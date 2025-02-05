@@ -1,0 +1,203 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Redirect } from "wouter";
+import { z } from "zod";
+import { Switch } from "@/components/ui/switch";
+
+const formSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(6),
+  isProvider: z.boolean().optional(),
+  name: z.string().optional(),
+});
+
+export default function AuthPage() {
+  const { user, loginMutation, registerMutation } = useAuth();
+
+  const loginForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  const registerForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      isProvider: false,
+      name: "",
+    },
+  });
+
+  if (user) {
+    return <Redirect to="/" />;
+  }
+
+  return (
+    <div className="min-h-screen grid lg:grid-cols-2">
+      <div className="flex items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <Tabs defaultValue="login">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="login">
+                <Form {...loginForm}>
+                  <form
+                    onSubmit={loginForm.handleSubmit((data) =>
+                      loginMutation.mutate(data)
+                    )}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={loginForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={loginMutation.isPending}
+                    >
+                      Login
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="register">
+                <Form {...registerForm}>
+                  <form
+                    onSubmit={registerForm.handleSubmit((data) =>
+                      registerMutation.mutate(data)
+                    )}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={registerForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="isProvider"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2">
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel>Register as Service Provider</FormLabel>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={registerMutation.isPending}
+                    >
+                      Register
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="hidden lg:block bg-gradient-to-br from-primary/20 to-primary/5 p-8">
+        <div className="h-full flex flex-col justify-center max-w-xl mx-auto">
+          <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            CarWash Connect
+          </h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Find and book the best car wash services in your area. Professional
+            service providers, transparent pricing, and hassle-free booking.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <img
+              src="https://images.unsplash.com/photo-1485463611174-f302f6a5c1c9"
+              alt="Car Wash Service"
+              className="rounded-lg object-cover h-48 w-full"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1527581849771-416a9d62308e"
+              alt="Clean Car"
+              className="rounded-lg object-cover h-48 w-full"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
