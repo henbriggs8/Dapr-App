@@ -19,18 +19,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const profileSchema = insertUserSchema.extend({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  priceBasic: z.number().min(1, "Basic price is required").optional(),
-  priceStandard: z.number().min(1, "Standard price is required").optional(),
-  pricePremium: z.number().min(1, "Premium price is required").optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: bookings, isLoading: bookingsLoading } = useQuery({
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["/api/bookings"],
   });
 
@@ -40,11 +37,8 @@ export default function ProfilePage() {
       username: user?.username,
       name: user?.name || "",
       description: user?.description || "",
-      latitude: user?.latitude,
-      longitude: user?.longitude,
-      priceBasic: user?.priceBasic,
-      priceStandard: user?.priceStandard,
-      pricePremium: user?.pricePremium,
+      latitude: user?.latitude || undefined,
+      longitude: user?.longitude || undefined,
     },
   });
 
@@ -76,13 +70,16 @@ export default function ProfilePage() {
         <Card className="mb-8">
           <CardHeader className="flex flex-row items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={user?.profileImage} />
+              <AvatarImage src={user?.profileImage || undefined} />
               <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-2xl">{user?.name}</CardTitle>
               {user?.isProvider && (
-                <RatingDisplay rating={user.rating} count={user.ratingCount} />
+                <RatingDisplay 
+                  rating={user.rating || 5} 
+                  count={user.ratingCount || 0} 
+                />
               )}
             </div>
           </CardHeader>
@@ -145,7 +142,12 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>Latitude</FormLabel>
                                 <FormControl>
-                                  <Input type="number" step="any" {...field} />
+                                  <Input 
+                                    type="number" 
+                                    step="any" 
+                                    {...field} 
+                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -159,51 +161,12 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>Longitude</FormLabel>
                                 <FormControl>
-                                  <Input type="number" step="any" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="priceBasic"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Basic Price ($)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="priceStandard"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Standard Price ($)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="pricePremium"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Premium Price ($)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} />
+                                  <Input 
+                                    type="number" 
+                                    step="any" 
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -227,7 +190,7 @@ export default function ProfilePage() {
 
           <TabsContent value="bookings">
             <div className="grid gap-4">
-              {bookings?.map((booking) => (
+              {bookings.map((booking) => (
                 <Card key={booking.id}>
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-center">

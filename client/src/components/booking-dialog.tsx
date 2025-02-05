@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { User } from "@shared/schema";
+import { User, PricingConfig } from "@shared/schema";
 import { Button } from "./ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -8,10 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 export default function BookingDialog({
   provider,
+  pricing,
   open,
   onClose,
 }: {
   provider: User;
+  pricing: PricingConfig;
   open: boolean;
   onClose: () => void;
 }) {
@@ -53,7 +55,7 @@ export default function BookingDialog({
             <TabsTrigger value="premium">Premium</TabsTrigger>
           </TabsList>
           <TabsContent value="basic" className="space-y-4">
-            <div className="text-2xl font-bold">${provider.priceBasic}</div>
+            <div className="text-2xl font-bold">${pricing.basic}</div>
             <ul className="space-y-2">
               <li>✓ Exterior Wash</li>
               <li>✓ Basic Cleaning</li>
@@ -67,7 +69,7 @@ export default function BookingDialog({
             </Button>
           </TabsContent>
           <TabsContent value="standard" className="space-y-4">
-            <div className="text-2xl font-bold">${provider.priceStandard}</div>
+            <div className="text-2xl font-bold">${pricing.standard}</div>
             <ul className="space-y-2">
               <li>✓ Exterior Wash</li>
               <li>✓ Interior Vacuum</li>
@@ -82,7 +84,7 @@ export default function BookingDialog({
             </Button>
           </TabsContent>
           <TabsContent value="premium" className="space-y-4">
-            <div className="text-2xl font-bold">${provider.pricePremium}</div>
+            <div className="text-2xl font-bold">${pricing.premium}</div>
             <ul className="space-y-2">
               <li>✓ Full Detail</li>
               <li>✓ Wax Treatment</li>

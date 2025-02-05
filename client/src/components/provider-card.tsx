@@ -6,30 +6,37 @@ import PriceTier from "./price-tier";
 import { useState } from "react";
 import BookingDialog from "./booking-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ProviderCard({ provider }: { provider: User }) {
   const [bookingOpen, setBookingOpen] = useState(false);
+  const { data: pricing } = useQuery({ queryKey: ["/api/pricing"] });
+
+  if (!pricing) return null;
 
   return (
     <>
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={provider.profileImage} />
+            <AvatarImage src={provider.profileImage ?? undefined} />
             <AvatarFallback>{provider.name?.[0]}</AvatarFallback>
           </Avatar>
           <div>
             <h2 className="text-xl font-semibold">{provider.name}</h2>
-            <RatingDisplay rating={provider.rating} count={provider.ratingCount} />
+            <RatingDisplay 
+              rating={provider.rating ?? 5} 
+              count={provider.ratingCount ?? 0} 
+            />
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">{provider.description}</p>
           <div className="space-y-4">
             <PriceTier
-              basic={provider.priceBasic}
-              standard={provider.priceStandard}
-              premium={provider.pricePremium}
+              basic={pricing.basic}
+              standard={pricing.standard}
+              premium={pricing.premium}
             />
             <Button
               className="w-full"
@@ -42,6 +49,7 @@ export default function ProviderCard({ provider }: { provider: User }) {
       </Card>
       <BookingDialog
         provider={provider}
+        pricing={pricing}
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
       />
