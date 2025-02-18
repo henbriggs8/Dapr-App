@@ -11,6 +11,13 @@ function isAdmin(req: Express.Request, res: Express.Response, next: Express.Next
   next();
 }
 
+function isProvider(req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+  if (!req.user?.isProvider) {
+    return res.status(403).send("Provider access required");
+  }
+  next();
+}
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
@@ -23,6 +30,22 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/pricing", async (req, res) => {
     const pricing = await storage.getPricingConfig();
     res.json(pricing);
+  });
+
+  // Provider endpoints
+  app.post("/api/provider/location", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { latitude, longitude } = req.body;
+    await storage.updateProviderLocation(req.user.id, latitude, longitude);
+    res.json({ success: true });
+  });
+
+  app.get("/api/bookings/active", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const bookings = await storage.getActiveBookings(req.user.id);
+    res.json(bookings);
   });
 
   // Protected endpoints

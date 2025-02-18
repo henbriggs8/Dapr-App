@@ -11,6 +11,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createBooking(booking: Booking): Promise<Booking>;
   getUserBookings(userId: number): Promise<Booking[]>;
+  getActiveBookings(providerId: number): Promise<Booking[]>;
+  updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void>;
   getPricingConfig(): Promise<PricingConfig>;
   updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig>;
   sessionStore: session.Store;
@@ -51,7 +53,8 @@ export class MemStorage implements IStorage {
       description: "Professional car wash service with years of experience",
       latitude: 40.7128,
       longitude: -74.0060,
-      profileImage: "https://images.unsplash.com/photo-1556745753-b2904692b3cd"
+      profileImage: "https://images.unsplash.com/photo-1556745753-b2904692b3cd",
+      currentStatus: "online"
     });
 
     this.createUser({
@@ -62,7 +65,8 @@ export class MemStorage implements IStorage {
       description: "Eco-friendly car wash solutions",
       latitude: 40.7589,
       longitude: -73.9851,
-      profileImage: "https://images.unsplash.com/photo-1649105703438-0992d6844823"
+      profileImage: "https://images.unsplash.com/photo-1649105703438-0992d6844823",
+      currentStatus: "offline"
     });
 
     // Create admin user
@@ -90,9 +94,35 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user = { id, ...insertUser, rating: 5, ratingCount: 0 };
+    const user: User = {
+      id,
+      ...insertUser,
+      rating: 5,
+      ratingCount: 0,
+      currentStatus: insertUser.currentStatus || 'offline',
+      lastLocationUpdate: new Date().toISOString(),
+      latitude: insertUser.latitude || null,
+      longitude: insertUser.longitude || null,
+      description: insertUser.description || null,
+      profileImage: insertUser.profileImage || null,
+      name: insertUser.name || null,
+      isProvider: insertUser.isProvider || false,
+      isAdmin: insertUser.isAdmin || false
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (user && user.isProvider) {
+      this.users.set(userId, {
+        ...user,
+        latitude,
+        longitude,
+        lastLocationUpdate: new Date().toISOString()
+      });
+    }
   }
 
   async getProviders(): Promise<User[]> {
@@ -101,7 +131,12 @@ export class MemStorage implements IStorage {
 
   async createBooking(booking: Booking): Promise<Booking> {
     const id = this.currentBookingId++;
-    const newBooking = { ...booking, id };
+    const newBooking = {
+      ...booking,
+      id,
+      status: booking.status || 'pending',
+      rating: booking.rating || null
+    };
     this.bookings.set(id, newBooking);
     return newBooking;
   }
@@ -112,12 +147,21 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getActiveBookings(providerId: number): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      (booking) => 
+        booking.providerId === providerId && 
+        booking.status !== 'completed' &&
+        booking.status !== 'cancelled'
+    );
+  }
+
   async getPricingConfig(): Promise<PricingConfig> {
     return this.pricingConfig;
   }
 
   async updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig> {
-    this.pricingConfig = { ...config, id: this.pricingConfig.id, updatedAt: new Date().toISOString() };
+    this.pricingConfig = { ...config, id: this.pricingConfig.id };
     return this.pricingConfig;
   }
 }

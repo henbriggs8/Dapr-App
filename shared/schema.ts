@@ -14,7 +14,9 @@ export const users = pgTable("users", {
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   description: text("description"),
-  profileImage: text("profile_image")
+  profileImage: text("profile_image"),
+  currentStatus: text("current_status").default('offline'),
+  lastLocationUpdate: text("last_location_update")
 });
 
 export const pricingConfig = pgTable("pricing_config", {
@@ -32,7 +34,10 @@ export const bookings = pgTable("bookings", {
   status: text("status").notNull().default('pending'),
   rating: integer("rating"),
   priceTier: text("price_tier").notNull(),
-  timestamp: text("timestamp").notNull()
+  timestamp: text("timestamp").notNull(),
+  serviceLocation: text("service_location"),
+  serviceLatitude: doublePrecision("service_latitude"),
+  serviceLongitude: doublePrecision("service_longitude")
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -44,7 +49,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   latitude: true,
   longitude: true,
   description: true,
-  profileImage: true
+  profileImage: true,
+  currentStatus: true
 });
 
 export const insertPricingConfigSchema = createInsertSchema(pricingConfig);
