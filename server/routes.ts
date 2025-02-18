@@ -1,17 +1,18 @@
 import type { Express } from "express";
+import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema } from "@shared/schema";
 
-function isAdmin(req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
     return res.status(403).send("Admin access required");
   }
   next();
 }
 
-function isProvider(req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+function isProvider(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isProvider) {
     return res.status(403).send("Provider access required");
   }
@@ -41,6 +42,14 @@ export function registerRoutes(app: Express): Server {
     res.json({ success: true });
   });
 
+  app.post("/api/provider/status", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { status } = req.body;
+    const user = await storage.updateProviderStatus(req.user.id, status);
+    res.json(user);
+  });
+
   app.get("/api/bookings/active", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -52,12 +61,14 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/bookings", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const booking = insertBookingSchema.parse({
+    const bookingData = insertBookingSchema.parse({
       ...req.body,
       userId: req.user.id,
     });
 
-    const newBooking = await storage.createBooking(booking);
+    // Remove id from booking data since it's auto-generated
+    const { id, ...bookingWithoutId } = bookingData;
+    const newBooking = await storage.createBooking(bookingWithoutId);
     res.status(201).json(newBooking);
   });
 

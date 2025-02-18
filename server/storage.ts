@@ -9,10 +9,11 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
-  createBooking(booking: Booking): Promise<Booking>;
+  createBooking(booking: Omit<Booking, 'id'>): Promise<Booking>;
   getUserBookings(userId: number): Promise<Booking[]>;
   getActiveBookings(providerId: number): Promise<Booking[]>;
   updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void>;
+  updateProviderStatus(userId: number, status: string): Promise<User>;
   getPricingConfig(): Promise<PricingConfig>;
   updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig>;
   sessionStore: session.Store;
@@ -125,11 +126,24 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async updateProviderStatus(userId: number, status: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user || !user.isProvider) {
+      throw new Error('User not found or not a provider');
+    }
+    const updatedUser = {
+      ...user,
+      currentStatus: status
+    };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
   async getProviders(): Promise<User[]> {
     return Array.from(this.users.values()).filter((user) => user.isProvider);
   }
 
-  async createBooking(booking: Booking): Promise<Booking> {
+  async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking> {
     const id = this.currentBookingId++;
     const newBooking = {
       ...booking,
