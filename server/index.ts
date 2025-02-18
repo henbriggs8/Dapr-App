@@ -13,7 +13,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -45,9 +44,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Add health check endpoint first
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
   const server = registerRoutes(app);
 
-  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -55,22 +58,22 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
+  // Setup Vite middleware only after registering routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
   const PORT = 5000;
   const HOST = '0.0.0.0';
 
-  return new Promise((resolve) => {
+  // Return a promise that resolves when the server is ready
+  await new Promise<void>((resolve) => {
     server.listen(PORT, HOST, () => {
       log(`Server running at http://${HOST}:${PORT}`);
       log('Application is ready to accept connections');
-      // Signal that the server is ready
-      resolve(server);
+      resolve();
     });
   });
 })().catch(error => {
