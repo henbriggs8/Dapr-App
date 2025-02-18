@@ -1,10 +1,23 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { User, PricingConfig } from "@shared/schema";
+import { User, PricingConfig, bookingFormSchema } from "@shared/schema";
 import { Button } from "./ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./ui/form";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 export default function BookingDialog({
   provider,
@@ -19,13 +32,20 @@ export default function BookingDialog({
 }) {
   const { toast } = useToast();
 
+  const form = useForm({
+    resolver: zodResolver(bookingFormSchema),
+    defaultValues: {
+      serviceLocation: "",
+      serviceLocationType: "home",
+      priceTier: "basic",
+      providerId: provider.id,
+      timestamp: new Date().toISOString(),
+    },
+  });
+
   const bookingMutation = useMutation({
-    mutationFn: async (tier: string) => {
-      const res = await apiRequest("POST", "/api/bookings", {
-        providerId: provider.id,
-        priceTier: tier,
-        timestamp: new Date().toISOString(),
-      });
+    mutationFn: async (formData: any) => {
+      const res = await apiRequest("POST", "/api/bookings", formData);
       return await res.json();
     },
     onSuccess: () => {
@@ -36,10 +56,19 @@ export default function BookingDialog({
       });
       onClose();
     },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create booking",
+        variant: "destructive",
+      });
+    },
   });
 
-  const book = (tier: string) => {
-    bookingMutation.mutate(tier);
+  const onSubmit = (tier: string) => {
+    form.setValue("priceTier", tier);
+    const formData = form.getValues();
+    bookingMutation.mutate(formData);
   };
 
   return (
@@ -48,6 +77,56 @@ export default function BookingDialog({
         <DialogHeader>
           <DialogTitle>Book with {provider.name}</DialogTitle>
         </DialogHeader>
+
+        <Form {...form}>
+          <form className="space-y-4 mb-4">
+            <FormField
+              control={form.control}
+              name="serviceLocationType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Type</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex space-x-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="home" id="home" />
+                        <Label htmlFor="home">Home</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="work" id="work" />
+                        <Label htmlFor="work">Work</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="other" id="other" />
+                        <Label htmlFor="other">Other</Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="serviceLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Service Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+
         <Tabs defaultValue="basic">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="basic">Basic</TabsTrigger>
@@ -61,7 +140,7 @@ export default function BookingDialog({
               <li>✓ Basic Cleaning</li>
             </ul>
             <Button
-              onClick={() => book("basic")}
+              onClick={() => onSubmit("basic")}
               disabled={bookingMutation.isPending}
               className="w-full"
             >
@@ -76,7 +155,7 @@ export default function BookingDialog({
               <li>✓ Window Cleaning</li>
             </ul>
             <Button
-              onClick={() => book("standard")}
+              onClick={() => onSubmit("standard")}
               disabled={bookingMutation.isPending}
               className="w-full"
             >
@@ -92,7 +171,7 @@ export default function BookingDialog({
               <li>✓ Tire Shine</li>
             </ul>
             <Button
-              onClick={() => book("premium")}
+              onClick={() => onSubmit("premium")}
               disabled={bookingMutation.isPending}
               className="w-full"
             >

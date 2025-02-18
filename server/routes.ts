@@ -64,11 +64,17 @@ export function registerRoutes(app: Express): Server {
     const bookingData = insertBookingSchema.parse({
       ...req.body,
       userId: req.user.id,
+      status: 'pending' // Explicitly set status for new bookings
     });
 
     // Remove id from booking data since it's auto-generated
     const { id, ...bookingWithoutId } = bookingData;
-    const newBooking = await storage.createBooking(bookingWithoutId);
+    const booking = {
+      ...bookingWithoutId,
+      rating: null // Ensure rating is null for new bookings
+    };
+
+    const newBooking = await storage.createBooking(booking);
     res.status(201).json(newBooking);
   });
 

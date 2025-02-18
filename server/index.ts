@@ -65,15 +65,41 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  const PORT = 5000;
+  const PORT = Number(process.env.PORT) || 5000;
   const HOST = '0.0.0.0';
 
-  // Return a promise that resolves when the server is ready
+  // Create a promise that resolves when the server is ready
   await new Promise<void>((resolve) => {
     server.listen(PORT, HOST, () => {
+      // Add explicit port availability messages
+      console.log('----------------------------------------');
+      console.log(`Server listening on port ${PORT}`);
+      console.log('Port is now available');
+      console.log('----------------------------------------');
       log(`Server running at http://${HOST}:${PORT}`);
       log('Application is ready to accept connections');
-      resolve();
+
+      // Test the health endpoint to ensure the server is truly ready
+      fetch(`http://${HOST}:${PORT}/health`)
+        .then(response => response.json())
+        .then(() => {
+          console.log('Health check passed - server is fully operational');
+          resolve();
+        })
+        .catch(error => {
+          console.error('Health check failed:', error);
+          resolve(); // Still resolve to allow the server to start
+        });
+    });
+
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+        process.exit(1);
+      } else {
+        console.error('Server error:', error);
+        process.exit(1);
+      }
     });
   });
 })().catch(error => {

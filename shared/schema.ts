@@ -35,7 +35,8 @@ export const bookings = pgTable("bookings", {
   rating: integer("rating"),
   priceTier: text("price_tier").notNull(),
   timestamp: text("timestamp").notNull(),
-  serviceLocation: text("service_location"),
+  serviceLocation: text("service_location").notNull(),
+  serviceLocationType: text("service_location_type").notNull(),
   serviceLatitude: doublePrecision("service_latitude"),
   serviceLongitude: doublePrecision("service_longitude")
 });
@@ -56,7 +57,16 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertPricingConfigSchema = createInsertSchema(pricingConfig);
 export const insertBookingSchema = createInsertSchema(bookings);
 
+// Extend the booking schema with validation for location type
+export const bookingFormSchema = insertBookingSchema.extend({
+  serviceLocationType: z.enum(['home', 'work', 'other'], {
+    required_error: "Please select a location type",
+  }),
+  serviceLocation: z.string().min(1, "Address is required"),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;
+export type BookingFormData = z.infer<typeof bookingFormSchema>;
