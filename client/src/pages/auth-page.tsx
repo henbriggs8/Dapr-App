@@ -14,6 +14,7 @@ const formSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(6),
   isProvider: z.boolean().optional(),
+  isAdmin: z.boolean().optional(),
   name: z.string().optional(),
 });
 
@@ -34,6 +35,7 @@ export default function AuthPage() {
       username: "",
       password: "",
       isProvider: false,
+      isAdmin: false,
       name: "",
     },
   });
@@ -145,22 +147,40 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={registerForm.control}
-                      name="isProvider"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center gap-2">
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel>Register as Service Provider</FormLabel>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <FormField
+                        control={registerForm.control}
+                        name="isProvider"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel>Register as Service Provider</FormLabel>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="isAdmin"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel>Register as Admin (Development Only)</FormLabel>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <Button
                       type="submit"
                       className="w-full"
