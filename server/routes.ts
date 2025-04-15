@@ -379,6 +379,172 @@ export function registerRoutes(app: Express): Server {
     });
   });
   
+  // Provider earnings and metrics endpoints
+  app.get('/api/provider/earnings', async (req, res) => {
+    if (!req.user?.isProvider) {
+      return res.status(403).send('Provider access required');
+    }
+    
+    const period = req.query.period as string || 'month';
+    try {
+      const earnings = await storage.getProviderEarnings(req.user.id, period);
+      res.json(earnings);
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get earnings data');
+    }
+  });
+  
+  app.get('/api/provider/metrics', async (req, res) => {
+    if (!req.user?.isProvider) {
+      return res.status(403).send('Provider access required');
+    }
+    
+    try {
+      const metrics = await storage.getProviderServiceMetrics(req.user.id);
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get service metrics');
+    }
+  });
+  
+  // Service timer endpoints
+  app.post('/api/bookings/:id/start', async (req, res) => {
+    if (!req.user?.isProvider) {
+      return res.status(403).send('Provider access required');
+    }
+    
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      const booking = await storage.startServiceTimer(id);
+      
+      // Notify the customer via WebSocket if they're connected
+      if (booking.userId) {
+        const userClients = clients.get(booking.userId) || [];
+        
+        if (userClients.length > 0) {
+          const notification = JSON.stringify({
+            type: 'booking_update',
+            booking: {
+              id: booking.id,
+              status: booking.status,
+              stage: booking.currentStage || null,
+              startTime: booking.startTime
+            }
+          });
+          
+          userClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(notification);
+            }
+          });
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(404).send(error instanceof Error ? error.message : 'Booking not found');
+    }
+  });
+  
+  app.post('/api/bookings/:id/complete', async (req, res) => {
+    if (!req.user?.isProvider) {
+      return res.status(403).send('Provider access required');
+    }
+    
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      const booking = await storage.completeServiceTimer(id);
+      
+      // Notify the customer via WebSocket if they're connected
+      if (booking.userId) {
+        const userClients = clients.get(booking.userId) || [];
+        
+        if (userClients.length > 0) {
+          const notification = JSON.stringify({
+            type: 'booking_update',
+            booking: {
+              id: booking.id,
+              status: booking.status,
+              stage: booking.currentStage || null,
+              endTime: booking.endTime,
+              serviceDuration: booking.serviceDuration
+            }
+          });
+          
+          userClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(notification);
+            }
+          });
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(404).send(error instanceof Error ? error.message : 'Booking not found or timer not started');
+    }
+  });
+  
+  // Rating endpoint
+  app.post('/api/bookings/:id/rating', async (req, res) => {
+    if (!req.user) {
+      return res.sendStatus(401);
+    }
+    
+    const id = parseInt(req.params.id);
+    const { rating, comment } = req.body;
+    
+    if (isNaN(id) || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).send('Invalid booking ID or rating (must be 1-5)');
+    }
+    
+    try {
+      // Verify this booking belongs to the user
+      const booking = await storage.getBookingById(id);
+      if (!booking || booking.userId !== req.user.id) {
+        return res.status(403).send('Access denied');
+      }
+      
+      const updatedBooking = await storage.addBookingRating(id, rating, comment);
+      
+      // Notify the provider via WebSocket if they're connected
+      if (updatedBooking.providerId) {
+        const providerClients = clients.get(updatedBooking.providerId) || [];
+        
+        if (providerClients.length > 0) {
+          const notification = JSON.stringify({
+            type: 'rating_received',
+            booking: {
+              id: updatedBooking.id,
+              rating: updatedBooking.rating,
+              ratingComment: updatedBooking.ratingComment
+            }
+          });
+          
+          providerClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(notification);
+            }
+          });
+        }
+      }
+      
+      res.json(updatedBooking);
+    } catch (error) {
+      res.status(404).send(error instanceof Error ? error.message : 'Booking not found');
+    }
+  });
+
   // Add API endpoint to update booking status with notifications
   app.post('/api/bookings/:id/status', async (req, res) => {
     if (!req.user?.isProvider) {

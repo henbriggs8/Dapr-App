@@ -18,6 +18,22 @@ export interface IStorage {
   updateProviderStatus(userId: number, status: string): Promise<User>;
   getPricingConfig(): Promise<PricingConfig>;
   updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig>;
+  // Provider earnings and metrics
+  getProviderEarnings(providerId: number, period?: string): Promise<{ 
+    totalEarnings: number;
+    completedServices: number;
+    averageRating: number;
+    serviceTypeBreakdown: { [key: string]: number };
+  }>;
+  getProviderServiceMetrics(providerId: number): Promise<{
+    averageDuration: { [key: string]: number };
+    totalServiceTime: number;
+  }>;
+  // Booking timing methods
+  startServiceTimer(bookingId: number): Promise<Booking>;
+  completeServiceTimer(bookingId: number): Promise<Booking>;
+  // Rating methods
+  addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking>;
   // Vehicle methods
   getUserVehicles(userId: number): Promise<Vehicle[]>;
   getVehicleById(id: number): Promise<Vehicle | undefined>;
@@ -219,7 +235,14 @@ export class MemStorage implements IStorage {
       status: booking.status || 'pending',
       rating: booking.rating || null,
       vehicleId: booking.vehicleId || null,
-      notes: booking.notes || null
+      notes: booking.notes || null,
+      // New fields for earnings and timing tracking
+      ratingComment: booking.ratingComment || null,
+      amount: booking.amount || null,
+      providerEarnings: booking.providerEarnings || null,
+      startTime: booking.startTime || null,
+      endTime: booking.endTime || null,
+      serviceDuration: booking.serviceDuration || null
     };
     this.bookings.set(id, newBooking);
     return newBooking;
@@ -250,6 +273,36 @@ export class MemStorage implements IStorage {
       throw new Error('Booking not found');
     }
     
+    // If status is changing to completed and there is start time, calculate duration
+    let serviceDuration = booking.serviceDuration;
+    if (status === 'completed' && booking.startTime && !booking.endTime) {
+      const endTime = new Date().toISOString();
+      const startTime = new Date(booking.startTime);
+      const endTimeDate = new Date(endTime);
+      
+      // Calculate duration in minutes
+      serviceDuration = Math.round((endTimeDate.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      // Get service details to calculate provider earnings
+      const service = await this.getServiceById(booking.serviceId);
+      const amount = service ? service.price * 100 : 0; // Convert to cents
+      const providerEarnings = Math.round(amount * 0.7); // Provider gets 70%
+      
+      const updatedBooking = {
+        ...booking,
+        status,
+        currentStage: stage || booking.currentStage,
+        notes: booking.notes,
+        endTime,
+        serviceDuration,
+        amount,
+        providerEarnings
+      };
+      
+      this.bookings.set(id, updatedBooking);
+      return updatedBooking;
+    }
+    
     const updatedBooking = {
       ...booking,
       status,
@@ -258,6 +311,202 @@ export class MemStorage implements IStorage {
     };
     
     this.bookings.set(id, updatedBooking);
+    return updatedBooking;
+  }
+  
+  // Provider metrics methods
+  async getProviderEarnings(providerId: number, period: string = 'month'): Promise<{ 
+    totalEarnings: number;
+    completedServices: number;
+    averageRating: number;
+    serviceTypeBreakdown: { [key: string]: number };
+  }> {
+    // Get all completed bookings for this provider
+    const bookings = Array.from(this.bookings.values()).filter(
+      (booking) => booking.providerId === providerId && booking.status === 'completed'
+    );
+    
+    // Filter by time period if needed
+    const now = new Date();
+    let filteredBookings = bookings;
+    
+    if (period === 'today') {
+      const today = now.toISOString().split('T')[0];
+      filteredBookings = bookings.filter(booking => booking.date === today);
+    } else if (period === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(now.getDate() - 7);
+      filteredBookings = bookings.filter(booking => {
+        const bookingDate = new Date(booking.timestamp);
+        return bookingDate >= weekAgo;
+      });
+    } else if (period === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(now.getMonth() - 1);
+      filteredBookings = bookings.filter(booking => {
+        const bookingDate = new Date(booking.timestamp);
+        return bookingDate >= monthAgo;
+      });
+    }
+    
+    // Calculate total earnings (provider's cut)
+    const totalEarnings = filteredBookings.reduce((sum, booking) => 
+      sum + (booking.providerEarnings || 0), 0);
+    
+    // Count completed services
+    const completedServices = filteredBookings.length;
+    
+    // Calculate average rating
+    const validRatings = filteredBookings.filter(booking => booking.rating !== null);
+    const averageRating = validRatings.length > 0 
+      ? validRatings.reduce((sum, booking) => sum + (booking.rating || 0), 0) / validRatings.length
+      : 0;
+    
+    // Get breakdown by service type
+    const serviceTypeBreakdown: { [key: string]: number } = {};
+    for (const booking of filteredBookings) {
+      const service = await this.getServiceById(booking.serviceId);
+      if (service) {
+        const category = service.category;
+        serviceTypeBreakdown[category] = (serviceTypeBreakdown[category] || 0) + 1;
+      }
+    }
+    
+    return {
+      totalEarnings,
+      completedServices,
+      averageRating,
+      serviceTypeBreakdown
+    };
+  }
+  
+  async getProviderServiceMetrics(providerId: number): Promise<{
+    averageDuration: { [key: string]: number };
+    totalServiceTime: number;
+  }> {
+    // Get all completed bookings with duration for this provider
+    const bookings = Array.from(this.bookings.values()).filter(
+      (booking) => booking.providerId === providerId && 
+                  booking.status === 'completed' && 
+                  booking.serviceDuration !== null
+    );
+    
+    // Calculate average duration by service type
+    const durationByService: { [key: string]: number[] } = {};
+    let totalServiceTime = 0;
+    
+    for (const booking of bookings) {
+      const service = await this.getServiceById(booking.serviceId);
+      if (service && booking.serviceDuration) {
+        const category = service.category;
+        if (!durationByService[category]) {
+          durationByService[category] = [];
+        }
+        durationByService[category].push(booking.serviceDuration);
+        totalServiceTime += booking.serviceDuration;
+      }
+    }
+    
+    // Calculate averages
+    const averageDuration: { [key: string]: number } = {};
+    for (const [category, durations] of Object.entries(durationByService)) {
+      averageDuration[category] = Math.round(
+        durations.reduce((sum, duration) => sum + duration, 0) / durations.length
+      );
+    }
+    
+    return {
+      averageDuration,
+      totalServiceTime
+    };
+  }
+  
+  // Service timing methods
+  async startServiceTimer(bookingId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    // Update booking with start time
+    const startTime = new Date().toISOString();
+    const updatedBooking = {
+      ...booking,
+      startTime,
+      status: 'in_progress',
+      currentStage: booking.currentStage || 'on_the_way'
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  async completeServiceTimer(bookingId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    if (!booking.startTime) {
+      throw new Error('Cannot complete service that has not been started');
+    }
+    
+    // Calculate duration
+    const endTime = new Date().toISOString();
+    const startTime = new Date(booking.startTime);
+    const endTimeDate = new Date(endTime);
+    const serviceDuration = Math.round((endTimeDate.getTime() - startTime.getTime()) / (1000 * 60));
+    
+    // Get service details to calculate provider earnings
+    const service = await this.getServiceById(booking.serviceId);
+    const amount = service ? service.price * 100 : 0; // Convert to cents
+    const providerEarnings = Math.round(amount * 0.7); // Provider gets 70%
+    
+    const updatedBooking = {
+      ...booking,
+      status: 'completed',
+      currentStage: 'completed',
+      endTime,
+      serviceDuration,
+      amount,
+      providerEarnings
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  // Rating methods
+  async addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    // Update booking with rating and comment
+    const updatedBooking = {
+      ...booking,
+      rating,
+      ratingComment: comment || null
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    
+    // Update provider rating
+    const provider = await this.getUser(booking.providerId);
+    if (provider) {
+      const currentRatingCount = provider.ratingCount || 0;
+      const currentRating = provider.rating || 5; // Default to 5 if no ratings yet
+      const newRatingCount = currentRatingCount + 1;
+      const newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
+      
+      this.users.set(provider.id, {
+        ...provider,
+        rating: newRating,
+        ratingCount: newRatingCount
+      });
+    }
+    
     return updatedBooking;
   }
 
