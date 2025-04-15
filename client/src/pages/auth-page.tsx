@@ -51,9 +51,9 @@ export default function AuthPage() {
           <CardContent className="pt-6">
             <div className="flex justify-center mb-6">
               <img 
-                src="/assets/dapper-logo.svg" 
+                src="/assets/img/dapper-logo.png" 
                 alt="Dapper Logo" 
-                className="h-16"
+                className="h-12"
               />
             </div>
             <Tabs defaultValue="login">
@@ -206,7 +206,7 @@ export default function AuthPage() {
         <div className="h-full flex flex-col justify-center max-w-xl mx-auto">
           <div className="flex items-center justify-center mb-6">
             <img 
-              src="/assets/dapper-logo.svg" 
+              src="/assets/img/dapper-logo.png" 
               alt="Dapper Logo" 
               className="h-24"
             />

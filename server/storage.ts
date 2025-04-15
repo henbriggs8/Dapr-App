@@ -10,8 +10,10 @@ export interface IStorage {
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   createBooking(booking: Omit<Booking, 'id'>): Promise<Booking>;
+  getBookingById(id: number): Promise<Booking | undefined>;
   getUserBookings(userId: number): Promise<Booking[]>;
   getActiveBookings(providerId: number): Promise<Booking[]>;
+  updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking>;
   updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void>;
   updateProviderStatus(userId: number, status: string): Promise<User>;
   getPricingConfig(): Promise<PricingConfig>;
@@ -235,6 +237,27 @@ export class MemStorage implements IStorage {
         booking.status !== 'completed' &&
         booking.status !== 'cancelled'
     );
+  }
+  
+  async getBookingById(id: number): Promise<Booking | undefined> {
+    return this.bookings.get(id);
+  }
+  
+  async updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking> {
+    const booking = await this.getBookingById(id);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    const updatedBooking = {
+      ...booking,
+      status,
+      // Store the current stage in the notes field if provided
+      notes: stage ? `Current stage: ${stage}` : booking.notes
+    };
+    
+    this.bookings.set(id, updatedBooking);
+    return updatedBooking;
   }
 
   async getPricingConfig(): Promise<PricingConfig> {

@@ -86,9 +86,9 @@ export default function HomePage() {
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <img 
-            src="/assets/dapper-logo.svg" 
+            src="/assets/img/dapper-logo.png" 
             alt="Dapper Logo" 
-            className="h-12"
+            className="h-8"
           />
           <div>
             <h1 className="text-3xl font-bold">{provider?.name}</h1>
