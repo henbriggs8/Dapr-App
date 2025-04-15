@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertBookingSchema, insertPricingConfigSchema } from "@shared/schema";
+import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema } from "@shared/schema";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {

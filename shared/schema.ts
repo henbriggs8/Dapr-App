@@ -27,10 +27,31 @@ export const pricingConfig = pgTable("pricing_config", {
   updatedAt: text("updated_at").notNull()
 });
 
+export const services = pgTable("services", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: integer("price").notNull(),
+  duration: integer("duration").notNull(), // duration in minutes
+  category: text("category").notNull(), // 'basic', 'standard', 'premium'
+});
+
+export const timeSlots = pgTable("time_slots", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  startTime: text("start_time").notNull(), // HH:MM format 
+  endTime: text("end_time").notNull(), // HH:MM format
+  isAvailable: boolean("is_available").notNull().default(true),
+  maxBookings: integer("max_bookings").notNull().default(3),
+  currentBookings: integer("current_bookings").notNull().default(0)
+});
+
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   providerId: integer("provider_id").notNull(),
+  serviceId: integer("service_id").notNull(),
+  timeSlotId: integer("time_slot_id").notNull(),
   status: text("status").notNull().default('pending'),
   rating: integer("rating"),
   priceTier: text("price_tier").notNull(),
@@ -55,6 +76,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export const insertPricingConfigSchema = createInsertSchema(pricingConfig);
+export const insertServiceSchema = createInsertSchema(services);
+export const insertTimeSlotSchema = createInsertSchema(timeSlots);
 export const insertBookingSchema = createInsertSchema(bookings);
 
 // Extend the booking schema with validation for location type
@@ -67,6 +90,10 @@ export const bookingFormSchema = insertBookingSchema.extend({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type Service = typeof services.$inferSelect;
+export type TimeSlot = typeof timeSlots.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;
+export type InsertService = z.infer<typeof insertServiceSchema>;
+export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
