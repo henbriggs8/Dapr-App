@@ -49,6 +49,13 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/assets/dapper-logo.svg" 
+                alt="Dapper Logo" 
+                className="h-16"
+              />
+            </div>
             <Tabs defaultValue="login">
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -197,12 +204,16 @@ export default function AuthPage() {
       </div>
       <div className="hidden lg:block bg-gradient-to-br from-primary/20 to-primary/5 p-8">
         <div className="h-full flex flex-col justify-center max-w-xl mx-auto">
-          <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            CarWash Connect
-          </h1>
+          <div className="flex items-center justify-center mb-6">
+            <img 
+              src="/assets/dapper-logo.svg" 
+              alt="Dapper Logo" 
+              className="h-24"
+            />
+          </div>
           <p className="text-lg text-muted-foreground mb-8">
-            Find and book the best car wash services in your area. Professional
-            service providers, transparent pricing, and hassle-free booking.
+            Premium car wash and detailing services for the discerning vehicle owner. 
+            Professional care, transparent pricing, and effortless scheduling.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <img

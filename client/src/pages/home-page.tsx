@@ -84,9 +84,16 @@ export default function HomePage() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">{provider?.name}</h1>
-          <p className="text-muted-foreground">{provider?.description}</p>
+        <div className="flex items-center gap-4">
+          <img 
+            src="/assets/dapper-logo.svg" 
+            alt="Dapper Logo" 
+            className="h-12"
+          />
+          <div>
+            <h1 className="text-3xl font-bold">{provider?.name}</h1>
+            <p className="text-muted-foreground">{provider?.description}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Link href="/spinner-demo">
