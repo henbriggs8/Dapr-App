@@ -80,7 +80,10 @@ export function registerRoutes(app: Express): Server {
         serviceLatitude: bookingWithoutId.serviceLatitude || null,
         serviceLongitude: bookingWithoutId.serviceLongitude || null,
         vehicleId: bookingWithoutId.vehicleId || null,
-        notes: null // Set notes to null for new bookings
+        notes: null, // Set notes to null for new bookings
+        date: req.body.date || null, // Use date from request body if available 
+        time: req.body.time || null, // Use time from request body if available
+        currentStage: null // Ensure currentStage is null for new bookings
       };
 
       const newBooking = await storage.createBooking(booking);
