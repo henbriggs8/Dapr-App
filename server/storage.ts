@@ -1,4 +1,4 @@
-import { User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot } from "@shared/schema";
+import { User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
@@ -16,10 +16,17 @@ export interface IStorage {
   updateProviderStatus(userId: number, status: string): Promise<User>;
   getPricingConfig(): Promise<PricingConfig>;
   updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig>;
-  // New methods for services and time slots
+  // Vehicle methods
+  getUserVehicles(userId: number): Promise<Vehicle[]>;
+  getVehicleById(id: number): Promise<Vehicle | undefined>;
+  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle>;
+  deleteVehicle(id: number): Promise<boolean>;
+  // Service methods
   getServices(): Promise<Service[]>;
   getServiceById(id: number): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
+  // Time slot methods
   getTimeSlots(): Promise<TimeSlot[]>;
   getTimeSlotById(id: number): Promise<TimeSlot | undefined>;
   getAvailableTimeSlots(date?: string): Promise<TimeSlot[]>;
@@ -33,22 +40,26 @@ export class MemStorage implements IStorage {
   private bookings: Map<number, Booking>;
   private services: Map<number, Service>;
   private timeSlots: Map<number, TimeSlot>;
+  private vehicles: Map<number, Vehicle>;
   private pricingConfig: PricingConfig;
   sessionStore: session.Store;
   currentUserId: number;
   currentBookingId: number;
   currentServiceId: number;
   currentTimeSlotId: number;
+  currentVehicleId: number;
 
   constructor() {
     this.users = new Map();
     this.bookings = new Map();
     this.services = new Map();
     this.timeSlots = new Map();
+    this.vehicles = new Map();
     this.currentUserId = 1;
     this.currentBookingId = 1;
     this.currentServiceId = 1;
     this.currentTimeSlotId = 1;
+    this.currentVehicleId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -57,8 +68,8 @@ export class MemStorage implements IStorage {
     this.pricingConfig = {
       id: 1,
       basic: 30,
-      standard: 50,
-      premium: 80,
+      standard: 55,
+      premium: 175,
       updatedAt: new Date().toISOString()
     };
 
@@ -86,25 +97,25 @@ export class MemStorage implements IStorage {
     // Create services
     this.createService({
       name: "Basic Wash",
-      description: "Exterior wash and basic cleaning",
+      description: "Exterior wash only - perfect for a quick refresh",
       price: 30,
       duration: 30,
       category: "basic"
     });
     
     this.createService({
-      name: "Standard Wash",
-      description: "Exterior wash, interior vacuum, and window cleaning",
-      price: 50,
+      name: "The OG",
+      description: "Maintenance clean, hand wash, vacuum and wipe down",
+      price: 55,
       duration: 45,
       category: "standard"
     });
     
     this.createService({
-      name: "Premium Wash",
-      description: "Full detail, wax treatment, interior deep clean, and tire shine",
-      price: 80,
-      duration: 60,
+      name: "Full Detail",
+      description: "Hand wash, wheels degreased & shine, glass shined, spray wax. Interior: vacuum, carpets & mats shampooed, leather & upholstery steam cleaned, cup holders cleaned",
+      price: 175,
+      duration: 90,
       category: "premium"
     });
     
@@ -159,6 +170,9 @@ export class MemStorage implements IStorage {
       description: insertUser.description || null,
       profileImage: insertUser.profileImage || null,
       name: insertUser.name || null,
+      email: insertUser.email || null,
+      phone: insertUser.phone || null,
+      address: insertUser.address || null,
       isProvider: insertUser.isProvider || false,
       isAdmin: insertUser.isAdmin || false
     };
@@ -201,7 +215,8 @@ export class MemStorage implements IStorage {
       ...booking,
       id,
       status: booking.status || 'pending',
-      rating: booking.rating || null
+      rating: booking.rating || null,
+      vehicleId: booking.vehicleId || null
     };
     this.bookings.set(id, newBooking);
     return newBooking;
@@ -301,6 +316,54 @@ export class MemStorage implements IStorage {
     
     this.timeSlots.set(id, updatedTimeSlot);
     return updatedTimeSlot;
+  }
+
+  // Vehicle methods
+  async getUserVehicles(userId: number): Promise<Vehicle[]> {
+    return Array.from(this.vehicles.values()).filter(
+      (vehicle) => vehicle.userId === userId
+    );
+  }
+
+  async getVehicleById(id: number): Promise<Vehicle | undefined> {
+    return this.vehicles.get(id);
+  }
+
+  async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const id = this.currentVehicleId++;
+    const newVehicle: Vehicle = {
+      ...vehicle,
+      id,
+      color: vehicle.color || null,
+      licensePlate: vehicle.licensePlate || null,
+      notes: vehicle.notes || null
+    };
+    this.vehicles.set(id, newVehicle);
+    return newVehicle;
+  }
+
+  async updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const vehicle = await this.getVehicleById(id);
+    if (!vehicle) {
+      throw new Error('Vehicle not found');
+    }
+    
+    const updatedVehicle = {
+      ...vehicle,
+      ...updates
+    };
+    
+    this.vehicles.set(id, updatedVehicle);
+    return updatedVehicle;
+  }
+
+  async deleteVehicle(id: number): Promise<boolean> {
+    const vehicle = await this.getVehicleById(id);
+    if (!vehicle) {
+      return false;
+    }
+    
+    return this.vehicles.delete(id);
   }
 }
 

@@ -1,34 +1,68 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, Booking, Vehicle, insertVehicleSchema } from "@shared/schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Phone, Home, LogOut, Car, Plus, Pencil, Trash2 } from "lucide-react";
 import RatingDisplay from "@/components/rating-display";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 const profileSchema = insertUserSchema.extend({
   name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
   description: z.string().optional(),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
 });
 
-export default function ProfilePage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
+// Create a Zod schema for validating vehicle form inputs
+const vehicleSchema = insertVehicleSchema.extend({
+  year: z.coerce.number().min(1900, "Year must be at least 1900").max(new Date().getFullYear() + 1, `Year cannot exceed ${new Date().getFullYear() + 1}`),
+  make: z.string().min(1, "Make is required"),
+  model: z.string().min(1, "Model is required"),
+  color: z.string().optional().or(z.literal("")),
+  licensePlate: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal(""))
+});
 
-  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
+type VehicleFormValues = z.infer<typeof vehicleSchema>;
+
+export default function ProfilePage() {
+  const { user, logoutMutation } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
+  });
+  
+  const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
   });
 
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -36,6 +70,9 @@ export default function ProfilePage() {
     defaultValues: {
       username: user?.username,
       name: user?.name || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      address: user?.address || "",
       description: user?.description || "",
       latitude: user?.latitude || undefined,
       longitude: user?.longitude || undefined,
@@ -68,27 +105,54 @@ export default function ProfilePage() {
     <div className="container mx-auto p-4">
       <div className="max-w-4xl mx-auto">
         <Card className="mb-8">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={user?.profileImage || undefined} />
-              <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-2xl">{user?.name}</CardTitle>
-              {user?.isProvider && (
-                <RatingDisplay 
-                  rating={user.rating || 5} 
-                  count={user.ratingCount || 0} 
-                />
-              )}
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={user?.profileImage || undefined} />
+                <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-2xl">{user?.name}</CardTitle>
+                {user?.isProvider && (
+                  <RatingDisplay 
+                    rating={user.rating || 5} 
+                    count={user.ratingCount || 0} 
+                  />
+                )}
+              </div>
             </div>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              className="flex items-center gap-2"
+              disabled={logoutMutation.isPending}
+              onClick={() => {
+                logoutMutation.mutate(undefined, {
+                  onSuccess: () => {
+                    setLocation('/auth');
+                    toast({
+                      title: "Signed out",
+                      description: "You have been successfully signed out",
+                    });
+                  }
+                });
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
           </CardHeader>
         </Card>
 
         <Tabs defaultValue="profile">
           <TabsList className="w-full">
             <TabsTrigger value="profile">Profile</TabsTrigger>
-            {!user?.isProvider && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
+            {!user?.isProvider && (
+              <>
+                <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+                <TabsTrigger value="bookings">Bookings</TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           <TabsContent value="profile">
@@ -112,6 +176,54 @@ export default function ProfilePage() {
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
                             <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" /> Email Address
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="you@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" /> Phone Number
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="(123) 456-7890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Home className="h-4 w-4" /> Home Address
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="123 Main St, Anytown, CA 12345" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

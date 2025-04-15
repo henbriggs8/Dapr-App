@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   isProvider: boolean("is_provider").notNull().default(false),
   isAdmin: boolean("is_admin").notNull().default(false),
   name: text("name"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
   rating: doublePrecision("rating").default(5),
   ratingCount: integer("rating_count").default(0),
   latitude: doublePrecision("latitude"),
@@ -46,12 +49,24 @@ export const timeSlots = pgTable("time_slots", {
   currentBookings: integer("current_bookings").notNull().default(0)
 });
 
+export const vehicles = pgTable("vehicles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  year: integer("year").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  color: text("color"),
+  licensePlate: text("license_plate"),
+  notes: text("notes")
+});
+
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   providerId: integer("provider_id").notNull(),
   serviceId: integer("service_id").notNull(),
   timeSlotId: integer("time_slot_id").notNull(),
+  vehicleId: integer("vehicle_id"),
   status: text("status").notNull().default('pending'),
   rating: integer("rating"),
   priceTier: text("price_tier").notNull(),
@@ -68,6 +83,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
   isProvider: true,
   isAdmin: true,
   name: true,
+  email: true,
+  phone: true,
+  address: true,
   latitude: true,
   longitude: true,
   description: true,
@@ -79,6 +97,7 @@ export const insertPricingConfigSchema = createInsertSchema(pricingConfig);
 export const insertServiceSchema = createInsertSchema(services);
 export const insertTimeSlotSchema = createInsertSchema(timeSlots);
 export const insertBookingSchema = createInsertSchema(bookings);
+export const insertVehicleSchema = createInsertSchema(vehicles);
 
 // Extend the booking schema with validation for location type
 export const bookingFormSchema = insertBookingSchema.extend({
@@ -86,6 +105,12 @@ export const bookingFormSchema = insertBookingSchema.extend({
     required_error: "Please select a location type",
   }),
   serviceLocation: z.string().min(1, "Address is required"),
+  serviceId: z.number({
+    required_error: "Service ID is required",
+  }),
+  timeSlotId: z.number({
+    required_error: "Time slot ID is required",
+  }),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -93,7 +118,9 @@ export type User = typeof users.$inferSelect;
 export type Service = typeof services.$inferSelect;
 export type TimeSlot = typeof timeSlots.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type Vehicle = typeof vehicles.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;

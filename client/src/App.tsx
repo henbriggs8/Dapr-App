@@ -8,6 +8,7 @@ import HomePage from "@/pages/home-page";
 import ProfilePage from "@/pages/profile-page";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
+import SpinnerDemo from "@/pages/spinner-demo";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
@@ -85,6 +86,7 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <AdminRoute path="/admin" component={AdminDashboard} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/spinner-demo" component={SpinnerDemo} />
       <Route component={NotFound} />
     </Switch>
   );
