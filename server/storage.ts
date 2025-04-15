@@ -218,7 +218,8 @@ export class MemStorage implements IStorage {
       id,
       status: booking.status || 'pending',
       rating: booking.rating || null,
-      vehicleId: booking.vehicleId || null
+      vehicleId: booking.vehicleId || null,
+      notes: booking.notes || null
     };
     this.bookings.set(id, newBooking);
     return newBooking;

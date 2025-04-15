@@ -74,7 +74,8 @@ export const bookings = pgTable("bookings", {
   serviceLocation: text("service_location").notNull(),
   serviceLocationType: text("service_location_type").notNull(),
   serviceLatitude: doublePrecision("service_latitude"),
-  serviceLongitude: doublePrecision("service_longitude")
+  serviceLongitude: doublePrecision("service_longitude"),
+  notes: text("notes")
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

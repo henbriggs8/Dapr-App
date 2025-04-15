@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
@@ -78,7 +79,8 @@ export function registerRoutes(app: Express): Server {
         rating: null, // Ensure rating is null for new bookings
         serviceLatitude: bookingWithoutId.serviceLatitude || null,
         serviceLongitude: bookingWithoutId.serviceLongitude || null,
-        vehicleId: bookingWithoutId.vehicleId || null
+        vehicleId: bookingWithoutId.vehicleId || null,
+        notes: null // Set notes to null for new bookings
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -300,5 +302,110 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time notifications
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store active client connections for each user ID
+  const clients = new Map<number, WebSocket[]>();
+  
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('WebSocket client connected');
+    // We'll set this when the client sends an auth message
+    let userId: number | null = null;
+    
+    ws.on('message', (message: string) => {
+      try {
+        const data = JSON.parse(message);
+        
+        // Handle client authentication/registration
+        if (data.type === 'auth' && typeof data.userId === 'number') {
+          userId = data.userId;
+          
+          // Store client connection for this user
+          if (!clients.has(userId)) {
+            clients.set(userId, []);
+          }
+          
+          const userConnections = clients.get(userId);
+          if (userConnections) {
+            userConnections.push(ws);
+          }
+          
+          console.log(`WebSocket client authenticated for user ${userId}`);
+          
+          // Send confirmation
+          ws.send(JSON.stringify({
+            type: 'auth_confirmed',
+            userId
+          }));
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+      
+      // Remove client from connections
+      if (userId) {
+        const userClients = clients.get(userId) || [];
+        const index = userClients.indexOf(ws);
+        if (index !== -1) {
+          userClients.splice(index, 1);
+        }
+        
+        // Remove user entry if no more connections
+        if (userClients.length === 0) {
+          clients.delete(userId);
+        }
+      }
+    });
+  });
+  
+  // Add API endpoint to update booking status with notifications
+  app.post('/api/bookings/:id/status', async (req, res) => {
+    if (!req.user?.isProvider) {
+      return res.status(403).send('Provider access required');
+    }
+    
+    const { status, stage } = req.body;
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      // Update the booking status
+      const booking = await storage.updateBookingStatus(id, status, stage);
+      
+      // Notify the customer via WebSocket if they're connected
+      const userClients = clients.get(booking.userId) || [];
+      
+      if (userClients.length > 0) {
+        const notification = JSON.stringify({
+          type: 'booking_update',
+          booking: {
+            id: booking.id,
+            status: booking.status,
+            stage: stage || null,
+          }
+        });
+        
+        userClients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(notification);
+          }
+        });
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(404).send(error instanceof Error ? error.message : 'Booking not found');
+    }
+  });
+  
   return httpServer;
 }

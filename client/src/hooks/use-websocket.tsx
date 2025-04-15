@@ -1,0 +1,139 @@
+import { useEffect, useRef, useState, useCallback, ReactNode, createContext, useContext } from "react";
+import { useAuth } from "./use-auth";
+import { useToast } from "./use-toast";
+import { queryClient } from "@/lib/queryClient";
+import type { InvalidateQueryFilters } from "@tanstack/react-query";
+
+type WebSocketStatus = "connecting" | "connected" | "disconnected";
+
+type WebSocketContextType = {
+  status: WebSocketStatus;
+  sendMessage: (message: object) => void;
+};
+
+export const WebSocketContext = createContext<WebSocketContextType | null>(null);
+
+export function WebSocketProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const socketRef = useRef<WebSocket | null>(null);
+  const [status, setStatus] = useState<WebSocketStatus>("disconnected");
+  const { toast } = useToast();
+  
+  const connect = useCallback(() => {
+    if (!user) {
+      setStatus("disconnected");
+      return;
+    }
+    
+    try {
+      setStatus("connecting");
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      socketRef.current = new WebSocket(wsUrl);
+      
+      socketRef.current.onopen = () => {
+        setStatus("connected");
+        console.log("WebSocket connection established");
+        
+        // Register with the server using the user's ID
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({
+            type: "auth",
+            userId: user.id
+          }));
+        }
+      };
+      
+      socketRef.current.onclose = () => {
+        setStatus("disconnected");
+        console.log("WebSocket connection closed");
+        
+        // Try to reconnect after delay
+        setTimeout(() => {
+          if (user) {
+            connect();
+          }
+        }, 5000);
+      };
+      
+      socketRef.current.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setStatus("disconnected");
+      };
+      
+      socketRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          console.log("WebSocket message received:", data);
+          
+          if (data.type === "auth_confirmed") {
+            console.log("WebSocket auth confirmed for user:", data.userId);
+          } else if (data.type === "booking_update") {
+            // Invalidate booking queries to refresh data
+            queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+            
+            // Show a toast notification for booking updates
+            if (data.booking) {
+              const { status, stage } = data.booking;
+              let message = `Your booking status is now: ${status}`;
+              if (stage) {
+                message = `${message} (${stage})`;
+              }
+              
+              toast({
+                title: "Booking Update",
+                description: message,
+                duration: 5000
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
+        }
+      };
+    } catch (error) {
+      console.error("Error connecting to WebSocket:", error);
+      setStatus("disconnected");
+    }
+  }, [user, toast]);
+  
+  const sendMessage = useCallback((message: object) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(message));
+    } else {
+      console.warn("Cannot send message, WebSocket is not connected");
+    }
+  }, []);
+  
+  // Connect and disconnect on mount/unmount or when user changes
+  useEffect(() => {
+    if (user) {
+      connect();
+    } else if (socketRef.current) {
+      socketRef.current.close();
+      setStatus("disconnected");
+    }
+    
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, [user, connect]);
+  
+  return (
+    <WebSocketContext.Provider value={{ status, sendMessage }}>
+      {children}
+    </WebSocketContext.Provider>
+  );
+}
+
+export function useWebSocket() {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error("useWebSocket must be used within a WebSocketProvider");
+  }
+  return context;
+}
