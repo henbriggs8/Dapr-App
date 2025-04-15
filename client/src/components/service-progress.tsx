@@ -8,12 +8,13 @@ import { CarWashSpinner } from "@/components/car-wash-spinner";
 import { Progress } from "@/components/ui/progress";
 import { Booking, Service } from "@shared/schema";
 
+// Make sure these stages match the ones in provider-dashboard.tsx
 const serviceStages = [
-  { id: "detail_pro_otw", label: "Detail Pro On The Way" },
+  { id: "on_the_way", label: "Detail Pro On The Way" },
   { id: "arrival", label: "Detail Pro Has Arrived" },
   { id: "exterior_washing", label: "Exterior Washing" },
   { id: "interior_cleaning", label: "Interior Cleaning" },
-  { id: "finishing", label: "Finishing Up" },
+  { id: "finishing", label: "Finishing Touches" },
   { id: "completed", label: "Service Completed" }
 ];
 

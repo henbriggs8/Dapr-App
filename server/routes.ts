@@ -73,17 +73,27 @@ export function registerRoutes(app: Express): Server {
   
       // Remove id from booking data since it's auto-generated
       const { id, ...bookingWithoutId } = bookingData;
+      // Create a properly typed booking object with all required fields
       const booking = {
-        ...bookingWithoutId,
-        status: 'pending', // Explicitly set status for new bookings
-        rating: null, // Ensure rating is null for new bookings
+        userId: bookingWithoutId.userId,
+        providerId: bookingWithoutId.providerId,
+        serviceId: bookingWithoutId.serviceId,
+        timeSlotId: bookingWithoutId.timeSlotId,
+        serviceLocation: bookingWithoutId.serviceLocation,
+        serviceLocationType: bookingWithoutId.serviceLocationType,
+        priceTier: bookingWithoutId.priceTier,
+        timestamp: bookingWithoutId.timestamp,
+        
+        // Optional or default fields
+        status: 'pending',
+        rating: null,
         serviceLatitude: bookingWithoutId.serviceLatitude || null,
         serviceLongitude: bookingWithoutId.serviceLongitude || null,
         vehicleId: bookingWithoutId.vehicleId || null,
-        notes: null, // Set notes to null for new bookings
-        date: req.body.date || null, // Use date from request body if available 
-        time: req.body.time || null, // Use time from request body if available
-        currentStage: null // Ensure currentStage is null for new bookings
+        notes: null,
+        date: req.body.date || null,
+        time: req.body.time || null,
+        currentStage: null
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -323,14 +333,16 @@ export function registerRoutes(app: Express): Server {
         
         // Handle client authentication/registration
         if (data.type === 'auth' && typeof data.userId === 'number') {
-          userId = data.userId;
+          // Ensure userId is never null after this point
+          const userIdValue = data.userId;
+          userId = userIdValue;
           
           // Store client connection for this user
-          if (!clients.has(userId)) {
-            clients.set(userId, []);
+          if (!clients.has(userIdValue)) {
+            clients.set(userIdValue, []);
           }
           
-          const userConnections = clients.get(userId);
+          const userConnections = clients.get(userIdValue);
           if (userConnections) {
             userConnections.push(ws);
           }
