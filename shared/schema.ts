@@ -68,6 +68,7 @@ export const bookings = pgTable("bookings", {
   timeSlotId: integer("time_slot_id").notNull(),
   vehicleId: integer("vehicle_id"),
   status: text("status").notNull().default('pending'),
+  currentStage: text("current_stage"), // Added field for tracking service progress stages
   rating: integer("rating"),
   priceTier: text("price_tier").notNull(),
   timestamp: text("timestamp").notNull(),
@@ -75,7 +76,9 @@ export const bookings = pgTable("bookings", {
   serviceLocationType: text("service_location_type").notNull(),
   serviceLatitude: doublePrecision("service_latitude"),
   serviceLongitude: doublePrecision("service_longitude"),
-  notes: text("notes")
+  notes: text("notes"),
+  date: text("date"), // Added for booking date 
+  time: text("time") // Added for booking time
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

@@ -76,16 +76,35 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             
             // Show a toast notification for booking updates
             if (data.booking) {
-              const { status, stage } = data.booking;
-              let message = `Your booking status is now: ${status}`;
-              if (stage) {
-                message = `${message} (${stage})`;
+              const { status, stage, id } = data.booking;
+              
+              // Format the stage message if available
+              const stageLabels: Record<string, string> = {
+                'on_the_way': 'Detail Pro On The Way',
+                'arrival': 'Arrival at Location',
+                'exterior_washing': 'Exterior Washing',
+                'interior_cleaning': 'Interior Cleaning',
+                'finishing': 'Finishing Touches',
+                'completed': 'Service Completed'
+              };
+              
+              let message = `Your booking status is now: ${status.replace('_', ' ')}`;
+              if (stage && stageLabels[stage]) {
+                message = `${message} - ${stageLabels[stage]}`;
               }
               
               toast({
                 title: "Booking Update",
                 description: message,
-                duration: 5000
+                duration: 5000,
+                action: stage === 'completed' ? undefined : (
+                  <button
+                    onClick={() => window.location.href = `/booking?id=${id}`}
+                    className="bg-primary text-white px-3 py-1 rounded-md text-xs"
+                  >
+                    View
+                  </button>
+                )
               });
             }
           }

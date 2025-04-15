@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
 import ProfilePage from "@/pages/profile-page";
+import BookingDetails from "@/pages/booking-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
 import SpinnerDemo from "@/pages/spinner-demo";
@@ -85,6 +86,7 @@ function Router() {
         <ProtectedRoute path="/" component={HomePage} />
       )}
       <ProtectedRoute path="/profile" component={ProfilePage} />
+      <ProtectedRoute path="/booking" component={BookingDetails} />
       <AdminRoute path="/admin" component={AdminDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/spinner-demo" component={SpinnerDemo} />

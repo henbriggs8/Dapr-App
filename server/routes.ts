@@ -382,23 +382,25 @@ export function registerRoutes(app: Express): Server {
       const booking = await storage.updateBookingStatus(id, status, stage);
       
       // Notify the customer via WebSocket if they're connected
-      const userClients = clients.get(booking.userId) || [];
-      
-      if (userClients.length > 0) {
-        const notification = JSON.stringify({
-          type: 'booking_update',
-          booking: {
-            id: booking.id,
-            status: booking.status,
-            stage: stage || null,
-          }
-        });
+      if (booking.userId) {
+        const userClients = clients.get(booking.userId) || [];
         
-        userClients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(notification);
-          }
-        });
+        if (userClients.length > 0) {
+          const notification = JSON.stringify({
+            type: 'booking_update',
+            booking: {
+              id: booking.id,
+              status: booking.status,
+              stage: booking.currentStage || null,
+            }
+          });
+          
+          userClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(notification);
+            }
+          });
+        }
       }
       
       res.json(booking);

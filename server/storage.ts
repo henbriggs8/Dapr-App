@@ -253,8 +253,8 @@ export class MemStorage implements IStorage {
     const updatedBooking = {
       ...booking,
       status,
-      // Store the current stage in the notes field if provided
-      notes: stage ? `Current stage: ${stage}` : booking.notes
+      currentStage: stage || booking.currentStage,
+      notes: booking.notes
     };
     
     this.bookings.set(id, updatedBooking);

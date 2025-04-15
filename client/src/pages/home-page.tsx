@@ -1,9 +1,9 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { User, Service, TimeSlot } from "@shared/schema";
+import { User, Service, TimeSlot, Booking } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { Calendar, Clock } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Calendar, Clock, ChevronRight, Car } from "lucide-react";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ export default function HomePage() {
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [, setLocation] = useLocation();
   
   // Query providers (we'll still need the company info)
   const { data: providers, isLoading: providersLoading } = useQuery<User[]>({
@@ -38,7 +39,13 @@ export default function HomePage() {
     enabled: !!selectedDate,
   });
   
-  const isLoading = providersLoading || servicesLoading || timeSlotsLoading;
+  // Query user bookings
+  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
+    queryKey: ["/api/bookings"],
+    enabled: !!user,
+  });
+  
+  const isLoading = providersLoading || servicesLoading || timeSlotsLoading || bookingsLoading;
   
   if (isLoading) {
     return (
@@ -111,6 +118,73 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* User Bookings Section */}
+      {bookings && bookings.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Your Bookings</CardTitle>
+            <CardDescription>Track and manage your car wash appointments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {bookings.map((booking) => {
+                const service = services?.find(s => s.id === booking.serviceId);
+                const timeSlot = timeSlots?.find(t => t.id === booking.timeSlotId);
+                
+                return (
+                  <div 
+                    key={booking.id} 
+                    className="flex justify-between items-center border p-4 rounded-lg"
+                    onClick={() => setLocation(`/booking?id=${booking.id}`)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`rounded-full w-3 h-3 ${
+                        booking.status === 'completed' ? 'bg-green-500' : 
+                        booking.status === 'in_progress' ? 'bg-blue-500' : 
+                        booking.status === 'cancelled' ? 'bg-red-500' : 
+                        'bg-amber-500'
+                      }`} />
+                      <div>
+                        <h3 className="font-medium">{service?.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {timeSlot ? (
+                            <>
+                              <Calendar className="h-3 w-3 inline mr-1" />
+                              {formatDate(timeSlot.date)} • 
+                              <Clock className="h-3 w-3 inline mx-1" />
+                              {timeSlot.startTime}
+                            </>
+                          ) : (
+                            'Loading details...'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={
+                          booking.status === 'completed' ? 'default' : 
+                          booking.status === 'in_progress' ? 'secondary' : 
+                          booking.status === 'cancelled' ? 'destructive' : 
+                          'outline'
+                        }
+                        className={booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''}
+                      >
+                        {booking.status.replace('_', ' ')}
+                      </Badge>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="grid gap-8 md:grid-cols-12">
         <div className="md:col-span-8">
           <div className="mb-8">

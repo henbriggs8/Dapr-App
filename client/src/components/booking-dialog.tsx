@@ -94,6 +94,12 @@ export default function BookingDialog({
     data.timeSlotId = timeSlotId;
     data.timestamp = timeSlot ? `${timeSlot.date}T${timeSlot.startTime}:00` : new Date().toISOString();
     
+    // Add date and time fields for better display in app
+    if (timeSlot) {
+      data.date = timeSlot.date;
+      data.time = timeSlot.startTime;
+    }
+    
     bookingMutation.mutate(data);
   };
 

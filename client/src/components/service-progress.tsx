@@ -18,6 +18,10 @@ const serviceStages = [
 ];
 
 function getActiveServiceStage(booking: Booking): string | null {
+  // First check if currentStage is available directly
+  if (booking.currentStage) return booking.currentStage;
+  
+  // Fallback to parsing from notes for backward compatibility
   if (!booking.notes) return null;
   
   const match = booking.notes.match(/Current stage: (.+)/);
