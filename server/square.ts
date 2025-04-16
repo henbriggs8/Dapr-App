@@ -1,5 +1,5 @@
+// Import Square SDK
 import { Square } from 'square';
-import { Environment } from 'square/dist/types/models/models';
 
 // Define ApiError type for error handling
 type ApiError = {
@@ -12,11 +12,17 @@ type ApiError = {
 import { randomBytes } from 'crypto';
 import { BookingFormData } from '@shared/schema';
 
+// Define the Environment enum type that's in the Square SDK
+enum Environment {
+  Sandbox = 'sandbox',
+  Production = 'production'
+}
+
 // Initialize the Square client
 const { accessToken, environment } = getSquareCredentials();
-export const squareClient = new Square({
+export const squareClient = new Client({
   accessToken,
-  environment: environment as Environment
+  environment
 });
 
 function getSquareCredentials() {

@@ -80,7 +80,7 @@ export default function HomePage() {
       const dateString = date.toISOString().split('T')[0];
       dates.push({
         value: dateString,
-        label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { weekday: 'short' })
+        label: i === 0 ? 'Today' : i === 1 ? 'Tmrw' : date.toLocaleDateString('en-US', { weekday: 'short' })
       });
     }
     
@@ -200,7 +200,11 @@ export default function HomePage() {
               <Tabs defaultValue={dateOptions[0].value} onValueChange={setSelectedDate}>
                 <TabsList className="grid grid-cols-7 w-full">
                   {dateOptions.map((date) => (
-                    <TabsTrigger key={date.value} value={date.value}>
+                    <TabsTrigger 
+                      key={date.value} 
+                      value={date.value}
+                      className="text-xs sm:text-sm py-1 px-1"
+                    >
                       {date.label}
                     </TabsTrigger>
                   ))}
