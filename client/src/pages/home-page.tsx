@@ -90,7 +90,7 @@ export default function HomePage() {
   const dateOptions = generateDateOptions();
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 pb-20">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <img 
@@ -190,7 +190,13 @@ export default function HomePage() {
         <div className="md:col-span-9">
           <div className="mb-8">
             <ServiceCards
-              onServiceSelect={(service) => setSelectedServiceId(service.id)} 
+              onServiceSelect={(service) => {
+                console.log("Service selected in HomePage:", service);
+                // Prevent re-selecting the same service
+                if (selectedServiceId !== service.id) {
+                  setSelectedServiceId(service.id);
+                }
+              }}
             />
           </div>
           

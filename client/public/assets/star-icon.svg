@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple star shape -->
+  <path d="M4 1L5 3H7.5L5.5 4.5L6 7L4 5.5L2 7L2.5 4.5L0.5 3H3L4 1Z" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>
+</svg>

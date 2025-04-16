@@ -6,6 +6,8 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
 import ProfilePage from "@/pages/profile-page";
+import ServicesPage from "@/pages/services-page";
+import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
@@ -15,6 +17,7 @@ import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
 import { OnboardingJourney } from "@/components/onboarding-journey";
+import TabNavigation from "@/components/tab-navigation";
 import { useState, useEffect } from "react";
 
 function AdminRoute({
@@ -112,6 +115,8 @@ function Router() {
         ) : (
           <ProtectedRoute path="/" component={HomePage} />
         )}
+        <ProtectedRoute path="/services" component={ServicesPage} />
+        <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking" component={BookingDetails} />
         <AdminRoute path="/admin" component={AdminDashboard} />
@@ -125,6 +130,9 @@ function Router() {
         show={showOnboarding} 
         onComplete={handleOnboardingComplete}
       />
+      
+      {/* Show tab navigation for regular users only */}
+      {user && !user.isAdmin && !user.isProvider && <TabNavigation />}
     </>
   );
 }

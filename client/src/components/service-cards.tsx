@@ -1,23 +1,30 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 
 export default function ServiceCards({
   onServiceSelect,
 }: {
   onServiceSelect?: (service: Service) => void;
 }) {
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  
   const { data: services, isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
 
-  // Select first service by default when data is loaded
+  // Select first service by default when data is loaded only once, using a ref to avoid multiple re-runs
+  const initialSelectionMade = React.useRef(false);
+  
   useEffect(() => {
-    if (services && services.length > 0 && onServiceSelect) {
+    if (services && services.length > 0 && onServiceSelect && !initialSelectionMade.current) {
+      console.log("Making initial service selection");
+      initialSelectionMade.current = true;
+      setSelectedServiceId(services[0].id);
       onServiceSelect(services[0]);
     }
   }, [services, onServiceSelect]);
@@ -40,8 +47,8 @@ export default function ServiceCards({
       case "basic":
         return (
           <img 
-            src="/assets/water-drops-8.svg" 
-            alt="Water drops" 
+            src="/assets/water-droplet.svg" 
+            alt="Water droplet" 
             className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
@@ -58,8 +65,8 @@ export default function ServiceCards({
       case "premium":
         return (
           <img 
-            src="/assets/sparkles-icon.svg" 
-            alt="Sparkles" 
+            src="/assets/star-icon.svg" 
+            alt="Star" 
             className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
@@ -67,8 +74,8 @@ export default function ServiceCards({
       default:
         return (
           <img 
-            src="/assets/water-drops-8.svg" 
-            alt="Water drops" 
+            src="/assets/water-droplet.svg" 
+            alt="Water droplet" 
             className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
@@ -80,13 +87,13 @@ export default function ServiceCards({
   const getServiceColor = (category: string) => {
     switch (category) {
       case "basic":
-        return "bg-gradient-to-br from-[#8c52ff]/80 to-[#8c52ff]/90";
+        return "bg-gradient-to-br from-[#b491fa]/90 to-[#b491fa]";
       case "standard":
         return "bg-gradient-to-br from-[#8c52ff]/85 to-[#6930c3]/95";
       case "premium":
-        return "bg-gradient-to-br from-[#6930c3]/90 to-[#5e30a0]";
+        return "bg-gradient-to-br from-[#5e17eb]/90 to-[#5e17eb]";
       default:
-        return "bg-gradient-to-br from-[#8c52ff]/80 to-[#8c52ff]/90";
+        return "bg-gradient-to-br from-[#b491fa]/90 to-[#b491fa]";
     }
   };
 
@@ -144,9 +151,15 @@ export default function ServiceCards({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ y: -5 }}
-            onClick={() => onServiceSelect && onServiceSelect(service)}
+            onClick={() => {
+              if (onServiceSelect) {
+                console.log("Service selected:", service);
+                setSelectedServiceId(service.id);
+                onServiceSelect(service);
+              }
+            }}
           >
-            <Card className="cursor-pointer border-2 hover:border-[#8c52ff] transition-all duration-300 h-full overflow-hidden group">
+            <Card className={`cursor-pointer border-2 ${selectedServiceId === service.id ? 'border-[#8c52ff] shadow-lg' : 'border-muted'} hover:border-[#8c52ff] hover:shadow-lg active:scale-95 transition-all duration-300 h-full overflow-hidden group`}>
               <div className={`relative ${getServiceColor(service.category)} p-5`}>
                 <div className="absolute right-2 top-2 bg-white/20 rounded-full w-6 h-6 flex items-center justify-center backdrop-blur-sm">
                   {getServiceIcon(service.category)}
@@ -170,8 +183,13 @@ export default function ServiceCards({
                     <li key={i}>{point}</li>
                   ))}
                 </ul>
-                <div className="mt-3 text-sm font-medium text-[#8c52ff] group-hover:text-[#8c52ff] group-hover:underline transition-all duration-300">
-                  Select this package →
+                <div className="mt-3 flex justify-between items-center">
+                  <div className="text-sm font-medium text-[#8c52ff] group-hover:text-[#8c52ff] group-hover:underline transition-all duration-300">
+                    Select this package →
+                  </div>
+                  {selectedServiceId === service.id && (
+                    <Check className="h-5 w-5 text-[#8c52ff]" />
+                  )}
                 </div>
               </CardContent>
             </Card>

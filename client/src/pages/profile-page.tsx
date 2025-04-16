@@ -207,7 +207,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 pb-20">
       <div className="max-w-4xl mx-auto">
         <Card className="mb-8">
           <CardHeader className="flex flex-row items-center justify-between">
