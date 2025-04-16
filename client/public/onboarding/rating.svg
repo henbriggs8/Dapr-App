@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="180" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g filter="url(#filter0_d)">
+    <path d="M120 140C164.183 140 200 104.183 200 60C200 15.8172 164.183 -20 120 -20C75.8172 -20 40 15.8172 40 60C40 104.183 75.8172 140 120 140Z" fill="url(#paint0_linear)"/>
+    <circle cx="120" cy="60" r="80" fill="url(#paint1_linear)" fill-opacity="0.6"/>
+    
+    <!-- Rating Card -->
+    <rect x="60" y="35" width="120" height="90" rx="6" fill="white"/>
+    <rect x="60" y="35" width="120" height="25" rx="6" fill="#8C52FF"/>
+    <path d="M60 50C60 42.268 66.268 36 74 36H166C173.732 36 180 42.268 180 50V60H60V50Z" fill="#8C52FF"/>
+    
+    <!-- Rating Title -->
+    <text x="120" y="52" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">HOW WAS YOUR EXPERIENCE?</text>
+    
+    <!-- Stars -->
+    <path d="M72 85L76.1135 92.7532L84.5595 94.1229L78.2797 100.247L79.8885 108.877L72 104.8L64.1115 108.877L65.7203 100.247L59.4405 94.1229L67.8865 92.7532L72 85Z" fill="#F3F4F6"/>
+    <path d="M97 85L101.114 92.7532L109.56 94.1229L103.28 100.247L104.889 108.877L97 104.8L89.1115 108.877L90.7203 100.247L84.4405 94.1229L92.8865 92.7532L97 85Z" fill="#F3F4F6"/>
+    <path d="M122 85L126.114 92.7532L134.56 94.1229L128.28 100.247L129.889 108.877L122 104.8L114.112 108.877L115.72 100.247L109.44 94.1229L117.886 92.7532L122 85Z" fill="#F3F4F6"/>
+    <path d="M147 85L151.114 92.7532L159.56 94.1229L153.28 100.247L154.889 108.877L147 104.8L139.112 108.877L140.72 100.247L134.44 94.1229L142.886 92.7532L147 85Z" fill="#F3F4F6"/>
+    <path d="M172 85L176.114 92.7532L184.56 94.1229L178.28 100.247L179.889 108.877L172 104.8L164.112 108.877L165.72 100.247L159.44 94.1229L167.886 92.7532L172 85Z" fill="#F3F4F6"/>
+    
+    <!-- Active Stars (3 out of 5) -->
+    <path d="M72 85L76.1135 92.7532L84.5595 94.1229L78.2797 100.247L79.8885 108.877L72 104.8L64.1115 108.877L65.7203 100.247L59.4405 94.1229L67.8865 92.7532L72 85Z" fill="#FFD700"/>
+    <path d="M97 85L101.114 92.7532L109.56 94.1229L103.28 100.247L104.889 108.877L97 104.8L89.1115 108.877L90.7203 100.247L84.4405 94.1229L92.8865 92.7532L97 85Z" fill="#FFD700"/>
+    <path d="M122 85L126.114 92.7532L134.56 94.1229L128.28 100.247L129.889 108.877L122 104.8L114.112 108.877L115.72 100.247L109.44 94.1229L117.886 92.7532L122 85Z" fill="#FFD700"/>
+    
+    <!-- Number Labels -->
+    <text x="72" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#666666">1</text>
+    <text x="97" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#666666">2</text>
+    <text x="122" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#666666">3</text>
+    <text x="147" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#666666">4</text>
+    <text x="172" y="75" text-anchor="middle" font-family="Arial" font-size="10" fill="#666666">5</text>
+    
+    <!-- Comment Box -->
+    <rect x="70" y="115" width="100" height="30" rx="4" fill="#F3F4F6"/>
+    <rect x="75" y="122" width="60" height="5" rx="1" fill="#D1D5DB"/>
+    <rect x="75" y="132" width="40" height="5" rx="1" fill="#D1D5DB"/>
+    
+    <!-- Submit Button -->
+    <rect x="135" y="140" width="35" height="20" rx="4" fill="#8C52FF"/>
+    <text x="152.5" y="154" text-anchor="middle" font-family="Arial" font-size="10" fill="white">SUBMIT</text>
+    
+    <!-- Check Icon -->
+    <circle cx="170" cy="40" r="10" fill="white" fill-opacity="0.2"/>
+    <path d="M166 40L169 43L175 37" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Sparkles -->
+    <circle cx="70" cy="30" r="3" fill="white"/>
+    <circle cx="180" cy="50" r="2" fill="white"/>
+    <circle cx="150" cy="20" r="2.5" fill="white"/>
+    <circle cx="100" cy="25" r="2" fill="white"/>
+    
+    <!-- Emoji Indicators -->
+    <circle cx="72" cy="95" r="4" fill="white" fill-opacity="0.3"/>
+    <path d="M70 97.5C70 97.5 71 96 72 96C73 96 74 97.5 74 97.5" stroke="white" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="97" cy="95" r="4" fill="white" fill-opacity="0.3"/>
+    <path d="M95 97C95 97 96 98 97 98C98 98 99 97 99 97" stroke="white" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="122" cy="95" r="4" fill="white" fill-opacity="0.3"/>
+    <path d="M120 95H124" stroke="white" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="147" cy="95" r="4" fill="white" fill-opacity="0.3"/>
+    <path d="M145 94C145 94 146 95 147 95C148 95 149 94 149 94" stroke="white" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="172" cy="95" r="4" fill="white" fill-opacity="0.3"/>
+    <path d="M170 93C170 93 171 95 172 95C173 95 174 93 174 93" stroke="white" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <filter id="filter0_d" x="0" y="-40" width="240" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/>
+      <feOffset dy="10"/>
+      <feGaussianBlur stdDeviation="10"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+    <linearGradient id="paint0_linear" x1="40" y1="-20" x2="200" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4F4F9"/>
+      <stop offset="1" stop-color="#EBEEFF"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="120" y1="-20" x2="120" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -11,6 +11,7 @@ import { useState } from "react";
 import BookingDialog from "@/components/booking-dialog";
 import { Badge } from "@/components/ui/badge";
 import PricingSlider from "@/components/pricing-slider";
+import { OnboardingButton } from "@/components/onboarding-button";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -311,6 +312,9 @@ export default function HomePage() {
           timeSlotId={selectedTimeSlotId!}
         />
       )}
+      
+      {/* Onboarding Tour Button */}
+      <OnboardingButton />
     </div>
   );
 }

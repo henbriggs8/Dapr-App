@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="180" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g filter="url(#filter0_d)">
+    <path d="M120 140C164.183 140 200 104.183 200 60C200 15.8172 164.183 -20 120 -20C75.8172 -20 40 15.8172 40 60C40 104.183 75.8172 140 120 140Z" fill="url(#paint0_linear)"/>
+    <circle cx="120" cy="60" r="80" fill="url(#paint1_linear)" fill-opacity="0.6"/>
+    
+    <!-- Calendar Shape -->
+    <rect x="70" y="45" width="100" height="90" rx="4" fill="white"/>
+    <rect x="70" y="45" width="100" height="20" rx="4" fill="#8C52FF"/>
+    
+    <!-- Month Title -->
+    <text x="120" y="59" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">APRIL 2025</text>
+    
+    <!-- Calendar Days Header -->
+    <rect x="75" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="81" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">M</text>
+    
+    <rect x="93" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="99" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">T</text>
+    
+    <rect x="111" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="117" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">W</text>
+    
+    <rect x="129" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="135" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">T</text>
+    
+    <rect x="147" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="153" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">F</text>
+    
+    <rect x="165" y="70" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="171" y="79" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">S</text>
+    
+    <!-- Calendar Dates - Week 1 -->
+    <rect x="75" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="81" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">1</text>
+    
+    <rect x="93" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="99" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">2</text>
+    
+    <rect x="111" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="117" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">3</text>
+    
+    <rect x="129" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="135" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">4</text>
+    
+    <rect x="147" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="153" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">5</text>
+    
+    <rect x="165" y="87" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="171" y="96" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">6</text>
+    
+    <!-- Calendar Dates - Week 2 -->
+    <rect x="75" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="81" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">7</text>
+    
+    <rect x="93" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="99" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">8</text>
+    
+    <rect x="111" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="117" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">9</text>
+    
+    <rect x="129" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="135" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">10</text>
+    
+    <rect x="147" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="153" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">11</text>
+    
+    <rect x="165" y="104" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="171" y="113" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">12</text>
+    
+    <!-- Calendar Dates - Week 3 -->
+    <rect x="75" y="121" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="81" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">13</text>
+    
+    <rect x="93" y="121" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="99" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">14</text>
+    
+    <rect x="111" y="121" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="117" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">15</text>
+    
+    <!-- Selected Date -->
+    <rect x="129" y="121" width="12" height="12" rx="1" fill="#8C52FF"/>
+    <text x="135" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="white">16</text>
+    
+    <rect x="147" y="121" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="153" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">17</text>
+    
+    <rect x="165" y="121" width="12" height="12" rx="1" fill="#F4F4F4"/>
+    <text x="171" y="130" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">18</text>
+    
+    <!-- Time Slots Box -->
+    <rect x="85" y="145" width="70" height="20" rx="3" fill="#F4F4F4"/>
+    <text x="102" y="158" text-anchor="middle" font-family="Arial" font-size="8" fill="#666666">9:00 AM</text>
+    
+    <!-- Selected Slot -->
+    <rect x="110" y="145" width="30" height="20" rx="3" fill="#8C52FF"/>
+    <text x="125" y="158" text-anchor="middle" font-family="Arial" font-size="8" fill="white">10:30 AM</text>
+    
+    <!-- Booking Button -->
+    <rect x="150" y="145" width="10" height="20" rx="3" fill="#F4F4F4"/>
+    
+    <!-- Clock Hands -->
+    <circle cx="135" cy="30" r="12" fill="white" stroke="#8C52FF" stroke-width="1.5"/>
+    <line x1="135" y1="30" x2="135" y2="22" stroke="#8C52FF" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="135" y1="30" x2="142" y2="33" stroke="#8C52FF" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="135" cy="30" r="1.5" fill="#8C52FF"/>
+    
+    <!-- Sparkles -->
+    <circle cx="70" cy="40" r="3" fill="white"/>
+    <circle cx="180" cy="50" r="2" fill="white"/>
+    <circle cx="150" cy="20" r="2.5" fill="white"/>
+    <circle cx="100" cy="25" r="2" fill="white"/>
+  </g>
+  <defs>
+    <filter id="filter0_d" x="0" y="-40" width="240" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/>
+      <feOffset dy="10"/>
+      <feGaussianBlur stdDeviation="10"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+    <linearGradient id="paint0_linear" x1="40" y1="-20" x2="200" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4F4F9"/>
+      <stop offset="1" stop-color="#EBEEFF"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="120" y1="-20" x2="120" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

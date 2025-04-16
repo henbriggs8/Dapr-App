@@ -14,6 +14,8 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
+import { OnboardingJourney } from "@/components/onboarding-journey";
+import { useState, useEffect } from "react";
 
 function AdminRoute({
   path,
@@ -77,21 +79,53 @@ function ProviderRoute({
 
 function Router() {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Show onboarding for regular (non-admin, non-provider) users after login
+  useEffect(() => {
+    if (user && !user.isAdmin && !user.isProvider) {
+      // Check if onboarding has been completed before
+      const hasCompletedOnboarding = localStorage.getItem('dapper_onboarding_completed');
+      
+      if (!hasCompletedOnboarding) {
+        // Show onboarding after a short delay to ensure smooth transition
+        const timer = setTimeout(() => {
+          setShowOnboarding(true);
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user]);
+  
+  const handleOnboardingComplete = () => {
+    // Mark onboarding as completed in localStorage
+    localStorage.setItem('dapper_onboarding_completed', 'true');
+    setShowOnboarding(false);
+  };
 
   return (
-    <Switch>
-      {user?.isProvider ? (
-        <ProviderRoute path="/" component={ProviderDashboard} />
-      ) : (
-        <ProtectedRoute path="/" component={HomePage} />
-      )}
-      <ProtectedRoute path="/profile" component={ProfilePage} />
-      <ProtectedRoute path="/booking" component={BookingDetails} />
-      <AdminRoute path="/admin" component={AdminDashboard} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/spinner-demo" component={SpinnerDemo} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        {user?.isProvider ? (
+          <ProviderRoute path="/" component={ProviderDashboard} />
+        ) : (
+          <ProtectedRoute path="/" component={HomePage} />
+        )}
+        <ProtectedRoute path="/profile" component={ProfilePage} />
+        <ProtectedRoute path="/booking" component={BookingDetails} />
+        <AdminRoute path="/admin" component={AdminDashboard} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/spinner-demo" component={SpinnerDemo} />
+        <Route component={NotFound} />
+      </Switch>
+      
+      {/* Onboarding Journey with Micro-Interactions */}
+      <OnboardingJourney 
+        show={showOnboarding} 
+        onComplete={handleOnboardingComplete}
+      />
+    </>
   );
 }
 

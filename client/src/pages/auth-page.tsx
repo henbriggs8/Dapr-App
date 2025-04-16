@@ -218,7 +218,7 @@ export default function AuthPage() {
             />
           </div>
           <p className="text-lg text-muted-foreground mb-8">
-            Premium car wash and detailing services for the discerning vehicle owner. 
+            Redefining the Neighborhood Car Wash.
             Professional care, transparent pricing, and effortless scheduling.
           </p>
           <div className="grid grid-cols-2 gap-4">
