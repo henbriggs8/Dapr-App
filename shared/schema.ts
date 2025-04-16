@@ -96,7 +96,15 @@ export const bookings = pgTable("bookings", {
   previousProviders: json("previous_providers").default([]), // Array of providers who rejected
   addOns: json("add_ons").default([]), // JSON array of selected add-ons
   addOnTotal: integer("add_on_total"), // Total price of add-ons
-  totalPrice: integer("total_price") // Total booking price incl. add-ons
+  totalPrice: integer("total_price"), // Total booking price incl. add-ons
+  
+  // Payment fields
+  isPaid: boolean("is_paid").default(false), // Whether booking has been paid for
+  paymentStatus: text("payment_status").default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  paymentId: text("payment_id"), // Square payment ID
+  paymentDate: text("payment_date"), // When payment was completed
+  paymentUrl: text("payment_url"), // URL for Square checkout
+  squareOrderId: text("square_order_id") // Square order ID
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
