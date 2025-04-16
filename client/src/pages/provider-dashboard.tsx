@@ -50,6 +50,7 @@ export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState("active-bookings");
   const [earningsPeriod, setEarningsPeriod] = useState<"today" | "week" | "month">("month");
   const [locationError, setLocationError] = useState<string>();
+  const [bookingsTimeframe, setBookingsTimeframe] = useState<"day" | "week" | "month">("day");
   
   // Fetch active bookings
   const { data: activeBookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
@@ -60,6 +61,27 @@ export default function ProviderDashboard() {
     },
     enabled: !!user && user.isProvider,
     refetchInterval: 10000 // Refetch every 10 seconds
+  });
+  
+  // Fetch bookings by timeframe
+  const { data: timeframeBookings, isLoading: timeframeLoading } = useQuery<Booking[]>({
+    queryKey: ["/api/provider/bookings", bookingsTimeframe],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/provider/bookings/${bookingsTimeframe}`);
+      return await res.json();
+    },
+    enabled: !!user && user.isProvider && activeTab === "bookings-history"
+  });
+  
+  // Check for any booking assignments
+  const { data: assignmentData, isLoading: assignmentLoading, refetch: refetchAssignments } = useQuery({
+    queryKey: ["/api/provider/assignments"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/provider/assignments");
+      return await res.json();
+    },
+    enabled: !!user && user.isProvider && user.currentStatus === "online",
+    refetchInterval: 30000 // Check for new assignments every 30 seconds
   });
 
   // Fetch all services
@@ -196,6 +218,55 @@ export default function ProviderDashboard() {
     onError: (error: Error) => {
       toast({
         title: "Failed to complete service",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Accept booking assignment mutation
+  const acceptBookingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/provider/bookings/${id}/accept`);
+      return await res.json();
+    },
+    onSuccess: (booking: Booking) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings/active"] });
+      
+      toast({
+        title: "Booking accepted",
+        description: "You've accepted the new booking. It's now in your active bookings.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to accept booking",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Reject booking assignment mutation
+  const rejectBookingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/provider/bookings/${id}/reject`);
+      return await res.json();
+    },
+    onSuccess: (booking: Booking) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/assignments"] });
+      
+      toast({
+        title: "Booking rejected",
+        description: "You've rejected the booking. It will be offered to another provider.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to reject booking",
         description: error.message,
         variant: "destructive",
       });
@@ -354,17 +425,207 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
+      {/* Booking Assignment Alert */}
+      {assignmentData && 'id' in assignmentData && (
+        <Card className="mb-6 bg-amber-50 border-amber-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-amber-600" />
+              New Booking Assignment
+            </CardTitle>
+            <CardDescription>
+              You have a new booking assignment waiting for your response
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Booking Details</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-medium">Booking ID:</span> #{assignmentData.id}</p>
+                    <p><span className="font-medium">Service:</span> {getServiceName(assignmentData.serviceId)}</p>
+                    <p><span className="font-medium">Date/Time:</span> {assignmentData.date && assignmentData.time ? 
+                      formatDateTime(assignmentData.date, assignmentData.time) : 
+                      'As soon as possible'
+                    }</p>
+                    <p><span className="font-medium">Location:</span> {assignmentData.serviceLocation}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Vehicle Information</h3>
+                  {assignmentData.vehicleId ? (
+                    <div className="space-y-2">
+                      <p>
+                        <Car className="h-4 w-4 inline mr-2 text-muted-foreground" />
+                        {getVehicle(assignmentData.vehicleId)?.year} {getVehicle(assignmentData.vehicleId)?.make} {getVehicle(assignmentData.vehicleId)?.model}
+                      </p>
+                      <p><span className="font-medium">Color:</span> {getVehicle(assignmentData.vehicleId)?.color}</p>
+                      <p><span className="font-medium">License Plate:</span> {getVehicle(assignmentData.vehicleId)?.licensePlate}</p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No vehicle information provided</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-4 flex justify-end gap-4">
+                <Button 
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-50"
+                  onClick={() => rejectBookingMutation.mutate(assignmentData.id)}
+                  disabled={rejectBookingMutation.isPending}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  {rejectBookingMutation.isPending ? 'Rejecting...' : 'Reject Booking'}
+                </Button>
+                <Button 
+                  className="bg-[#8c52ff] hover:bg-[#7a45e0]"
+                  onClick={() => acceptBookingMutation.mutate(assignmentData.id)}
+                  disabled={acceptBookingMutation.isPending}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {acceptBookingMutation.isPending ? 'Accepting...' : 'Accept Booking'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <Tabs 
         defaultValue="active-bookings" 
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid grid-cols-3 w-full md:w-[60%] lg:w-[40%]">
+        <TabsList className="grid grid-cols-4 w-full md:w-[80%] lg:w-[60%]">
           <TabsTrigger value="active-bookings">Active Bookings</TabsTrigger>
+          <TabsTrigger value="bookings-history">Booking History</TabsTrigger>
           <TabsTrigger value="earnings">Earnings</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
         </TabsList>
+        
+        {/* Add Booking History Tab */}
+        <TabsContent value="bookings-history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Booking History</CardTitle>
+                  <CardDescription>
+                    View your past and upcoming bookings
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={bookingsTimeframe === "day" ? "default" : "outline"}
+                    size="sm"
+                    className={bookingsTimeframe === "day" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
+                    onClick={() => setBookingsTimeframe("day")}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant={bookingsTimeframe === "week" ? "default" : "outline"}
+                    size="sm"
+                    className={bookingsTimeframe === "week" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
+                    onClick={() => setBookingsTimeframe("week")}
+                  >
+                    This Week
+                  </Button>
+                  <Button
+                    variant={bookingsTimeframe === "month" ? "default" : "outline"}
+                    size="sm"
+                    className={bookingsTimeframe === "month" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
+                    onClick={() => setBookingsTimeframe("month")}
+                  >
+                    This Month
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {timeframeLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <CarWashSpinner size="md" showText text="Loading bookings..." />
+                </div>
+              ) : !timeframeBookings || timeframeBookings.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-lg text-muted-foreground">No bookings found for this time period.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Try selecting a different timeframe.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {timeframeBookings.map((booking) => {
+                    const service = services?.find(s => s.id === booking.serviceId);
+                    // Determine status color
+                    let statusColor = "bg-gray-200";
+                    if (booking.status === "pending") statusColor = "bg-yellow-200 text-yellow-700";
+                    if (booking.status === "confirmed") statusColor = "bg-green-200 text-green-700";
+                    if (booking.status === "in_progress") statusColor = "bg-blue-200 text-blue-700";
+                    if (booking.status === "completed") statusColor = "bg-purple-200 text-purple-700";
+                    if (booking.status === "cancelled") statusColor = "bg-red-200 text-red-700";
+                    if (booking.status === "assigned") statusColor = "bg-orange-200 text-orange-700";
+                    
+                    return (
+                      <div key={booking.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">Booking #{booking.id}</p>
+                              <div className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>
+                                {booking.status.replace('_', ' ')}
+                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              <Calendar className="inline h-3 w-3 mr-1" /> 
+                              {booking.date && booking.time 
+                                ? formatDateTime(booking.date, booking.time)
+                                : new Date(booking.timestamp).toLocaleString()
+                              }
+                            </p>
+                            <p className="text-sm mt-1">
+                              <span className="font-medium">Service:</span> {service?.name}
+                            </p>
+                            {booking.serviceLocation && (
+                              <p className="text-sm text-muted-foreground">
+                                <MapPin className="inline h-3 w-3 mr-1" /> 
+                                {booking.serviceLocation}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            {booking.rating ? (
+                              <div className="flex items-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star 
+                                    key={star} 
+                                    className={`h-4 w-4 ${star <= (booking.rating || 0) 
+                                      ? "text-yellow-400 fill-yellow-400" 
+                                      : "text-gray-300"}`} 
+                                  />
+                                ))}
+                              </div>
+                            ) : booking.status === 'completed' ? (
+                              <p className="text-xs text-muted-foreground">No rating yet</p>
+                            ) : null}
+                            {booking.serviceDuration && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                <Timer className="inline h-3 w-3 mr-1" /> 
+                                {formatDuration(booking.serviceDuration)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         {/* Active Bookings Tab */}
         <TabsContent value="active-bookings" className="space-y-4">

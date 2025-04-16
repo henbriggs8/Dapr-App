@@ -17,7 +17,9 @@ import {
 } from "./ui/form";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Loader2, Clock, Calendar } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
+import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function BookingDialog({
   provider,
@@ -33,12 +35,50 @@ export default function BookingDialog({
   timeSlotId: number;
 }) {
   const { toast } = useToast();
-
+  
+  // Define add-ons
+  const [addOns, setAddOns] = useState<{
+    id: string;
+    name: string;
+    price: number;
+    selected: boolean;
+  }[]>([
+    { id: "dog-hair", name: "Dog Hair Removal", price: 20, selected: false },
+    { id: "car-seat", name: "Child Car Seat Steam Clean", price: 30, selected: false },
+    { id: "odor", name: "Odor Eliminator", price: 50, selected: false },
+    { id: "engine", name: "Engine Bay Detail", price: 50, selected: false },
+    { id: "leather", name: "Leather Revive", price: 40, selected: false },
+    { id: "stain", name: "Heavy Stain Removal", price: 50, selected: false },
+  ]);
+  
+  // Track total price
+  const [totalPrice, setTotalPrice] = useState<number>(0);
+  
   // Fetch the selected service
   const { data: service, isLoading: serviceLoading } = useQuery<Service>({
     queryKey: ["/api/services", serviceId],
     enabled: !!serviceId,
   });
+  
+  // Toggle add-on selection
+  const toggleAddOn = (id: string) => {
+    setAddOns(
+      addOns.map((addon) =>
+        addon.id === id ? { ...addon, selected: !addon.selected } : addon
+      )
+    );
+  };
+  
+  // Calculate total price when service or add-ons change
+  useEffect(() => {
+    if (service) {
+      const addOnTotal = addOns
+        .filter((addon) => addon.selected)
+        .reduce((sum, addon) => sum + addon.price, 0);
+      
+      setTotalPrice(service.price + addOnTotal);
+    }
+  }, [service, addOns]);
   
   // Fetch the selected time slot
   const { data: timeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
@@ -98,6 +138,14 @@ export default function BookingDialog({
     if (timeSlot) {
       data.date = timeSlot.date;
       data.time = timeSlot.startTime;
+    }
+    
+    // Add the selected add-ons to the booking data
+    const selectedAddOns = addOns.filter(addon => addon.selected);
+    if (selectedAddOns.length > 0) {
+      data.addOns = selectedAddOns;
+      data.addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
+      data.totalPrice = totalPrice;
     }
     
     bookingMutation.mutate(data);
@@ -234,6 +282,61 @@ export default function BookingDialog({
                 </FormItem>
               )}
             />
+            
+            {/* Add-ons section */}
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium">Service Add-ons</h3>
+                <div className="flex items-center">
+                  <Tag className="h-4 w-4 mr-1 text-[#8c52ff]" />
+                  <span className="text-sm text-muted-foreground">Select to customize your service</span>
+                </div>
+              </div>
+              
+              <div className="grid gap-2">
+                {addOns.map((addon) => (
+                  <div key={addon.id} className="flex items-center justify-between border rounded-md p-3 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id={addon.id}
+                        checked={addon.selected}
+                        onCheckedChange={() => toggleAddOn(addon.id)}
+                        className="mr-3"
+                      />
+                      <div>
+                        <Label htmlFor={addon.id} className="font-medium cursor-pointer">
+                          {addon.name}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">+${addon.price}</p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${addon.selected ? 'bg-[#8c52ff] text-white' : 'bg-muted'}`}>
+                      {addon.selected && <Plus className="h-3 w-3" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Show total when add-ons are selected */}
+              {addOns.some(addon => addon.selected) && (
+                <div className="mt-4 p-3 bg-muted/30 rounded-md">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Base service price:</span>
+                    <span>${service?.price}</span>
+                  </div>
+                  {addOns.filter(a => a.selected).map(addon => (
+                    <div key={addon.id} className="flex justify-between text-sm">
+                      <span>{addon.name}:</span>
+                      <span>+${addon.price}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold mt-2 pt-2 border-t">
+                    <span>Total price:</span>
+                    <span>${totalPrice}</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <Button
               type="submit"
@@ -246,7 +349,7 @@ export default function BookingDialog({
                   Processing...
                 </>
               ) : (
-                'Confirm Booking'
+                `Confirm Booking - $${totalPrice}`
               )}
             </Button>
           </form>

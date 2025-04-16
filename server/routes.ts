@@ -76,7 +76,7 @@ export function registerRoutes(app: Express): Server {
       // Create a properly typed booking object with all required fields
       const booking = {
         userId: bookingWithoutId.userId,
-        providerId: bookingWithoutId.providerId,
+        providerId: bookingWithoutId.providerId || null,
         serviceId: bookingWithoutId.serviceId,
         timeSlotId: bookingWithoutId.timeSlotId,
         serviceLocation: bookingWithoutId.serviceLocation,
@@ -94,13 +94,24 @@ export function registerRoutes(app: Express): Server {
         date: req.body.date || null,
         time: req.body.time || null,
         currentStage: null,
+        
         // New fields for earnings and metrics tracking
         ratingComment: null,
         amount: null,
         providerEarnings: null,
         startTime: null,
         endTime: null,
-        serviceDuration: null
+        serviceDuration: null,
+        
+        // Assignment system fields
+        assignedAt: null,
+        acceptedAt: null,
+        rejectedAt: null,
+        assignmentExpiry: null,
+        previousProviders: [],
+        addOns: req.body.addOns || [],
+        addOnTotal: req.body.addOnTotal || 0,
+        totalPrice: req.body.totalPrice || null
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -128,6 +139,13 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
 
     const bookings = await storage.getUserBookings(req.user.id);
+    res.json(bookings);
+  });
+  
+  app.get("/api/bookings/active", async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).send('Provider access required');
+    
+    const bookings = await storage.getActiveBookings(req.user.id);
     res.json(bookings);
   });
 
@@ -396,6 +414,8 @@ export function registerRoutes(app: Express): Server {
     });
   });
   
+  // This section was moved to the end of the file
+  
   // Provider earnings and metrics endpoints
   app.get('/api/provider/earnings', async (req, res) => {
     if (!req.user?.isProvider) {
@@ -604,6 +624,184 @@ export function registerRoutes(app: Express): Server {
       res.json(booking);
     } catch (error) {
       res.status(404).send(error instanceof Error ? error.message : 'Booking not found');
+    }
+  });
+  
+  // Booking assignment system endpoints
+  
+  // Get bookings by timeframe for provider dashboard
+  app.get('/api/provider/bookings/:timeframe', isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    const timeframe = req.params.timeframe as 'day' | 'week' | 'month';
+    if (!['day', 'week', 'month'].includes(timeframe)) {
+      return res.status(400).send('Invalid timeframe. Must be day, week, or month');
+    }
+    
+    try {
+      const bookings = await storage.getBookingsByTimeframe(req.user.id, timeframe);
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get bookings');
+    }
+  });
+  
+  // Check for assigned bookings
+  app.get('/api/provider/assignments', isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const assignment = await storage.findBookingAssignment(req.user.id);
+      
+      if (assignment) {
+        res.json(assignment);
+      } else {
+        res.json({ assigned: false });
+      }
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get assignments');
+    }
+  });
+  
+  // Accept a booking assignment
+  app.post('/api/provider/bookings/:id/accept', isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      const booking = await storage.acceptBooking(id, req.user.id);
+      
+      // Notify the customer about the accepted booking
+      if (booking.userId) {
+        const userClients = clients.get(booking.userId) || [];
+        
+        if (userClients.length > 0) {
+          const notification = JSON.stringify({
+            type: 'booking_accepted',
+            booking: {
+              id: booking.id,
+              status: booking.status,
+              providerId: booking.providerId,
+              acceptedAt: booking.acceptedAt
+            }
+          });
+          
+          userClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(notification);
+            }
+          });
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(400).send(error instanceof Error ? error.message : 'Failed to accept booking');
+    }
+  });
+  
+  // Reject a booking assignment
+  app.post('/api/provider/bookings/:id/reject', isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      const booking = await storage.rejectBooking(id, req.user.id);
+      
+      // Find a new provider for this booking
+      if (booking.serviceLatitude && booking.serviceLongitude) {
+        // Get nearby providers (within 20km) who haven't rejected the booking
+        const providers = await storage.getNearbyProviders(
+          booking.serviceLatitude, 
+          booking.serviceLongitude, 
+          20
+        );
+        
+        // Filter out providers who have already rejected this booking
+        const previousProviders = Array.isArray(booking.previousProviders) 
+          ? booking.previousProviders as number[]
+          : [];
+        
+        const eligibleProviders = providers.filter(p => 
+          !previousProviders.includes(p.id)
+        );
+        
+        // Assign to the first eligible provider if available
+        if (eligibleProviders.length > 0) {
+          const newProvider = eligibleProviders[0];
+          await storage.assignBookingToProvider(booking.id, newProvider.id);
+          
+          // Notify the new provider
+          const providerClients = clients.get(newProvider.id) || [];
+          if (providerClients.length > 0) {
+            const notification = JSON.stringify({
+              type: 'new_assignment',
+              bookingId: booking.id
+            });
+            
+            providerClients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(notification);
+              }
+            });
+          }
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(400).send(error instanceof Error ? error.message : 'Failed to reject booking');
+    }
+  });
+  
+  // Admin-only: manually assign booking to provider
+  app.post('/api/admin/bookings/:id/assign/:providerId', isAdmin, async (req, res) => {
+    const bookingId = parseInt(req.params.id);
+    const providerId = parseInt(req.params.providerId);
+    
+    if (isNaN(bookingId) || isNaN(providerId)) {
+      return res.status(400).send('Invalid booking ID or provider ID');
+    }
+    
+    try {
+      const booking = await storage.assignBookingToProvider(bookingId, providerId);
+      
+      // Notify the provider
+      const providerClients = clients.get(providerId) || [];
+      if (providerClients.length > 0) {
+        const notification = JSON.stringify({
+          type: 'new_assignment',
+          bookingId: booking.id
+        });
+        
+        providerClients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(notification);
+          }
+        });
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(400).send(error instanceof Error ? error.message : 'Failed to assign booking');
+    }
+  });
+  
+  // List unassigned bookings (admin only)
+  app.get('/api/admin/bookings/unassigned', isAdmin, async (req, res) => {
+    try {
+      const bookings = await storage.getUnassignedBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get unassigned bookings');
     }
   });
   

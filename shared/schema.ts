@@ -63,10 +63,11 @@ export const vehicles = pgTable("vehicles", {
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  providerId: integer("provider_id").notNull(),
+  providerId: integer("provider_id"), // Can be null for unassigned bookings
   serviceId: integer("service_id").notNull(),
   timeSlotId: integer("time_slot_id").notNull(),
   vehicleId: integer("vehicle_id"),
+  // Status can be: 'pending', 'assigned', 'confirmed', 'in_progress', 'completed', 'cancelled'
   status: text("status").notNull().default('pending'),
   currentStage: text("current_stage"), // For tracking service progress stages
   rating: integer("rating"),
@@ -85,7 +86,17 @@ export const bookings = pgTable("bookings", {
   providerEarnings: integer("provider_earnings"), // Provider's cut in cents
   startTime: text("start_time"), // When service actually started (ISO string)
   endTime: text("end_time"), // When service was completed (ISO string)
-  serviceDuration: integer("service_duration") // Actual duration in minutes
+  serviceDuration: integer("service_duration"), // Actual duration in minutes
+  
+  // Assignment system fields
+  assignedAt: text("assigned_at"), // When booking was assigned to provider
+  acceptedAt: text("accepted_at"), // When provider accepted the booking
+  rejectedAt: text("rejected_at"), // When provider rejected the booking
+  assignmentExpiry: text("assignment_expiry"), // Expiry time for provider to respond
+  previousProviders: json("previous_providers").default([]), // Array of providers who rejected
+  addOns: json("add_ons").default([]), // JSON array of selected add-ons
+  addOnTotal: integer("add_on_total"), // Total price of add-ons
+  totalPrice: integer("total_price") // Total booking price incl. add-ons
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

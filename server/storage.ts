@@ -18,6 +18,16 @@ export interface IStorage {
   updateProviderStatus(userId: number, status: string): Promise<User>;
   getPricingConfig(): Promise<PricingConfig>;
   updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig>;
+  
+  // Booking assignment system methods
+  getNearbyProviders(latitude: number, longitude: number, radius: number): Promise<User[]>;
+  assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking>;
+  acceptBooking(bookingId: number, providerId: number): Promise<Booking>;
+  rejectBooking(bookingId: number, providerId: number): Promise<Booking>;
+  findBookingAssignment(providerId: number): Promise<Booking | undefined>;
+  getBookingsByTimeframe(providerId: number, timeframe: 'day' | 'week' | 'month'): Promise<Booking[]>;
+  getUnassignedBookings(): Promise<Booking[]>;
+  
   // Provider earnings and metrics
   getProviderEarnings(providerId: number, period?: string): Promise<{ 
     totalEarnings: number;
@@ -29,6 +39,7 @@ export interface IStorage {
     averageDuration: { [key: string]: number };
     totalServiceTime: number;
   }>;
+  
   // Admin dashboards
   getRevenueByLocation(): Promise<{
     totalRevenue: number;
@@ -52,27 +63,33 @@ export interface IStorage {
       lastLocationUpdate?: string;
     }[];
   }>;
+  
   // Booking timing methods
   startServiceTimer(bookingId: number): Promise<Booking>;
   completeServiceTimer(bookingId: number): Promise<Booking>;
+  
   // Rating methods
   addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking>;
+  
   // Vehicle methods
   getUserVehicles(userId: number): Promise<Vehicle[]>;
   getVehicleById(id: number): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle>;
   deleteVehicle(id: number): Promise<boolean>;
+  
   // Service methods
   getServices(): Promise<Service[]>;
   getServiceById(id: number): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
+  
   // Time slot methods
   getTimeSlots(): Promise<TimeSlot[]>;
   getTimeSlotById(id: number): Promise<TimeSlot | undefined>;
   getAvailableTimeSlots(date?: string): Promise<TimeSlot[]>;
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
   updateTimeSlot(id: number, updates: Partial<TimeSlot>): Promise<TimeSlot>;
+  
   sessionStore: session.Store;
 }
 
@@ -281,8 +298,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.bookings.values()).filter(
       (booking) => 
         booking.providerId === providerId && 
-        booking.status !== 'completed' &&
-        booking.status !== 'cancelled'
+        ['confirmed', 'in_progress', 'assigned'].includes(booking.status)
     );
   }
   
@@ -608,18 +624,20 @@ export class MemStorage implements IStorage {
     this.bookings.set(bookingId, updatedBooking);
     
     // Update provider rating
-    const provider = await this.getUser(booking.providerId);
-    if (provider) {
-      const currentRatingCount = provider.ratingCount || 0;
-      const currentRating = provider.rating || 5; // Default to 5 if no ratings yet
-      const newRatingCount = currentRatingCount + 1;
-      const newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
-      
-      this.users.set(provider.id, {
-        ...provider,
-        rating: newRating,
-        ratingCount: newRatingCount
-      });
+    if (booking.providerId !== null) {
+      const provider = await this.getUser(booking.providerId);
+      if (provider) {
+        const currentRatingCount = provider.ratingCount || 0;
+        const currentRating = provider.rating || 5; // Default to 5 if no ratings yet
+        const newRatingCount = currentRatingCount + 1;
+        const newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
+        
+        this.users.set(provider.id, {
+          ...provider,
+          rating: newRating,
+          ratingCount: newRatingCount
+        });
+      }
     }
     
     return updatedBooking;
@@ -752,6 +770,196 @@ export class MemStorage implements IStorage {
     }
     
     return this.vehicles.delete(id);
+  }
+  
+  // Booking assignment system methods
+  async getNearbyProviders(latitude: number | null, longitude: number | null, radius: number): Promise<User[]> {
+    // Get all providers
+    const providers = await this.getProviders().then(providers => 
+      providers.filter(p => p.currentStatus === 'online')
+    );
+    
+    // If latitude or longitude is null, return empty array
+    if (latitude === null || longitude === null) {
+      return [];
+    }
+    
+    // Calculate distance and filter by radius (in kilometers)
+    return providers.filter(provider => {
+      if (!provider.latitude || !provider.longitude) return false;
+      
+      // Simple distance calculation using Haversine formula
+      const R = 6371; // Earth radius in km
+      const dLat = this.deg2rad(provider.latitude - latitude);
+      const dLon = this.deg2rad(provider.longitude - longitude);
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(this.deg2rad(latitude)) * Math.cos(this.deg2rad(provider.latitude)) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2); 
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      const distance = R * c;
+      
+      return distance <= radius;
+    });
+  }
+  
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI/180);
+  }
+  
+  async assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    const provider = await this.getUser(providerId);
+    if (!provider || !provider.isProvider) {
+      throw new Error('Provider not found');
+    }
+    
+    const now = new Date();
+    // Set expiry time for assignment (5 minutes from now)
+    const expiryTime = new Date(now.getTime() + 5 * 60000);
+    
+    const updatedBooking = {
+      ...booking,
+      providerId,
+      status: 'assigned',
+      assignedAt: now.toISOString(),
+      assignmentExpiry: expiryTime.toISOString()
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  async acceptBooking(bookingId: number, providerId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    if (booking.providerId !== providerId) {
+      throw new Error('Booking not assigned to this provider');
+    }
+    
+    if (booking.status !== 'assigned') {
+      throw new Error('Booking is not in assigned state');
+    }
+    
+    const now = new Date();
+    const updatedBooking = {
+      ...booking,
+      status: 'confirmed',
+      acceptedAt: now.toISOString()
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  async rejectBooking(bookingId: number, providerId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    if (booking.providerId !== providerId) {
+      throw new Error('Booking not assigned to this provider');
+    }
+    
+    if (booking.status !== 'assigned') {
+      throw new Error('Booking is not in assigned state');
+    }
+    
+    // Add current provider to previous providers list
+    const previousProviders = Array.isArray(booking.previousProviders) 
+      ? [...booking.previousProviders, providerId]
+      : [providerId];
+    
+    const now = new Date();
+    const updatedBooking = {
+      ...booking,
+      providerId: null, // Reset provider
+      status: 'pending', // Back to pending
+      rejectedAt: now.toISOString(),
+      previousProviders
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  // Fix the parameter nullable issue with this helper method
+  private ensureNumber(value: number | null | undefined): number {
+    // Default to 0 if null or undefined
+    return value ?? 0;
+  }
+  
+  async findBookingAssignment(providerId: number): Promise<Booking | undefined> {
+    // Find the most recent booking assigned to this provider
+    const assignments = Array.from(this.bookings.values()).filter(
+      (booking) => 
+        booking.providerId === providerId && 
+        booking.status === 'assigned' &&
+        booking.assignmentExpiry && 
+        new Date(booking.assignmentExpiry) > new Date()
+    );
+    
+    // Sort by assignment time, newest first
+    assignments.sort((a, b) => {
+      const dateA = a.assignedAt ? new Date(a.assignedAt).getTime() : 0;
+      const dateB = b.assignedAt ? new Date(b.assignedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+    
+    return assignments.length > 0 ? assignments[0] : undefined;
+  }
+  
+  async getBookingsByTimeframe(providerId: number, timeframe: 'day' | 'week' | 'month'): Promise<Booking[]> {
+    const allBookings = Array.from(this.bookings.values()).filter(
+      (booking) => booking.providerId === providerId
+    );
+    
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    if (timeframe === 'day') {
+      return allBookings.filter(booking => booking.date === today);
+    }
+    
+    if (timeframe === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(now.getDate() - 7);
+      
+      return allBookings.filter(booking => {
+        if (!booking.date) return false;
+        const bookingDate = new Date(booking.date);
+        return bookingDate >= weekAgo && bookingDate <= now;
+      });
+    }
+    
+    if (timeframe === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(now.getMonth() - 1);
+      
+      return allBookings.filter(booking => {
+        if (!booking.date) return false;
+        const bookingDate = new Date(booking.date);
+        return bookingDate >= monthAgo && bookingDate <= now;
+      });
+    }
+    
+    return allBookings;
+  }
+  
+  async getUnassignedBookings(): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      (booking) => 
+        booking.status === 'pending' &&
+        (!booking.providerId)
+    );
   }
 }
 
