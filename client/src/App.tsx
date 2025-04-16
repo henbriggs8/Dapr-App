@@ -9,6 +9,7 @@ import ProfilePage from "@/pages/profile-page";
 import ServicesPage from "@/pages/services-page";
 import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
+import PaymentSuccessPage from "@/pages/payment-success";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
 
@@ -119,6 +120,7 @@ function Router() {
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking" component={BookingDetails} />
+        <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />

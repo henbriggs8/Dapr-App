@@ -90,6 +90,21 @@ export interface IStorage {
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
   updateTimeSlot(id: number, updates: Partial<TimeSlot>): Promise<TimeSlot>;
   
+  // Payment methods
+  updateBookingPaymentInfo(
+    bookingId: number, 
+    paymentInfo: {
+      paymentStatus?: string;
+      paymentId?: string;
+      paymentDate?: string;
+      paymentUrl?: string;
+      squareOrderId?: string;
+      isPaid?: boolean;
+    }
+  ): Promise<Booking>;
+  
+  getPendingPaymentBookings(): Promise<Booking[]>;
+  
   sessionStore: session.Store;
 }
 
@@ -959,6 +974,43 @@ export class MemStorage implements IStorage {
       (booking) => 
         booking.status === 'pending' &&
         (!booking.providerId)
+    );
+  }
+  
+  // Payment methods
+  async updateBookingPaymentInfo(
+    bookingId: number, 
+    paymentInfo: {
+      paymentStatus?: string;
+      paymentId?: string;
+      paymentDate?: string;
+      paymentUrl?: string;
+      squareOrderId?: string;
+      isPaid?: boolean;
+    }
+  ): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    
+    const updatedBooking = {
+      ...booking,
+      paymentStatus: paymentInfo.paymentStatus || booking.paymentStatus || 'pending',
+      paymentId: paymentInfo.paymentId || booking.paymentId || null,
+      paymentDate: paymentInfo.paymentDate || booking.paymentDate || null,
+      paymentUrl: paymentInfo.paymentUrl || booking.paymentUrl || null,
+      squareOrderId: paymentInfo.squareOrderId || booking.squareOrderId || null,
+      isPaid: paymentInfo.isPaid !== undefined ? paymentInfo.isPaid : booking.isPaid || false
+    };
+    
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+  
+  async getPendingPaymentBookings(): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      booking => booking.paymentStatus === 'pending' || booking.paymentStatus === 'processing'
     );
   }
 }

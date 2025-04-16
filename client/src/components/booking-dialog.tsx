@@ -74,6 +74,33 @@ export default function BookingDialog({
     }
   }, [service]);
   
+  // Payment mutation to handle creating a payment for the booking
+  const paymentMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/create-payment`, {});
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Square payment page
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        toast({
+          title: "Payment Error",
+          description: "Could not generate payment link. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to set up payment",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Toggle add-on selection
   const toggleAddOn = (id: string) => {
     setAddOns(
@@ -127,16 +154,18 @@ export default function BookingDialog({
       const res = await apiRequest("POST", "/api/bookings", formData);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate multiple queries
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timeslots"] });
       
       toast({
-        title: "Booking successful",
-        description: "Your car wash has been scheduled",
+        title: "Booking created",
+        description: "Redirecting to payment...",
       });
-      onClose();
+      
+      // Initiate payment for the booking
+      paymentMutation.mutate(data.id);
     },
     onError: () => {
       toast({

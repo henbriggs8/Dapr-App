@@ -54,9 +54,9 @@ export default function ProviderDashboard() {
   
   // Fetch active bookings
   const { data: activeBookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings/active"],
+    queryKey: ["/api/provider/active-bookings"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/bookings/active");
+      const res = await apiRequest("GET", "/api/provider/active-bookings");
       return await res.json();
     },
     enabled: !!user && user.isProvider,
@@ -148,7 +148,7 @@ export default function ProviderDashboard() {
       return await res.json();
     },
     onSuccess: (updatedBooking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       
       // Send notification via WebSocket
@@ -183,7 +183,7 @@ export default function ProviderDashboard() {
       return await res.json();
     },
     onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
       toast({
         title: "Service started",
         description: `Timer started for booking #${booking.id}.`,
@@ -205,7 +205,7 @@ export default function ProviderDashboard() {
       return await res.json();
     },
     onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/provider/earnings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/provider/metrics"] });
       
@@ -232,7 +232,7 @@ export default function ProviderDashboard() {
     },
     onSuccess: (booking: Booking) => {
       queryClient.invalidateQueries({ queryKey: ["/api/provider/assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
       
       toast({
         title: "Booking accepted",

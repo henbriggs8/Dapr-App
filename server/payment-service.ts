@@ -1,33 +1,16 @@
-import { Square } from 'square';
-import { Environment } from 'square/dist/types/models/models';
-
-// Define ApiError type for error handling
-type ApiError = {
-  result: {
-    errors?: Array<{
-      detail?: string;
-    }>;
-  };
-};
 import { randomBytes } from 'crypto';
-import { BookingFormData } from '@shared/schema';
+import { Service, Booking } from '@shared/schema';
+
+// Square is imported directly rather than through dynamic imports to avoid TypeScript errors
+const square = require('square');
+const { Client, Environment } = square;
 
 // Initialize the Square client
-const { accessToken, environment } = getSquareCredentials();
-export const squareClient = new Square({
-  accessToken,
-  environment: environment as Environment
+const isSandbox = process.env.SQUARE_ACCESS_TOKEN?.startsWith('sandbox');
+const squareClient = new Client({
+  accessToken: process.env.SQUARE_ACCESS_TOKEN || '',
+  environment: isSandbox ? Environment.Sandbox : Environment.Production
 });
-
-function getSquareCredentials() {
-  // Check if we're using sandbox or production credentials
-  const isSandbox = process.env.SQUARE_ACCESS_TOKEN?.startsWith('sandbox');
-  
-  return {
-    accessToken: process.env.SQUARE_ACCESS_TOKEN || '',
-    environment: isSandbox ? Environment.Sandbox : Environment.Production
-  };
-}
 
 // Function to generate a unique idempotency key
 function generateIdempotencyKey(): string {
@@ -35,24 +18,22 @@ function generateIdempotencyKey(): string {
 }
 
 // Create a payment link for a booking
-export async function createPaymentLink(booking: {
-  id: number;
-  userId: number;
-  serviceId: number;
-  price: number;
-  serviceName: string;
-}): Promise<{ url: string; orderId: string }> {
+export async function createPaymentLink(
+  booking: Booking,
+  service: Service
+): Promise<{ url: string; orderId: string }> {
   try {
     // Format amount in cents for Square
-    const amountInCents = Math.round(booking.price * 100);
+    const amount = service.price;
+    const amountInCents = Math.round(amount * 100);
     
     // Create an order with Square
-    const { result } = await squareClient.ordersApi.createOrder({
+    const orderResponse = await squareClient.ordersApi.createOrder({
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems: [
           {
-            name: booking.serviceName,
+            name: service.name,
             quantity: "1",
             basePriceMoney: {
               amount: BigInt(amountInCents),
@@ -66,15 +47,17 @@ export async function createPaymentLink(booking: {
       idempotencyKey: generateIdempotencyKey()
     });
     
-    if (!result.order?.id) {
+    if (!orderResponse.result.order?.id) {
       throw new Error('Failed to create order in Square');
     }
+    
+    const orderId = orderResponse.result.order.id;
     
     // Create a checkout link for the order
     const checkoutResponse = await squareClient.checkoutApi.createPaymentLink({
       idempotencyKey: generateIdempotencyKey(),
       quickPay: {
-        name: `Dapper - ${booking.serviceName}`,
+        name: `Dapper - ${service.name}`,
         locationId: process.env.SQUARE_LOCATION_ID!,
         priceMoney: {
           amount: BigInt(amountInCents),
@@ -82,7 +65,7 @@ export async function createPaymentLink(booking: {
         }
       },
       order: {
-        orderId: result.order.id
+        orderId: orderId
       },
       checkoutOptions: {
         redirectUrl: `${process.env.SITE_URL || 'http://localhost:5000'}/payment-success?booking=${booking.id}`
@@ -95,19 +78,15 @@ export async function createPaymentLink(booking: {
     
     return {
       url: checkoutResponse.result.paymentLink.url,
-      orderId: result.order.id
+      orderId: orderId
     };
   } catch (error: any) {
-    if (error instanceof ApiError) {
-      console.error('Square API Error:', error.result);
-      throw new Error(`Square API Error: ${JSON.stringify(error.result)}`);
-    }
     console.error('Payment link creation error:', error);
-    throw new Error(error?.message || 'Unknown payment error');
+    throw new Error(error?.message || 'Failed to create payment link');
   }
 }
 
-// Process a payment for a booking
+// Process a payment directly (for in-app payments)
 export async function processPayment(
   bookingId: number, 
   nonce: string, 
@@ -127,20 +106,28 @@ export async function processPayment(
       referenceId: `booking-${bookingId}`
     });
     
-    return {
-      success: true,
-      paymentId: response.result.payment?.id
-    };
-  } catch (error: any) {
-    if (error && typeof error === 'object' && 'result' in error) {
-      console.error('Square API Error:', error.result);
+    if (response.result.payment?.id) {
+      return {
+        success: true,
+        paymentId: response.result.payment.id
+      };
+    } else {
       return {
         success: false,
-        error: `Payment failed: ${error.result?.errors?.[0]?.detail || 'Unknown error'}`
+        error: 'Payment was not completed'
+      };
+    }
+  } catch (error: any) {
+    console.error('Payment processing error:', error);
+    
+    // Check for Square API errors
+    if (error.result && error.result.errors) {
+      return {
+        success: false,
+        error: `Payment failed: ${error.result.errors[0]?.detail || 'Unknown error'}`
       };
     }
     
-    console.error('Payment processing error:', error);
     return {
       success: false,
       error: error?.message || 'Payment processing failed. Please try again.'

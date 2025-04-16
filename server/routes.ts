@@ -111,7 +111,15 @@ export function registerRoutes(app: Express): Server {
         previousProviders: [],
         addOns: req.body.addOns || [],
         addOnTotal: req.body.addOnTotal || 0,
-        totalPrice: req.body.totalPrice || null
+        totalPrice: req.body.totalPrice || null,
+        
+        // Payment fields
+        isPaid: false,
+        paymentStatus: 'pending',
+        paymentId: null,
+        paymentDate: null,
+        paymentUrl: null,
+        squareOrderId: null
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -142,7 +150,31 @@ export function registerRoutes(app: Express): Server {
     res.json(bookings);
   });
   
-  app.get("/api/bookings/active", async (req, res) => {
+  app.get("/api/bookings/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send("Invalid booking ID");
+    }
+    
+    const booking = await storage.getBookingById(id);
+    
+    if (!booking) {
+      return res.status(404).send("Booking not found");
+    }
+    
+    // Check if the booking belongs to the user or if user is a provider for this booking
+    if (booking.userId !== req.user.id && 
+        (!req.user.isProvider || booking.providerId !== req.user.id) && 
+        !req.user.isAdmin) {
+      return res.status(403).send("Access denied");
+    }
+    
+    res.json(booking);
+  });
+  
+  app.get("/api/provider/active-bookings", async (req, res) => {
     if (!req.user?.isProvider) return res.status(403).send('Provider access required');
     
     const bookings = await storage.getActiveBookings(req.user.id);
@@ -532,6 +564,165 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Payment endpoints
+  app.post('/api/bookings/:id/create-payment', async (req, res) => {
+    if (!req.user) {
+      return res.sendStatus(401);
+    }
+    
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      // Get the booking and service details
+      const booking = await storage.getBookingById(id);
+      if (!booking) {
+        return res.status(404).send('Booking not found');
+      }
+      
+      // Verify this booking belongs to the user
+      if (booking.userId !== req.user.id) {
+        return res.status(403).send('Access denied');
+      }
+      
+      // Check if booking is already paid
+      if (booking.isPaid) {
+        return res.status(400).send('Booking is already paid');
+      }
+      
+      // Get service details
+      const service = await storage.getServiceById(booking.serviceId);
+      if (!service) {
+        return res.status(404).send('Service not found');
+      }
+      
+      try {
+        const { createPaymentLink } = await import('./payment-service');
+        const { url, orderId } = await createPaymentLink(booking, service);
+        
+        // Update booking with payment link
+        await storage.updateBookingPaymentInfo(booking.id, {
+          paymentUrl: url,
+          squareOrderId: orderId,
+          paymentStatus: 'pending'
+        });
+        
+        res.json({ paymentUrl: url });
+      } catch (error) {
+        console.error('Payment creation error:', error);
+        res.status(500).json({ 
+          error: error instanceof Error ? error.message : 'Failed to create payment link' 
+        });
+      }
+    } catch (error) {
+      console.error('Payment endpoint error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'An error occurred' 
+      });
+    }
+  });
+  
+  app.post('/api/bookings/:id/verify-payment', async (req, res) => {
+    if (!req.user) {
+      return res.sendStatus(401);
+    }
+    
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid booking ID');
+    }
+    
+    try {
+      // Get the booking
+      const booking = await storage.getBookingById(id);
+      if (!booking) {
+        return res.status(404).send('Booking not found');
+      }
+      
+      // Verify payment status using Square
+      if (booking.paymentId) {
+        const { verifyPaymentStatus } = await import('./payment-service');
+        const isPaid = await verifyPaymentStatus(booking.paymentId);
+        
+        if (isPaid && !booking.isPaid) {
+          // Update booking payment status
+          await storage.updateBookingPaymentInfo(booking.id, {
+            isPaid: true,
+            paymentStatus: 'completed',
+            paymentDate: new Date().toISOString()
+          });
+          
+          // Also update booking status to confirmed
+          await storage.updateBookingStatus(booking.id, 'confirmed');
+          
+          return res.json({ verified: true, status: 'completed' });
+        }
+      }
+      
+      res.json({ 
+        verified: booking.isPaid, 
+        status: booking.paymentStatus 
+      });
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to verify payment' 
+      });
+    }
+  });
+  
+  // Payment webhook endpoint (this would be called by Square)
+  app.post('/api/payment-webhook', async (req, res) => {
+    try {
+      const { type, data } = req.body;
+      
+      // Handle payment.updated event
+      if (type === 'payment.updated') {
+        const { payment } = data.object;
+        
+        if (payment.status === 'COMPLETED') {
+          // Find booking with this payment ID
+          const bookings = await storage.getPendingPaymentBookings();
+          const booking = bookings.find(b => b.paymentId === payment.id);
+          
+          if (booking) {
+            // Mark booking as paid
+            await storage.updateBookingPaymentInfo(booking.id, {
+              isPaid: true,
+              paymentStatus: 'completed',
+              paymentDate: new Date().toISOString()
+            });
+            
+            // Update booking status to confirmed
+            await storage.updateBookingStatus(booking.id, 'confirmed');
+            
+            // Notify user via WebSocket
+            const userClients = clients.get(booking.userId) || [];
+            if (userClients.length > 0) {
+              const notification = JSON.stringify({
+                type: 'payment_completed',
+                bookingId: booking.id
+              });
+              
+              userClients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(notification);
+                }
+              });
+            }
+          }
+        }
+      }
+      
+      res.status(200).end();
+    } catch (error) {
+      console.error('Payment webhook error:', error);
+      res.status(500).end();
+    }
+  });
+
   // Rating endpoint
   app.post('/api/bookings/:id/rating', async (req, res) => {
     if (!req.user) {
