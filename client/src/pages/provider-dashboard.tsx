@@ -500,10 +500,10 @@ export default function ProviderDashboard() {
         className="space-y-4"
       >
         <TabsList className="grid grid-cols-4 w-full md:w-[80%] lg:w-[60%]">
-          <TabsTrigger value="active-bookings">Active Bookings</TabsTrigger>
-          <TabsTrigger value="bookings-history">Booking History</TabsTrigger>
-          <TabsTrigger value="earnings">Earnings</TabsTrigger>
-          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="active-bookings" className="text-xs sm:text-sm py-1">Active</TabsTrigger>
+          <TabsTrigger value="bookings-history" className="text-xs sm:text-sm py-1">History</TabsTrigger>
+          <TabsTrigger value="earnings" className="text-xs sm:text-sm py-1">Earnings</TabsTrigger>
+          <TabsTrigger value="metrics" className="text-xs sm:text-sm py-1">Metrics</TabsTrigger>
         </TabsList>
         
         {/* Add Booking History Tab */}
@@ -512,7 +512,7 @@ export default function ProviderDashboard() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>Booking History</CardTitle>
+                  <CardTitle>History</CardTitle>
                   <CardDescription>
                     View your past and upcoming bookings
                   </CardDescription>
@@ -631,7 +631,7 @@ export default function ProviderDashboard() {
         <TabsContent value="active-bookings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Active Bookings</CardTitle>
+              <CardTitle>Active</CardTitle>
               <CardDescription>
                 Manage your current job assignments
               </CardDescription>
