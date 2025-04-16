@@ -42,7 +42,7 @@ export default function ServiceCards({
           <img 
             src="/assets/water-drops-8.svg" 
             alt="Water drops" 
-            className="h-8 w-8 text-white" 
+            className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
         );
@@ -51,7 +51,7 @@ export default function ServiceCards({
           <img 
             src="/assets/vacuum-8.svg" 
             alt="Vacuum cleaner" 
-            className="h-8 w-8 text-white" 
+            className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
         );
@@ -60,7 +60,7 @@ export default function ServiceCards({
           <img 
             src="/assets/sparkles-icon.svg" 
             alt="Sparkles" 
-            className="h-8 w-8 text-white" 
+            className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
         );
@@ -69,7 +69,7 @@ export default function ServiceCards({
           <img 
             src="/assets/water-drops-8.svg" 
             alt="Water drops" 
-            className="h-8 w-8 text-white" 
+            className="h-5 w-5 text-white" 
             style={{ filter: 'brightness(0) invert(1)' }}
           />
         );
@@ -104,6 +104,35 @@ export default function ServiceCards({
     }
   };
 
+  // Create bullet point descriptions for each service
+  const getServiceBulletPoints = (category: string) => {
+    switch (category) {
+      case "basic":
+        return [
+          "Exterior hand wash",
+          "Streak free windows"
+        ];
+      case "standard":
+        return [
+          "Hand wash",
+          "Tires degreased and shined",
+          "Streak free windows",
+          "Interior vacuum and wipe down"
+        ];
+      case "premium":
+        return [
+          "Everything in O.G. plus",
+          "Carpets shampoo",
+          "Carpets and Mats restore",
+          "Steam clean",
+          "Cupholder clean",
+          "Fresh scent"
+        ];
+      default:
+        return ["Car wash service"];
+    }
+  };
+
   return (
     <div className="w-full">
       <h2 className="text-xl font-bold mb-4">Select Your Service</h2>
@@ -119,7 +148,7 @@ export default function ServiceCards({
           >
             <Card className="cursor-pointer border-2 hover:border-[#8c52ff] transition-all duration-300 h-full overflow-hidden group">
               <div className={`relative ${getServiceColor(service.category)} p-5`}>
-                <div className="absolute right-4 top-4 bg-white/20 rounded-full w-12 h-12 flex items-center justify-center backdrop-blur-sm">
+                <div className="absolute right-2 top-2 bg-white/20 rounded-full w-6 h-6 flex items-center justify-center backdrop-blur-sm">
                   {getServiceIcon(service.category)}
                 </div>
                 <CardHeader className="p-0 pb-3">
@@ -136,7 +165,11 @@ export default function ServiceCards({
                 </div>
               </div>
               <CardContent className="p-4">
-                <p className="text-muted-foreground text-sm">{service.description}</p>
+                <ul className="text-muted-foreground text-sm space-y-1 list-disc pl-4">
+                  {getServiceBulletPoints(service.category).map((point, i) => (
+                    <li key={i}>{point}</li>
+                  ))}
+                </ul>
                 <div className="mt-3 text-sm font-medium text-[#8c52ff] group-hover:text-[#8c52ff] group-hover:underline transition-all duration-300">
                   Select this package →
                 </div>

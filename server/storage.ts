@@ -137,7 +137,7 @@ export class MemStorage implements IStorage {
     
     // Create services
     this.createService({
-      name: "Basic Wash",
+      name: "Basic",
       description: "Exterior wash only - perfect for a quick refresh",
       price: 30,
       duration: 30,
