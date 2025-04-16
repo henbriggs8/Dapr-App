@@ -104,15 +104,6 @@ export default function HomePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/spinner-demo">
-            <Button variant="outline" className="flex items-center gap-2">
-              <span className="relative">
-                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              Spinner Demo
-            </Button>
-          </Link>
           <Link href="/profile">
             <Button variant="outline">Profile</Button>
           </Link>

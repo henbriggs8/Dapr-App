@@ -11,7 +11,7 @@ import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
-import SpinnerDemo from "@/pages/spinner-demo";
+
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -121,7 +121,6 @@ function Router() {
         <ProtectedRoute path="/booking" component={BookingDetails} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthPage} />
-        <Route path="/spinner-demo" component={SpinnerDemo} />
         <Route component={NotFound} />
       </Switch>
       
