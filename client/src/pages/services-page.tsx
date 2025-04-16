@@ -123,11 +123,11 @@ export default function ServicesPage() {
               <ul className="space-y-2 mb-4">
                 <li className="flex items-center">
                   <Star className="h-4 w-4 mr-2 text-yellow-300" />
-                  Complete exterior paint correction
+                  Steam extraction
                 </li>
                 <li className="flex items-center">
                   <Star className="h-4 w-4 mr-2 text-yellow-300" />
-                  Premium ceramic coating application
+                  Paint decontamination
                 </li>
                 <li className="flex items-center">
                   <Star className="h-4 w-4 mr-2 text-yellow-300" />
