@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Vacuum hose curved part -->
+  <path d="M6 10C6 6.5 9 3.5 12.5 3.5C16 3.5 19 6.5 19 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  
+  <!-- Vacuum hose straight part -->
+  <path d="M6 10L6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  
+  <!-- Vacuum base/head -->
+  <path d="M4 15H8C8.55 15 9 14.55 9 14V14C9 13.45 8.55 13 8 13H4C3.45 13 3 13.45 3 14V14C3 14.55 3.45 15 4 15Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  
+  <!-- Vacuum canister body -->
+  <path d="M14 11C14 11 15 11.2 16 12C17 12.8 17 14 17 14L17 16.5C17 17.3 16.3 18 15.5 18H14.5C13.7 18 13 17.3 13 16.5L13 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Canister details -->
+  <circle cx="16.5" cy="14.5" r="0.5" fill="currentColor" />
+  <circle cx="15" cy="17" r="1" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="18" cy="17" r="1" stroke="currentColor" stroke-width="1.5" />
+</svg>

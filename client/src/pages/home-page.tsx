@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import BookingDialog from "@/components/booking-dialog";
 import { Badge } from "@/components/ui/badge";
-import PricingSlider from "@/components/pricing-slider";
+import ServiceCards from "@/components/service-cards";
 import { OnboardingButton } from "@/components/onboarding-button";
 
 export default function HomePage() {
@@ -187,9 +187,9 @@ export default function HomePage() {
       )}
       
       <div className="grid gap-8 md:grid-cols-12">
-        <div className="md:col-span-8">
+        <div className="md:col-span-9">
           <div className="mb-8">
-            <PricingSlider 
+            <ServiceCards
               onServiceSelect={(service) => setSelectedServiceId(service.id)} 
             />
           </div>
@@ -248,7 +248,7 @@ export default function HomePage() {
           </Card>
         </div>
         
-        <div className="md:col-span-4">
+        <div className="md:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle>Your Selection</CardTitle>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple car silhouette -->
+  <path d="M7 14H17L18 11H6L7 14Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M5 14H19V16H5V14Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+  
+  <!-- Car wheels -->
+  <circle cx="8" cy="17" r="1" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="16" cy="17" r="1" stroke="currentColor" stroke-width="1.5" />
+  <line x1="7" y1="16" x2="17" y2="16" stroke="currentColor" stroke-width="1.5" />
+  
+  <!-- Multiple bubbles around the car -->
+  <circle cx="7" cy="9" r="2" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="4" cy="11" r="1" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="11" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="16" cy="8" r="2" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="19" cy="11" r="1" stroke="currentColor" stroke-width="1.5" />
+  
+  <!-- Bubble shine details -->
+  <path d="M6 9.5C6.5 8.5 8 8 8 8" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+  <path d="M10 8.5C10.5 7.5 12 7 12 7" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+  <path d="M15 9.5C15.5 8.5 17 8 17 8" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+</svg>

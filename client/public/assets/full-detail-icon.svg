@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Car body -->
+  <path d="M15 10H20L21 12V16H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M15 16H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M15 14H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  
+  <!-- Car wheels and details -->
+  <circle cx="19" cy="17" r="1" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="16" cy="11.5" r="0.5" fill="currentColor" />
+  
+  <!-- Soap bubbles -->
+  <circle cx="10" cy="9" r="2" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="8" cy="12" r="2.5" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="11" cy="13" r="1.8" stroke="currentColor" stroke-width="1.5" />
+  <circle cx="7" cy="8" r="1.5" stroke="currentColor" stroke-width="1.5" />
+  
+  <!-- Curve lines inside main bubble -->
+  <path d="M9 10.5C9.5 9.5 11 9 11 9" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+  <path d="M7 13.5C7.5 12.5 9 12 9 12" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+  
+  <!-- Sparkles -->
+  <path d="M18 7L19 6M18 6L19 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M20 9L21 8M20 8L21 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+  
+  <!-- Small circle sparkles -->
+  <circle cx="3.5" cy="7.5" r="0.5" fill="currentColor" />
+  <circle cx="4.5" cy="12.5" r="0.5" fill="currentColor" />
+  <circle cx="16.5" cy="4.5" r="0.5" fill="currentColor" />
+</svg>

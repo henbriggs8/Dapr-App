@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Vacuum hose curved part - more accurate arc shape -->
+  <path d="M7 9C7 6 9 3 12.5 3C16 3 19 6 19 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Vacuum hose straight part -->
+  <path d="M7 9V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Vacuum base/head -->
+  <path d="M4 15.5C4 14.7 4.7 14 5.5 14H8.5C9.3 14 10 14.7 10 15.5V15.5C10 16.3 9.3 17 8.5 17H5.5C4.7 17 4 16.3 4 15.5V15.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Vacuum canister body - more rounded -->
+  <path d="M14 11C14 11 14 12 15 13C16 14 16.5 14 16.5 14V15.5C16.5 16.9 17.1 18 18.5 18H20C21.4 18 22 16.9 22 15.5V13.5C22 12.5 21 11 20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Vacuum canister connecting piece -->
+  <path d="M14 11H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Small front wheel -->
+  <circle cx="17" cy="18" r="1.2" stroke="currentColor" stroke-width="1.5" />
+  
+  <!-- Large back wheel -->
+  <circle cx="21" cy="18" r="1.2" stroke="currentColor" stroke-width="1.5" />
+  
+  <!-- Small detail dots -->
+  <circle cx="20" cy="13" r="0.3" fill="currentColor" />
+  <circle cx="18" cy="14" r="0.3" fill="currentColor" />
+</svg>

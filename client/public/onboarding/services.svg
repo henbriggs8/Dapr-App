@@ -1,80 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="240" height="180" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g filter="url(#filter0_d)">
-    <path d="M120 140C164.183 140 200 104.183 200 60C200 15.8172 164.183 -20 120 -20C75.8172 -20 40 15.8172 40 60C40 104.183 75.8172 140 120 140Z" fill="url(#paint0_linear)"/>
-    <circle cx="120" cy="60" r="80" fill="url(#paint1_linear)" fill-opacity="0.6"/>
-    
-    <!-- Car Wash Equipment -->
-    <path d="M80 70C80 68.3431 81.3431 67 83 67H157C158.657 67 160 68.3431 160 70V120C160 121.657 158.657 123 157 123H83C81.3431 123 80 121.657 80 120V70Z" fill="#E8EAED"/>
-    
-    <!-- Wash Machine Frame -->
-    <rect x="83" y="70" width="74" height="50" rx="2" fill="#D1D5DB"/>
-    
-    <!-- Machine Display -->
-    <rect x="88" y="75" width="64" height="10" rx="2" fill="#8C52FF"/>
-    <circle cx="94" cy="80" r="2" fill="white"/>
-    <circle cx="102" cy="80" r="2" fill="white"/>
-    <rect x="110" y="78" width="35" height="4" rx="1" fill="white"/>
-    
-    <!-- Service Tiers Displayed -->
-    <rect x="88" y="90" width="18" height="25" rx="2" fill="#FFFFFF"/>
-    <rect x="90" y="93" width="14" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="90" y="97" width="10" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="90" y="105" width="12" height="6" rx="1" fill="#8C52FF" fill-opacity="0.5"/>
-    
-    <rect x="111" y="90" width="18" height="25" rx="2" fill="#FFFFFF"/>
-    <rect x="113" y="93" width="14" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="113" y="97" width="10" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="113" y="105" width="12" height="6" rx="1" fill="#8C52FF" fill-opacity="0.7"/>
-    
-    <rect x="134" y="90" width="18" height="25" rx="2" fill="#FFFFFF" stroke="#8C52FF" stroke-width="2"/>
-    <rect x="136" y="93" width="14" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="136" y="97" width="10" height="2" rx="1" fill="#8C52FF"/>
-    <rect x="136" y="105" width="12" height="6" rx="1" fill="#8C52FF"/>
-    
-    <!-- Sparkles -->
-    <circle cx="70" cy="40" r="3" fill="white"/>
-    <circle cx="180" cy="50" r="2" fill="white"/>
-    <circle cx="150" cy="30" r="2.5" fill="white"/>
-    <circle cx="100" cy="25" r="2" fill="white"/>
-    
-    <!-- Water Drops -->
-    <path d="M136 52C136 46.4772 140.477 42 146 42C151.523 42 156 46.4772 156 52" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M125 30C125 24.4772 129.477 20 135 20C140.523 20 145 24.4772 145 30" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    
-    <!-- Pricing Symbols -->
-    <path d="M96 110L96 111" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M96 108C96.5523 108 97 108.448 97 109C97 109.552 96.5523 110 96 110C95.4477 110 95 109.552 95 109C95 108.448 95.4477 108 96 108" fill="#8C52FF"/>
-    
-    <path d="M119 110L119 111" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M119 108C119.552 108 120 108.448 120 109C120 109.552 119.552 110 119 110C118.448 110 118 109.552 118 109C118 108.448 118.448 108 119 108" fill="#8C52FF"/>
-    <path d="M121 110L120 110" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    
-    <path d="M142 110L142 111" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M142 108C142.552 108 143 108.448 143 109C143 109.552 142.552 110 142 110C141.448 110 141 109.552 141 109C141 108.448 141.448 108 142 108" fill="#8C52FF"/>
-    <path d="M144 110L143 110" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M144 108L143 108" stroke="#8C52FF" stroke-width="2" stroke-linecap="round"/>
-    
-    <!-- Cursor/Pointer -->
-    <path d="M141 83L151 83L146 91L141 83Z" fill="#FFFFFF"/>
-  </g>
-  <defs>
-    <filter id="filter0_d" x="0" y="-40" width="240" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/>
-      <feOffset dy="10"/>
-      <feGaussianBlur stdDeviation="10"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
-      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
-      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
-    </filter>
-    <linearGradient id="paint0_linear" x1="40" y1="-20" x2="200" y2="140" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F4F4F9"/>
-      <stop offset="1" stop-color="#EBEEFF"/>
-    </linearGradient>
-    <linearGradient id="paint1_linear" x1="120" y1="-20" x2="120" y2="140" gradientUnits="userSpaceOnUse">
-      <stop stop-color="white" stop-opacity="0.2"/>
-      <stop offset="1" stop-color="white" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
+<svg width="200px" height="160px" viewBox="0 0 200 160" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <title>Choose Your Service</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <!-- Background Elements -->
+        <circle cx="40" cy="40" r="15" fill="#ffffff" opacity="0.1"></circle>
+        <circle cx="160" cy="30" r="10" fill="#ffffff" opacity="0.1"></circle>
+        <circle cx="140" cy="130" r="20" fill="#ffffff" opacity="0.1"></circle>
+        
+        <!-- Service Tiers -->
+        <g transform="translate(35, 30)">
+            <!-- Basic Wash -->
+            <rect x="0" y="0" width="40" height="70" rx="5" fill="#ffffff" opacity="0.6"></rect>
+            <g transform="translate(10, 10)">
+                <circle cx="10" cy="10" r="10" fill="#ffffff" opacity="0.9"></circle>
+                <path d="M5,10 L8,13 L15,6" stroke="#8c52ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </g>
+            <text x="20" y="45" font-family="Arial" font-size="8" text-anchor="middle" fill="#ffffff">BASIC</text>
+            <text x="20" y="60" font-family="Arial" font-size="10" text-anchor="middle" fill="#ffffff">$30</text>
+        </g>
+        
+        <g transform="translate(80, 20)">
+            <!-- The OG -->
+            <rect x="0" y="0" width="40" height="90" rx="5" fill="#ffffff" opacity="0.8"></rect>
+            <g transform="translate(10, 10)">
+                <circle cx="10" cy="10" r="10" fill="#ffffff" opacity="0.9"></circle>
+                <path d="M5,10 L8,13 L15,6" stroke="#8c52ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M5,14 L15,14" stroke="#8c52ff" stroke-width="2" stroke-linecap="round"></path>
+            </g>
+            <text x="20" y="45" font-family="Arial" font-size="8" text-anchor="middle" fill="#ffffff">THE OG</text>
+            <text x="20" y="60" font-family="Arial" font-size="10" text-anchor="middle" fill="#ffffff">$55</text>
+            <text x="20" y="75" font-family="Arial" font-size="6" text-anchor="middle" fill="#ffffff">POPULAR</text>
+        </g>
+        
+        <g transform="translate(125, 10)">
+            <!-- Full Detail -->
+            <rect x="0" y="0" width="40" height="110" rx="5" fill="#ffffff" opacity="0.9"></rect>
+            <g transform="translate(10, 10)">
+                <circle cx="10" cy="10" r="10" fill="#ffffff" opacity="0.9"></circle>
+                <path d="M5,10 L8,13 L15,6" stroke="#8c52ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M5,14 L15,14" stroke="#8c52ff" stroke-width="2" stroke-linecap="round"></path>
+                <path d="M5,18 L15,18" stroke="#8c52ff" stroke-width="2" stroke-linecap="round"></path>
+            </g>
+            <text x="20" y="45" font-family="Arial" font-size="7" text-anchor="middle" fill="#ffffff">FULL DETAIL</text>
+            <text x="20" y="60" font-family="Arial" font-size="10" text-anchor="middle" fill="#ffffff">$175</text>
+            <text x="20" y="75" font-family="Arial" font-size="6" text-anchor="middle" fill="#ffffff">PREMIUM</text>
+        </g>
+        
+        <!-- Hand with Pointing Finger -->
+        <g transform="translate(80, 130)">
+            <path d="M15,0 C11.134,0 8,3.134 8,7 L8,15 L0,15 L0,30 L35,30 L35,15 L30,15 L30,8 C30,3.582 26.418,0 22,0 L15,0 Z" fill="#ffffff" opacity="0.8"></path>
+            <path d="M15,0 L15,20 L8,20 L8,7 C8,3.134 11.134,0 15,0 Z" fill="#ffffff" opacity="0.6"></path>
+            <path d="M22,0 L22,20 L15,20 L15,0 L22,0 Z" fill="#ffffff" opacity="0.7"></path>
+            <path d="M30,8 L30,20 L22,20 L22,0 C26.418,0 30,3.582 30,8 Z" fill="#ffffff" opacity="0.6"></path>
+        </g>
+        
+        <!-- Sparkles -->
+        <g transform="translate(150, 70)" fill="#ffffff">
+            <circle cx="0" cy="0" r="2"></circle>
+            <path d="M0,-5 L0,5 M-5,0 L5,0" stroke="#ffffff" stroke-width="1"></path>
+        </g>
+        
+        <g transform="translate(50, 110)" fill="#ffffff">
+            <circle cx="0" cy="0" r="2"></circle>
+            <path d="M0,-5 L0,5 M-5,0 L5,0" stroke="#ffffff" stroke-width="1"></path>
+        </g>
+        
+        <!-- Pointer Indicator -->
+        <path d="M100,120 L100,110 L105,115 L100,120 Z" fill="#ffffff" opacity="0.9"></path>
+    </g>
 </svg>
