@@ -57,12 +57,19 @@ export default function BookingDialog({
   // Fetch the selected service
   const { data: service, isLoading: serviceLoading } = useQuery<Service>({
     queryKey: ["/api/services", serviceId],
+    queryFn: async () => {
+      if (!serviceId) throw new Error("No service ID provided");
+      const res = await fetch(`/api/services/${serviceId}`);
+      if (!res.ok) throw new Error("Failed to fetch service");
+      return res.json();
+    },
     enabled: !!serviceId,
   });
   
   // Initialize total price from service when it's loaded
   useEffect(() => {
-    if (service && service.price) {
+    if (service && typeof service.price === 'number') {
+      console.log("Service loaded:", service);
       setTotalPrice(service.price);
     }
   }, [service]);
@@ -91,6 +98,12 @@ export default function BookingDialog({
   // Fetch the selected time slot
   const { data: timeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
     queryKey: ["/api/timeslots", timeSlotId],
+    queryFn: async () => {
+      if (!timeSlotId) throw new Error("No time slot ID provided");
+      const res = await fetch(`/api/timeslots/${timeSlotId}`);
+      if (!res.ok) throw new Error("Failed to fetch time slot");
+      return res.json();
+    },
     enabled: !!timeSlotId,
   });
 
@@ -135,8 +148,17 @@ export default function BookingDialog({
   });
 
   const onSubmit = (data: any) => {
+    if (!service) {
+      toast({
+        title: "Error",
+        description: "Service information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Update form values with the latest service and time slot info
-    data.priceTier = service?.category || "basic";
+    data.priceTier = service.category || "basic";
     data.providerId = provider.id;
     data.serviceId = serviceId;
     data.timeSlotId = timeSlotId;
@@ -148,14 +170,16 @@ export default function BookingDialog({
       data.time = timeSlot.startTime;
     }
     
-    // Add the selected add-ons to the booking data
+    // Calculate add-ons total if any are selected
     const selectedAddOns = addOns.filter(addon => addon.selected);
-    if (selectedAddOns.length > 0) {
-      data.addOns = selectedAddOns;
-      data.addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
-      data.totalPrice = totalPrice;
-    }
+    const addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
     
+    // Always include price information
+    data.addOns = selectedAddOns;
+    data.addOnTotal = addOnTotal;
+    data.totalPrice = service.price + addOnTotal;
+    
+    console.log("Submitting booking:", data);
     bookingMutation.mutate(data);
   };
 
