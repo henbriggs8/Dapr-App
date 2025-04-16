@@ -93,7 +93,14 @@ export function registerRoutes(app: Express): Server {
         notes: null,
         date: req.body.date || null,
         time: req.body.time || null,
-        currentStage: null
+        currentStage: null,
+        // New fields for earnings and metrics tracking
+        ratingComment: null,
+        amount: null,
+        providerEarnings: null,
+        startTime: null,
+        endTime: null,
+        serviceDuration: null
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -270,6 +277,16 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/admin/users", isAdmin, async (req, res) => {
     const users = await storage.getAllUsers();
     res.json(users);
+  });
+
+  app.get("/api/admin/revenue-by-location", isAdmin, async (req, res) => {
+    const revenueData = await storage.getRevenueByLocation();
+    res.json(revenueData);
+  });
+
+  app.get("/api/admin/provider-status", isAdmin, async (req, res) => {
+    const statusData = await storage.getProviderStatusSummary();
+    res.json(statusData);
   });
 
   app.patch("/api/admin/pricing", isAdmin, async (req, res) => {

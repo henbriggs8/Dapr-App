@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Redirect } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
+import { LogOut } from "lucide-react";
 
 const pricingSchema = z.object({
   basic: z.coerce.number().min(1),
@@ -22,7 +23,7 @@ const pricingSchema = z.object({
 });
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
 
   // Redirect non-admin users
@@ -85,8 +86,18 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto p-4">
       <Card className="mb-8">
-        <CardHeader>
+        <CardHeader className="flex justify-between items-center">
           <CardTitle>Admin Dashboard</CardTitle>
+          <Button 
+            variant="outline"
+            size="sm"
+            className="text-red-500 hover:bg-red-50"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          </Button>
         </CardHeader>
       </Card>
 

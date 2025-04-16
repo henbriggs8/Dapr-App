@@ -41,6 +41,12 @@ export default function AuthPage() {
   });
 
   if (user) {
+    // Redirect admin users to the admin dashboard
+    if (user.isAdmin) {
+      return <Redirect to="/admin" />;
+    }
+    // Redirect providers to the provider dashboard (which is already handled by the Router in App.tsx)
+    // Otherwise, redirect regular users to the home page
     return <Redirect to="/" />;
   }
 

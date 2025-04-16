@@ -29,6 +29,29 @@ export interface IStorage {
     averageDuration: { [key: string]: number };
     totalServiceTime: number;
   }>;
+  // Admin dashboards
+  getRevenueByLocation(): Promise<{
+    totalRevenue: number;
+    locationData: {
+      latitude: number;
+      longitude: number;
+      location: string;
+      revenue: number;
+      bookingsCount: number;
+    }[];
+  }>;
+  getProviderStatusSummary(): Promise<{
+    totalProviders: number;
+    onlineProviders: number;
+    onlineProvidersList: {
+      id: number;
+      name: string;
+      username: string;
+      latitude?: number;
+      longitude?: number;
+      lastLocationUpdate?: string;
+    }[];
+  }>;
   // Booking timing methods
   startServiceTimer(bookingId: number): Promise<Booking>;
   completeServiceTimer(bookingId: number): Promise<Booking>;
@@ -418,6 +441,98 @@ export class MemStorage implements IStorage {
     return {
       averageDuration,
       totalServiceTime
+    };
+  }
+  
+  // Admin dashboard methods
+  async getRevenueByLocation(): Promise<{
+    totalRevenue: number;
+    locationData: {
+      latitude: number;
+      longitude: number;
+      location: string;
+      revenue: number;
+      bookingsCount: number;
+    }[];
+  }> {
+    // Get all completed bookings
+    const completedBookings = Array.from(this.bookings.values()).filter(
+      booking => booking.status === 'completed' && booking.amount
+    );
+    
+    // Calculate total revenue
+    const totalRevenue = completedBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
+    
+    // Group by location
+    const locationMap = new Map<string, {
+      latitude: number;
+      longitude: number;
+      location: string;
+      revenue: number;
+      bookingsCount: number;
+    }>();
+    
+    for (const booking of completedBookings) {
+      // Create a unique location key
+      const lat = booking.serviceLatitude;
+      const lng = booking.serviceLongitude;
+      
+      if (lat && lng) {
+        // Round to 2 decimal places for location grouping
+        const roundedLat = Math.round(lat * 100) / 100;
+        const roundedLng = Math.round(lng * 100) / 100;
+        const locationKey = `${roundedLat},${roundedLng}`;
+        
+        if (!locationMap.has(locationKey)) {
+          locationMap.set(locationKey, {
+            latitude: lat,
+            longitude: lng,
+            location: booking.serviceLocation || 'Unknown location',
+            revenue: 0,
+            bookingsCount: 0
+          });
+        }
+        
+        const locationData = locationMap.get(locationKey)!;
+        locationData.revenue += booking.amount || 0;
+        locationData.bookingsCount += 1;
+      }
+    }
+    
+    return {
+      totalRevenue,
+      locationData: Array.from(locationMap.values())
+    };
+  }
+  
+  async getProviderStatusSummary(): Promise<{
+    totalProviders: number;
+    onlineProviders: number;
+    onlineProvidersList: {
+      id: number;
+      name: string;
+      username: string;
+      latitude?: number;
+      longitude?: number;
+      lastLocationUpdate?: string;
+    }[];
+  }> {
+    const providers = await this.getProviders();
+    const onlineProviders = providers.filter(provider => provider.currentStatus === 'online');
+    
+    const onlineProvidersList = onlineProviders.map(provider => ({
+      id: provider.id,
+      name: provider.name || '',
+      username: provider.username,
+      latitude: provider.latitude === null ? undefined : provider.latitude,
+      longitude: provider.longitude === null ? undefined : provider.longitude,
+      lastLocationUpdate: provider.lastLocationUpdate === null ? undefined : provider.lastLocationUpdate
+    }));
+    
+    return {
+      totalProviders: providers.length,
+      onlineProviders: onlineProviders.length,
+      onlineProvidersList
     };
   }
   
