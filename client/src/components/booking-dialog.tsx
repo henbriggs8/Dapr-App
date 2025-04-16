@@ -60,6 +60,13 @@ export default function BookingDialog({
     enabled: !!serviceId,
   });
   
+  // Initialize total price from service when it's loaded
+  useEffect(() => {
+    if (service && service.price) {
+      setTotalPrice(service.price);
+    }
+  }, [service]);
+  
   // Toggle add-on selection
   const toggleAddOn = (id: string) => {
     setAddOns(
@@ -71,12 +78,13 @@ export default function BookingDialog({
   
   // Calculate total price when service or add-ons change
   useEffect(() => {
-    if (service) {
+    if (service && service.price) {
+      const basePrice = service.price || 0;
       const addOnTotal = addOns
         .filter((addon) => addon.selected)
         .reduce((sum, addon) => sum + addon.price, 0);
       
-      setTotalPrice(service.price + addOnTotal);
+      setTotalPrice(basePrice + addOnTotal);
     }
   }, [service, addOns]);
   
@@ -160,6 +168,9 @@ export default function BookingDialog({
     return (
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="sr-only">Loading</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -349,7 +360,7 @@ export default function BookingDialog({
                   Processing...
                 </>
               ) : (
-                `Confirm Booking - $${totalPrice}`
+                `Confirm Booking - $${totalPrice || (service?.price || 0)}`
               )}
             </Button>
           </form>
