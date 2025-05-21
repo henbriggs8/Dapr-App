@@ -176,25 +176,13 @@ export default function ServiceCards({
                   <Badge className="bg-white/30 text-white backdrop-blur-sm">
                     {service.duration} min
                   </Badge>
-                  <div className="text-white text-lg font-bold">
+                  <div className="text-white text-xl font-bold">
                     {service.category === "basic" ? 
-                      <span>
-                        S: $39 <br />
-                        M: $49 <br />
-                        L: $59
-                      </span> : 
+                      <span>From $39</span> : 
                      service.category === "standard" ? 
-                      <span>
-                        S: $58 <br />
-                        M: $68 <br />
-                        L: $78
-                      </span> : 
+                      <span>From $58</span> : 
                      service.category === "premium" ? 
-                      <span>
-                        S: $167 <br />
-                        M: $177 <br />
-                        L: $197
-                      </span> : 
+                      <span>From $167</span> : 
                      `$${service.price}`}
                   </div>
                 </div>

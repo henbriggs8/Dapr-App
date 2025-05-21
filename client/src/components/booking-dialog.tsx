@@ -363,33 +363,58 @@ export default function BookingDialog({
               )}
             />
             
-            {/* Vehicle Size Selection */}
-            <div className="space-y-2 mb-2">
-              <div className="font-medium">Vehicle Size</div>
-              <div className="grid grid-cols-3 gap-3">
-                <div 
-                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                  onClick={() => console.log("Selected small vehicle")}
-                >
-                  <div className="text-sm font-medium">Small</div>
-                  <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
+            {/* Vehicle Selection */}
+            <div className="space-y-4 mb-2">
+              <div className="bg-slate-50 p-4 rounded-lg border">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="font-medium">Vehicle 1</div>
+                  <Badge className="bg-[#8c52ff]">Primary</Badge>
                 </div>
-                <div 
-                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                  onClick={() => console.log("Selected medium vehicle")}
-                >
-                  <div className="text-sm font-medium">Medium</div>
-                  <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
-                </div>
-                <div 
-                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                  onClick={() => console.log("Selected large vehicle")}
-                >
-                  <div className="text-sm font-medium">Large</div>
-                  <div className="text-xs text-muted-foreground">SUV, Van</div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="font-medium text-sm">Vehicle Size</div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div 
+                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                        onClick={() => console.log("Selected small vehicle")}
+                      >
+                        <div className="text-sm font-medium">Small</div>
+                        <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
+                      </div>
+                      <div 
+                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                        onClick={() => console.log("Selected medium vehicle")}
+                      >
+                        <div className="text-sm font-medium">Medium</div>
+                        <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
+                      </div>
+                      <div 
+                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                        onClick={() => console.log("Selected large vehicle")}
+                      >
+                        <div className="text-sm font-medium">Large</div>
+                        <div className="text-xs text-muted-foreground">SUV, Van</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <div className="text-sm font-medium">Vehicle Details (Optional)</div>
+                    <Input placeholder="Year, Make, Model (e.g., 2022 Honda Accord)" />
+                    <div className="text-xs text-muted-foreground">This helps our team identify your vehicle</div>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Price varies based on vehicle size</p>
+              
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2 border-dashed"
+                onClick={() => console.log("Adding another vehicle")}
+              >
+                <span className="text-sm">+ Add Another Vehicle</span>
+              </Button>
             </div>
             
             {/* Promotions section - simplified */}
