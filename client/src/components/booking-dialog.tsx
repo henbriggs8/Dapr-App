@@ -363,69 +363,18 @@ export default function BookingDialog({
               )}
             />
             
-            {/* Promotions section */}
-            <div className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
+            {/* Promotions section - simplified */}
+            <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium">Promotions & Rewards</h3>
-                <Badge className="bg-[#8c52ff]">
-                  Earn 100-300 Points
-                </Badge>
+                <h3 className="font-medium">Promotional Code</h3>
               </div>
               
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between border rounded-md p-3 bg-white hover:bg-purple-50 transition-colors">
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="promo-first-wash"
-                      className="mr-3"
-                    />
-                    <div>
-                      <Label htmlFor="promo-first-wash" className="font-medium cursor-pointer">
-                        First Wash Free
-                      </Label>
-                      <p className="text-xs text-muted-foreground">Just pay the tip! (New customers only)</p>
-                    </div>
-                  </div>
+              <div className="flex flex-col w-full">
+                <div className="flex gap-2">
+                  <Input id="promo-code" placeholder="Enter promotional code" className="flex-1" />
+                  <Button type="button" variant="outline" size="sm">Apply</Button>
                 </div>
-                
-                <div className="flex items-center justify-between border rounded-md p-3 bg-white hover:bg-purple-50 transition-colors">
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="promo-credit"
-                      className="mr-3"
-                    />
-                    <div>
-                      <Label htmlFor="promo-credit" className="font-medium cursor-pointer">
-                        $25 Free Credit
-                      </Label>
-                      <p className="text-xs text-muted-foreground">For booking premium services</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between border rounded-md p-3 bg-white hover:bg-purple-50 transition-colors">
-                  <div className="flex flex-col w-full">
-                    <Label htmlFor="referral-code" className="font-medium mb-1">
-                      Referral Code
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input id="referral-code" placeholder="Enter code (Give $10, Get $10)" className="flex-1" />
-                      <Button type="button" variant="outline" size="sm">Apply</Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Enter a friend's referral code</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-4 text-xs">
-                <p className="font-medium text-[#8c52ff]">Dapper Rewards</p>
-                <ul className="list-disc pl-5 mt-1 space-y-1 text-muted-foreground">
-                  <li>Book = 100-300 points</li>
-                  <li>Refer a friend = 300 points</li>
-                  <li>Book 2x/month = 500 bonus points</li>
-                  <li>Leave a review = 100 points</li>
-                  <li>Join monthly plan = 1000 points</li>
-                </ul>
+                <p className="text-xs text-muted-foreground mt-1">Enter a valid promotional code to receive a discount</p>
               </div>
             </div>
             
