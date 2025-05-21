@@ -121,7 +121,7 @@ export default function ProviderDashboard() {
   // Provider status mutation
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await apiRequest("POST", "/api/providers/status", { status });
+      const res = await apiRequest("POST", "/api/provider/status", { status });
       return await res.json();
     },
     onSuccess: (updatedUser: User) => {
@@ -282,7 +282,7 @@ export default function ProviderDashboard() {
         watchId = navigator.geolocation.watchPosition(
           async (position) => {
             try {
-              await apiRequest("POST", "/api/providers/location", {
+              await apiRequest("POST", "/api/provider/location", {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
               });

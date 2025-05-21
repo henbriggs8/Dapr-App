@@ -103,7 +103,7 @@ export default function ServiceCards({
       case "basic":
         return "Exterior wash and shine only";
       case "standard":
-        return "Hand wash + quick vacuum and wipe down";
+        return "Hand wash + interior cleanup";
       case "premium":
         return "Complete interior & exterior detailing";
       default:
@@ -122,9 +122,9 @@ export default function ServiceCards({
       case "standard":
         return [
           "Hand wash",
-          "Tires degreased and shined",
+          "Tires degreased",
           "Streak free windows",
-          "Interior vacuum and wipe down"
+          "Vacuum and wipe down"
         ];
       case "premium":
         return [
@@ -133,7 +133,8 @@ export default function ServiceCards({
           "Carpets and Mats restore",
           "Steam clean",
           "Cupholder clean",
-          "Fresh scent"
+          "Dash clean",
+          "Dapper scent"
         ];
       default:
         return ["Car wash service"];
@@ -174,7 +175,12 @@ export default function ServiceCards({
                   <Badge className="bg-white/30 text-white backdrop-blur-sm">
                     {service.duration} min
                   </Badge>
-                  <div className="text-white text-2xl font-bold">${service.price}</div>
+                  <div className="text-white text-2xl font-bold">
+                    ${service.category === "basic" ? "39–59" : 
+                       service.category === "standard" ? "58–78" : 
+                       service.category === "premium" ? "167–197" : 
+                       service.price}
+                  </div>
                 </div>
               </div>
               <CardContent className="p-4">
