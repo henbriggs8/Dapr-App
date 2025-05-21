@@ -130,10 +130,11 @@ export default function ServiceCards({
         return [
           "Everything in O.G. plus",
           "Carpets shampoo",
-          "Carpets and Mats restore",
-          "Steam clean",
-          "Cupholder clean",
-          "Dash clean",
+          "Carpets/mats restored",
+          "Steam clean", 
+          "Cupholder & Dash clean",
+          "Steam extraction",
+          "Paint decontamination",
           "Dapper scent"
         ];
       default:

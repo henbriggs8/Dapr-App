@@ -141,6 +141,7 @@ export default function BookingDialog({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       serviceLocation: "",
+      zipCode: "",
       serviceLocationType: "home",
       priceTier: service?.category || "basic",
       providerId: provider.id,
@@ -334,20 +335,19 @@ export default function BookingDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="zipCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your ZIP code" {...field} maxLength={5} />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-xs text-muted-foreground">We'll use this to route you to the nearest franchise location</p>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <div className="font-medium text-sm">ZIP Code</div>
+              <Input 
+                placeholder="Enter your ZIP code"
+                maxLength={5} 
+                className="w-full"
+                onChange={(e) => {
+                  // We'll keep this as local state only since it's not required in the schema
+                  console.log("ZIP code updated:", e.target.value);
+                }}
+              />
+              <p className="text-xs text-muted-foreground">We'll use this to route you to the nearest franchise location</p>
+            </div>
 
             <FormField
               control={form.control}

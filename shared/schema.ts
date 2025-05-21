@@ -135,6 +135,7 @@ export const bookingFormSchema = insertBookingSchema.extend({
     required_error: "Please select a location type",
   }),
   serviceLocation: z.string().min(1, "Address is required"),
+  zipCode: z.string().min(5, "ZIP code must be at least 5 digits").optional(),
   serviceId: z.number({
     required_error: "Service ID is required",
   }),
