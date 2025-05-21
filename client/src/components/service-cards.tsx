@@ -101,11 +101,11 @@ export default function ServiceCards({
   const getServiceSummary = (category: string) => {
     switch (category) {
       case "basic":
-        return "Exterior wash and shine only";
+        return "Exterior wash and windows";
       case "standard":
-        return "Hand wash + interior cleanup";
+        return "Hand wash, vacuum, tires, interior wipe down";
       case "premium":
-        return "Complete interior & exterior detailing";
+        return "Complete interior & exterior detailing with premium features";
       default:
         return "Car wash service";
     }
@@ -176,11 +176,26 @@ export default function ServiceCards({
                   <Badge className="bg-white/30 text-white backdrop-blur-sm">
                     {service.duration} min
                   </Badge>
-                  <div className="text-white text-2xl font-bold">
-                    ${service.category === "basic" ? "39–59" : 
-                       service.category === "standard" ? "58–78" : 
-                       service.category === "premium" ? "167–197" : 
-                       service.price}
+                  <div className="text-white text-lg font-bold">
+                    {service.category === "basic" ? 
+                      <span>
+                        S: $39 <br />
+                        M: $49 <br />
+                        L: $59
+                      </span> : 
+                     service.category === "standard" ? 
+                      <span>
+                        S: $58 <br />
+                        M: $68 <br />
+                        L: $78
+                      </span> : 
+                     service.category === "premium" ? 
+                      <span>
+                        S: $167 <br />
+                        M: $177 <br />
+                        L: $197
+                      </span> : 
+                     `$${service.price}`}
                   </div>
                 </div>
               </div>

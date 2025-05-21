@@ -363,6 +363,35 @@ export default function BookingDialog({
               )}
             />
             
+            {/* Vehicle Size Selection */}
+            <div className="space-y-2 mb-2">
+              <div className="font-medium">Vehicle Size</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div 
+                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                  onClick={() => console.log("Selected small vehicle")}
+                >
+                  <div className="text-sm font-medium">Small</div>
+                  <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
+                </div>
+                <div 
+                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                  onClick={() => console.log("Selected medium vehicle")}
+                >
+                  <div className="text-sm font-medium">Medium</div>
+                  <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
+                </div>
+                <div 
+                  className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
+                  onClick={() => console.log("Selected large vehicle")}
+                >
+                  <div className="text-sm font-medium">Large</div>
+                  <div className="text-xs text-muted-foreground">SUV, Van</div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Price varies based on vehicle size</p>
+            </div>
+            
             {/* Promotions section - simplified */}
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
