@@ -59,7 +59,6 @@ export default function BookingDialog({
   const [vehicles, setVehicles] = useState([
     { id: 1, size: 'small', details: '', sizeMultiplier: 0 }
   ]);
-  const [selectedVehicleSize, setSelectedVehicleSize] = useState<string>('small');
   
   // Fetch the selected service
   const { data: service, isLoading: serviceLoading } = useQuery<Service>({
@@ -119,25 +118,33 @@ export default function BookingDialog({
   
   // Vehicle size selection handler
   const selectVehicleSize = (size: string, vehicleId: number) => {
-    setSelectedVehicleSize(size);
+    console.log(`Selecting ${size} for vehicle ${vehicleId}`);
     const sizeMultiplier = size === 'small' ? 0 : size === 'medium' ? 10 : 20;
     
-    setVehicles(vehicles.map(vehicle => 
-      vehicle.id === vehicleId 
-        ? { ...vehicle, size, sizeMultiplier }
-        : vehicle
-    ));
+    // Force a re-render by creating a completely new array
+    setVehicles(prevVehicles => 
+      prevVehicles.map(vehicle => 
+        vehicle.id === vehicleId 
+          ? { ...vehicle, size: size, sizeMultiplier: sizeMultiplier }
+          : { ...vehicle }
+      )
+    );
   };
   
   // Add another vehicle
   const addVehicle = () => {
     const newVehicleId = Math.max(...vehicles.map(v => v.id)) + 1;
-    setVehicles([...vehicles, { 
-      id: newVehicleId, 
-      size: 'small', 
-      details: '', 
-      sizeMultiplier: 0 
-    }]);
+    console.log(`Adding vehicle with ID: ${newVehicleId}`);
+    setVehicles(prevVehicles => {
+      const newVehicles = [...prevVehicles, { 
+        id: newVehicleId, 
+        size: 'small', 
+        details: '', 
+        sizeMultiplier: 0 
+      }];
+      console.log('New vehicles array:', newVehicles);
+      return newVehicles;
+    });
   };
   
   // Remove vehicle
@@ -434,7 +441,8 @@ export default function BookingDialog({
                     <div className="space-y-2">
                       <div className="font-medium text-sm">Vehicle Size</div>
                       <div className="grid grid-cols-3 gap-3">
-                        <div 
+                        <button 
+                          type="button"
                           className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
                             vehicle.size === 'small' 
                               ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
@@ -445,8 +453,9 @@ export default function BookingDialog({
                           <div className="text-sm font-medium">Small</div>
                           <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
                           <div className="text-xs text-green-600 font-medium">+$0</div>
-                        </div>
-                        <div 
+                        </button>
+                        <button 
+                          type="button"
                           className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
                             vehicle.size === 'medium' 
                               ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
@@ -457,8 +466,9 @@ export default function BookingDialog({
                           <div className="text-sm font-medium">Medium</div>
                           <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
                           <div className="text-xs text-orange-600 font-medium">+$10</div>
-                        </div>
-                        <div 
+                        </button>
+                        <button 
+                          type="button"
                           className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
                             vehicle.size === 'large' 
                               ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
@@ -469,7 +479,7 @@ export default function BookingDialog({
                           <div className="text-sm font-medium">Large</div>
                           <div className="text-xs text-muted-foreground">SUV, Van</div>
                           <div className="text-xs text-red-600 font-medium">+$20</div>
-                        </div>
+                        </button>
                       </div>
                     </div>
                     
