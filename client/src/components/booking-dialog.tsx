@@ -55,6 +55,12 @@ export default function BookingDialog({
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
   
+  // Vehicle management state
+  const [vehicles, setVehicles] = useState([
+    { id: 1, size: 'small', details: '', sizeMultiplier: 0 }
+  ]);
+  const [selectedVehicleSize, setSelectedVehicleSize] = useState<string>('small');
+  
   // Fetch the selected service
   const { data: service, isLoading: serviceLoading } = useQuery<Service>({
     queryKey: ["/api/services", serviceId],
@@ -111,7 +117,37 @@ export default function BookingDialog({
     );
   };
   
-  // Calculate total price when service or add-ons change
+  // Vehicle size selection handler
+  const selectVehicleSize = (size: string, vehicleId: number) => {
+    setSelectedVehicleSize(size);
+    const sizeMultiplier = size === 'small' ? 0 : size === 'medium' ? 10 : 20;
+    
+    setVehicles(vehicles.map(vehicle => 
+      vehicle.id === vehicleId 
+        ? { ...vehicle, size, sizeMultiplier }
+        : vehicle
+    ));
+  };
+  
+  // Add another vehicle
+  const addVehicle = () => {
+    const newVehicleId = Math.max(...vehicles.map(v => v.id)) + 1;
+    setVehicles([...vehicles, { 
+      id: newVehicleId, 
+      size: 'small', 
+      details: '', 
+      sizeMultiplier: 0 
+    }]);
+  };
+  
+  // Remove vehicle
+  const removeVehicle = (vehicleId: number) => {
+    if (vehicles.length > 1) {
+      setVehicles(vehicles.filter(v => v.id !== vehicleId));
+    }
+  };
+  
+  // Calculate total price when service, add-ons, or vehicles change
   useEffect(() => {
     if (service && service.price) {
       const basePrice = service.price || 0;
@@ -119,9 +155,12 @@ export default function BookingDialog({
         .filter((addon) => addon.selected)
         .reduce((sum, addon) => sum + addon.price, 0);
       
-      setTotalPrice(basePrice + addOnTotal);
+      // Calculate vehicle size adjustments
+      const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + vehicle.sizeMultiplier, 0);
+      
+      setTotalPrice(basePrice + addOnTotal + vehicleSizeTotal);
     }
-  }, [service, addOns]);
+  }, [service, addOns, vehicles]);
   
   // Fetch the selected time slot
   const { data: timeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
@@ -251,8 +290,14 @@ export default function BookingDialog({
               <div className="text-muted-foreground">Service:</div>
               <div className="font-medium">{service?.name}</div>
               
-              <div className="text-muted-foreground">Price:</div>
+              <div className="text-muted-foreground">Base Price:</div>
               <div className="font-medium">${service?.price}</div>
+              
+              <div className="text-muted-foreground">Vehicle Size:</div>
+              <div className="font-medium">+${vehicles.reduce((sum, v) => sum + v.sizeMultiplier, 0)}</div>
+              
+              <div className="text-muted-foreground font-semibold">Total Price:</div>
+              <div className="font-bold text-[#8c52ff]">${totalPrice}</div>
               
               <div className="text-muted-foreground">Duration:</div>
               <div className="font-medium flex items-center">
@@ -365,55 +410,96 @@ export default function BookingDialog({
             
             {/* Vehicle Selection */}
             <div className="space-y-4 mb-2">
-              <div className="bg-slate-50 p-4 rounded-lg border">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="font-medium">Vehicle 1</div>
-                  <Badge className="bg-[#8c52ff]">Primary</Badge>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="font-medium text-sm">Vehicle Size</div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div 
-                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                        onClick={() => console.log("Selected small vehicle")}
-                      >
-                        <div className="text-sm font-medium">Small</div>
-                        <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
-                      </div>
-                      <div 
-                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                        onClick={() => console.log("Selected medium vehicle")}
-                      >
-                        <div className="text-sm font-medium">Medium</div>
-                        <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
-                      </div>
-                      <div 
-                        className="border rounded-md p-3 flex flex-col items-center hover:border-[#8c52ff] cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50" 
-                        onClick={() => console.log("Selected large vehicle")}
-                      >
-                        <div className="text-sm font-medium">Large</div>
-                        <div className="text-xs text-muted-foreground">SUV, Van</div>
-                      </div>
+              {vehicles.map((vehicle, index) => (
+                <div key={vehicle.id} className="bg-slate-50 p-4 rounded-lg border">
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="font-medium">Vehicle {index + 1}</div>
+                    <div className="flex items-center gap-2">
+                      {index === 0 && <Badge className="bg-[#8c52ff]">Primary</Badge>}
+                      {vehicles.length > 1 && index > 0 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removeVehicle(vehicle.id)}
+                          className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                        >
+                          ×
+                        </Button>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="grid gap-2">
-                    <div className="text-sm font-medium">Vehicle Details (Optional)</div>
-                    <Input placeholder="Year, Make, Model (e.g., 2022 Honda Accord)" />
-                    <div className="text-xs text-muted-foreground">This helps our team identify your vehicle</div>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="font-medium text-sm">Vehicle Size</div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div 
+                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
+                            vehicle.size === 'small' 
+                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
+                              : 'hover:border-[#8c52ff]'
+                          }`}
+                          onClick={() => selectVehicleSize('small', vehicle.id)}
+                        >
+                          <div className="text-sm font-medium">Small</div>
+                          <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
+                          <div className="text-xs text-green-600 font-medium">+$0</div>
+                        </div>
+                        <div 
+                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
+                            vehicle.size === 'medium' 
+                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
+                              : 'hover:border-[#8c52ff]'
+                          }`}
+                          onClick={() => selectVehicleSize('medium', vehicle.id)}
+                        >
+                          <div className="text-sm font-medium">Medium</div>
+                          <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
+                          <div className="text-xs text-orange-600 font-medium">+$10</div>
+                        </div>
+                        <div 
+                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
+                            vehicle.size === 'large' 
+                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
+                              : 'hover:border-[#8c52ff]'
+                          }`}
+                          onClick={() => selectVehicleSize('large', vehicle.id)}
+                        >
+                          <div className="text-sm font-medium">Large</div>
+                          <div className="text-xs text-muted-foreground">SUV, Van</div>
+                          <div className="text-xs text-red-600 font-medium">+$20</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <div className="text-sm font-medium">Vehicle Details (Optional)</div>
+                      <Input 
+                        placeholder="Year, Make, Model (e.g., 2022 Honda Accord)" 
+                        value={vehicle.details}
+                        onChange={(e) => {
+                          setVehicles(vehicles.map(v => 
+                            v.id === vehicle.id 
+                              ? { ...v, details: e.target.value }
+                              : v
+                          ));
+                        }}
+                      />
+                      <div className="text-xs text-muted-foreground">This helps our team identify your vehicle</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
               
               <Button 
                 type="button" 
                 variant="outline" 
                 className="w-full flex items-center justify-center gap-2 border-dashed"
-                onClick={() => console.log("Adding another vehicle")}
+                onClick={addVehicle}
               >
-                <span className="text-sm">+ Add Another Vehicle</span>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">Add Another Vehicle</span>
               </Button>
             </div>
             
