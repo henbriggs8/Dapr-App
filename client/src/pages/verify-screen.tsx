@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function VerifyScreen() {
   const [, setLocation] = useLocation();
@@ -11,6 +12,7 @@ export default function VerifyScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const { toast } = useToast();
+  const { registerMutation } = useAuth();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Start cooldown timer for resend
@@ -65,22 +67,42 @@ export default function VerifyScreen() {
     setIsLoading(true);
     const enteredCode = code.join("");
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     if (enteredCode === "123456") {
-      toast({
-        title: "Verification successful!",
-        description: "Welcome to Dapper",
-      });
+      // Get pending signup data
+      const pendingSignupData = localStorage.getItem("pendingSignup");
       
-      // Check if user needs onboarding
-      const hasCompletedOnboarding = localStorage.getItem("onboardingCompleted");
-      const hasAddress = localStorage.getItem("userAddress");
-      
-      if (!hasCompletedOnboarding && !hasAddress) {
-        setLocation("/onboarding/address");
+      if (pendingSignupData) {
+        try {
+          const signupData = JSON.parse(pendingSignupData);
+          
+          // Create user account with actual registration
+          const userData = {
+            username: signupData.value,
+            password: "defaultPass123" // In production, this would be handled differently
+          };
+          
+          await registerMutation.mutateAsync(userData);
+          
+          // Clear pending signup data
+          localStorage.removeItem("pendingSignup");
+          
+          toast({
+            title: "Account created successfully!",
+            description: "Welcome to Dapper",
+          });
+          
+          // Redirect to onboarding for new users
+          setLocation("/onboarding/address");
+          
+        } catch (error) {
+          toast({
+            title: "Account creation failed",
+            description: "Please try again",
+            variant: "destructive",
+          });
+        }
       } else {
+        // No pending signup data, just redirect
         setLocation("/");
       }
     } else {
@@ -89,7 +111,6 @@ export default function VerifyScreen() {
         description: "Please check your code and try again",
         variant: "destructive",
       });
-      // Clear the code
       setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     }
@@ -162,10 +183,10 @@ export default function VerifyScreen() {
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={!isCodeComplete || isLoading}
+              disabled={!isCodeComplete || isLoading || registerMutation.isPending}
               className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
             >
-              {isLoading ? "Verifying..." : "Continue"}
+              {isLoading || registerMutation.isPending ? "Creating account..." : "Continue"}
             </Button>
           </motion.div>
 

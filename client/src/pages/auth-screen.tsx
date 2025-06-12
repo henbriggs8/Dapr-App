@@ -5,6 +5,8 @@ import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
@@ -14,14 +16,31 @@ export default function AuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { loginMutation, registerMutation } = useAuth();
+  const { toast } = useToast();
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (isLoginMode) {
-      // Handle login logic (placeholder)
-      console.log("Login attempt", { activeTab, email, phoneNumber, password });
-      setLocation("/");
+      // Handle login with actual authentication
+      const credentials = activeTab === "phone" 
+        ? { username: phoneNumber, password }
+        : { username: email, password };
+      
+      try {
+        await loginMutation.mutateAsync(credentials);
+        setLocation("/");
+      } catch (error) {
+        // Error is handled by the mutation's onError
+      }
     } else {
-      // Navigate to verification screen for signup
+      // For signup, we'll simulate the flow by storing signup data and going to verification
+      // In a real app, this would trigger SMS/email verification
+      const signupData = activeTab === "phone"
+        ? { type: "phone", value: phoneNumber }
+        : { type: "email", value: email };
+      
+      // Store signup data for verification screen
+      localStorage.setItem("pendingSignup", JSON.stringify(signupData));
       setLocation("/verify");
     }
   };
@@ -165,13 +184,17 @@ export default function AuthScreen() {
             <Button
               onClick={handleContinue}
               disabled={
-                isLoginMode 
+                (isLoginMode 
                   ? (activeTab === "phone" ? !phoneNumber || !password : !email || !password)
-                  : (activeTab === "phone" ? !phoneNumber : !email)
+                  : (activeTab === "phone" ? !phoneNumber : !email)) ||
+                loginMutation.isPending || registerMutation.isPending
               }
               className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
             >
-              {isLoginMode ? "Log in" : "Continue"}
+              {loginMutation.isPending || registerMutation.isPending 
+                ? "Please wait..." 
+                : (isLoginMode ? "Log in" : "Continue")
+              }
             </Button>
 
             {/* Toggle Login/Signup */}
