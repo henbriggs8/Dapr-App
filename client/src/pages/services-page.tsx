@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import { Plus, Star, Info, Droplet, Settings, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { formatPrice } from "@shared/pricing";
 
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -63,7 +64,7 @@ export default function ServicesPage() {
                 <CardContent>
                   <div className="flex justify-between mb-3">
                     <Badge variant="outline">{service.duration} min</Badge>
-                    <span className="font-bold text-lg">${service.price}</span>
+                    <span className="font-bold text-lg">{formatPrice(service.price)}</span>
                   </div>
                   <Button 
                     className="w-full" 

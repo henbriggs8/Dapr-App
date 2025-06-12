@@ -237,6 +237,7 @@ export default function BookingDialog({
 
   const onSubmit = (data: any) => {
     console.log("Form submission started", data);
+    console.log("Form errors:", form.formState.errors);
     
     if (!service) {
       toast({
