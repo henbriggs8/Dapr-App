@@ -210,7 +210,7 @@ export default function ProfilePage() {
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
       <div className="max-w-4xl mx-auto">
         <Card className="mb-8">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={user?.profileImage || undefined} />
@@ -226,11 +226,11 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2"
                 onClick={() => setLocation('/')}
               >
                 <Car className="h-4 w-4" />
@@ -239,7 +239,7 @@ export default function ProfilePage() {
               <Button 
                 variant="destructive" 
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2"
                 disabled={logoutMutation.isPending}
                 onClick={() => {
                   logoutMutation.mutate(undefined, {

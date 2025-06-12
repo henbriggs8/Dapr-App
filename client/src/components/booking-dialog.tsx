@@ -256,8 +256,6 @@ export default function BookingDialog({
   });
 
   const onSubmit = (data: any) => {
-    console.log("Form submission started", data);
-    console.log("Form errors:", form.formState.errors);
     
     // Check authentication first
     if (!user) {
@@ -324,8 +322,6 @@ export default function BookingDialog({
     data.vehicleSizeTotal = vehicleSizeTotal;
     data.vehicles = vehicles;
     data.totalPrice = service.price + addOnTotal + vehicleSizeTotal;
-    
-    console.log("Submitting booking with complete data:", data);
     bookingMutation.mutate(data);
   };
 
@@ -656,11 +652,6 @@ export default function BookingDialog({
               type="submit"
               className="w-full"
               disabled={bookingMutation.isPending}
-              onClick={() => {
-                console.log("Submit button clicked");
-                console.log("Form state:", form.formState);
-                console.log("Form values:", form.getValues());
-              }}
             >
               {bookingMutation.isPending ? (
                 <>
