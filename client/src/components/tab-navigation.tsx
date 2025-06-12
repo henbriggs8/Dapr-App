@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, Sparkles, Activity, User } from "lucide-react";
+import { CalendarCheck, Sparkles, Activity, User } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function TabNavigation() {
@@ -8,10 +8,10 @@ export default function TabNavigation() {
   // Define tab items with their routes, icons, and labels
   const tabs = [
     {
-      icon: Home,
-      label: "Home",
-      route: "/",
-      active: location === "/"
+      icon: CalendarCheck,
+      label: "Book",
+      route: "/booking",
+      active: location === "/booking"
     },
     {
       icon: Sparkles,

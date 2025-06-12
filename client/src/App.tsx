@@ -4,7 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
-import HomePage from "@/pages/home-page";
+import HomeScreen from "@/pages/home-screen";
+import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
 import ServicesPage from "@/pages/services-page";
 import ActivityPage from "@/pages/activity-page";
@@ -114,12 +115,13 @@ function Router() {
         {user?.isProvider ? (
           <ProviderRoute path="/" component={ProviderDashboard} />
         ) : (
-          <ProtectedRoute path="/" component={HomePage} />
+          <Route path="/" component={HomeScreen} />
         )}
+        <ProtectedRoute path="/booking" component={BookingScreen} />
         <ProtectedRoute path="/services" component={ServicesPage} />
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/booking" component={BookingDetails} />
+        <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthPage} />
