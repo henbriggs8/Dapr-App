@@ -158,64 +158,97 @@ export default function BookingScreen() {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Select Date & Time
+                <Clock className="h-5 w-5" />
+                Select Time
               </CardTitle>
-              <CardDescription>
-                Choose your preferred appointment time
+              <CardDescription className="flex items-center justify-between">
+                <span>Same-day service available</span>
+                <button
+                  onClick={() => {
+                    // Toggle between today and date picker
+                    const today = new Date().toISOString().split('T')[0];
+                    if (selectedDate === today) {
+                      // Show date picker options for next few days
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      setSelectedDate(tomorrow.toISOString().split('T')[0]);
+                    } else {
+                      setSelectedDate(today);
+                    }
+                  }}
+                  className="text-[#8c52ff] text-sm font-medium hover:underline"
+                >
+                  {selectedDate === new Date().toISOString().split('T')[0] 
+                    ? "Schedule for later?" 
+                    : "Back to today"
+                  }
+                </button>
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={selectedDate} onValueChange={setSelectedDate} className="w-full">
-                <TabsList className="grid w-full grid-cols-7 mb-6">
-                  {getDateOptions().map((date) => (
-                    <TabsTrigger key={date} value={date} className="text-xs">
-                      {formatDate(date)}
-                    </TabsTrigger>
+              {/* Date Selection (only show if not today) */}
+              {selectedDate !== new Date().toISOString().split('T')[0] && (
+                <div className="mb-6">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {getDateOptions().slice(1, 8).map((date) => (
+                      <button
+                        key={date}
+                        onClick={() => setSelectedDate(date)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                          selectedDate === date
+                            ? "border-[#8c52ff] bg-[#8c52ff]/5 text-[#8c52ff]"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        {formatDate(date)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Time Slots */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {timeSlots
+                  ?.filter(slot => 
+                    slot.date === selectedDate && 
+                    slot.isAvailable && 
+                    slot.currentBookings < slot.maxBookings
+                  )
+                  .map((timeSlot) => (
+                    <Button
+                      key={timeSlot.id}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto hover:border-[#8c52ff] hover:bg-[#8c52ff]/5"
+                      onClick={() => handleTimeSlotSelect(timeSlot)}
+                    >
+                      <Clock className="h-4 w-4 mb-1" />
+                      <span className="font-medium">
+                        {formatTime(timeSlot.startTime)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {timeSlot.maxBookings - timeSlot.currentBookings} spots left
+                      </span>
+                    </Button>
                   ))}
-                </TabsList>
-                
-                {getDateOptions().map((date) => (
-                  <TabsContent key={date} value={date}>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {timeSlots
-                        ?.filter(slot => 
-                          slot.date === date && 
-                          slot.isAvailable && 
-                          slot.currentBookings < slot.maxBookings
-                        )
-                        .map((timeSlot) => (
-                          <Button
-                            key={timeSlot.id}
-                            variant="outline"
-                            className="flex flex-col items-center p-4 h-auto hover:border-[#8c52ff] hover:bg-[#8c52ff]/5"
-                            onClick={() => handleTimeSlotSelect(timeSlot)}
-                          >
-                            <Clock className="h-4 w-4 mb-1" />
-                            <span className="font-medium">
-                              {formatTime(timeSlot.startTime)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {timeSlot.maxBookings - timeSlot.currentBookings} spots left
-                            </span>
-                          </Button>
-                        ))}
-                    </div>
-                    
-                    {timeSlots?.filter(slot => 
-                      slot.date === date && 
-                      slot.isAvailable && 
-                      slot.currentBookings < slot.maxBookings
-                    ).length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No available time slots for this date</p>
-                        <p className="text-sm">Please try another date</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                ))}
-              </Tabs>
+              </div>
+              
+              {timeSlots?.filter(slot => 
+                slot.date === selectedDate && 
+                slot.isAvailable && 
+                slot.currentBookings < slot.maxBookings
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No available time slots for {selectedDate === new Date().toISOString().split('T')[0] ? 'today' : 'this date'}</p>
+                  <p className="text-sm">
+                    {selectedDate === new Date().toISOString().split('T')[0] 
+                      ? "Try scheduling for tomorrow" 
+                      : "Please try another date"
+                    }
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
