@@ -9,13 +9,21 @@ import { Separator } from "@/components/ui/separator";
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"phone" | "email">("phone");
+  const [isLoginMode, setIsLoginMode] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleContinue = () => {
-    // Navigate to verification screen (placeholder)
-    setLocation("/verify");
+    if (isLoginMode) {
+      // Handle login logic (placeholder)
+      console.log("Login attempt", { activeTab, email, phoneNumber, password });
+      setLocation("/");
+    } else {
+      // Navigate to verification screen for signup
+      setLocation("/verify");
+    }
   };
 
   const handleSkip = () => {
@@ -36,7 +44,9 @@ export default function AuthScreen() {
         >
           <ArrowLeft className="h-6 w-6 text-gray-700" />
         </button>
-        <h1 className="text-xl font-semibold text-gray-900">Sign up</h1>
+        <h1 className="text-xl font-semibold text-gray-900">
+          {isLoginMode ? "Log in" : "Sign up"}
+        </h1>
         <div className="w-10" /> {/* Spacer for centering */}
       </div>
 
@@ -104,12 +114,25 @@ export default function AuthScreen() {
                   />
                 </div>
 
-                {/* Disclaimer */}
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  We will send a text with a verification code. Message and data rates may apply. 
-                  By continuing, you agree to our{" "}
-                  <button className="text-[#8c52ff] underline">Terms of Service</button>.
-                </p>
+                {/* Password field for login mode */}
+                {isLoginMode && (
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+                  />
+                )}
+
+                {/* Disclaimer - only show in signup mode */}
+                {!isLoginMode && (
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    We will send a text with a verification code. Message and data rates may apply. 
+                    By continuing, you agree to our{" "}
+                    <button className="text-[#8c52ff] underline">Terms of Service</button>.
+                  </p>
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -124,17 +147,45 @@ export default function AuthScreen() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
                 />
+
+                {/* Password field for login mode */}
+                {isLoginMode && (
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+                  />
+                )}
               </motion.div>
             )}
 
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={activeTab === "phone" ? !phoneNumber : !email}
+              disabled={
+                isLoginMode 
+                  ? (activeTab === "phone" ? !phoneNumber || !password : !email || !password)
+                  : (activeTab === "phone" ? !phoneNumber : !email)
+              }
               className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
             >
-              Continue
+              {isLoginMode ? "Log in" : "Continue"}
             </Button>
+
+            {/* Toggle Login/Signup */}
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  setIsLoginMode(!isLoginMode);
+                  setPassword("");
+                }}
+                className="text-[#8c52ff] text-base font-medium hover:underline"
+              >
+                {isLoginMode ? "Don't have an account? Sign up" : "Already have account? Login"}
+              </button>
+            </div>
           </div>
 
           {/* OR Divider */}
