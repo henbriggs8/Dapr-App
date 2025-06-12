@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import AuthScreen from "@/pages/auth-screen";
 import HomeScreen from "@/pages/home-screen";
 import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
@@ -135,6 +136,8 @@ function Router() {
         <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
         <Route path="/faq" component={FAQ} />
         <Route path="/corporate" component={Corporate} />
+        <Route path="/auth-new" component={AuthScreen} />
+        <Route path="/verify" component={() => <div className="min-h-screen bg-white flex items-center justify-center"><p className="text-gray-600">Verification page (placeholder)</p></div>} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
