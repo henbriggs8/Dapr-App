@@ -7,6 +7,9 @@ import AuthPage from "@/pages/auth-page";
 import AuthScreen from "@/pages/auth-screen";
 import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
+import AddressScreen from "@/pages/address-screen";
+import CarProfileScreen from "@/pages/car-profile-screen";
+import FirstWashOffer from "@/pages/first-wash-offer";
 import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
 import ServicesPage from "@/pages/services-page";
@@ -26,9 +29,7 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
-import { OnboardingJourney } from "@/components/onboarding-journey";
 import TabNavigation from "@/components/tab-navigation";
-import { useState, useEffect } from "react";
 
 function AdminRoute({
   path,
@@ -92,30 +93,6 @@ function ProviderRoute({
 
 function Router() {
   const { user } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  
-  // Show onboarding for regular (non-admin, non-provider) users after login
-  useEffect(() => {
-    if (user && !user.isAdmin && !user.isProvider) {
-      // Check if onboarding has been completed before
-      const hasCompletedOnboarding = localStorage.getItem('dapper_onboarding_completed');
-      
-      if (!hasCompletedOnboarding) {
-        // Show onboarding after a short delay to ensure smooth transition
-        const timer = setTimeout(() => {
-          setShowOnboarding(true);
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [user]);
-  
-  const handleOnboardingComplete = () => {
-    // Mark onboarding as completed in localStorage
-    localStorage.setItem('dapper_onboarding_completed', 'true');
-    setShowOnboarding(false);
-  };
 
   return (
     <>
@@ -123,7 +100,7 @@ function Router() {
         {user?.isProvider ? (
           <ProviderRoute path="/" component={ProviderDashboard} />
         ) : (
-          <Route path="/" component={HomeScreen} />
+          <ProtectedRoute path="/" component={HomeScreen} />
         )}
         <ProtectedRoute path="/booking" component={BookingScreen} />
         <ProtectedRoute path="/services" component={ServicesPage} />
@@ -138,17 +115,14 @@ function Router() {
         <Route path="/faq" component={FAQ} />
         <Route path="/corporate" component={Corporate} />
         <Route path="/verify" component={VerifyScreen} />
+        <Route path="/onboarding/address" component={AddressScreen} />
+        <Route path="/onboarding/car-profile" component={CarProfileScreen} />
+        <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthScreen} />
         <Route path="/auth-old" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>
-      
-      {/* Onboarding Journey with Micro-Interactions */}
-      <OnboardingJourney 
-        show={showOnboarding} 
-        onComplete={handleOnboardingComplete}
-      />
       
       {/* Show tab navigation for regular users only */}
       {user && !user.isAdmin && !user.isProvider && <TabNavigation />}
