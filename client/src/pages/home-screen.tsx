@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby, Gift, Copy, Share } from "lucide-react";
+import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby, Gift, Copy, Share, Home, FileText, Activity, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -256,6 +256,43 @@ export default function HomeScreen() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-pb">
+        <div className="flex items-center justify-around py-2">
+          <button
+            onClick={() => setLocation("/booking")}
+            className="flex flex-col items-center p-3 min-w-0 flex-1"
+          >
+            <Calendar className="h-6 w-6 text-[#8c52ff]" />
+            <span className="text-xs text-[#8c52ff] font-medium mt-1">Book Now</span>
+          </button>
+          
+          <button
+            onClick={() => setLocation("/services")}
+            className="flex flex-col items-center p-3 min-w-0 flex-1"
+          >
+            <FileText className="h-6 w-6 text-gray-400" />
+            <span className="text-xs text-gray-400 mt-1">Services</span>
+          </button>
+          
+          <button
+            onClick={() => setLocation("/activity")}
+            className="flex flex-col items-center p-3 min-w-0 flex-1"
+          >
+            <Activity className="h-6 w-6 text-gray-400" />
+            <span className="text-xs text-gray-400 mt-1">Activity</span>
+          </button>
+          
+          <button
+            onClick={() => setLocation("/profile")}
+            className="flex flex-col items-center p-3 min-w-0 flex-1"
+          >
+            <User className="h-6 w-6 text-gray-400" />
+            <span className="text-xs text-gray-400 mt-1">Account</span>
+          </button>
+        </div>
+      </div>
 
       {/* Bottom spacing for mobile navigation */}
       <div className="pb-20 sm:pb-8"></div>
