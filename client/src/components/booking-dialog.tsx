@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,6 +37,7 @@ export default function BookingDialog({
   timeSlotId: number;
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Define add-ons using centralized pricing
   const [addOns, setAddOns] = useState<{
@@ -227,17 +229,48 @@ export default function BookingDialog({
     },
     onError: (error: Error) => {
       console.error("Booking creation failed:", error);
-      toast({
-        title: "Booking Failed",
-        description: error.message || "Unable to create booking. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Check if it's an authentication error
+      if (error.message.includes("Authentication required") || error.message.includes("401")) {
+        toast({
+          title: "Login Required",
+          description: "Please log in to complete your booking.",
+          variant: "destructive",
+          action: (
+            <button 
+              onClick={() => window.location.href = "/auth"}
+              className="text-sm underline"
+            >
+              Go to Login
+            </button>
+          ),
+        });
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: error.message || "Unable to create booking. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
   const onSubmit = (data: any) => {
     console.log("Form submission started", data);
     console.log("Form errors:", form.formState.errors);
+    
+    // Check authentication first
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to complete your booking.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/auth";
+      }, 2000);
+      return;
+    }
     
     if (!service) {
       toast({
@@ -623,6 +656,11 @@ export default function BookingDialog({
               type="submit"
               className="w-full"
               disabled={bookingMutation.isPending}
+              onClick={() => {
+                console.log("Submit button clicked");
+                console.log("Form state:", form.formState);
+                console.log("Form values:", form.getValues());
+              }}
             >
               {bookingMutation.isPending ? (
                 <>

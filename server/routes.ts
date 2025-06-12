@@ -60,7 +60,10 @@ export function registerRoutes(app: Express): Server {
 
   // Protected endpoints
   app.post("/api/bookings", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    if (!req.user) {
+      console.log("Booking attempt without authentication");
+      return res.status(401).json({ error: "Authentication required to create bookings. Please log in first." });
+    }
 
     try {
       const bookingData = insertBookingSchema.parse({
