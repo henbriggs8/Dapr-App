@@ -46,7 +46,7 @@ export default function ServicesPage() {
   ];
   
   return (
-    <div className="container mx-auto p-4 pb-20">
+    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
       <h1 className="text-3xl font-bold mb-2">Our Services</h1>
       <p className="text-muted-foreground mb-6">Explore our premium car detailing services</p>
       

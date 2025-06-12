@@ -90,7 +90,7 @@ export default function HomePage() {
   const dateOptions = generateDateOptions();
 
   return (
-    <div className="container mx-auto p-4 pb-20">
+    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <img 

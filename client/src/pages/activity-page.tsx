@@ -74,7 +74,7 @@ export default function ActivityPage() {
   const loyaltyTier = "Silver";
   
   return (
-    <div className="container mx-auto p-4 pb-20">
+    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
       <h1 className="text-3xl font-bold mb-2">Activity</h1>
       <p className="text-muted-foreground mb-6">Track your bookings and rewards</p>
       
