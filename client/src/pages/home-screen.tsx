@@ -133,8 +133,8 @@ export default function HomeScreen() {
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Schedule Your Wash</h2>
-                <p className="text-gray-600 text-sm mt-1">Tap to book your mobile car wash</p>
+                <h2 className="text-xl font-bold text-gray-900">Get A Wash</h2>
+                <p className="text-gray-600 text-sm mt-1">in as little as 15 minutes</p>
               </div>
             </div>
           </motion.button>
