@@ -37,7 +37,7 @@ export default function BookingDialog({
 }) {
   const { toast } = useToast();
   
-  // Define add-ons
+  // Define add-ons using centralized pricing
   const [addOns, setAddOns] = useState<{
     id: string;
     name: string;
@@ -199,36 +199,68 @@ export default function BookingDialog({
 
   const bookingMutation = useMutation({
     mutationFn: async (formData: any) => {
+      console.log("Making booking API request with data:", formData);
       const res = await apiRequest("POST", "/api/bookings", formData);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Network error" }));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
       return await res.json();
     },
     onSuccess: (data) => {
+      console.log("Booking created successfully:", data);
+      
       // Invalidate multiple queries
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timeslots"] });
       
       toast({
-        title: "Booking created",
-        description: "Redirecting to payment...",
+        title: "Booking Created Successfully!",
+        description: "Proceeding to secure payment...",
       });
+      
+      // Close dialog before payment
+      onClose();
       
       // Initiate payment for the booking
       paymentMutation.mutate(data.id);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Booking creation failed:", error);
       toast({
-        title: "Error",
-        description: "Failed to create booking",
+        title: "Booking Failed",
+        description: error.message || "Unable to create booking. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: any) => {
+    console.log("Form submission started", data);
+    
     if (!service) {
       toast({
         title: "Error",
         description: "Service information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!timeSlot) {
+      toast({
+        title: "Error", 
+        description: "Time slot information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate required fields
+    if (!data.serviceLocation?.trim()) {
+      toast({
+        title: "Service Address Required",
+        description: "Please enter your service address",
         variant: "destructive",
       });
       return;
@@ -250,13 +282,16 @@ export default function BookingDialog({
     // Calculate add-ons total if any are selected
     const selectedAddOns = addOns.filter(addon => addon.selected);
     const addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
+    const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + vehicle.sizeMultiplier, 0);
     
-    // Always include price information
+    // Include comprehensive booking information
     data.addOns = selectedAddOns;
     data.addOnTotal = addOnTotal;
-    data.totalPrice = service.price + addOnTotal;
+    data.vehicleSizeTotal = vehicleSizeTotal;
+    data.vehicles = vehicles;
+    data.totalPrice = service.price + addOnTotal + vehicleSizeTotal;
     
-    console.log("Submitting booking:", data);
+    console.log("Submitting booking with complete data:", data);
     bookingMutation.mutate(data);
   };
 

@@ -167,27 +167,27 @@ export class MemStorage implements IStorage {
       name: "System Administrator"
     });
     
-    // Create services
+    // Create services with centralized pricing
     this.createService({
       name: "Basic",
-      description: "Exterior wash only - perfect for a quick refresh",
-      price: 30,
+      description: "Exterior hand wash, Streak free windows",
+      price: 39,
       duration: 30,
       category: "basic"
     });
     
     this.createService({
       name: "The OG",
-      description: "Maintenance clean, hand wash, vacuum and wipe down",
-      price: 55,
+      description: "Hand wash, Tires degreased, Vacuum and interior wipe down",
+      price: 58,
       duration: 45,
       category: "standard"
     });
     
     this.createService({
-      name: "Full Detail",
-      description: "Hand wash, wheels degreased & shine, glass shined, spray wax. Interior: vacuum, carpets & mats shampooed, leather & upholstery steam cleaned, cup holders cleaned",
-      price: 175,
+      name: "Black Label",
+      description: "Everything in O.G. plus premium services including carpet shampoo and steam extraction",
+      price: 167,
       duration: 90,
       category: "premium"
     });

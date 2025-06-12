@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
 import { Loader2, Check } from "lucide-react";
+import { formatPriceRange } from "@shared/pricing";
 
 export default function ServiceCards({
   onServiceSelect,
@@ -177,13 +178,7 @@ export default function ServiceCards({
                     {service.duration} min
                   </Badge>
                   <div className="text-white text-xl font-bold">
-                    {service.category === "basic" ? 
-                      <span>From $39</span> : 
-                     service.category === "standard" ? 
-                      <span>From $58</span> : 
-                     service.category === "premium" ? 
-                      <span>From $167</span> : 
-                     `$${service.price}`}
+                    {formatPriceRange(service.price)}
                   </div>
                 </div>
               </div>
