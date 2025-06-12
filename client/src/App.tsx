@@ -136,10 +136,10 @@ function Router() {
         <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
         <Route path="/faq" component={FAQ} />
         <Route path="/corporate" component={Corporate} />
-        <Route path="/auth-new" component={AuthScreen} />
         <Route path="/verify" component={() => <div className="min-h-screen bg-white flex items-center justify-center"><p className="text-gray-600">Verification page (placeholder)</p></div>} />
         <AdminRoute path="/admin" component={AdminDashboard} />
-        <Route path="/auth" component={AuthPage} />
+        <Route path="/auth" component={AuthScreen} />
+        <Route path="/auth-old" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>
       
