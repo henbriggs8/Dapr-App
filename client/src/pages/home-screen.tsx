@@ -150,7 +150,7 @@ export default function HomeScreen() {
             transition={{ duration: 0.6, delay: 0.4 }}
             src="/dapper-logo-text.png"
             alt="Dapper Logo"
-            className="h-12 w-auto"
+            className="h-24 w-auto"
           />
         </div>
       </div>
