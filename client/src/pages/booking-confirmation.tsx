@@ -40,15 +40,21 @@ export default function BookingConfirmation() {
       setShowConfetti(false);
     }, 3000);
 
-    // Auto-redirect to service progress after 8 seconds
-    const redirectTimer = setTimeout(() => {
-      setLocation(`/service-progress?bookingId=${bookingId}`);
-    }, 8000);
+    // Countdown timer
+    const countdownTimer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          setLocation(`/service-progress?bookingId=${bookingId}`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
     return () => {
       window.removeEventListener('resize', handleResize);
       clearTimeout(confettiTimer);
-      clearTimeout(redirectTimer);
+      clearInterval(countdownTimer);
     };
   }, [bookingId, setLocation]);
 
@@ -214,7 +220,7 @@ export default function BookingConfirmation() {
             className="w-full h-12 bg-[#8c52ff] hover:bg-[#7c47e6]"
             onClick={() => setLocation(`/service-progress?bookingId=${bookingId}`)}
           >
-            Track Your Service
+            Track Your Service {countdown > 0 && `(${countdown}s)`}
           </Button>
           
           <Button 
@@ -225,6 +231,17 @@ export default function BookingConfirmation() {
             Back to Home
           </Button>
         </motion.div>
+
+        {/* Auto-redirect notice */}
+        {countdown > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-sm text-gray-500 bg-gray-50 rounded-lg p-3"
+          >
+            Automatically redirecting to live tracking in {countdown} seconds...
+          </motion.div>
+        )}
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 pt-4">
