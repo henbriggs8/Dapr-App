@@ -81,7 +81,7 @@ export function ServiceTracker({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showProviderLocation, setShowProviderLocation] = useState(false);
   
-  const { isConnected, sendMessage } = useWebSocket();
+  const { sendMessage } = useWebSocket();
 
   // Simulate real-time updates
   useEffect(() => {

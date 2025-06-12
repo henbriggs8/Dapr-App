@@ -10,6 +10,7 @@ import Confetti from "react-confetti";
 export default function BookingConfirmation() {
   const [, setLocation] = useLocation();
   const [showConfetti, setShowConfetti] = useState(true);
+  const [countdown, setCountdown] = useState(8);
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
     height: window.innerHeight
@@ -35,15 +36,21 @@ export default function BookingConfirmation() {
     window.addEventListener('resize', handleResize);
     
     // Stop confetti after 3 seconds
-    const timer = setTimeout(() => {
+    const confettiTimer = setTimeout(() => {
       setShowConfetti(false);
     }, 3000);
 
+    // Auto-redirect to service progress after 8 seconds
+    const redirectTimer = setTimeout(() => {
+      setLocation(`/service-progress?bookingId=${bookingId}`);
+    }, 8000);
+
     return () => {
       window.removeEventListener('resize', handleResize);
-      clearTimeout(timer);
+      clearTimeout(confettiTimer);
+      clearTimeout(redirectTimer);
     };
-  }, []);
+  }, [bookingId, setLocation]);
 
   const estimatedArrival = new Date(Date.now() + 30 * 60000); // 30 minutes from now
 
@@ -205,7 +212,7 @@ export default function BookingConfirmation() {
         >
           <Button 
             className="w-full h-12 bg-[#8c52ff] hover:bg-[#7c47e6]"
-            onClick={() => setLocation("/activity")}
+            onClick={() => setLocation(`/service-progress?bookingId=${bookingId}`)}
           >
             Track Your Service
           </Button>

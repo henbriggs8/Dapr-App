@@ -11,6 +11,7 @@ import { useState } from "react";
 import BookingDialog from "@/components/booking-dialog";
 import { Badge } from "@/components/ui/badge";
 import ServiceCards from "@/components/service-cards";
+import { EnhancedServiceSelection } from "@/components/enhanced-service-selection";
 import { OnboardingButton } from "@/components/onboarding-button";
 
 export default function BookingScreen() {
@@ -148,9 +149,25 @@ export default function BookingScreen() {
         {/* Onboarding Button */}
         <OnboardingButton />
 
-        {/* Service Selection */}
+        {/* Enhanced Service Selection */}
         <div className="mb-8">
-          <ServiceCards onServiceSelect={handleServiceSelect} />
+          <EnhancedServiceSelection 
+            services={services || []}
+            selectedServiceId={selectedServiceId}
+            onServiceSelect={handleServiceSelect}
+            onBookNow={() => {
+              if (selectedServiceId && !selectedTimeSlotId) {
+                // Auto-select first available time slot for today
+                const availableSlots = getAvailableTimeSlots();
+                if (availableSlots.length > 0) {
+                  setSelectedTimeSlotId(availableSlots[0].id);
+                  setBookingOpen(true);
+                }
+              } else if (selectedServiceId && selectedTimeSlotId) {
+                setBookingOpen(true);
+              }
+            }}
+          />
         </div>
 
         {/* Date and Time Selection */}
