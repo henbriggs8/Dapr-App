@@ -21,6 +21,7 @@ export default function AddressScreen() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zipCode, setZipCode] = useState("");
+  const [locationType, setLocationType] = useState("Home");
 
   const handleSaveAndContinue = () => {
     // Save address data to localStorage for now
@@ -28,7 +29,8 @@ export default function AddressScreen() {
       streetAddress,
       city,
       state,
-      zipCode
+      zipCode,
+      locationType
     };
     localStorage.setItem("userAddress", JSON.stringify(addressData));
     
@@ -77,6 +79,27 @@ export default function AddressScreen() {
         transition={{ delay: 0.1 }}
         className="space-y-6"
       >
+        {/* Location Type Selector */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">
+            Location Type
+          </Label>
+          <div className="flex gap-3">
+            {["Home", "Work", "Other"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setLocationType(type)}
+                className={`flex-1 h-12 rounded-lg border-2 font-medium transition-all ${
+                  locationType === type
+                    ? "border-[#8c52ff] bg-[#8c52ff]/5 text-[#8c52ff]"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
         {/* Street Address */}
         <div className="space-y-2">
           <Label htmlFor="street" className="text-sm font-medium text-gray-700">
