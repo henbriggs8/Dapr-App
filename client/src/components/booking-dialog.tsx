@@ -202,7 +202,6 @@ export default function BookingDialog({
     defaultValues: {
       serviceLocation: parsedAddress ? 
         `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}` : "",
-      zipCode: parsedAddress?.zipCode || "",
       serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
       providerId: provider.id,
@@ -465,19 +464,7 @@ export default function BookingDialog({
               )}
             />
 
-            <div className="space-y-2">
-              <div className="font-medium text-sm">ZIP Code</div>
-              <Input 
-                placeholder="Enter your ZIP code"
-                maxLength={5} 
-                className="w-full"
-                onChange={(e) => {
-                  // We'll keep this as local state only since it's not required in the schema
-                  console.log("ZIP code updated:", e.target.value);
-                }}
-              />
-              <p className="text-xs text-muted-foreground">We'll use this to route you to the nearest franchise location</p>
-            </div>
+
 
             <FormField
               control={form.control}
