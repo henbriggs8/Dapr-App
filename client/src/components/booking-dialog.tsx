@@ -39,6 +39,13 @@ export default function BookingDialog({
   const { toast } = useToast();
   const { user } = useAuth();
   
+  // Get saved user data from onboarding
+  const savedAddress = localStorage.getItem("userAddress");
+  const savedVehicle = localStorage.getItem("userVehicle");
+  
+  const parsedAddress = savedAddress ? JSON.parse(savedAddress) : null;
+  const parsedVehicle = savedVehicle ? JSON.parse(savedVehicle) : null;
+  
   // Define add-ons using centralized pricing
   const [addOns, setAddOns] = useState<{
     id: string;
@@ -56,10 +63,15 @@ export default function BookingDialog({
   
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
-  
-  // Vehicle management state
+
+  // Vehicle management state - initialize with saved vehicle data
   const [vehicles, setVehicles] = useState([
-    { id: 1, size: 'small', details: '', sizeMultiplier: 0 }
+    { 
+      id: 1, 
+      size: 'small', 
+      details: parsedVehicle ? `${parsedVehicle.year} ${parsedVehicle.make} ${parsedVehicle.model} (${parsedVehicle.color})` : '', 
+      sizeMultiplier: 0 
+    }
   ]);
   
   // Fetch the selected service
@@ -188,9 +200,10 @@ export default function BookingDialog({
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      serviceLocation: "",
-      zipCode: "",
-      serviceLocationType: "home",
+      serviceLocation: parsedAddress ? 
+        `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}` : "",
+      zipCode: parsedAddress?.zipCode || "",
+      serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
       providerId: provider.id,
       serviceId: serviceId,
