@@ -133,7 +133,7 @@ export default function HomeScreen() {
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Get A Wash</h2>
+                <h2 className="text-xl font-bold text-gray-900">Tap to Get A Wash</h2>
                 <p className="text-gray-600 text-sm mt-1">in as little as 15 minutes</p>
               </div>
             </div>
