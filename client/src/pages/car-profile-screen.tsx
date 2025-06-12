@@ -11,10 +11,13 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i);
 
 const CAR_MAKES = [
-  "Acura", "Audi", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler", "Dodge",
-  "Ford", "GMC", "Honda", "Hyundai", "Infiniti", "Jeep", "Kia", "Lexus",
-  "Lincoln", "Mazda", "Mercedes-Benz", "Mitsubishi", "Nissan", "Porsche",
-  "Ram", "Subaru", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other"
+  "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Bugatti", "Buick", 
+  "Cadillac", "Chevrolet", "Chrysler", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", 
+  "GMC", "Honda", "Hyundai", "Infiniti", "Jaguar", "Jeep", "Kia", "Koenigsegg", 
+  "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lotus", "Maserati", "Mazda", 
+  "McLaren", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", "Pagani", "Polestar", 
+  "Porsche", "Ram", "Rolls Royce", "Subaru", "Tesla", "Toyota", "Volkswagen", 
+  "Volvo", "Other"
 ];
 
 const CAR_COLORS = [
