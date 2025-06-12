@@ -142,16 +142,20 @@ export default function HomeScreen() {
       </div>
 
       {/* Logo Section */}
-      <div className="px-4 py-8">
+      <div className="px-4 py-6">
         <div className="max-w-md mx-auto flex justify-center">
-          <motion.img
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            src="/dapper-logo-text.png"
-            alt="Dapper Logo"
-            className="h-24 w-auto"
-          />
+            className="bg-gradient-to-r from-gray-50 to-white rounded-2xl px-8 py-4 shadow-sm border border-gray-100"
+          >
+            <img
+              src="/dapper-logo-clean.png"
+              alt="Dapper Logo"
+              className="h-8 w-auto opacity-90"
+            />
+          </motion.div>
         </div>
       </div>
 
