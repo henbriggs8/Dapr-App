@@ -20,6 +20,56 @@ const CAR_MAKES = [
   "Volvo", "Other"
 ];
 
+const CAR_MODELS: { [key: string]: string[] } = {
+  "Acura": ["ILX", "TLX", "RLX", "MDX", "RDX", "NSX"],
+  "Alfa Romeo": ["Giulia", "Stelvio", "4C", "Tonale"],
+  "Aston Martin": ["DB11", "Vantage", "DBS", "DBX"],
+  "Audi": ["A3", "A4", "A5", "A6", "A7", "A8", "Q3", "Q5", "Q7", "Q8", "e-tron", "R8", "TT"],
+  "Bentley": ["Continental", "Flying Spur", "Bentayga", "Mulsanne"],
+  "BMW": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i4", "iX"],
+  "Bugatti": ["Chiron", "Veyron", "Divo"],
+  "Buick": ["Encore", "Envision", "Enclave"],
+  "Cadillac": ["ATS", "CTS", "CT4", "CT5", "CT6", "XT4", "XT5", "XT6", "Escalade"],
+  "Chevrolet": ["Spark", "Sonic", "Cruze", "Malibu", "Impala", "Camaro", "Corvette", "Trax", "Equinox", "Traverse", "Tahoe", "Suburban", "Silverado", "Colorado"],
+  "Chrysler": ["300", "Pacifica"],
+  "Dodge": ["Charger", "Challenger", "Durango", "Journey"],
+  "Ferrari": ["488", "F8", "SF90", "Roma", "Portofino", "812", "LaFerrari"],
+  "Fiat": ["500", "500X", "124 Spider"],
+  "Ford": ["Fiesta", "Focus", "Fusion", "Mustang", "EcoSport", "Escape", "Edge", "Explorer", "Expedition", "F-150", "Super Duty", "Ranger"],
+  "Genesis": ["G70", "G80", "G90", "GV60", "GV70", "GV80"],
+  "GMC": ["Terrain", "Acadia", "Yukon", "Sierra", "Canyon"],
+  "Honda": ["Fit", "Civic", "Accord", "Insight", "CR-V", "Passport", "Pilot", "Ridgeline"],
+  "Hyundai": ["Accent", "Elantra", "Sonata", "Venue", "Kona", "Tucson", "Santa Fe", "Palisade"],
+  "Infiniti": ["Q50", "Q60", "Q70", "QX30", "QX50", "QX60", "QX80"],
+  "Jaguar": ["XE", "XF", "XJ", "F-Type", "E-Pace", "F-Pace", "I-Pace"],
+  "Jeep": ["Compass", "Cherokee", "Grand Cherokee", "Wrangler", "Gladiator"],
+  "Kia": ["Rio", "Forte", "Optima", "Stinger", "Soul", "Seltos", "Sportage", "Sorento", "Telluride"],
+  "Koenigsegg": ["Regera", "Jesko", "Gemera"],
+  "Lamborghini": ["Huracan", "Aventador", "Urus"],
+  "Land Rover": ["Range Rover Evoque", "Range Rover Velar", "Range Rover Sport", "Range Rover", "Discovery Sport", "Discovery", "Defender"],
+  "Lexus": ["IS", "ES", "GS", "LS", "RC", "LC", "UX", "NX", "RX", "GX", "LX"],
+  "Lincoln": ["MKZ", "Continental", "Corsair", "Nautilus", "Aviator", "Navigator"],
+  "Lotus": ["Evija", "Emira", "Evora"],
+  "Maserati": ["Ghibli", "Quattroporte", "Levante", "MC20"],
+  "Mazda": ["Mazda3", "Mazda6", "CX-3", "CX-30", "CX-5", "CX-9", "MX-5 Miata"],
+  "McLaren": ["570S", "720S", "765LT", "Artura"],
+  "Mercedes-Benz": ["A-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "G-Class", "SL", "AMG GT"],
+  "Mini": ["Cooper", "Countryman", "Clubman"],
+  "Mitsubishi": ["Mirage", "Lancer", "Eclipse Cross", "Outlander"],
+  "Nissan": ["Versa", "Sentra", "Altima", "Maxima", "370Z", "GT-R", "Kicks", "Rogue", "Murano", "Pathfinder", "Armada", "Titan", "Frontier"],
+  "Pagani": ["Huayra", "Zonda"],
+  "Polestar": ["1", "2", "3"],
+  "Porsche": ["718", "911", "Panamera", "Macan", "Cayenne", "Taycan"],
+  "Ram": ["1500", "2500", "3500", "ProMaster"],
+  "Rolls Royce": ["Ghost", "Wraith", "Dawn", "Phantom", "Cullinan"],
+  "Subaru": ["Impreza", "Legacy", "Outback", "Forester", "Crosstrek", "Ascent", "WRX", "BRZ"],
+  "Tesla": ["Model 3", "Model S", "Model X", "Model Y", "Cybertruck"],
+  "Toyota": ["Yaris", "Corolla", "Camry", "Avalon", "Prius", "86", "Supra", "C-HR", "RAV4", "Venza", "Highlander", "4Runner", "Sequoia", "Land Cruiser", "Sienna", "Tacoma", "Tundra"],
+  "Volkswagen": ["Jetta", "Passat", "Arteon", "Golf", "Tiguan", "Atlas", "ID.4"],
+  "Volvo": ["S60", "S90", "V60", "V90", "XC40", "XC60", "XC90"],
+  "Other": ["Custom", "Kit Car", "Classic", "Modified"]
+};
+
 const CAR_COLORS = [
   "Black", "White", "Silver", "Gray", "Red", "Blue", "Green", "Brown",
   "Gold", "Orange", "Yellow", "Purple", "Pink", "Tan", "Maroon", "Other"
@@ -31,6 +81,15 @@ export default function CarProfileScreen() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [color, setColor] = useState("");
+
+  // Get available models for the selected make
+  const availableModels = make && CAR_MODELS[make] ? CAR_MODELS[make] : [];
+
+  // Handle make selection and clear model when make changes
+  const handleMakeChange = (selectedMake: string) => {
+    setMake(selectedMake);
+    setModel(""); // Clear model when make changes
+  };
 
   const handleSaveVehicle = () => {
     // Save vehicle data to localStorage for now
@@ -111,9 +170,9 @@ export default function CarProfileScreen() {
             <Label htmlFor="make" className="text-sm font-medium text-gray-700">
               Make
             </Label>
-            <Select onValueChange={setMake} value={make}>
+            <Select onValueChange={handleMakeChange} value={make}>
               <SelectTrigger className="h-14 border-gray-300 focus:ring-[#8c52ff] focus:border-transparent">
-                <SelectValue placeholder="Toyota" />
+                <SelectValue placeholder="Select make" />
               </SelectTrigger>
               <SelectContent>
                 {CAR_MAKES.map((makeOption) => (
@@ -131,14 +190,18 @@ export default function CarProfileScreen() {
           <Label htmlFor="model" className="text-sm font-medium text-gray-700">
             Model
           </Label>
-          <Input
-            id="model"
-            type="text"
-            placeholder="Camry"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
-          />
+          <Select onValueChange={setModel} value={model} disabled={!make || availableModels.length === 0}>
+            <SelectTrigger className="h-14 border-gray-300 focus:ring-[#8c52ff] focus:border-transparent">
+              <SelectValue placeholder={make ? "Select model" : "Select make first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((modelOption) => (
+                <SelectItem key={modelOption} value={modelOption}>
+                  {modelOption}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Color */}
