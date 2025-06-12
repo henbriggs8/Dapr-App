@@ -1,127 +1,100 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { Droplets, Shield, Truck, Star, Quote } from "lucide-react";
+import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
 
-  const valueCards = [
+  const featureTiles = [
     {
-      icon: <Droplets className="h-8 w-8 text-[#8c52ff]" />,
-      title: "Steam Clean",
-      description: "Professional steam cleaning for deep sanitization"
+      id: 1,
+      icon: <HelpCircle className="h-6 w-6" />,
+      label: "How It Works",
+      route: "/how-it-works"
     },
     {
-      icon: <Shield className="h-8 w-8 text-[#8c52ff]" />,
-      title: "Kid + Pet Safe",
-      description: "Eco-friendly products safe for your family"
+      id: 2,
+      icon: <Car className="h-6 w-6" />,
+      label: "Interior Cleaning",
+      route: "/interior-cleaning"
     },
     {
-      icon: <Truck className="h-8 w-8 text-[#8c52ff]" />,
-      title: "Mobile Convenience",
-      description: "We come to you wherever you are"
+      id: 3,
+      icon: <Sparkles className="h-6 w-6" />,
+      label: "Exterior Cleaning",
+      route: "/exterior-cleaning"
+    },
+    {
+      id: 4,
+      icon: <Baby className="h-6 w-6" />,
+      label: "Child Car Seat Cleaning",
+      route: "/car-seat-cleaning"
+    },
+    {
+      id: 5,
+      icon: <HelpCircle className="h-6 w-6" />,
+      label: "FAQ",
+      route: "/faq"
+    },
+    {
+      id: 6,
+      icon: <Building2 className="h-6 w-6" />,
+      label: "Corporate Packages",
+      route: "/corporate"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      {/* Hero Section */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-12 pb-16">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
+    <div className="min-h-screen bg-white">
+      {/* Header Area */}
+      <div className="px-4 pt-12 pb-6">
+        <div className="max-w-md mx-auto">
+          <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            onClick={() => setLocation("/booking")}
+            className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-6 text-left transition-colors duration-200 active:scale-95 transform"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Book mobile detailing{" "}
-              <span className="text-[#8c52ff]">to your door</span>
-            </h1>
-            
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Premium car wash and detailing services that come to you. Professional, convenient, and eco-friendly.
-            </p>
-            
-            <Button
-              size="lg"
-              className="bg-[#8c52ff] hover:bg-[#7c47eb] text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-              onClick={() => setLocation("/booking")}
-            >
-              Book Now
-            </Button>
-          </motion.div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-[#8c52ff] rounded-full p-3">
+                <Calendar className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Schedule Your Wash</h2>
+                <p className="text-gray-600 text-sm mt-1">Tap to book your mobile car wash</p>
+              </div>
+            </div>
+          </motion.button>
         </div>
       </div>
 
-      {/* Value Proposition Cards */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {valueCards.map((card, index) => (
-              <motion.div
-                key={index}
+      {/* Feature Tiles Section */}
+      <div className="px-4 pb-20">
+        <div className="max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {featureTiles.map((tile, index) => (
+              <motion.button
+                key={tile.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
+                onClick={() => setLocation(tile.route)}
+                className="bg-white border border-gray-200 hover:border-[#8c52ff] rounded-xl p-4 text-left transition-all duration-200 hover:shadow-md active:scale-95 transform"
               >
-                <Card className="text-center hover:shadow-lg transition-shadow duration-200 border-0 shadow-md">
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-center mb-4">
-                      {card.icon}
-                    </div>
-                    <CardTitle className="text-xl font-semibold text-gray-900">
-                      {card.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-gray-600 text-base">
-                      {card.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                <div className="flex flex-col items-start space-y-3">
+                  <div className="bg-gray-100 rounded-full p-2 text-[#8c52ff]">
+                    {tile.icon}
+                  </div>
+                  <span className="font-semibold text-gray-900 text-sm leading-tight">
+                    {tile.label}
+                  </span>
+                </div>
+              </motion.button>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Testimonial Section */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            <Card className="bg-[#8c52ff]/5 border-[#8c52ff]/20 text-center">
-              <CardContent className="pt-8 pb-8">
-                {/* 5-Star Rating */}
-                <div className="flex justify-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="h-6 w-6 text-yellow-400 fill-current"
-                    />
-                  ))}
-                </div>
-                
-                {/* Quote */}
-                <div className="relative">
-                  <Quote className="h-8 w-8 text-[#8c52ff]/30 absolute -top-2 -left-2" />
-                  <blockquote className="text-lg sm:text-xl text-gray-800 font-medium italic mb-4 px-8">
-                    "Dapper transformed my car! The convenience of mobile service and the quality of work exceeded my expectations. My car looks brand new!"
-                  </blockquote>
-                  <Quote className="h-8 w-8 text-[#8c52ff]/30 absolute -bottom-2 -right-2 rotate-180" />
-                </div>
-                
-                <p className="text-gray-600 font-medium">
-                  — Sarah M., Satisfied Customer
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
         </div>
       </div>
 

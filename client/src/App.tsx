@@ -13,6 +13,12 @@ import BookingDetails from "@/pages/booking-details";
 import PaymentSuccessPage from "@/pages/payment-success";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
+import HowItWorks from "@/pages/how-it-works";
+import InteriorCleaning from "@/pages/interior-cleaning";
+import ExteriorCleaning from "@/pages/exterior-cleaning";
+import CarSeatCleaning from "@/pages/car-seat-cleaning";
+import FAQ from "@/pages/faq";
+import Corporate from "@/pages/corporate";
 
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
@@ -123,6 +129,12 @@ function Router() {
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
+        <Route path="/how-it-works" component={HowItWorks} />
+        <Route path="/interior-cleaning" component={InteriorCleaning} />
+        <Route path="/exterior-cleaning" component={ExteriorCleaning} />
+        <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
+        <Route path="/faq" component={FAQ} />
+        <Route path="/corporate" component={Corporate} />
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
