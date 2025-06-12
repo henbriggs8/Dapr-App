@@ -29,6 +29,7 @@ import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
+import { HomeWithOnboarding } from "@/components/home-with-onboarding";
 import TabNavigation from "@/components/tab-navigation";
 
 function AdminRoute({
@@ -100,7 +101,7 @@ function Router() {
         {user?.isProvider ? (
           <ProviderRoute path="/" component={ProviderDashboard} />
         ) : (
-          <ProtectedRoute path="/" component={HomeScreen} />
+          <ProtectedRoute path="/" component={HomeWithOnboarding} />
         )}
         <ProtectedRoute path="/booking" component={BookingScreen} />
         <ProtectedRoute path="/services" component={ServicesPage} />

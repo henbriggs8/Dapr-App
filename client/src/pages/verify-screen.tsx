@@ -73,7 +73,16 @@ export default function VerifyScreen() {
         title: "Verification successful!",
         description: "Welcome to Dapper",
       });
-      setLocation("/");
+      
+      // Check if user needs onboarding
+      const hasCompletedOnboarding = localStorage.getItem("onboardingCompleted");
+      const hasAddress = localStorage.getItem("userAddress");
+      
+      if (!hasCompletedOnboarding && !hasAddress) {
+        setLocation("/onboarding/address");
+      } else {
+        setLocation("/");
+      }
     } else {
       toast({
         title: "Invalid code",
