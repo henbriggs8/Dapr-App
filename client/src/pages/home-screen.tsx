@@ -89,13 +89,32 @@ export default function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <div className="relative h-64 overflow-hidden">
+        <img 
+          src="/hero-lambo.jpg" 
+          alt="Professional car detailing service"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-3xl md:text-4xl font-bold text-white text-center px-4"
+          >
+            Redefining the Car Wash
+          </motion.h1>
+        </div>
+      </div>
+
       {/* Header Area */}
-      <div className="px-4 pt-12 pb-6">
+      <div className="px-4 pt-8 pb-6">
         <div className="max-w-md mx-auto">
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             onClick={() => setLocation("/booking")}
             className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-6 text-left transition-colors duration-200 active:scale-95 transform"
           >
