@@ -97,14 +97,24 @@ export default function HomeScreen() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-3xl md:text-4xl font-bold text-white text-center px-4"
-          >
-            Redefining the Car Wash
-          </motion.h1>
+          <div className="text-center px-4">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-3xl md:text-4xl font-bold text-white mb-2"
+            >
+              Redefining the Car Wash
+            </motion.h1>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-2xl"
+            >
+              🚗🧼
+            </motion.div>
+          </div>
         </div>
       </div>
 
