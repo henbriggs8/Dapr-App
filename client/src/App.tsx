@@ -15,6 +15,7 @@ import ProfilePage from "@/pages/profile-page";
 import ServicesPage from "@/pages/services-page";
 import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
+import BookingConfirmation from "@/pages/booking-confirmation";
 import PaymentSuccessPage from "@/pages/payment-success";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
@@ -108,6 +109,7 @@ function Router() {
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
+        <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
         <Route path="/how-it-works" component={HowItWorks} />
         <Route path="/interior-cleaning" component={InteriorCleaning} />

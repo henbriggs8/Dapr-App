@@ -228,16 +228,11 @@ export default function BookingDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timeslots"] });
       
-      toast({
-        title: "Booking Created Successfully!",
-        description: "Proceeding to secure payment...",
-      });
-      
-      // Close dialog before payment
+      // Close dialog
       onClose();
       
-      // Initiate payment for the booking
-      paymentMutation.mutate(data.id);
+      // Navigate to confirmation page with booking ID
+      window.location.href = `/booking-confirmation?bookingId=${data.id}`;
     },
     onError: (error: Error) => {
       console.error("Booking creation failed:", error);
