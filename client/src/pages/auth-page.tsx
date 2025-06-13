@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import { z } from "zod";
 import { Switch } from "@/components/ui/switch";
 
@@ -207,6 +207,17 @@ export default function AuthPage() {
             </Tabs>
           </CardContent>
         </Card>
+        
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground mb-3">
+            Are you a car care professional?
+          </p>
+          <Link href="/provider-auth">
+            <Button variant="outline" className="w-full">
+              Sign up to be a Detail Pro
+            </Button>
+          </Link>
+        </div>
       </div>
       <div className="hidden lg:block bg-gradient-to-br from-primary/20 to-primary/5 p-8">
         <div className="h-full flex flex-col justify-center max-w-xl mx-auto">

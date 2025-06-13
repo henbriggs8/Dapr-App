@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -242,6 +242,24 @@ export default function AuthScreen() {
                 <span>Continue with Google</span>
               </div>
             </Button>
+          </div>
+
+          {/* Provider Sign Up Section */}
+          <div className="pt-4 border-t border-gray-200">
+            <div className="text-center mb-3">
+              <p className="text-sm text-gray-600">Are you a car care professional?</p>
+            </div>
+            <Link href="/provider-auth">
+              <Button
+                variant="outline"
+                className="w-full h-14 text-base font-medium border-[#8c52ff] text-[#8c52ff] hover:bg-[#8c52ff]/5 rounded-lg"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-lg">🚗</span>
+                  <span>Sign up to be a Detail Pro</span>
+                </div>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import ProviderAuthPage from "@/pages/provider-auth-page";
 import AuthScreen from "@/pages/auth-screen";
 import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
@@ -126,6 +127,7 @@ function Router() {
         <AdminRoute path="/admin" component={AdminDashboard} />
         <Route path="/auth" component={AuthScreen} />
         <Route path="/auth-old" component={AuthPage} />
+        <Route path="/provider-auth" component={ProviderAuthPage} />
         <Route component={NotFound} />
       </Switch>
       
