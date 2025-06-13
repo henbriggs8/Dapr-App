@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import ProviderAuthPage from "@/pages/provider-auth-page";
+import IdVerificationPage from "@/pages/provider-onboarding/id-verification";
+import VehicleSetupPage from "@/pages/provider-onboarding/vehicle-setup";
+import BankInfoPage from "@/pages/provider-onboarding/bank-info";
 import AuthScreen from "@/pages/auth-screen";
 import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
@@ -128,6 +131,9 @@ function Router() {
         <Route path="/auth" component={AuthScreen} />
         <Route path="/auth-old" component={AuthPage} />
         <Route path="/provider-auth" component={ProviderAuthPage} />
+        <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
+        <Route path="/provider-onboarding/vehicle-setup" component={VehicleSetupPage} />
+        <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
         <Route component={NotFound} />
       </Switch>
       
