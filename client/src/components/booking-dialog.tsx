@@ -182,8 +182,8 @@ export default function BookingDialog({
         .filter((addon) => addon.selected)
         .reduce((sum, addon) => sum + addon.price, 0);
       
-      // Calculate vehicle size adjustments
-      const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + vehicle.sizeMultiplier, 0);
+      // Calculate vehicle size adjustments using percentage multipliers
+      const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + (basePrice * vehicle.sizeMultiplier), 0);
       
       setTotalPrice(basePrice + addOnTotal + vehicleSizeTotal);
     }
