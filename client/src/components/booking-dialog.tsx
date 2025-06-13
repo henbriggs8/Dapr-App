@@ -22,6 +22,7 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
 
 export default function BookingDialog({
   provider,
@@ -64,13 +65,19 @@ export default function BookingDialog({
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
 
-  // Vehicle management state - initialize with saved vehicle data
-  const [vehicles, setVehicles] = useState([
+  // Vehicle management state - automatically detect size from saved vehicle data
+  const detectedVehicleSize = getVehicleSizeFromStorage();
+  const [vehicles, setVehicles] = useState<{
+    id: number;
+    size: VehicleSize;
+    details: string;
+    sizeMultiplier: number;
+  }[]>([
     { 
       id: 1, 
-      size: 'small', 
+      size: detectedVehicleSize, 
       details: parsedVehicle ? `${parsedVehicle.year} ${parsedVehicle.make} ${parsedVehicle.model} (${parsedVehicle.color})` : '', 
-      sizeMultiplier: 0 
+      sizeMultiplier: detectedVehicleSize === 'small' ? 0 : detectedVehicleSize === 'medium' ? 0.15 : 0.3
     }
   ]);
   
@@ -130,12 +137,11 @@ export default function BookingDialog({
     );
   };
   
-  // Vehicle size selection handler
-  const selectVehicleSize = (size: string, vehicleId: number) => {
+  // Vehicle size selection handler (kept for backward compatibility but not used)
+  const selectVehicleSize = (size: VehicleSize, vehicleId: number) => {
     console.log(`Selecting ${size} for vehicle ${vehicleId}`);
-    const sizeMultiplier = size === 'small' ? 0 : size === 'medium' ? 10 : 20;
+    const sizeMultiplier = size === 'small' ? 0 : size === 'medium' ? 0.15 : 0.3;
     
-    // Force a re-render by creating a completely new array
     setVehicles(prevVehicles => 
       prevVehicles.map(vehicle => 
         vehicle.id === vehicleId 
@@ -152,7 +158,7 @@ export default function BookingDialog({
     setVehicles(prevVehicles => {
       const newVehicles = [...prevVehicles, { 
         id: newVehicleId, 
-        size: 'small', 
+        size: 'small' as VehicleSize, 
         details: '', 
         sizeMultiplier: 0 
       }];
@@ -499,47 +505,27 @@ export default function BookingDialog({
                   
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <div className="font-medium text-sm">Vehicle Size</div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <button 
-                          type="button"
-                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
-                            vehicle.size === 'small' 
-                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
-                              : 'hover:border-[#8c52ff]'
-                          }`}
-                          onClick={() => selectVehicleSize('small', vehicle.id)}
-                        >
-                          <div className="text-sm font-medium">Small</div>
-                          <div className="text-xs text-muted-foreground">Sedan, Coupe</div>
-                          <div className="text-xs text-green-600 font-medium">+$0</div>
-                        </button>
-                        <button 
-                          type="button"
-                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
-                            vehicle.size === 'medium' 
-                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
-                              : 'hover:border-[#8c52ff]'
-                          }`}
-                          onClick={() => selectVehicleSize('medium', vehicle.id)}
-                        >
-                          <div className="text-sm font-medium">Medium</div>
-                          <div className="text-xs text-muted-foreground">Crossover, Small SUV</div>
-                          <div className="text-xs text-orange-600 font-medium">+$10</div>
-                        </button>
-                        <button 
-                          type="button"
-                          className={`border rounded-md p-3 flex flex-col items-center cursor-pointer transition-all duration-200 bg-white hover:bg-slate-50 ${
-                            vehicle.size === 'large' 
-                              ? 'border-[#8c52ff] bg-[#8c52ff]/5' 
-                              : 'hover:border-[#8c52ff]'
-                          }`}
-                          onClick={() => selectVehicleSize('large', vehicle.id)}
-                        >
-                          <div className="text-sm font-medium">Large</div>
-                          <div className="text-xs text-muted-foreground">SUV, Van</div>
-                          <div className="text-xs text-red-600 font-medium">+$20</div>
-                        </button>
+                      <div className="font-medium text-sm">Vehicle Size (Auto-detected)</div>
+                      <div className="bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <div>
+                            <div className="text-sm font-medium capitalize text-green-800">{vehicle.size}</div>
+                            <div className="text-xs text-green-600">
+                              {vehicle.size === 'small' && 'Sedan, Coupe, Sports Car'}
+                              {vehicle.size === 'medium' && 'Crossover, Small SUV, Pickup'}
+                              {vehicle.size === 'large' && 'Large SUV, Van, Full-size Truck'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-green-700">
+                          {vehicle.size === 'small' && '+$0'}
+                          {vehicle.size === 'medium' && '+$' + Math.round((service?.price || 0) * 0.15)}
+                          {vehicle.size === 'large' && '+$' + Math.round((service?.price || 0) * 0.3)}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Based on your {parsedVehicle?.make} {parsedVehicle?.model}
                       </div>
                     </div>
                     
