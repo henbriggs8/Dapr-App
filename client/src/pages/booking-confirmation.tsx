@@ -139,7 +139,8 @@ export default function BookingConfirmation() {
                 radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%)
               `,
-              animation: 'sparkle 3s ease-in-out'
+              opacity: showConfetti ? 1 : 0,
+              transition: 'opacity 3s ease-in-out'
             }}
           />
         </div>
@@ -324,12 +325,7 @@ export default function BookingConfirmation() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes sparkle {
-          0%, 100% { opacity: 0; }
-          50% { opacity: 1; }
-        }
-      `}</style>
+
     </div>
   );
 }

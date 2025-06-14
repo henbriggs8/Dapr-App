@@ -23,6 +23,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
+import { useLocation } from "wouter";
 
 interface PrefillData {
   selectedVehicle?: any;
@@ -51,6 +52,7 @@ export default function BookingDialog({
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   
   // Get saved user data from onboarding
   const savedAddress = localStorage.getItem("userAddress");
@@ -132,17 +134,10 @@ export default function BookingDialog({
       const res = await apiRequest("POST", `/api/bookings/${bookingId}/create-payment`, {});
       return await res.json();
     },
-    onSuccess: (data) => {
-      // Redirect to Square payment page
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        toast({
-          title: "Payment Error",
-          description: "Could not generate payment link. Please try again.",
-          variant: "destructive",
-        });
-      }
+    onSuccess: (data, bookingId) => {
+      // Close dialog and navigate to confirmation page
+      onClose();
+      navigate(`/booking-confirmation?booking=${bookingId}`);
     },
     onError: (error) => {
       toast({
