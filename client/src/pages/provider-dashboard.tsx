@@ -1146,50 +1146,6 @@ export default function ProviderDashboard() {
     </div>
   );
 }
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Payment method:</p>
-                            <p className="text-lg font-semibold">Direct deposit</p>
-                          </div>
-                        </div>
-                        <Separator />
-                        <p className="text-sm mt-4">
-                          Payments are processed weekly every Monday. Contact support if you have any questions about your earnings.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Metrics Tab */}
-        <TabsContent value="metrics">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                Service Metrics
-              </CardTitle>
-              <CardDescription>
-                Track your service performance and timing metrics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingMetrics ? (
-                <div className="flex justify-center py-10">
-                  <CarWashSpinner size="md" showText text="Loading service metrics..." />
-                </div>
-              ) : !metricsData ? (
-                <div className="py-10 text-center text-muted-foreground">
-                  No service metrics available yet. Complete some services to see your metrics.
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {/* Service Duration Metrics */}
-                  <div>
                     <h3 className="text-lg font-medium mb-4">Service Duration</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Card>
