@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -39,10 +39,18 @@ export default function ProviderAuthPage() {
 
   if (user) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[#8c52ff] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting...</p>
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            {/* Circular loading ring */}
+            <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-[#8c52ff] border-t-transparent rounded-full animate-spin"></div>
+            {/* Car icon in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Car className="w-6 h-6 text-[#8c52ff]" />
+            </div>
+          </div>
+          <p className="text-gray-600 text-lg">Redirecting...</p>
         </div>
       </div>
     );
