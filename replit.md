@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dapper is a comprehensive mobile car wash and detailing service platform built with modern web technologies. It provides a complete ecosystem for customers to book car wash services, service providers to manage their operations, and administrators to oversee the business. The application features a mobile-first design with real-time updates, geolocation services, and integrated payment processing.
+Dapper is a comprehensive mobile car wash and detailing service platform built with modern web technologies. It provides a complete ecosystem for customers to book car wash services, service providers to manage their operations, and administrators to oversee the business. The application features a mobile-first design with real-time updates, geolocation services, integrated payment processing, and intelligent rebooking capabilities that learn from customer behavior patterns.
 
 ## System Architecture
 
@@ -41,6 +41,8 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - **Time Slot Management**: Dynamic scheduling with availability tracking
 - **Real-time Updates**: Live booking status updates via WebSocket connections
 - **Vehicle Integration**: Support for vehicle size detection and pricing adjustments
+- **One-Click Rebooking**: Intelligent rebooking suggestions based on customer history and service patterns
+- **Smart Defaults**: Automatic prefilling of booking details from previous appointments
 
 ### Provider Network
 - **Geolocation**: Real-time provider location tracking and assignment
@@ -130,6 +132,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 ## Changelog
 
 - June 14, 2025. Initial setup
+- June 14, 2025. Implemented One-Click Service Rebooking with Intelligent Defaults feature
 
 ## User Preferences
 

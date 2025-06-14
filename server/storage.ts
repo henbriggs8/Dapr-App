@@ -105,6 +105,14 @@ export interface IStorage {
   
   getPendingPaymentBookings(): Promise<Booking[]>;
   
+  // Rebooking analysis methods
+  generateRebookingSuggestions(
+    userId: number,
+    userBookings: Booking[],
+    services: Service[],
+    timeSlots: TimeSlot[]
+  ): Promise<any[]>;
+  
   sessionStore: session.Store;
 }
 
@@ -223,7 +231,46 @@ export class MemStorage implements IStorage {
       address: "456 Oak Street, Salt Lake City, UT 84102"
     });
 
-    // Remove sample booking creation to prevent type errors in storage initialization
+    // Create sample completed bookings to demonstrate rebooking feature
+    this.createBooking({
+      userId: 4,
+      serviceId: 1, // Basic service
+      timeSlotId: 1,
+      providerId: 1,
+      vehicleId: null,
+      status: "completed",
+      currentStage: null,
+      rating: 5,
+      ratingComment: "Great service!",
+      priceTier: "basic",
+      timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), // 20 days ago
+      serviceLocation: "456 Oak Street, Salt Lake City, UT 84102",
+      serviceLocationType: "residential",
+      serviceLatitude: 40.7589,
+      serviceLongitude: -111.8883,
+      notes: "Regular customer wash",
+      date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      time: "09:00",
+      amount: 3900,
+      providerEarnings: 2900,
+      startTime: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+      endTime: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      serviceDuration: 30,
+      assignedAt: null,
+      acceptedAt: null,
+      rejectedAt: null,
+      assignmentExpiry: null,
+      previousProviders: [],
+      addOns: [],
+      addOnTotal: 0,
+      totalPrice: 3900,
+      isPaid: true,
+      paymentStatus: "completed",
+      paymentId: "sample_payment_1",
+      paymentDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+      paymentUrl: null,
+      squareOrderId: null,
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -1048,6 +1095,149 @@ export class MemStorage implements IStorage {
     return Array.from(this.bookings.values()).filter(
       booking => booking.paymentStatus === 'pending' || booking.paymentStatus === 'processing'
     );
+  }
+
+  async generateRebookingSuggestions(
+    userId: number,
+    userBookings: Booking[],
+    services: Service[],
+    timeSlots: TimeSlot[]
+  ): Promise<any[]> {
+    const completedBookings = userBookings
+      .filter(booking => booking.status === 'completed')
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (completedBookings.length === 0) return [];
+
+    const suggestions: any[] = [];
+
+    // Analyze the most recent booking for immediate rebooking
+    const mostRecent = completedBookings[0];
+    const recentService = services.find(s => s.id === mostRecent.serviceId);
+    
+    if (recentService) {
+      // Calculate suggested date based on service type and frequency
+      const daysSinceLastService = Math.floor(
+        (Date.now() - new Date(mostRecent.timestamp).getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      let suggestedDaysFromNow = 0;
+      let reason = "";
+      let confidence = 80;
+
+      // Intelligent scheduling based on service type
+      if (recentService.category === 'basic') {
+        if (daysSinceLastService >= 14) {
+          suggestedDaysFromNow = 1;
+          reason = "Your car is due for a refresh";
+          confidence = 90;
+        } else if (daysSinceLastService >= 7) {
+          suggestedDaysFromNow = 3;
+          reason = "Maintain that fresh look";
+          confidence = 75;
+        }
+      } else if (recentService.category === 'standard') {
+        if (daysSinceLastService >= 21) {
+          suggestedDaysFromNow = 1;
+          reason = "Time for your regular detail";
+          confidence = 95;
+        } else if (daysSinceLastService >= 14) {
+          suggestedDaysFromNow = 7;
+          reason = "Keep your vehicle pristine";
+          confidence = 80;
+        }
+      } else if (recentService.category === 'premium') {
+        if (daysSinceLastService >= 45) {
+          suggestedDaysFromNow = 1;
+          reason = "Premium care is overdue";
+          confidence = 95;
+        } else if (daysSinceLastService >= 30) {
+          suggestedDaysFromNow = 7;
+          reason = "Maintain premium condition";
+          confidence = 85;
+        }
+      }
+
+      if (suggestedDaysFromNow > 0) {
+        // Find preferred time based on history
+        const preferredTimes = completedBookings
+          .map(b => b.time)
+          .filter(Boolean)
+          .reduce((acc: {[key: string]: number}, time) => {
+            if (time) {
+              acc[time] = (acc[time] || 0) + 1;
+            }
+            return acc;
+          }, {});
+
+        const mostPreferredTime = Object.entries(preferredTimes)
+          .sort(([,a], [,b]) => b - a)[0]?.[0] || "09:00";
+
+        const suggestedDate = new Date();
+        suggestedDate.setDate(suggestedDate.getDate() + suggestedDaysFromNow);
+        
+        // Find the best available time slot
+        const availableSlots = timeSlots.filter(slot => 
+          slot.date === suggestedDate.toISOString().split('T')[0] &&
+          slot.isAvailable &&
+          slot.currentBookings < slot.maxBookings
+        );
+
+        const preferredSlot = availableSlots.find(slot => 
+          slot.startTime === mostPreferredTime
+        ) || availableSlots[0];
+
+        if (preferredSlot) {
+          suggestions.push({
+            booking: mostRecent,
+            service: recentService,
+            suggestedDate: suggestedDate.toISOString().split('T')[0],
+            suggestedTime: preferredSlot.startTime,
+            confidence,
+            reason,
+            timeSlot: preferredSlot
+          });
+        }
+      }
+    }
+
+    // Analyze service upgrade opportunities
+    const serviceFrequency = completedBookings.reduce((acc: {[key: string]: number}, booking) => {
+      const service = services.find(s => s.id === booking.serviceId);
+      if (service) {
+        acc[service.category] = (acc[service.category] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // Suggest upgrade if customer frequently books basic services
+    if (serviceFrequency.basic >= 3 && !serviceFrequency.standard) {
+      const standardService = services.find(s => s.category === 'standard');
+      if (standardService) {
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        
+        const availableSlots = timeSlots.filter(slot => 
+          slot.date === nextWeek.toISOString().split('T')[0] &&
+          slot.isAvailable &&
+          slot.currentBookings < slot.maxBookings
+        );
+
+        if (availableSlots.length > 0) {
+          suggestions.push({
+            booking: mostRecent,
+            service: standardService,
+            suggestedDate: nextWeek.toISOString().split('T')[0],
+            suggestedTime: availableSlots[0].startTime,
+            confidence: 70,
+            reason: "Ready for an upgrade? Try our premium service",
+            timeSlot: availableSlots[0]
+          });
+        }
+      }
+    }
+
+    return suggestions.slice(0, 2); // Return top 2 suggestions
   }
 }
 

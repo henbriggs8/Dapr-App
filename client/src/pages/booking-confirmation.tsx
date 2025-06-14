@@ -1,253 +1,335 @@
-import { useLocation } from "wouter";
-import { CheckCircle, Clock, MapPin, Car, Phone, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import Confetti from "react-confetti";
+import { useLocation, useRoute, Link } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Calendar, Clock, MapPin, Car, ArrowRight, Home, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Booking, Service, TimeSlot } from "@shared/schema";
+import { CarWashSpinner } from "@/components/car-wash-spinner";
+import confetti from "react-confetti";
 
 export default function BookingConfirmation() {
-  const [, setLocation] = useLocation();
+  const [match, params] = useRoute("/booking-confirmation");
+  const [, navigate] = useLocation();
   const [showConfetti, setShowConfetti] = useState(true);
-  const [countdown, setCountdown] = useState(8);
-  const [dimensions, setDimensions] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight
-  });
+  const [bookingId, setBookingId] = useState<number | null>(null);
 
-  // Get booking details from URL params or localStorage
-  const urlParams = new URLSearchParams(window.location.search);
-  const bookingId = urlParams.get('bookingId');
-  
-  const { data: booking } = useQuery({
-    queryKey: [`/api/bookings/${bookingId}`],
+  // Get booking ID from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("booking");
+    if (id) {
+      setBookingId(parseInt(id));
+    }
+  }, []);
+
+  // Stop confetti after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowConfetti(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch booking details
+  const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
+    queryKey: ["/api/bookings"],
     enabled: !!bookingId,
   });
 
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
+  // Fetch services
+  const { data: services, isLoading: isLoadingServices } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+    enabled: !!bookingId,
+  });
+
+  // Fetch time slots
+  const { data: timeSlots, isLoading: isLoadingTimeSlots } = useQuery<TimeSlot[]>({
+    queryKey: ["/api/timeslots"],
+    enabled: !!bookingId,
+  });
+
+  const isLoading = isLoadingBookings || isLoadingServices || isLoadingTimeSlots;
+
+  // Find the specific booking
+  const booking = bookingId && bookings ? bookings.find(b => b.id === bookingId) : null;
+  const service = booking && services ? services.find(s => s.id === booking.serviceId) : null;
+  const timeSlot = booking && timeSlots ? timeSlots.find(t => t.id === booking.timeSlotId) : null;
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price);
+  };
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Tomorrow";
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric' 
       });
-    };
+    }
+  };
 
-    window.addEventListener('resize', handleResize);
-    
-    // Stop confetti after 3 seconds
-    const confettiTimer = setTimeout(() => {
-      setShowConfetti(false);
-    }, 3000);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <CarWashSpinner size="lg" showText text="Loading confirmation..." />
+      </div>
+    );
+  }
 
-    // Countdown timer
-    const countdownTimer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          setLocation(`/service-progress?bookingId=${bookingId}`);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(confettiTimer);
-      clearInterval(countdownTimer);
-    };
-  }, [bookingId, setLocation]);
-
-  const estimatedArrival = new Date(Date.now() + 30 * 60000); // 30 minutes from now
+  if (!booking || !service || !timeSlot) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-red-600">Booking Not Found</CardTitle>
+            <CardDescription>
+              We couldn't find your booking confirmation. Please check your booking history or contact support.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate("/")} 
+              className="w-full"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Return Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 pt-8 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-[#8c52ff]/5 to-blue-50 p-4 relative overflow-hidden">
+      {/* Confetti Effect */}
       {showConfetti && (
-        <Confetti
-          width={dimensions.width}
-          height={dimensions.height}
-          recycle={false}
-          numberOfPieces={200}
-          gravity={0.3}
-        />
+        <div className="fixed inset-0 pointer-events-none z-50">
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: `
+                radial-gradient(circle at 20% 50%, rgba(140, 82, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%)
+              `,
+              animation: 'sparkle 3s ease-in-out'
+            }}
+          />
+        </div>
       )}
 
-      <div className="max-w-md mx-auto space-y-6">
-        {/* Success Header */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-center space-y-4"
-        >
-          <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-12 h-12 text-green-600" />
+      <div className="max-w-2xl mx-auto pt-8 pb-20">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6 relative">
+            <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="absolute -top-1 -right-1">
+              <div className="w-6 h-6 bg-[#8c52ff] rounded-full animate-pulse" />
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Booking Confirmed!</h1>
-            <p className="text-gray-600 mt-2">Your car wash is on the way</p>
+          
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Hitting the restart button on your car
+          </h1>
+          
+          <p className="text-lg text-gray-600 mb-6">
+            Your appointment has been confirmed and sent to your detail pro!
+          </p>
+
+          <div className="flex items-center justify-center gap-2 text-sm text-[#8c52ff] bg-[#8c52ff]/10 rounded-full px-4 py-2 inline-flex">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Processing your request...</span>
           </div>
-        </motion.div>
+        </div>
 
         {/* Booking Details Card */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Booking ID</span>
-                <span className="font-mono text-sm">#{bookingId || 'D123456'}</span>
+        <Card className="mb-6 border-2 border-green-200 shadow-lg">
+          <CardHeader className="bg-green-50">
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Car className="h-5 w-5" />
+              Booking Confirmation
+            </CardTitle>
+            <CardDescription className="text-green-700">
+              Booking #{booking.id} • {service.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            {/* Service Details */}
+            <div className="flex items-center justify-between pb-4 border-b">
+              <div>
+                <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                <p className="text-sm text-gray-600">{service.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      service.category === 'basic' ? 'border-blue-200 text-blue-700' :
+                      service.category === 'standard' ? 'border-purple-200 text-purple-700' :
+                      'border-amber-200 text-amber-700'
+                    }
+                  >
+                    {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
+                  </Badge>
+                  <span className="text-xs text-gray-500">• {service.duration} minutes</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-[#8c52ff]">
+                  {formatPrice(service.price)}
+                </div>
+              </div>
+            </div>
+
+            {/* Appointment Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Calendar className="h-5 w-5 text-[#8c52ff]" />
+                <div>
+                  <div className="text-sm text-gray-600">Date</div>
+                  <div className="font-medium">{formatDate(timeSlot.date)}</div>
+                </div>
               </div>
               
-              <div className="flex items-center space-x-3">
-                <Clock className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Clock className="h-5 w-5 text-[#8c52ff]" />
                 <div>
-                  <div className="font-medium">Estimated Arrival</div>
-                  <div className="text-sm text-gray-600">
-                    {estimatedArrival.toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })} - {new Date(estimatedArrival.getTime() + 15 * 60000).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </div>
+                  <div className="text-sm text-gray-600">Time</div>
+                  <div className="font-medium">{formatTime(timeSlot.startTime)}</div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center space-x-3">
-                <MapPin className="w-5 h-5 text-red-600" />
-                <div>
-                  <div className="font-medium">Service Location</div>
-                  <div className="text-sm text-gray-600">
-                    {(booking as any)?.serviceLocation || "Your saved address"}
-                  </div>
-                </div>
+            {/* Location */}
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <MapPin className="h-5 w-5 text-[#8c52ff] mt-0.5" />
+              <div>
+                <div className="text-sm text-gray-600">Service Location</div>
+                <div className="font-medium">{booking.serviceLocation}</div>
               </div>
+            </div>
 
-              <div className="flex items-center space-x-3">
-                <Car className="w-5 h-5 text-purple-600" />
-                <div>
-                  <div className="font-medium">Vehicle</div>
-                  <div className="text-sm text-gray-600">
-                    {(() => {
-                      try {
-                        const vehicle = JSON.parse(localStorage.getItem("userVehicle") || "{}");
-                        return `${vehicle.year} ${vehicle.make} ${vehicle.model}` || "Your vehicle";
-                      } catch {
-                        return "Your vehicle";
-                      }
-                    })()}
-                  </div>
+            {/* Status */}
+            <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-center">
+                <div className="text-blue-800 font-medium">Status: Confirmed</div>
+                <div className="text-sm text-blue-600 mt-1">
+                  Your detail pro will be notified and will contact you shortly
                 </div>
               </div>
-
-              <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5 text-green-600" />
-                <div>
-                  <div className="font-medium">Service</div>
-                  <div className="text-sm text-gray-600">
-                    {(booking as any)?.serviceName || "The OG"} - ${(booking as any)?.totalPrice || "58"}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Provider Contact */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Car className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">Your Dapper Pro</div>
-                    <div className="text-sm text-gray-600">Marcus Johnson</div>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline">
-                  <Phone className="w-4 h-4 mr-1" />
-                  Call
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Next Steps */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.8 }}
-          className="bg-blue-50 rounded-lg p-4"
-        >
-          <h3 className="font-medium text-blue-900 mb-2">What happens next?</h3>
-          <ul className="space-y-2 text-sm text-blue-800">
-            <li className="flex items-start space-x-2">
-              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2"></div>
-              <span>Your Dapper Pro will arrive at the estimated time</span>
-            </li>
-            <li className="flex items-start space-x-2">
-              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2"></div>
-              <span>You'll receive real-time updates via SMS</span>
-            </li>
-            <li className="flex items-start space-x-2">
-              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2"></div>
-              <span>No need to be present - we'll take care of everything</span>
-            </li>
-          </ul>
-        </motion.div>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">What happens next?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#8c52ff] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                1
+              </div>
+              <div>
+                <div className="font-medium">Provider Assignment</div>
+                <div className="text-sm text-gray-600">
+                  Your request is being matched with an available detail pro in your area
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#8c52ff] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                2
+              </div>
+              <div>
+                <div className="font-medium">Confirmation Call</div>
+                <div className="text-sm text-gray-600">
+                  Your detail pro will contact you to confirm the appointment details
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-bold">
+                3
+              </div>
+              <div>
+                <div className="font-medium text-gray-500">Service Day</div>
+                <div className="text-sm text-gray-400">
+                  Your detail pro will arrive at the scheduled time to service your vehicle
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Action Buttons */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 1.0 }}
-          className="space-y-3"
-        >
+        <div className="space-y-3">
           <Button 
-            className="w-full h-12 bg-[#8c52ff] hover:bg-[#7c47e6]"
-            onClick={() => setLocation(`/service-progress?bookingId=${bookingId}`)}
+            onClick={() => navigate(`/booking-details?id=${booking.id}`)}
+            className="w-full bg-[#8c52ff] hover:bg-[#8c52ff]/90 text-white py-3"
+            size="lg"
           >
-            Track Your Service {countdown > 0 && `(${countdown}s)`}
+            View Booking Details
+            <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
           
           <Button 
-            variant="outline" 
-            className="w-full h-12"
-            onClick={() => setLocation("/")}
+            onClick={() => navigate("/")}
+            variant="outline"
+            className="w-full py-3"
+            size="lg"
           >
-            Back to Home
+            <Home className="h-4 w-4 mr-2" />
+            Return to Home
           </Button>
-        </motion.div>
+        </div>
 
-        {/* Auto-redirect notice */}
-        {countdown > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center text-sm text-gray-500 bg-gray-50 rounded-lg p-3"
-          >
-            Automatically redirecting to live tracking in {countdown} seconds...
-          </motion.div>
-        )}
-
-        {/* Footer */}
-        <div className="text-center text-sm text-gray-500 pt-4">
-          Need help? Call us at <span className="text-purple-600 font-medium">(555) 123-WASH</span>
+        {/* Support Note */}
+        <div className="text-center mt-8 p-4 bg-white rounded-lg border border-gray-200">
+          <p className="text-sm text-gray-600">
+            Need to make changes or have questions about your booking?
+          </p>
+          <p className="text-sm text-[#8c52ff] font-medium mt-1">
+            Contact us at support@dapper.com or (555) 123-WASH
+          </p>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes sparkle {
+          0%, 100% { opacity: 0; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
