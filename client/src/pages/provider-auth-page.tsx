@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronDown } from "lucide-react";
@@ -20,19 +20,32 @@ export default function ProviderAuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
 
-  if (user) {
-    if (user.isProvider) {
-      // Check if onboarding is complete
-      const onboardingComplete = localStorage.getItem('provider-onboarding-complete');
-      if (!onboardingComplete) {
-        setLocation('/provider-onboarding/id-verification');
-        return null;
+  // Handle user redirects with useEffect to avoid setState during render
+  useEffect(() => {
+    if (user) {
+      if (user.isProvider) {
+        // Check if onboarding is complete
+        const onboardingComplete = localStorage.getItem('provider-onboarding-complete');
+        if (!onboardingComplete) {
+          setLocation('/provider-onboarding/id-verification');
+        } else {
+          setLocation('/provider');
+        }
+      } else {
+        setLocation('/');
       }
-      setLocation('/provider');
-    } else {
-      setLocation('/');
     }
-    return null;
+  }, [user, setLocation]);
+
+  if (user) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-[#8c52ff] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleBack = () => {

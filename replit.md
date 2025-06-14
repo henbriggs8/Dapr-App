@@ -1,0 +1,136 @@
+# Dapper Car Wash - Mobile Car Wash Service Platform
+
+## Overview
+
+Dapper is a comprehensive mobile car wash and detailing service platform built with modern web technologies. It provides a complete ecosystem for customers to book car wash services, service providers to manage their operations, and administrators to oversee the business. The application features a mobile-first design with real-time updates, geolocation services, and integrated payment processing.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript for type safety
+- **Build Tool**: Vite for fast development and optimized builds
+- **UI Framework**: Tailwind CSS with shadcn/ui component library
+- **State Management**: TanStack Query (React Query) for server state management
+- **Routing**: Wouter for lightweight client-side routing
+- **Animations**: Framer Motion for smooth transitions and micro-interactions
+- **Forms**: React Hook Form with Zod validation for type-safe form handling
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **Language**: TypeScript with ES modules
+- **Session Management**: Express sessions with PostgreSQL store
+- **Authentication**: Passport.js with local strategy and bcrypt password hashing
+- **Real-time Communication**: WebSocket server for live updates
+- **File Structure**: Modular routing with separated concerns
+
+### Mobile-First Design
+- **Responsive**: Optimized for mobile devices with desktop compatibility
+- **PWA Ready**: Configured for progressive web app capabilities
+- **Touch Optimized**: Gesture-friendly interface with proper touch targets
+- **iOS Safari**: Special handling for iOS-specific behaviors and safe areas
+
+## Key Components
+
+### User Management System
+- **Multi-role Authentication**: Support for customers, service providers, and administrators
+- **Onboarding Flow**: Guided setup for new users including address and vehicle information
+- **Profile Management**: Comprehensive user profiles with ratings and service history
+
+### Booking & Scheduling System
+- **Service Tiers**: Three-tier pricing (Basic, Standard, Premium) with different feature sets
+- **Time Slot Management**: Dynamic scheduling with availability tracking
+- **Real-time Updates**: Live booking status updates via WebSocket connections
+- **Vehicle Integration**: Support for vehicle size detection and pricing adjustments
+
+### Provider Network
+- **Geolocation**: Real-time provider location tracking and assignment
+- **Status Management**: Online/offline status with last location updates
+- **Assignment Algorithm**: Automated booking assignment to nearby available providers
+- **Performance Metrics**: Earnings tracking, service metrics, and rating systems
+
+### Payment Integration
+- **Square Integration**: Complete payment processing with Square SDK
+- **Payment Links**: Dynamic payment link generation for secure transactions
+- **Order Management**: Full order lifecycle from creation to completion
+- **Revenue Tracking**: Comprehensive financial reporting and analytics
+
+### Admin Dashboard
+- **User Management**: Full CRUD operations for all user types
+- **Pricing Control**: Dynamic pricing configuration management
+- **Analytics**: Revenue tracking, geographic data, and provider performance
+- **Real-time Monitoring**: Live system status and provider activity
+
+## Data Flow
+
+### Customer Journey
+1. **Registration/Login**: User authentication with phone/email options
+2. **Onboarding**: Address setup and vehicle profile creation
+3. **Service Selection**: Choose from available service tiers with pricing
+4. **Booking Creation**: Select time slots and submit booking requests
+5. **Payment Processing**: Secure payment via Square integration
+6. **Service Tracking**: Real-time updates on service progress
+7. **Completion**: Rating and feedback collection
+
+### Provider Workflow
+1. **Authentication**: Provider-specific login with additional verification
+2. **Onboarding**: ID verification, vehicle setup, and bank information
+3. **Availability Management**: Online/offline status and location updates
+4. **Booking Assignment**: Automatic or manual booking acceptance
+5. **Service Execution**: Step-by-step service progress tracking
+6. **Completion**: Payment processing and customer rating
+
+### Admin Operations
+1. **System Monitoring**: Real-time dashboard with key metrics
+2. **User Management**: Customer and provider administration
+3. **Pricing Management**: Dynamic service pricing configuration
+4. **Analytics**: Revenue, geographic, and performance reporting
+5. **Provider Support**: Tools for managing provider network
+
+## External Dependencies
+
+### Core Technologies
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
+- **Authentication**: Passport.js with session-based authentication
+- **Payment Processing**: Square SDK for secure payment handling
+- **Real-time Features**: WebSocket for live updates and notifications
+
+### Third-party Services
+- **Google Maps API**: Geolocation services and mapping functionality
+- **Square Payments**: Complete payment processing infrastructure
+- **Neon Database**: PostgreSQL hosting with serverless capabilities
+
+### Development Tools
+- **TypeScript**: End-to-end type safety across the full stack
+- **ESBuild**: Fast production bundling for server-side code
+- **Drizzle Kit**: Database migration and schema management
+- **TanStack Query**: Intelligent data fetching and caching
+
+## Deployment Strategy
+
+### Environment Configuration
+- **Development**: Local development with hot module replacement
+- **Production**: Optimized builds with environment-specific configurations
+- **Database**: Environment-based connection string management
+
+### Build Process
+- **Frontend**: Vite production build with asset optimization
+- **Backend**: ESBuild bundling with external package handling
+- **Database**: Automated migration system with Drizzle Kit
+
+### Platform Support
+- **Cloud Run**: Configured for Google Cloud Run deployment
+- **Replit**: Native support for Replit hosting platform
+- **PostgreSQL**: Compatible with various PostgreSQL hosting providers
+
+### Monitoring & Performance
+- **Request Logging**: Comprehensive API request and response logging
+- **Error Handling**: Centralized error management with user-friendly messages
+- **Performance Optimization**: Lazy loading, code splitting, and caching strategies
+
+## Changelog
+
+- June 14, 2025. Initial setup
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
