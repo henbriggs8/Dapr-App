@@ -213,6 +213,33 @@ export class MemStorage implements IStorage {
         });
       }
     }
+
+    // Create a test customer for demo purposes
+    this.createUser({
+      username: "testcustomer",
+      password: "password123",
+      name: "Sarah Johnson",
+      phone: "+1 (555) 123-4567",
+      address: "456 Oak Street, Salt Lake City, UT 84102"
+    });
+
+    // Create a sample booking to demonstrate provider dashboard
+    this.createBooking({
+      userId: 4, // Test customer
+      serviceId: 2, // The OG service
+      timeSlotId: 2, // 9 AM slot
+      providerId: 1, // Dapper provider
+      address: "456 Oak Street, Salt Lake City, UT 84102",
+      latitude: 40.7589,
+      longitude: -111.8883,
+      notes: "Please pay extra attention to the interior - pet hair from golden retriever",
+      status: "assigned",
+      stage: "pending",
+      totalPrice: 58,
+      paymentStatus: "pending",
+      createdAt: new Date().toISOString(),
+      estimatedDuration: 45
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {
