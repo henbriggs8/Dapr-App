@@ -229,16 +229,17 @@ export class MemStorage implements IStorage {
       serviceId: 2, // The OG service
       timeSlotId: 2, // 9 AM slot
       providerId: 1, // Dapper provider
-      address: "456 Oak Street, Salt Lake City, UT 84102",
-      latitude: 40.7589,
-      longitude: -111.8883,
+      priceTier: "standard",
+      timestamp: new Date().toISOString(),
+      serviceLocation: "456 Oak Street, Salt Lake City, UT 84102",
+      serviceLocationType: "residential",
+      serviceLatitude: 40.7589,
+      serviceLongitude: -111.8883,
       notes: "Please pay extra attention to the interior - pet hair from golden retriever",
       status: "assigned",
-      stage: "pending",
-      totalPrice: 58,
-      paymentStatus: "pending",
-      createdAt: new Date().toISOString(),
-      estimatedDuration: 45
+      currentStage: "pending",
+      totalPrice: 5800, // $58.00 in cents
+      paymentStatus: "pending"
     });
   }
 
