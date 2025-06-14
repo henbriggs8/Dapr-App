@@ -1,33 +1,31 @@
-import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useWebSocket } from "@/hooks/use-websocket";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Booking, User, Service, Vehicle } from "@shared/schema";
-import { LogOut } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { CarWashSpinner } from "@/components/car-wash-spinner";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress"; 
-import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { CarWashSpinner } from "@/components/car-wash-spinner";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { User, Booking } from "@shared/schema";
 import { 
-  MapPin, CheckCircle, XCircle, Clock, UserCircle, CalendarClock, ArrowRight, 
-  PlayCircle, StopCircle, Timer, Coins, BarChart3, Star, ChevronUp, Car, Calendar 
+  MapPin, 
+  Clock, 
+  DollarSign, 
+  Star, 
+  Users, 
+  Car, 
+  CheckCircle, 
+  XCircle, 
+  Play, 
+  Square as StopIcon,
+  BarChart3,
+  Calendar,
+  TrendingUp
 } from "lucide-react";
+import { useState } from "react";
 
-const serviceStages = [
-  { id: "on_the_way", label: "On The Way" },
-  { id: "arrival", label: "Arrived" },
-  { id: "exterior_washing", label: "Exterior Washing" },
-  { id: "interior_cleaning", label: "Interior Cleaning" },
-  { id: "finishing", label: "Finishing Touches" },
-  { id: "completed", label: "Completed" }
-];
-
-// Interface for provider earnings
 interface ProviderEarnings {
   totalEarnings: number;
   completedServices: number;
@@ -35,129 +33,43 @@ interface ProviderEarnings {
   serviceTypeBreakdown: { [key: string]: number };
 }
 
-// Interface for provider service metrics
 interface ProviderMetrics {
   averageDuration: { [key: string]: number };
   totalServiceTime: number;
 }
 
 export default function ProviderDashboard() {
-  const { user, logoutMutation } = useAuth();
-  const { status: wsStatus, sendMessage } = useWebSocket();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [expandedBooking, setExpandedBooking] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("active-bookings");
-  const [earningsPeriod, setEarningsPeriod] = useState<"today" | "week" | "month">("month");
-  const [locationError, setLocationError] = useState<string>();
-  const [bookingsTimeframe, setBookingsTimeframe] = useState<"day" | "week" | "month">("day");
-  const [isOnline, setIsOnline] = useState(user?.currentStatus === "online");
-  
+  const [isOnline, setIsOnline] = useState(user?.status === 'online');
+
   // Fetch active bookings
-  const { data: activeBookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/provider/active-bookings"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/provider/active-bookings");
-      return await res.json();
-    },
-    enabled: !!user && user.isProvider,
-    refetchInterval: 10000 // Refetch every 10 seconds
-  });
-  
-  // Fetch bookings by timeframe
-  const { data: timeframeBookings, isLoading: timeframeLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/provider/bookings", bookingsTimeframe],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/provider/bookings/${bookingsTimeframe}`);
-      return await res.json();
-    },
-    enabled: !!user && user.isProvider && activeTab === "bookings-history"
-  });
-  
-  // Check for any booking assignments
-  const { data: assignmentData, isLoading: assignmentLoading, refetch: refetchAssignments } = useQuery({
-    queryKey: ["/api/provider/assignments"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/provider/assignments");
-      return await res.json();
-    },
-    enabled: !!user && user.isProvider && user.currentStatus === "online",
-    refetchInterval: 30000 // Check for new assignments every 30 seconds
-  });
-
-  // Fetch all services
-  const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
-    enabled: !!user && user.isProvider
-  });
-
-  // Fetch all vehicles
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-    enabled: !!user && user.isProvider
+  const { data: activeBookings = [], isLoading: isLoadingBookings, refetch: refetchBookings } = useQuery<Booking[]>({
+    queryKey: ['/api/provider/active-bookings'],
   });
 
   // Fetch provider earnings
-  const { data: earningsData, isLoading: isLoadingEarnings } = useQuery<ProviderEarnings>({
-    queryKey: ["/api/provider/earnings", earningsPeriod],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/provider/earnings?period=${earningsPeriod}`);
-      return await res.json();
-    },
-    enabled: !!user && user.isProvider && activeTab === "earnings"
+  const { data: earnings, isLoading: isLoadingEarnings } = useQuery<ProviderEarnings>({
+    queryKey: ['/api/provider/earnings'],
   });
 
-  // Fetch provider service metrics
+  // Fetch provider metrics
   const { data: metricsData, isLoading: isLoadingMetrics } = useQuery<ProviderMetrics>({
-    queryKey: ["/api/provider/metrics"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/provider/metrics");
-      return await res.json();
-    },
-    enabled: !!user && user.isProvider && activeTab === "metrics"
+    queryKey: ['/api/provider/metrics'],
   });
 
-  const isLoading = bookingsLoading || servicesLoading || vehiclesLoading;
-
-  // Online/Offline toggle mutation
-  const toggleStatusMutation = useMutation({
-    mutationFn: async (newStatus: "online" | "offline") => {
-      const res = await apiRequest("POST", "/api/provider/status", { status: newStatus });
-      return await res.json();
-    },
-    onSuccess: (updatedUser: User) => {
-      queryClient.setQueryData(["/api/user"], updatedUser);
-      setIsOnline(updatedUser.currentStatus === "online");
-      toast({
-        title: `Now ${updatedUser.currentStatus}`,
-        description: updatedUser.currentStatus === "online" 
-          ? "You can now receive booking assignments" 
-          : "You won't receive new bookings until you go online",
-      });
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to update status",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Provider status mutation
-  const statusMutation = useMutation({
+  // Update provider status mutation
+  const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await apiRequest("POST", "/api/provider/status", { status });
+      const res = await apiRequest("PATCH", "/api/provider/status", { status });
       return await res.json();
     },
     onSuccess: (updatedUser: User) => {
       queryClient.setQueryData(["/api/user"], updatedUser);
+      setIsOnline(updatedUser.status === 'online');
       toast({
         title: "Status updated",
-        description: `You are now ${updatedUser.currentStatus}.`,
-        variant: "default",
+        description: `You are now ${updatedUser.status}`,
       });
     },
     onError: (error: Error) => {
@@ -166,106 +78,58 @@ export default function ProviderDashboard() {
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
 
-  // Update booking status mutation
-  const updateBookingMutation = useMutation({
-    mutationFn: async ({ id, status, stage }: { id: number, status: string, stage?: string }) => {
-      const res = await apiRequest("POST", `/api/bookings/${id}/status`, { status, stage });
+  // Update location mutation
+  const updateLocationMutation = useMutation({
+    mutationFn: async () => {
+      if (!navigator.geolocation) {
+        throw new Error("Geolocation is not supported");
+      }
+
+      return new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          (error) => reject(new Error("Failed to get location")),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    },
+    onSuccess: async (location) => {
+      const res = await apiRequest("PATCH", "/api/provider/location", location);
+      const updatedUser = await res.json();
+      queryClient.setQueryData(["/api/user"], updatedUser);
+      toast({
+        title: "Location updated",
+        description: "Your location has been updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update location",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Accept booking mutation
+  const acceptBookingMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/accept`);
       return await res.json();
     },
     onSuccess: (updatedBooking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      
-      // Send notification via WebSocket
-      if (wsStatus === "connected") {
-        sendMessage({
-          type: "booking_update",
-          bookingId: updatedBooking.id,
-          status: updatedBooking.status,
-          stage: updatedBooking.currentStage
-        });
-      }
-      
-      toast({
-        title: "Booking updated",
-        description: `Status changed to ${updatedBooking.status}${updatedBooking.currentStage ? ` (${updatedBooking.currentStage})` : ''}`,
-        variant: "default",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to update booking",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Service timer mutations
-  const startServiceMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/bookings/${id}/start`);
-      return await res.json();
-    },
-    onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-      toast({
-        title: "Service started",
-        description: `Timer started for booking #${booking.id}.`,
-        variant: "default",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to start timer",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  const completeServiceMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/bookings/${id}/complete`);
-      return await res.json();
-    },
-    onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/earnings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/metrics"] });
-      
-      toast({
-        title: "Service completed",
-        description: `Service completed in ${booking.serviceDuration} minutes.`,
-        variant: "default",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to complete service",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-  
-  // Accept booking assignment mutation
-  const acceptBookingMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/provider/bookings/${id}/accept`);
-      return await res.json();
-    },
-    onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
       toast({
         title: "Booking accepted",
-        description: "You've accepted the new booking. It's now in your active bookings.",
-        variant: "default",
+        description: "You have successfully accepted the booking",
       });
     },
     onError: (error: Error) => {
@@ -274,22 +138,20 @@ export default function ProviderDashboard() {
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
-  
-  // Reject booking assignment mutation
+
+  // Reject booking mutation
   const rejectBookingMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/provider/bookings/${id}/reject`);
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/reject`);
       return await res.json();
     },
     onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/provider/assignments"] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
       toast({
         title: "Booking rejected",
-        description: "You've rejected the booking. It will be offered to another provider.",
-        variant: "default",
+        description: "The booking has been rejected",
       });
     },
     onError: (error: Error) => {
@@ -298,111 +160,106 @@ export default function ProviderDashboard() {
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
 
-  // Update provider location
-  useEffect(() => {
-    if (user?.isProvider && user.currentStatus === 'online') {
-      let watchId: number;
-      
-      if (navigator.geolocation) {
-        watchId = navigator.geolocation.watchPosition(
-          async (position) => {
-            try {
-              await apiRequest("POST", "/api/provider/location", {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              });
-            } catch (error) {
-              console.error('Error updating location:', error);
-            }
-          },
-          (error) => {
-            setLocationError(error.message);
-            console.error('Geolocation error:', error);
-          },
-          {
-            enableHighAccuracy: true,
-            maximumAge: 30000,
-            timeout: 27000
-          }
-        );
-      }
-      
-      return () => {
-        if (watchId) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-      };
-    }
-  }, [user]);
+  // Start service mutation
+  const startServiceMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/start`);
+      return await res.json();
+    },
+    onSuccess: (booking: Booking) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
+      toast({
+        title: "Service started",
+        description: "Timer has been started for this service",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to start service",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
-  const updateStatus = (status: string) => {
-    statusMutation.mutate(status);
+  // Complete service mutation
+  const completeServiceMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/complete`);
+      return await res.json();
+    },
+    onSuccess: (booking: Booking) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/earnings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/metrics'] });
+      toast({
+        title: "Service completed",
+        description: "The service has been marked as completed",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to complete service",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusToggle = (checked: boolean) => {
+    const newStatus = checked ? 'online' : 'offline';
+    updateStatusMutation.mutate(newStatus);
   };
 
   const updateBookingStage = (booking: Booking, stage: string) => {
-    updateBookingMutation.mutate({
-      id: booking.id,
-      status: stage === 'completed' ? 'completed' : 'in_progress',
-      stage
-    });
+    // Implementation for updating booking stage
   };
 
   const cancelBooking = (booking: Booking) => {
-    updateBookingMutation.mutate({
-      id: booking.id,
-      status: 'cancelled'
-    });
+    // Implementation for canceling booking
   };
 
-  const startService = (bookingId: number) => {
-    startServiceMutation.mutate(bookingId);
-  };
-
-  const completeService = (bookingId: number) => {
-    completeServiceMutation.mutate(bookingId);
-  };
-
-  // Format date and time for display
-  const formatDateTime = (date: string, time: string) => {
-    return `${date} at ${time}`;
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
+  const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount / 100); // Convert cents to dollars
+    }).format(price);
   };
 
-  // Format duration in minutes to hours and minutes
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
-  // Get service name by ID
-  const getServiceName = (serviceId: number) => {
-    const service = services?.find(s => s.id === serviceId);
-    return service?.name || "Unknown";
-  };
-
-  // Get vehicle by ID
-  const getVehicle = (vehicleId: number | null) => {
-    if (!vehicleId) return null;
-    return vehicles?.find(v => v.id === vehicleId);
-  };
-
-  // Get category name with proper capitalization
   const formatCategory = (category: string) => {
-    return category.charAt(0).toUpperCase() + category.slice(1);
+    return category.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
-  if (isLoading) {
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'pending_assignment':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'assigned':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_progress':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'completed':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <CarWashSpinner size="lg" showText text="Loading dashboard..." />
@@ -411,860 +268,338 @@ export default function ProviderDashboard() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Provider Dashboard</h1>
-        <div className="flex items-center gap-4">
-          {locationError ? (
-            <div className="text-destructive flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Location Error: {locationError}
+    <div className="min-h-screen bg-gray-50 p-4 pb-20">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Provider Dashboard</h1>
+              <p className="text-gray-600">Welcome back, {user.username}!</p>
             </div>
-          ) : (
-            <div className="text-green-600 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Location tracking active
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium">Status:</span>
+                <Switch
+                  checked={isOnline}
+                  onCheckedChange={handleStatusToggle}
+                  disabled={updateStatusMutation.isPending}
+                />
+                <span className={`text-sm font-medium ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <Button 
+                onClick={() => updateLocationMutation.mutate()}
+                disabled={updateLocationMutation.isPending}
+                variant="outline"
+                size="sm"
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Update Location
+              </Button>
             </div>
-          )}
-          <Badge variant={wsStatus === "connected" ? "default" : "outline"} className={wsStatus === "connected" ? "bg-green-500 hover:bg-green-600" : ""}>
-            {wsStatus}
-          </Badge>
-          <Badge variant={user?.currentStatus === "online" ? "default" : "outline"} className={user?.currentStatus === "online" ? "bg-green-500 hover:bg-green-600" : ""}>
-            {user?.currentStatus}
-          </Badge>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">
-              {isOnline ? "Online" : "Offline"}
-            </span>
-            <button
-              onClick={() => toggleStatusMutation.mutate(isOnline ? "offline" : "online")}
-              disabled={toggleStatusMutation.isPending}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#8c52ff] focus:ring-offset-2 ${
-                isOnline ? 'bg-[#8c52ff]' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  isOnline ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
           </div>
-          <Button 
-            variant="outline"
-            size="sm"
-            className="text-red-500 hover:bg-red-50"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            <LogOut className="h-4 w-4 mr-1" />
-            {logoutMutation.isPending ? "Logging out..." : "Logout"}
-          </Button>
-        </div>
-      </div>
 
-      {/* Booking Assignment Alert */}
-      {assignmentData && 'id' in assignmentData && (
-        <Card className="mb-6 bg-amber-50 border-amber-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-amber-600" />
-              New Booking Assignment
-            </CardTitle>
-            <CardDescription>
-              You have a new booking assignment waiting for your response
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold mb-2">Booking Details</h3>
-                  <div className="space-y-2">
-                    <p><span className="font-medium">Booking ID:</span> #{assignmentData.id}</p>
-                    <p><span className="font-medium">Service:</span> {getServiceName(assignmentData.serviceId)}</p>
-                    <p><span className="font-medium">Date/Time:</span> {assignmentData.date && assignmentData.time ? 
-                      formatDateTime(assignmentData.date, assignmentData.time) : 
-                      'As soon as possible'
-                    }</p>
-                    <p><span className="font-medium">Location:</span> {assignmentData.serviceLocation}</p>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <DollarSign className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                    <p className="text-2xl font-bold">
+                      {earnings ? formatPrice(earnings.totalEarnings) : '$0.00'}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold mb-2">Vehicle Information</h3>
-                  {assignmentData.vehicleId ? (
-                    <div className="space-y-2">
-                      <p>
-                        <Car className="h-4 w-4 inline mr-2 text-muted-foreground" />
-                        {getVehicle(assignmentData.vehicleId)?.year} {getVehicle(assignmentData.vehicleId)?.make} {getVehicle(assignmentData.vehicleId)?.model}
-                      </p>
-                      <p><span className="font-medium">Color:</span> {getVehicle(assignmentData.vehicleId)?.color}</p>
-                      <p><span className="font-medium">License Plate:</span> {getVehicle(assignmentData.vehicleId)?.licensePlate}</p>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No vehicle information provided</p>
-                  )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Completed Services</p>
+                    <p className="text-2xl font-bold">
+                      {earnings?.completedServices || 0}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="mt-4 flex justify-end gap-4">
-                <Button 
-                  variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-50"
-                  onClick={() => rejectBookingMutation.mutate(assignmentData.id)}
-                  disabled={rejectBookingMutation.isPending}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  {rejectBookingMutation.isPending ? 'Rejecting...' : 'Reject Booking'}
-                </Button>
-                <Button 
-                  className="bg-[#8c52ff] hover:bg-[#7a45e0]"
-                  onClick={() => acceptBookingMutation.mutate(assignmentData.id)}
-                  disabled={acceptBookingMutation.isPending}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {acceptBookingMutation.isPending ? 'Accepting...' : 'Accept Booking'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Tabs 
-        defaultValue="active-bookings" 
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList className="grid grid-cols-4 w-full md:w-[80%] lg:w-[60%]">
-          <TabsTrigger value="active-bookings" className="text-xs sm:text-sm py-1">Active</TabsTrigger>
-          <TabsTrigger value="bookings-history" className="text-xs sm:text-sm py-1">History</TabsTrigger>
-          <TabsTrigger value="earnings" className="text-xs sm:text-sm py-1">Earnings</TabsTrigger>
-          <TabsTrigger value="metrics" className="text-xs sm:text-sm py-1">Metrics</TabsTrigger>
-        </TabsList>
-        
-        {/* Add Booking History Tab */}
-        <TabsContent value="bookings-history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>History</CardTitle>
-                  <CardDescription>
-                    View your past and upcoming bookings
-                  </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <Star className="h-8 w-8 text-yellow-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                    <p className="text-2xl font-bold">
+                      {earnings?.averageRating ? earnings.averageRating.toFixed(1) : 'N/A'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={bookingsTimeframe === "day" ? "default" : "outline"}
-                    size="sm"
-                    className={bookingsTimeframe === "day" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setBookingsTimeframe("day")}
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    variant={bookingsTimeframe === "week" ? "default" : "outline"}
-                    size="sm"
-                    className={bookingsTimeframe === "week" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setBookingsTimeframe("week")}
-                  >
-                    This Week
-                  </Button>
-                  <Button
-                    variant={bookingsTimeframe === "month" ? "default" : "outline"}
-                    size="sm"
-                    className={bookingsTimeframe === "month" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setBookingsTimeframe("month")}
-                  >
-                    This Month
-                  </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <Car className="h-8 w-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Active Jobs</p>
+                    <p className="text-2xl font-bold">
+                      {activeBookings.filter(b => ['assigned', 'in_progress'].includes(b.status)).length}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {timeframeLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <CarWashSpinner size="md" showText text="Loading bookings..." />
-                </div>
-              ) : !timeframeBookings || timeframeBookings.length === 0 ? (
-                <div className="py-6 text-center">
-                  <p className="text-lg text-muted-foreground">No bookings found for this time period.</p>
-                  <p className="text-sm text-muted-foreground mt-2">Try selecting a different timeframe.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {timeframeBookings.map((booking) => {
-                    const service = services?.find(s => s.id === booking.serviceId);
-                    // Determine status color
-                    let statusColor = "bg-gray-200";
-                    if (booking.status === "pending") statusColor = "bg-yellow-200 text-yellow-700";
-                    if (booking.status === "confirmed") statusColor = "bg-green-200 text-green-700";
-                    if (booking.status === "in_progress") statusColor = "bg-blue-200 text-blue-700";
-                    if (booking.status === "completed") statusColor = "bg-purple-200 text-purple-700";
-                    if (booking.status === "cancelled") statusColor = "bg-red-200 text-red-700";
-                    if (booking.status === "assigned") statusColor = "bg-orange-200 text-orange-700";
-                    
-                    return (
-                      <div key={booking.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium">Booking #{booking.id}</p>
-                              <div className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>
-                                {booking.status.replace('_', ' ')}
-                              </div>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              <Calendar className="inline h-3 w-3 mr-1" /> 
-                              {booking.date && booking.time 
-                                ? formatDateTime(booking.date, booking.time)
-                                : new Date(booking.timestamp).toLocaleString()
-                              }
-                            </p>
-                            <p className="text-sm mt-1">
-                              <span className="font-medium">Service:</span> {service?.name}
-                            </p>
-                            {booking.serviceLocation && (
-                              <p className="text-sm text-muted-foreground">
-                                <MapPin className="inline h-3 w-3 mr-1" /> 
-                                {booking.serviceLocation}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            {booking.rating ? (
-                              <div className="flex items-center">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star 
-                                    key={star} 
-                                    className={`h-4 w-4 ${star <= (booking.rating || 0) 
-                                      ? "text-yellow-400 fill-yellow-400" 
-                                      : "text-gray-300"}`} 
-                                  />
-                                ))}
-                              </div>
-                            ) : booking.status === 'completed' ? (
-                              <p className="text-xs text-muted-foreground">No rating yet</p>
-                            ) : null}
-                            {booking.serviceDuration && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                <Timer className="inline h-3 w-3 mr-1" /> 
-                                {formatDuration(booking.serviceDuration)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Active Bookings Tab */}
-        <TabsContent value="active-bookings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active</CardTitle>
-              <CardDescription>
-                Manage your current job assignments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!activeBookings || activeBookings.length === 0 ? (
-                <div className="py-6 text-center">
-                  <p className="text-lg text-muted-foreground">No active bookings at the moment.</p>
-                  <p className="text-sm text-muted-foreground mt-2">New bookings will appear here when customers make a reservation.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {activeBookings.map((booking) => {
-                    const service = services?.find(s => s.id === booking.serviceId);
-                    const vehicle = getVehicle(booking.vehicleId);
-                    const isExpanded = expandedBooking === booking.id;
-                    
-                    return (
-                      <Card key={booking.id} className={`border ${isExpanded ? 'border-[#8c52ff]' : 'border-border'}`}>
-                        <div
-                          className="flex justify-between items-center p-4 cursor-pointer"
-                          onClick={() => setExpandedBooking(isExpanded ? null : booking.id)}
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">Booking #{booking.id}</p>
-                              <Badge 
-                                variant={
-                                  booking.status === 'in_progress' ? "secondary" : 
-                                  booking.status === 'pending' ? "outline" : "default"
-                                }
-                                className={booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''}
-                              >
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="jobs" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            <TabsTrigger value="metrics">Performance</TabsTrigger>
+          </TabsList>
+
+          {/* Active Jobs Tab */}
+          <TabsContent value="jobs">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2 text-[#8c52ff]" />
+                  Active Bookings
+                </CardTitle>
+                <CardDescription>
+                  Manage your current and upcoming service appointments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingBookings ? (
+                  <div className="flex justify-center py-10">
+                    <CarWashSpinner size="md" showText text="Loading bookings..." />
+                  </div>
+                ) : activeBookings.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No active bookings at the moment</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      New bookings will appear here when assigned to you
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {activeBookings.map((booking) => (
+                      <div key={booking.id} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="font-medium">Booking #{booking.id}</h3>
+                              <Badge className={getStatusBadgeColor(booking.status)}>
                                 {booking.status.replace('_', ' ')}
                               </Badge>
                             </div>
-                            <CardDescription className="flex items-center gap-1 mt-1">
-                              <CalendarClock className="h-3 w-3" /> 
-                              {booking.date && booking.time 
-                                ? formatDateTime(booking.date, booking.time)
-                                : booking.timestamp
-                              }
-                            </CardDescription>
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            {!booking.startTime && booking.status === 'in_progress' ? (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-green-500 border-green-500"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startService(booking.id);
-                                }}
-                                disabled={startServiceMutation.isPending}
-                              >
-                                <PlayCircle className="h-4 w-4 mr-1" />
-                                Start Timer
-                              </Button>
-                            ) : booking.startTime && !booking.endTime ? (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-red-500 border-red-500"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  completeService(booking.id);
-                                }}
-                                disabled={completeServiceMutation.isPending}
-                              >
-                                <StopCircle className="h-4 w-4 mr-1" />
-                                End Timer
-                              </Button>
-                            ) : null}
-                            <span className="transform transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                              <ChevronUp className="h-5 w-5" />
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {isExpanded && (
-                          <div className="p-4 border-t">
-                            <div className="grid gap-4 md:grid-cols-2 mb-4">
-                              <div>
-                                <h3 className="text-sm font-semibold mb-2">Service Details</h3>
-                                <div className="space-y-1 text-sm">
-                                  <p className="flex items-center">
-                                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    {booking.date}
-                                  </p>
-                                  <p className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    {booking.time}
-                                  </p>
-                                  <p className="flex items-center">
-                                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    {booking.serviceLocation} ({booking.serviceLocationType})
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Service: </span>
-                                    {service?.name}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Price: </span>
-                                    ${service?.price}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Duration: </span>
-                                    {service?.duration} min
-                                  </p>
-                                  {booking.startTime && (
-                                    <p>
-                                      <span className="font-medium">Started: </span>
-                                      {new Date(booking.startTime).toLocaleTimeString()}
-                                    </p>
-                                  )}
-                                  {booking.endTime && (
-                                    <p>
-                                      <span className="font-medium">Completed: </span>
-                                      {new Date(booking.endTime).toLocaleTimeString()}
-                                    </p>
-                                  )}
-                                  {booking.serviceDuration && (
-                                    <p>
-                                      <span className="font-medium">Actual Duration: </span>
-                                      {formatDuration(booking.serviceDuration)}
-                                    </p>
-                                  )}
-                                </div>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                {booking.serviceLocation}
                               </div>
-                              
-                              <div>
-                                <h3 className="text-sm font-semibold mb-2">Vehicle Information</h3>
-                                {vehicle ? (
-                                  <div className="space-y-1 text-sm">
-                                    <p className="flex items-center">
-                                      <Car className="h-4 w-4 mr-2 text-muted-foreground" />
-                                      {vehicle.year} {vehicle.make} {vehicle.model}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">Color: </span>
-                                      {vehicle.color}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">License: </span>
-                                      {vehicle.licensePlate}
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <p className="text-muted-foreground">No vehicle information</p>
-                                )}
-                                
-                                {booking.notes && (
-                                  <div className="mt-3">
-                                    <h3 className="text-sm font-semibold mb-1">Notes</h3>
-                                    <p className="text-sm text-muted-foreground">{booking.notes}</p>
-                                  </div>
-                                )}
-
-                                {booking.rating && (
-                                  <div className="mt-3">
-                                    <h3 className="text-sm font-semibold mb-1">Customer Rating</h3>
-                                    <div className="flex items-center">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star 
-                                          key={star} 
-                                          className={`h-4 w-4 ${star <= (booking.rating || 0) 
-                                            ? "text-yellow-400 fill-yellow-400" 
-                                            : "text-gray-300"}`} 
-                                        />
-                                      ))}
-                                      <span className="ml-2 text-sm">({booking.rating}/5)</span>
-                                    </div>
-                                    {booking.ratingComment && (
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        "{booking.ratingComment}"
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2" />
+                                {booking.date} at {booking.time}
+                              </div>
+                              <div className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                {formatPrice(booking.totalPrice || 0)}
                               </div>
                             </div>
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            {booking.status === 'pending_assignment' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => acceptBookingMutation.mutate(booking.id)}
+                                  disabled={acceptBookingMutation.isPending}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Accept
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => rejectBookingMutation.mutate(booking.id)}
+                                  disabled={rejectBookingMutation.isPending}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                            
+                            {booking.status === 'assigned' && (
+                              <Button
+                                size="sm"
+                                onClick={() => startServiceMutation.mutate(booking.id)}
+                                disabled={startServiceMutation.isPending}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Start Service
+                              </Button>
+                            )}
                             
                             {booking.status === 'in_progress' && (
-                              <div className="mt-4">
-                                <h3 className="text-sm font-semibold mb-2">Service Progress</h3>
-                                <div className="flex flex-wrap gap-2">
-                                  {serviceStages.map((stage, index) => {
-                                    const isActive = booking.currentStage === stage.id;
-                                    const isPast = serviceStages.findIndex(s => s.id === booking.currentStage) > index;
-                                    
-                                    return (
-                                      <Button 
-                                        key={stage.id}
-                                        size="sm"
-                                        className={`text-xs ${isActive ? 'bg-[#8c52ff] hover:bg-[#7a45e0]' : isPast ? 'bg-green-500 hover:bg-green-600' : ''}`}
-                                        variant={isActive || isPast ? "default" : "outline"}
-                                        onClick={() => updateBookingStage(booking, stage.id)}
-                                      >
-                                        {isPast && !isActive && <CheckCircle className="h-3 w-3 mr-1" />}
-                                        {stage.label}
-                                        {isActive && <ArrowRight className="h-3 w-3 ml-1" />}
-                                      </Button>
-                                    );
-                                  })}
-                                </div>
+                              <Button
+                                size="sm"
+                                onClick={() => completeServiceMutation.mutate(booking.id)}
+                                disabled={completeServiceMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <StopIcon className="h-4 w-4 mr-2" />
+                                Complete
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Earnings Tab */}
+          <TabsContent value="earnings">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2 text-[#8c52ff]" />
+                  Earnings Overview
+                </CardTitle>
+                <CardDescription>
+                  Track your earnings and service breakdown
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingEarnings ? (
+                  <div className="flex justify-center py-10">
+                    <CarWashSpinner size="md" showText text="Loading earnings..." />
+                  </div>
+                ) : !earnings ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No earnings data available yet. Complete some services to see your earnings.
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Service Type Breakdown */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Service Type Breakdown</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(earnings.serviceTypeBreakdown).map(([type, count]) => (
+                          <Card key={type}>
+                            <CardContent className="p-4">
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-[#8c52ff]">{count}</p>
+                                <p className="text-sm text-gray-600">{formatCategory(type)}</p>
                               </div>
-                            )}
-                            
-                            <div className="flex justify-between mt-4 pt-4 border-t">
-                              {booking.status === 'pending' ? (
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => cancelBooking(booking)}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="bg-[#8c52ff] hover:bg-[#7a45e0]"
-                                    onClick={() => updateBookingStage(booking, 'on_the_way')}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Accept
-                                  </Button>
-                                </div>
-                              ) : booking.status === 'in_progress' ? (
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => cancelBooking(booking)}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="bg-green-500 hover:bg-green-600"
-                                    onClick={() => updateBookingStage(booking, 'completed')}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Complete Service
-                                  </Button>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Earnings Tab */}
-        <TabsContent value="earnings">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center">
-                    <Coins className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                    Earnings Overview
-                  </CardTitle>
-                  <CardDescription>Track your earnings and service breakdown</CardDescription>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Button 
-                    size="sm" 
-                    variant={earningsPeriod === "today" ? "default" : "outline"}
-                    className={earningsPeriod === "today" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setEarningsPeriod("today")}
-                  >
-                    Today
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant={earningsPeriod === "week" ? "default" : "outline"}
-                    className={earningsPeriod === "week" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setEarningsPeriod("week")}
-                  >
-                    This Week
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant={earningsPeriod === "month" ? "default" : "outline"}
-                    className={earningsPeriod === "month" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
-                    onClick={() => setEarningsPeriod("month")}
-                  >
-                    This Month
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingEarnings ? (
-                <div className="flex items-center justify-center py-10">
-                  <CarWashSpinner size="md" showText text="Loading earnings data..." />
-                </div>
-              ) : earningsData ? (
-                <div className="space-y-6">
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-green-600 font-medium">Total Earnings</p>
-                          <p className="text-2xl font-bold text-green-700">${earningsData.totalEarnings.toFixed(2)}</p>
-                        </div>
-                        <Coins className="h-8 w-8 text-green-500" />
-                      </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-blue-600 font-medium">Completed Services</p>
-                          <p className="text-2xl font-bold text-blue-700">{earningsData.completedServices}</p>
-                        </div>
-                        <CheckCircle className="h-8 w-8 text-blue-500" />
-                      </div>
-                    </div>
-                    
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-yellow-600 font-medium">Average Rating</p>
-                          <div className="flex items-center gap-1">
-                            <p className="text-2xl font-bold text-yellow-700">{earningsData.averageRating.toFixed(1)}</p>
-                            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                          </div>
-                        </div>
-                        <Star className="h-8 w-8 text-yellow-500" />
-                      </div>
-                    </div>
-                    
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-purple-600 font-medium">Avg per Service</p>
-                          <p className="text-2xl font-bold text-purple-700">
-                            ${earningsData.completedServices > 0 ? (earningsData.totalEarnings / earningsData.completedServices).toFixed(2) : '0.00'}
-                          </p>
-                        </div>
-                        <BarChart3 className="h-8 w-8 text-purple-500" />
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Service Type Breakdown */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Service Type Breakdown</h3>
-                    <div className="space-y-3">
-                      {Object.entries(earningsData.serviceTypeBreakdown).map(([serviceType, earnings]) => (
-                        <div key={serviceType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="font-medium capitalize">{serviceType.replace('_', ' ')}</span>
-                          <span className="text-lg font-bold text-[#8c52ff]">${earnings.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Performance Metrics Tab */}
+          <TabsContent value="metrics">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2 text-[#8c52ff]" />
+                  Service Metrics
+                </CardTitle>
+                <CardDescription>
+                  Track your service performance and timing metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingMetrics ? (
+                  <div className="flex justify-center py-10">
+                    <CarWashSpinner size="md" showText text="Loading service metrics..." />
                   </div>
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <p className="text-lg text-muted-foreground">No earnings data available for this period.</p>
-                  <p className="text-sm text-muted-foreground mt-2">Complete some services to see your earnings here.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Metrics Tab */}
-        <TabsContent value="metrics">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                Performance Metrics
-              </CardTitle>
-              <CardDescription>Analyze your service performance and efficiency</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingMetrics ? (
-                <div className="flex items-center justify-center py-10">
-                  <CarWashSpinner size="md" showText text="Loading metrics..." />
-                </div>
-              ) : metricsData ? (
-                <div className="space-y-6">
-                  {/* Service Duration Metrics */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Average Service Duration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {Object.entries(metricsData.averageDuration).map(([serviceType, duration]) => (
-                        <div key={serviceType} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm text-muted-foreground capitalize">{serviceType.replace('_', ' ')}</p>
-                              <p className="text-xl font-bold">{Math.round(duration)} min</p>
-                            </div>
-                            <Timer className="h-6 w-6 text-[#8c52ff]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                ) : !metricsData ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No service metrics available yet. Complete some services to see your metrics.
                   </div>
-                  
-                  {/* Total Service Time */}
-                  <div className="border rounded-lg p-6 bg-gradient-to-r from-purple-50 to-blue-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold">Total Service Time</h3>
-                        <p className="text-3xl font-bold text-[#8c52ff] mt-2">
-                          {Math.floor(metricsData.totalServiceTime / 60)}h {metricsData.totalServiceTime % 60}m
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">Across all completed services</p>
-                      </div>
-                      <Clock className="h-12 w-12 text-[#8c52ff]" />
-                    </div>
-                  </div>
-                  
-                  {/* Efficiency Insights */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Efficiency Insights</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div>
-                          <p className="font-medium text-green-700">Services per Hour</p>
-                          <p className="text-sm text-green-600">Based on average service duration</p>
-                        </div>
-                        <span className="text-2xl font-bold text-green-700">
-                          {metricsData.totalServiceTime > 0 
-                            ? (Object.keys(metricsData.averageDuration).length * 60 / Object.values(metricsData.averageDuration).reduce((a, b) => a + b, 0) * Object.keys(metricsData.averageDuration).length).toFixed(1)
-                            : '0'
-                          }
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div>
-                          <p className="font-medium text-blue-700">Most Efficient Service</p>
-                          <p className="text-sm text-blue-600">Shortest average duration</p>
-                        </div>
-                        <span className="text-lg font-bold text-blue-700 capitalize">
-                          {Object.keys(metricsData.averageDuration).length > 0 
-                            ? Object.entries(metricsData.averageDuration)
-                                .sort(([,a], [,b]) => a - b)[0]?.[0]?.replace('_', ' ') || 'N/A'
-                            : 'N/A'
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <p className="text-lg text-muted-foreground">No metrics data available yet.</p>
-                  <p className="text-sm text-muted-foreground mt-2">Complete some services to see performance metrics here.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-                    <h3 className="text-lg font-medium mb-4">Service Duration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Average Duration by Service Type</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {Object.entries(metricsData.averageDuration).length > 0 ? (
-                              Object.entries(metricsData.averageDuration).map(([category, duration]) => (
-                                <div key={category} className="flex justify-between items-center">
-                                  <div>
-                                    <span className="font-medium">{formatCategory(category)}</span>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Service Duration Metrics */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Service Duration</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Average Duration by Service Type</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {Object.entries(metricsData.averageDuration).length > 0 ? (
+                                Object.entries(metricsData.averageDuration).map(([category, duration]) => (
+                                  <div key={category} className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{formatCategory(category)}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                                      <span>{formatDuration(duration)}</span>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                                    <span>{formatDuration(duration)}</span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-muted-foreground text-sm">No service duration data yet</p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Total Service Time</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-3xl font-bold text-[#8c52ff]">
-                            {formatDuration(metricsData.totalServiceTime)}
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Across all completed services
-                          </p>
-                        </CardContent>
-                      </Card>
+                                ))
+                              ) : (
+                                <p className="text-muted-foreground text-sm">No service duration data yet</p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Total Service Time</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-center py-6">
+                              <div className="text-3xl font-bold text-[#8c52ff] mb-2">
+                                {formatDuration(metricsData.totalServiceTime)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Total time spent on services
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Efficiency Tips */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Efficiency Tips</h3>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-2">
-                            <ChevronUp className="h-4 w-4 text-green-500 mt-0.5" />
-                            <div>
-                              <p className="font-medium">Preparation is key</p>
-                              <p className="text-sm text-muted-foreground">
-                                Have all your supplies organized and ready before arriving at the service location.
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <ChevronUp className="h-4 w-4 text-green-500 mt-0.5" />
-                            <div>
-                              <p className="font-medium">Track each service accurately</p>
-                              <p className="text-sm text-muted-foreground">
-                                Always use the service timer to get accurate metrics and improve your efficiency.
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <ChevronUp className="h-4 w-4 text-green-500 mt-0.5" />
-                            <div>
-                              <p className="font-medium">Quality comes first</p>
-                              <p className="text-sm text-muted-foreground">
-                                While efficiency is important, never compromise on quality to save time.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  {/* Rating Performance */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Rating Performance</h3>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Customer Feedback</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="text-2xl font-bold">
-                            {user?.rating?.toFixed(1) || "N/A"}
-                          </div>
-                          <div className="flex">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star 
-                                key={star} 
-                                className={`h-5 w-5 ${star <= (user?.rating || 0) 
-                                  ? "text-yellow-400 fill-yellow-400" 
-                                  : "text-gray-300"}`} 
-                              />
-                            ))}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            ({user?.ratingCount || 0} reviews)
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Maintaining a high rating improves your visibility to customers and increases your booking opportunities.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

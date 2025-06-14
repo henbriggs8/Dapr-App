@@ -225,10 +225,15 @@ export class MemStorage implements IStorage {
 
     // Create a sample booking to demonstrate provider dashboard
     this.createBooking({
-      userId: 4, // Test customer
-      serviceId: 2, // The OG service
-      timeSlotId: 2, // 9 AM slot
-      providerId: 1, // Dapper provider
+      userId: 4,
+      serviceId: 2,
+      timeSlotId: 2,
+      providerId: 1,
+      vehicleId: null,
+      date: new Date().toISOString().split('T')[0],
+      time: "09:00",
+      status: "assigned",
+      currentStage: "pending",
       priceTier: "standard",
       timestamp: new Date().toISOString(),
       serviceLocation: "456 Oak Street, Salt Lake City, UT 84102",
@@ -236,10 +241,10 @@ export class MemStorage implements IStorage {
       serviceLatitude: 40.7589,
       serviceLongitude: -111.8883,
       notes: "Please pay extra attention to the interior - pet hair from golden retriever",
-      status: "assigned",
-      currentStage: "pending",
-      totalPrice: 5800, // $58.00 in cents
-      paymentStatus: "pending"
+      amount: 5800,
+      totalPrice: 5800,
+      addOns: [],
+      addOnTotal: 0,
     });
   }
 
@@ -312,20 +317,43 @@ export class MemStorage implements IStorage {
 
   async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking> {
     const id = this.currentBookingId++;
-    const newBooking = {
-      ...booking,
+    const newBooking: Booking = {
       id,
-      status: booking.status || 'pending',
-      rating: booking.rating || null,
+      userId: booking.userId,
+      providerId: booking.providerId || null,
+      serviceId: booking.serviceId,
+      timeSlotId: booking.timeSlotId,
       vehicleId: booking.vehicleId || null,
-      notes: booking.notes || null,
-      // New fields for earnings and timing tracking
-      ratingComment: booking.ratingComment || null,
-      amount: booking.amount || null,
-      providerEarnings: booking.providerEarnings || null,
-      startTime: booking.startTime || null,
-      endTime: booking.endTime || null,
-      serviceDuration: booking.serviceDuration || null
+      date: booking.date || null,
+      time: booking.time || null,
+      status: booking.status || 'pending_assignment',
+      totalPrice: booking.totalPrice || 0,
+      priceTier: booking.priceTier || 'basic',
+      serviceLocation: booking.serviceLocation || '',
+      serviceLocationType: booking.serviceLocationType || 'address',
+      serviceLatitude: booking.serviceLatitude || 0,
+      serviceLongitude: booking.serviceLongitude || 0,
+      contactPhone: booking.contactPhone || '',
+      contactEmail: booking.contactEmail || '',
+      vehicleMake: booking.vehicleMake || '',
+      vehicleModel: booking.vehicleModel || '',
+      vehicleYear: booking.vehicleYear || null,
+      vehicleColor: booking.vehicleColor || '',
+      vehicleSize: booking.vehicleSize || 'medium',
+      licensePlate: booking.licensePlate || '',
+      specialInstructions: booking.specialInstructions || '',
+      timestamp: booking.timestamp || new Date().toISOString(),
+      rating: null,
+      ratingComment: null,
+      serviceStartTime: null,
+      serviceEndTime: null,
+      actualDuration: null,
+      paymentStatus: 'pending',
+      paymentId: null,
+      paymentDate: null,
+      paymentUrl: null,
+      squareOrderId: null,
+      isPaid: false,
     };
     this.bookings.set(id, newBooking);
     return newBooking;
