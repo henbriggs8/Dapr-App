@@ -223,46 +223,7 @@ export class MemStorage implements IStorage {
       address: "456 Oak Street, Salt Lake City, UT 84102"
     });
 
-    // Create a sample booking to demonstrate provider dashboard
-    this.createBooking({
-      userId: 4,
-      serviceId: 2,
-      timeSlotId: 2,
-      providerId: 1,
-      vehicleId: null,
-      status: "assigned",
-      currentStage: "pending",
-      rating: null,
-      ratingComment: null,
-      priceTier: "standard",
-      timestamp: new Date().toISOString(),
-      serviceLocation: "456 Oak Street, Salt Lake City, UT 84102",
-      serviceLocationType: "residential",
-      serviceLatitude: 40.7589,
-      serviceLongitude: -111.8883,
-      notes: "Please pay extra attention to the interior - pet hair from golden retriever",
-      date: new Date().toISOString().split('T')[0],
-      time: "09:00",
-      amount: 5800,
-      providerEarnings: null,
-      startTime: null,
-      endTime: null,
-      serviceDuration: null,
-      assignedAt: null,
-      acceptedAt: null,
-      rejectedAt: null,
-      assignmentExpiry: null,
-      previousProviders: [],
-      addOns: [],
-      addOnTotal: 0,
-      totalPrice: 5800,
-      isPaid: false,
-      paymentStatus: "pending",
-      paymentId: null,
-      paymentDate: null,
-      paymentUrl: null,
-      squareOrderId: null,
-    });
+    // Remove sample booking creation to prevent type errors in storage initialization
   }
 
   async getUser(id: number): Promise<User | undefined> {

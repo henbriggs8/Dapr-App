@@ -24,18 +24,30 @@ import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
 
+interface PrefillData {
+  selectedVehicle?: any;
+  selectedLocation?: {
+    address: string;
+    latitude: number;
+    longitude: number;
+    type: 'address' | 'current';
+  };
+}
+
 export default function BookingDialog({
   provider,
   open,
   onClose,
   serviceId,
-  timeSlotId
+  timeSlotId,
+  prefillData
 }: {
   provider: User;
   open: boolean;
   onClose: () => void;
   serviceId: number;
   timeSlotId: number;
+  prefillData?: PrefillData;
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -65,21 +77,34 @@ export default function BookingDialog({
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
 
-  // Vehicle management state - automatically detect size from saved vehicle data
+  // Vehicle management state - use prefill data if available, otherwise detect from storage
   const detectedVehicleSize = getVehicleSizeFromStorage();
   const [vehicles, setVehicles] = useState<{
     id: number;
     size: VehicleSize;
     details: string;
     sizeMultiplier: number;
-  }[]>([
-    { 
-      id: 1, 
-      size: detectedVehicleSize, 
-      details: parsedVehicle ? `${parsedVehicle.year} ${parsedVehicle.make} ${parsedVehicle.model} (${parsedVehicle.color})` : '', 
-      sizeMultiplier: detectedVehicleSize === 'small' ? 0 : detectedVehicleSize === 'medium' ? 0.15 : 0.3
+  }[]>(() => {
+    // Use prefill vehicle if available
+    if (prefillData?.selectedVehicle) {
+      const vehicle = prefillData.selectedVehicle;
+      const vehicleSize = getVehicleSizeFromStorage(); // Could enhance this to detect from vehicle data
+      return [{
+        id: vehicle.id,
+        size: vehicleSize,
+        details: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color || 'Unknown color'})`,
+        sizeMultiplier: vehicleSize === 'small' ? 0 : vehicleSize === 'medium' ? 0.15 : 0.3
+      }];
     }
-  ]);
+    
+    // Fallback to parsed vehicle from storage
+    return [{
+      id: 1,
+      size: detectedVehicleSize,
+      details: parsedVehicle ? `${parsedVehicle.year} ${parsedVehicle.make} ${parsedVehicle.model} (${parsedVehicle.color})` : '',
+      sizeMultiplier: detectedVehicleSize === 'small' ? 0 : detectedVehicleSize === 'medium' ? 0.15 : 0.3
+    }];
+  });
   
   // Fetch the selected service
   const { data: service, isLoading: serviceLoading } = useQuery<Service>({

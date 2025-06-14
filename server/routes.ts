@@ -305,6 +305,23 @@ export function registerRoutes(app: Express): Server {
     res.json(service);
   });
   
+  // Rebooking analysis endpoint
+  app.get("/api/rebooking/suggestions", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const userBookings = await storage.getUserBookings(req.user.id);
+      const services = await storage.getServices();
+      const timeSlots = await storage.getAvailableTimeSlots();
+      
+      const suggestions = await storage.generateRebookingSuggestions(req.user.id, userBookings, services, timeSlots);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error generating rebooking suggestions:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
   // Time slots endpoints
   app.get("/api/timeslots", async (req, res) => {
     const date = req.query.date as string | undefined;

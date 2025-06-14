@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import ServiceCards from "@/components/service-cards";
 import { EnhancedServiceSelection } from "@/components/enhanced-service-selection";
 import { OnboardingButton } from "@/components/onboarding-button";
+import QuickRebook from "@/components/quick-rebook";
 
 export default function BookingScreen() {
   const { user } = useAuth();
@@ -148,6 +149,17 @@ export default function BookingScreen() {
 
         {/* Onboarding Button */}
         <OnboardingButton />
+
+        {/* Quick Rebook Suggestions */}
+        {bookings && bookings.length > 0 && (
+          <QuickRebook 
+            userBookings={bookings}
+            services={services || []}
+            timeSlots={timeSlots || []}
+            vehicles={[]} // Will be enhanced when vehicle system is implemented
+            provider={provider}
+          />
+        )}
 
         {/* Enhanced Service Selection */}
         <div className="mb-8">
