@@ -41,7 +41,7 @@ interface ProviderMetrics {
 export default function ProviderDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isOnline, setIsOnline] = useState(user?.status === 'online');
+  const [isOnline, setIsOnline] = useState(user?.currentStatus === 'online');
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingBookings, refetch: refetchBookings } = useQuery<Booking[]>({
@@ -66,10 +66,10 @@ export default function ProviderDashboard() {
     },
     onSuccess: (updatedUser: User) => {
       queryClient.setQueryData(["/api/user"], updatedUser);
-      setIsOnline(updatedUser.status === 'online');
+      setIsOnline(updatedUser.currentStatus === 'online');
       toast({
         title: "Status updated",
-        description: `You are now ${updatedUser.status}`,
+        description: `You are now ${updatedUser.currentStatus}`,
       });
     },
     onError: (error: Error) => {
