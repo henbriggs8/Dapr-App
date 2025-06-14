@@ -51,6 +51,7 @@ export default function ProviderDashboard() {
   const [earningsPeriod, setEarningsPeriod] = useState<"today" | "week" | "month">("month");
   const [locationError, setLocationError] = useState<string>();
   const [bookingsTimeframe, setBookingsTimeframe] = useState<"day" | "week" | "month">("day");
+  const [isOnline, setIsOnline] = useState(user?.currentStatus === "online");
   
   // Fetch active bookings
   const { data: activeBookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
@@ -117,6 +118,33 @@ export default function ProviderDashboard() {
   });
 
   const isLoading = bookingsLoading || servicesLoading || vehiclesLoading;
+
+  // Online/Offline toggle mutation
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (newStatus: "online" | "offline") => {
+      const res = await apiRequest("POST", "/api/provider/status", { status: newStatus });
+      return await res.json();
+    },
+    onSuccess: (updatedUser: User) => {
+      queryClient.setQueryData(["/api/user"], updatedUser);
+      setIsOnline(updatedUser.currentStatus === "online");
+      toast({
+        title: `Now ${updatedUser.currentStatus}`,
+        description: updatedUser.currentStatus === "online" 
+          ? "You can now receive booking assignments" 
+          : "You won't receive new bookings until you go online",
+      });
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update status",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Provider status mutation
   const statusMutation = useMutation({
@@ -404,14 +432,24 @@ export default function ProviderDashboard() {
           <Badge variant={user?.currentStatus === "online" ? "default" : "outline"} className={user?.currentStatus === "online" ? "bg-green-500 hover:bg-green-600" : ""}>
             {user?.currentStatus}
           </Badge>
-          <Button 
-            variant={user?.currentStatus === "online" ? "outline" : "default"}
-            className={user?.currentStatus === "online" ? "" : "bg-[#8c52ff] hover:bg-[#7a45e0]"}
-            onClick={() => updateStatus(user?.currentStatus === "online" ? "offline" : "online")}
-            disabled={statusMutation.isPending}
-          >
-            {statusMutation.isPending ? "Updating..." : user?.currentStatus === "online" ? "Go Offline" : "Go Online"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {isOnline ? "Online" : "Offline"}
+            </span>
+            <button
+              onClick={() => toggleStatusMutation.mutate(isOnline ? "offline" : "online")}
+              disabled={toggleStatusMutation.isPending}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#8c52ff] focus:ring-offset-2 ${
+                isOnline ? 'bg-[#8c52ff]' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isOnline ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
           <Button 
             variant="outline"
             size="sm"
@@ -922,10 +960,192 @@ export default function ProviderDashboard() {
                     className={earningsPeriod === "week" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
                     onClick={() => setEarningsPeriod("week")}
                   >
-                    Week
+                    This Week
                   </Button>
                   <Button 
                     size="sm" 
+                    variant={earningsPeriod === "month" ? "default" : "outline"}
+                    className={earningsPeriod === "month" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
+                    onClick={() => setEarningsPeriod("month")}
+                  >
+                    This Month
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingEarnings ? (
+                <div className="flex items-center justify-center py-10">
+                  <CarWashSpinner size="md" showText text="Loading earnings data..." />
+                </div>
+              ) : earningsData ? (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-green-600 font-medium">Total Earnings</p>
+                          <p className="text-2xl font-bold text-green-700">${earningsData.totalEarnings.toFixed(2)}</p>
+                        </div>
+                        <Coins className="h-8 w-8 text-green-500" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-blue-600 font-medium">Completed Services</p>
+                          <p className="text-2xl font-bold text-blue-700">{earningsData.completedServices}</p>
+                        </div>
+                        <CheckCircle className="h-8 w-8 text-blue-500" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-yellow-600 font-medium">Average Rating</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-2xl font-bold text-yellow-700">{earningsData.averageRating.toFixed(1)}</p>
+                            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                          </div>
+                        </div>
+                        <Star className="h-8 w-8 text-yellow-500" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-purple-600 font-medium">Avg per Service</p>
+                          <p className="text-2xl font-bold text-purple-700">
+                            ${earningsData.completedServices > 0 ? (earningsData.totalEarnings / earningsData.completedServices).toFixed(2) : '0.00'}
+                          </p>
+                        </div>
+                        <BarChart3 className="h-8 w-8 text-purple-500" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Service Type Breakdown */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Service Type Breakdown</h3>
+                    <div className="space-y-3">
+                      {Object.entries(earningsData.serviceTypeBreakdown).map(([serviceType, earnings]) => (
+                        <div key={serviceType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="font-medium capitalize">{serviceType.replace('_', ' ')}</span>
+                          <span className="text-lg font-bold text-[#8c52ff]">${earnings.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                  <p className="text-lg text-muted-foreground">No earnings data available for this period.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Complete some services to see your earnings here.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Metrics Tab */}
+        <TabsContent value="metrics">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2 text-[#8c52ff]" />
+                Performance Metrics
+              </CardTitle>
+              <CardDescription>Analyze your service performance and efficiency</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMetrics ? (
+                <div className="flex items-center justify-center py-10">
+                  <CarWashSpinner size="md" showText text="Loading metrics..." />
+                </div>
+              ) : metricsData ? (
+                <div className="space-y-6">
+                  {/* Service Duration Metrics */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Average Service Duration</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {Object.entries(metricsData.averageDuration).map(([serviceType, duration]) => (
+                        <div key={serviceType} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground capitalize">{serviceType.replace('_', ' ')}</p>
+                              <p className="text-xl font-bold">{Math.round(duration)} min</p>
+                            </div>
+                            <Timer className="h-6 w-6 text-[#8c52ff]" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Total Service Time */}
+                  <div className="border rounded-lg p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">Total Service Time</h3>
+                        <p className="text-3xl font-bold text-[#8c52ff] mt-2">
+                          {Math.floor(metricsData.totalServiceTime / 60)}h {metricsData.totalServiceTime % 60}m
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">Across all completed services</p>
+                      </div>
+                      <Clock className="h-12 w-12 text-[#8c52ff]" />
+                    </div>
+                  </div>
+                  
+                  {/* Efficiency Insights */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Efficiency Insights</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div>
+                          <p className="font-medium text-green-700">Services per Hour</p>
+                          <p className="text-sm text-green-600">Based on average service duration</p>
+                        </div>
+                        <span className="text-2xl font-bold text-green-700">
+                          {metricsData.totalServiceTime > 0 
+                            ? (Object.keys(metricsData.averageDuration).length * 60 / Object.values(metricsData.averageDuration).reduce((a, b) => a + b, 0) * Object.keys(metricsData.averageDuration).length).toFixed(1)
+                            : '0'
+                          }
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div>
+                          <p className="font-medium text-blue-700">Most Efficient Service</p>
+                          <p className="text-sm text-blue-600">Shortest average duration</p>
+                        </div>
+                        <span className="text-lg font-bold text-blue-700 capitalize">
+                          {Object.keys(metricsData.averageDuration).length > 0 
+                            ? Object.entries(metricsData.averageDuration)
+                                .sort(([,a], [,b]) => a - b)[0]?.[0]?.replace('_', ' ') || 'N/A'
+                            : 'N/A'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                  <p className="text-lg text-muted-foreground">No metrics data available yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Complete some services to see performance metrics here.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+} 
                     variant={earningsPeriod === "month" ? "default" : "outline"}
                     className={earningsPeriod === "month" ? "bg-[#8c52ff] hover:bg-[#7a45e0]" : ""}
                     onClick={() => setEarningsPeriod("month")}

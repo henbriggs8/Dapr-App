@@ -233,12 +233,23 @@ export default function BookingDialog({
       // Invalidate multiple queries
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timeslots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
+      
+      // Store booking data for confirmation page
+      localStorage.setItem('latest-booking', JSON.stringify(data));
       
       // Close dialog
       onClose();
       
-      // Navigate to confirmation page with booking ID
-      window.location.href = `/booking-confirmation?bookingId=${data.id}`;
+      toast({
+        title: "Booking Confirmed!",
+        description: "Your appointment has been scheduled successfully.",
+      });
+      
+      // Navigate to confirmation page
+      setTimeout(() => {
+        window.location.href = `/booking-confirmation?bookingId=${data.id}`;
+      }, 1000);
     },
     onError: (error: Error) => {
       console.error("Booking creation failed:", error);
