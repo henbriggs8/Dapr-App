@@ -98,6 +98,44 @@ export default function BookingConfirmation() {
     );
   }
 
+  if (!bookingId) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-red-600">No Booking Selected</CardTitle>
+            <CardDescription>
+              To view a booking confirmation, you need to access this page through the booking process or with a valid booking ID.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button 
+              onClick={() => navigate("/booking")} 
+              className="w-full bg-[#8c52ff] hover:bg-[#8c52ff]/90"
+            >
+              Book a Service
+            </Button>
+            <Button 
+              onClick={() => navigate("/activity")} 
+              variant="outline"
+              className="w-full"
+            >
+              View Booking History
+            </Button>
+            <Button 
+              onClick={() => navigate("/")} 
+              variant="outline"
+              className="w-full"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Return Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!booking || !service || !timeSlot) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
@@ -105,12 +143,19 @@ export default function BookingConfirmation() {
           <CardHeader className="text-center">
             <CardTitle className="text-red-600">Booking Not Found</CardTitle>
             <CardDescription>
-              We couldn't find your booking confirmation. Please check your booking history or contact support.
+              We couldn't find booking #{bookingId}. Please check your booking history or contact support.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <Button 
+              onClick={() => navigate("/activity")} 
+              className="w-full bg-[#8c52ff] hover:bg-[#8c52ff]/90"
+            >
+              View Booking History
+            </Button>
             <Button 
               onClick={() => navigate("/")} 
+              variant="outline"
               className="w-full"
             >
               <Home className="h-4 w-4 mr-2" />
