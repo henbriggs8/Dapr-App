@@ -56,7 +56,10 @@ export function registerRoutes(app: Express): Server {
 
     const { latitude, longitude } = req.body;
     await storage.updateProviderLocation(req.user.id, latitude, longitude);
-    res.json({ success: true });
+    
+    // Return the updated user object
+    const updatedUser = await storage.getUser(req.user.id);
+    res.json(updatedUser);
   });
 
   // User profile update endpoint
