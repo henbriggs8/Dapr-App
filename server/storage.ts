@@ -170,7 +170,7 @@ export class MemStorage implements IStorage {
 
     // Create admin user
     this.createUser({
-      username: "admin",
+      username: "dapperadmin",
       password: "admin123",
       isAdmin: true,
       name: "System Administrator"
