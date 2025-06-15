@@ -25,6 +25,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useState } from "react";
+import { ProviderProfileTab } from "@/components/provider-profile-tab";
 
 interface ProviderEarnings {
   totalEarnings: number;
@@ -370,10 +371,11 @@ export default function ProviderDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="jobs" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="metrics">Performance</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
           {/* Active Jobs Tab */}
@@ -604,6 +606,11 @@ export default function ProviderDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <ProviderProfileTab />
           </TabsContent>
         </Tabs>
       </div>

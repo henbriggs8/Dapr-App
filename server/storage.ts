@@ -7,6 +7,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   createBooking(booking: Omit<Booking, 'id'>): Promise<Booking>;
@@ -333,6 +334,21 @@ export class MemStorage implements IStorage {
       currentStatus: status
     };
     this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
+    const user = await this.getUser(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const updatedUser = {
+      ...user,
+      ...updates
+    };
+    
+    this.users.set(id, updatedUser);
     return updatedUser;
   }
 

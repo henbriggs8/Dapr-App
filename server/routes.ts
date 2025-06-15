@@ -43,12 +43,40 @@ export function registerRoutes(app: Express): Server {
     res.json({ success: true });
   });
 
-  app.post("/api/provider/status", isProvider, async (req, res) => {
+  app.patch("/api/provider/status", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const { status } = req.body;
     const user = await storage.updateProviderStatus(req.user.id, status);
     res.json(user);
+  });
+
+  app.patch("/api/provider/location", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { latitude, longitude } = req.body;
+    await storage.updateProviderLocation(req.user.id, latitude, longitude);
+    res.json({ success: true });
+  });
+
+  // User profile update endpoint
+  app.patch("/api/user/profile", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const { name, email, phone, address, description } = req.body;
+      const updatedUser = await storage.updateUserProfile(req.user.id, {
+        name,
+        email,
+        phone,
+        address,
+        description
+      });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
   });
 
   app.get("/api/bookings/active", isProvider, async (req, res) => {
