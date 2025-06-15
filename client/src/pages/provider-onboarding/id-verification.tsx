@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Camera, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function IdVerificationPage() {
   const [, setLocation] = useLocation();
@@ -11,6 +12,7 @@ export default function IdVerificationPage() {
   const [backIdUploaded, setBackIdUploaded] = useState(false);
   const [selfieUploaded, setSelfieUploaded] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileUpload = (type: 'front' | 'back' | 'selfie') => {
     toast({
@@ -24,7 +26,7 @@ export default function IdVerificationPage() {
   };
 
   const handleContinue = () => {
-    localStorage.setItem('provider-onboarding-id-verification', 'true');
+    localStorage.setItem(`provider-onboarding-id-verification-${user?.id}`, 'true');
     setLocation('/provider-onboarding/vehicle-setup');
   };
 

@@ -5,6 +5,7 @@ import { ArrowLeft, Car, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function VehicleSetupPage() {
   const [, setLocation] = useLocation();
@@ -14,6 +15,7 @@ export default function VehicleSetupPage() {
   const [model, setModel] = useState("");
   const [showManualEntry, setShowManualEntry] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleVinCheck = () => {
     if (!vin) {
@@ -58,8 +60,8 @@ export default function VehicleSetupPage() {
     }
 
     // Save vehicle info
-    localStorage.setItem('provider-onboarding-vehicle', JSON.stringify({ vin, year, make, model }));
-    localStorage.setItem('provider-onboarding-vehicle-setup', 'true');
+    localStorage.setItem(`provider-onboarding-vehicle-${user?.id}`, JSON.stringify({ vin, year, make, model }));
+    localStorage.setItem(`provider-onboarding-vehicle-setup-${user?.id}`, 'true');
     setLocation('/provider-onboarding/bank-info');
   };
 

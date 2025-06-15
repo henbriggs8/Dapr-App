@@ -43,7 +43,7 @@ export default function BankInfoPage() {
         accountType 
       }));
     }
-    localStorage.setItem('provider-onboarding-bank-info', 'true');
+    localStorage.setItem(`provider-onboarding-bank-info-${user?.id}`, 'true');
     localStorage.setItem(`provider-onboarding-complete-${user?.id}`, 'true');
     
     toast({
