@@ -104,11 +104,27 @@ function Router() {
   return (
     <>
       <Switch>
-        {user?.isProvider ? (
-          <ProviderRoute path="/" component={ProviderDashboard} />
-        ) : (
-          <ProtectedRoute path="/" component={HomeWithOnboarding} />
-        )}
+        {/* Public routes first */}
+        <Route path="/auth" component={AuthScreen} />
+        <Route path="/auth-old" component={AuthPage} />
+        <Route path="/provider-auth" component={ProviderAuthPage} />
+        <Route path="/verify" component={VerifyScreen} />
+        <Route path="/onboarding/address" component={AddressScreen} />
+        <Route path="/onboarding/car-profile" component={CarProfileScreen} />
+        <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
+        <Route path="/how-it-works" component={HowItWorks} />
+        <Route path="/interior-cleaning" component={InteriorCleaning} />
+        <Route path="/exterior-cleaning" component={ExteriorCleaning} />
+        <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
+        <Route path="/faq" component={FAQ} />
+        <Route path="/corporate" component={Corporate} />
+        
+        {/* Provider onboarding routes */}
+        <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
+        <Route path="/provider-onboarding/vehicle-setup" component={VehicleSetupPage} />
+        <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
+        
+        {/* Protected routes */}
         <ProtectedRoute path="/booking" component={BookingScreen} />
         <ProtectedRoute path="/services" component={ServicesPage} />
         <ProtectedRoute path="/activity" component={ActivityPage} />
@@ -117,23 +133,18 @@ function Router() {
         <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
         <ProtectedRoute path="/service-progress" component={ServiceProgress} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
-        <Route path="/how-it-works" component={HowItWorks} />
-        <Route path="/interior-cleaning" component={InteriorCleaning} />
-        <Route path="/exterior-cleaning" component={ExteriorCleaning} />
-        <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
-        <Route path="/faq" component={FAQ} />
-        <Route path="/corporate" component={Corporate} />
-        <Route path="/verify" component={VerifyScreen} />
-        <Route path="/onboarding/address" component={AddressScreen} />
-        <Route path="/onboarding/car-profile" component={CarProfileScreen} />
-        <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
+        
+        {/* Admin route */}
         <AdminRoute path="/admin" component={AdminDashboard} />
-        <Route path="/auth" component={AuthScreen} />
-        <Route path="/auth-old" component={AuthPage} />
-        <Route path="/provider-auth" component={ProviderAuthPage} />
-        <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
-        <Route path="/provider-onboarding/vehicle-setup" component={VehicleSetupPage} />
-        <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
+        
+        {/* Home route - must come after all specific routes */}
+        {user?.isProvider ? (
+          <ProviderRoute path="/" component={ProviderDashboard} />
+        ) : (
+          <ProtectedRoute path="/" component={HomeWithOnboarding} />
+        )}
+        
+        {/* Catch-all route for 404 */}
         <Route component={NotFound} />
       </Switch>
       
