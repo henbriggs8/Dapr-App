@@ -1,522 +1,686 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { PricingConfig, User } from "@shared/schema";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { User, Booking } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Redirect } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
-import { LogOut, DollarSign, MapPin, Users, BarChart, Activity } from "lucide-react";
+import { 
+  LogOut, 
+  Users, 
+  Calendar, 
+  DollarSign, 
+  BarChart3, 
+  Search, 
+  Filter,
+  Eye,
+  UserX,
+  UserCheck,
+  MoreHorizontal,
+  ArrowUpDown,
+  TrendingUp,
+  TrendingDown
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import MapComponent from "@/components/google-map";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from "react";
 
-// Types for the geography-based revenue data
-interface RevenueLocation {
-  latitude: number;
-  longitude: number;
-  location: string;
-  revenue: number;
-  bookingsCount: number;
+// Enhanced types for admin dashboard
+interface AdminBooking extends Booking {
+  customerName?: string;
+  providerName?: string;
+  serviceName?: string;
 }
 
-interface RevenueData {
+interface EarningsData {
   totalRevenue: number;
-  locationData: RevenueLocation[];
+  monthlyRevenue: number;
+  weeklyRevenue: number;
+  todayRevenue: number;
+  averageBookingValue: number;
+  totalBookings: number;
 }
 
-// Types for provider status summary
-interface OnlineProvider {
-  id: number;
-  name: string;
-  username: string;
-  latitude?: number;
-  longitude?: number;
-  lastLocationUpdate?: string;
+interface AnalyticsData {
+  totalJobs: number;
+  completedJobs: number;
+  cancelledJobs: number;
+  userGrowth: {
+    totalUsers: number;
+    newUsersThisMonth: number;
+    totalProviders: number;
+    activeProviders: number;
+  };
+  topServices: Array<{
+    name: string;
+    count: number;
+    revenue: number;
+  }>;
+  topProviders: Array<{
+    id: number;
+    name: string;
+    completedJobs: number;
+    revenue: number;
+    rating: number;
+  }>;
 }
-
-interface ProviderStatusSummary {
-  totalProviders: number;
-  onlineProviders: number;
-  onlineProvidersList: OnlineProvider[];
-}
-
-const pricingSchema = z.object({
-  basic: z.coerce.number().min(1),
-  standard: z.coerce.number().min(1),
-  premium: z.coerce.number().min(1),
-});
 
 export default function AdminDashboard() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  // Redirect non-admin users
+  // Role-based access check
   if (!user?.isAdmin) {
     return <Redirect to="/" />;
   }
 
-  // Fetch users
-  const { data: users = [] } = useQuery<User[]>({
+  // Fetch all users
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
-  });
-
-  // Fetch pricing data
-  const { data: pricing } = useQuery<PricingConfig>({
-    queryKey: ["/api/pricing"],
-  });
-  
-  // Fetch revenue by location data
-  const { data: revenueData, isLoading: isLoadingRevenue } = useQuery<RevenueData>({
-    queryKey: ["/api/admin/revenue-by-location"],
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-  
-  // Fetch provider status data
-  const { data: providerStatus, isLoading: isLoadingProviderStatus } = useQuery<ProviderStatusSummary>({
-    queryKey: ["/api/admin/provider-status"],
-    refetchInterval: 10000, // Refresh every 10 seconds
-  });
-
-  const form = useForm<z.infer<typeof pricingSchema>>({
-    resolver: zodResolver(pricingSchema),
-    defaultValues: {
-      basic: pricing?.basic,
-      standard: pricing?.standard,
-      premium: pricing?.premium,
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return await res.json();
     },
   });
 
-  const updatePricingMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof pricingSchema>) => {
-      const res = await apiRequest("PATCH", "/api/admin/pricing", data);
+  // Fetch all bookings
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<AdminBooking[]>({
+    queryKey: ["/api/admin/bookings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/bookings");
+      return await res.json();
+    },
+  });
+
+  // Fetch earnings data
+  const { data: earnings } = useQuery<EarningsData>({
+    queryKey: ["/api/admin/earnings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/earnings");
+      return await res.json();
+    },
+  });
+
+  // Fetch analytics data
+  const { data: analytics } = useQuery<AnalyticsData>({
+    queryKey: ["/api/admin/analytics"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/analytics");
+      return await res.json();
+    },
+  });
+
+  // User management mutations
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, action }: { userId: number; action: 'activate' | 'deactivate' }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${userId}/status`, { action });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pricing"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
-        title: "Pricing updated",
-        description: "The pricing configuration has been updated successfully",
+        title: "User status updated",
+        description: "User status has been successfully updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update user status",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
 
+  // Booking management mutations
+  const reassignBookingMutation = useMutation({
+    mutationFn: async ({ bookingId, providerId }: { bookingId: number; providerId: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/bookings/${bookingId}/reassign`, { providerId });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      toast({
+        title: "Booking reassigned",
+        description: "Booking has been successfully reassigned",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to reassign booking",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/bookings/${bookingId}/cancel`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      toast({
+        title: "Booking cancelled",
+        description: "Booking has been successfully cancelled",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to cancel booking",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filter users based on search and filters
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = roleFilter === "all" || 
+                       (roleFilter === "provider" && user.isProvider) ||
+                       (roleFilter === "customer" && !user.isProvider && !user.isAdmin) ||
+                       (roleFilter === "admin" && user.isAdmin);
+    
+    const matchesStatus = statusFilter === "all" ||
+                         (statusFilter === "active" && user.currentStatus !== "inactive") ||
+                         (statusFilter === "inactive" && user.currentStatus === "inactive");
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Users table columns
   const userColumns: ColumnDef<User>[] = [
     {
-      accessorKey: "username",
-      header: "Username",
-    },
-    {
       accessorKey: "name",
-      header: "Name",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
+          Name
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.name || row.original.username}</div>
+          <div className="text-sm text-gray-500">{row.original.email}</div>
+        </div>
+      ),
     },
     {
-      accessorKey: "isProvider",
-      header: "Provider",
-      cell: ({ row }) => (row.original.isProvider ? "Yes" : "No"),
-    },
-    {
-      accessorKey: "rating",
-      header: "Rating",
-      cell: ({ row }) => row.original.rating?.toFixed(1) || "N/A",
-    },
-  ];
-  
-  const providerColumns: ColumnDef<OnlineProvider>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => row.original.name || row.original.username,
-    },
-    {
-      accessorKey: "lastLocationUpdate",
-      header: "Last Update",
+      accessorKey: "role",
+      header: "Role",
       cell: ({ row }) => {
-        if (!row.original.lastLocationUpdate) return "Unknown";
-        const date = new Date(row.original.lastLocationUpdate);
-        return date.toLocaleTimeString();
-      }
+        const user = row.original;
+        if (user.isAdmin) return <Badge variant="destructive">Admin</Badge>;
+        if (user.isProvider) return <Badge variant="default">Detail Pro</Badge>;
+        return <Badge variant="secondary">Customer</Badge>;
+      },
     },
     {
-      id: "status",
+      accessorKey: "currentStatus",
       header: "Status",
-      cell: () => <Badge className="bg-green-500">Online</Badge>
-    },
-    {
-      id: "location",
-      header: "Location",
       cell: ({ row }) => {
-        if (row.original.latitude && row.original.longitude) {
-          return `${row.original.latitude.toFixed(4)}, ${row.original.longitude.toFixed(4)}`;
-        }
-        return "Unknown";
-      }
-    }
-  ];
-  
-  const revenueLocationColumns: ColumnDef<RevenueLocation>[] = [
-    {
-      accessorKey: "location",
-      header: "Location",
+        const status = row.original.currentStatus;
+        const variant = status === "online" ? "default" : status === "offline" ? "secondary" : "outline";
+        return <Badge variant={variant}>{status}</Badge>;
+      },
     },
     {
-      accessorKey: "revenue",
-      header: "Revenue",
-      cell: ({ row }) => `$${(row.original.revenue / 100).toFixed(2)}`,
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => row.original.email || "Not provided",
     },
     {
-      accessorKey: "bookingsCount",
-      header: "Bookings",
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const user = row.original;
+        const isActive = user.currentStatus !== "inactive";
+        
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                View Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => toggleUserStatusMutation.mutate({
+                  userId: user.id,
+                  action: isActive ? 'deactivate' : 'activate'
+                })}
+              >
+                {isActive ? (
+                  <>
+                    <UserX className="mr-2 h-4 w-4" />
+                    Deactivate
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="mr-2 h-4 w-4" />
+                    Reactivate
+                  </>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
-  // Convert revenue location data to map markers
-  const mapMarkers = revenueData?.locationData.map(location => ({
-    id: location.location,
-    name: `$${(location.revenue / 100).toFixed(2)} (${location.bookingsCount} bookings)`,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    isProvider: false,
-  })) || [];
+  // Bookings table columns
+  const bookingColumns: ColumnDef<AdminBooking>[] = [
+    {
+      accessorKey: "customerName",
+      header: "Customer",
+      cell: ({ row }) => row.original.customerName || "Unknown Customer",
+    },
+    {
+      accessorKey: "providerName",
+      header: "Assigned Pro",
+      cell: ({ row }) => row.original.providerName || "Unassigned",
+    },
+    {
+      accessorKey: "serviceName",
+      header: "Service",
+      cell: ({ row }) => row.original.serviceName || "Unknown Service",
+    },
+    {
+      accessorKey: "date",
+      header: "Date & Time",
+      cell: ({ row }) => {
+        const booking = row.original;
+        return (
+          <div>
+            <div className="font-medium">{booking.date || "No date"}</div>
+            <div className="text-sm text-gray-500">{booking.time || "No time"}</div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "serviceLocation",
+      header: "Location",
+      cell: ({ row }) => (
+        <div className="max-w-[200px] truncate">
+          {row.original.serviceLocation || "Not specified"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status;
+        const variant = status === "completed" ? "default" : 
+                       status === "cancelled" ? "destructive" : 
+                       status === "in_progress" ? "secondary" : "outline";
+        return <Badge variant={variant}>{status}</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const booking = row.original;
+        
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              {booking.status === "pending" && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    // This would open a provider selection dialog
+                    toast({
+                      title: "Reassign booking",
+                      description: "Reassignment feature would open here",
+                    });
+                  }}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Reassign
+                </DropdownMenuItem>
+              )}
+              {booking.status !== "cancelled" && booking.status !== "completed" && (
+                <DropdownMenuItem
+                  onClick={() => cancelBookingMutation.mutate(booking.id)}
+                  className="text-red-600"
+                >
+                  <UserX className="mr-2 h-4 w-4" />
+                  Cancel
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch (error) {
+      // Error handling is done in the mutation's onError callback
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <Card className="mb-8">
-        <CardHeader className="flex justify-between items-center">
-          <CardTitle>Admin Dashboard</CardTitle>
-          <Button 
-            variant="outline"
-            size="sm"
-            className="text-red-500 hover:bg-red-50"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            <LogOut className="h-4 w-4 mr-1" />
-            {logoutMutation.isPending ? "Logging out..." : "Logout"}
-          </Button>
-        </CardHeader>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <DollarSign className="h-5 w-5 mr-2 text-green-500" />
-              Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              ${(revenueData?.totalRevenue || 0) / 100}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-gray-600 mt-1">Manage users, bookings, and analytics</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Total from {revenueData?.locationData.length || 0} locations
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Users className="h-5 w-5 mr-2 text-blue-500" />
-              Provider Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {providerStatus?.onlineProviders || 0} 
-              <span className="text-sm text-muted-foreground ml-2">
-                online of {providerStatus?.totalProviders || 0} total
-              </span>
-            </div>
-            <Progress 
-              value={providerStatus ? (providerStatus.onlineProviders / providerStatus.totalProviders) * 100 : 0} 
-              className="h-2 mt-2"
-            />
-          </CardContent>
-        </Card>
-      </div>
+            <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
+        </div>
 
-      <Tabs defaultValue="revenue">
-        <TabsList>
-          <TabsTrigger value="revenue">
-            <MapPin className="h-4 w-4 mr-2" />
-            Revenue by Location
-          </TabsTrigger>
-          <TabsTrigger value="providers">
-            <Activity className="h-4 w-4 mr-2" />
-            Live Provider Status
-          </TabsTrigger>
-          <TabsTrigger value="pricing">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Pricing
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users className="h-4 w-4 mr-2" />
-            Users
-          </TabsTrigger>
-        </TabsList>
+        {/* Main Content */}
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Bookings
+            </TabsTrigger>
+            <TabsTrigger value="earnings" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Earnings
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="revenue">
-          <Card>
-            <CardHeader>
-              <CardTitle>Geographical Revenue Analysis</CardTitle>
-              <CardDescription>
-                View revenue data based on service locations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="h-[400px]">
-                {isLoadingRevenue ? (
-                  <div className="h-full flex items-center justify-center">
-                    <p>Loading map data...</p>
-                  </div>
-                ) : mapMarkers.length > 0 ? (
-                  <MapComponent 
-                    providers={mapMarkers as any} 
-                    zoom={11}
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center bg-muted/20 rounded-md">
-                    <p className="text-muted-foreground">No revenue data available yet</p>
-                  </div>
-                )}
-              </div>
-              
-              <Separator />
-              
-              <div className="overflow-hidden">
-                <h3 className="font-medium mb-2">Revenue by Location</h3>
-                {revenueData?.locationData && revenueData.locationData.length > 0 ? (
-                  <DataTable 
-                    columns={revenueLocationColumns} 
-                    data={revenueData.locationData} 
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No revenue data available yet</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="providers">
-          <Card>
-            <CardHeader>
-              <CardTitle>Live Provider Status</CardTitle>
-              <CardDescription>
-                Track service providers that are currently online
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                        <Activity className="h-6 w-6 text-green-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Online Providers</p>
-                        <h3 className="text-2xl font-bold">{providerStatus?.onlineProviders || 0}</h3>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Total Providers</p>
-                        <h3 className="text-2xl font-bold">{providerStatus?.totalProviders || 0}</h3>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {isLoadingProviderStatus ? (
-                <div className="py-8 flex justify-center">
-                  <p>Loading provider data...</p>
-                </div>
-              ) : providerStatus?.onlineProvidersList && providerStatus.onlineProvidersList.length > 0 ? (
-                <>
-                  <h3 className="font-medium mb-2">Online Providers</h3>
-                  <DataTable 
-                    columns={providerColumns} 
-                    data={providerStatus.onlineProvidersList} 
-                  />
-                  
-                  <div className="h-[400px] mt-6">
-                    <h3 className="font-medium mb-2">Provider Locations</h3>
-                    <MapComponent 
-                      providers={providerStatus.onlineProvidersList.map(p => ({
-                        id: p.id,
-                        name: p.name || p.username,
-                        latitude: p.latitude,
-                        longitude: p.longitude,
-                        isProvider: true,
-                      })) as any} 
-                      zoom={11}
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  Manage Detail Pros and Customers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Filters and Search */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by name, username, or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
                     />
                   </div>
-                </>
-              ) : (
-                <div className="py-8 flex justify-center">
-                  <p className="text-muted-foreground">No providers are online at the moment</p>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Filter by role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="customer">Customers</SelectItem>
+                      <SelectItem value="provider">Detail Pros</SelectItem>
+                      <SelectItem value="admin">Admins</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="pricing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Pricing</CardTitle>
-              <CardDescription>
-                Configure service pricing levels for all locations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit((data) =>
-                    updatePricingMutation.mutate(data)
-                  )}
-                  className="space-y-4"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="border-[#8c52ff]/20 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Basic Wash</CardTitle>
-                        <CardDescription className="text-xs">
-                          Exterior wash only - 30 min service
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <FormField
-                          control={form.control}
-                          name="basic"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Price ($)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
+                {/* Users Table */}
+                <DataTable
+                  columns={userColumns}
+                  data={filteredUsers}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                    <Card className="border-[#8c52ff]/20 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">The OG</CardTitle>
-                        <CardDescription className="text-xs">
-                          Maintenance clean, hand wash, vacuum and wipe down - 45 min service
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <FormField
-                          control={form.control}
-                          name="standard"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Price ($)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
+          {/* Bookings Tab */}
+          <TabsContent value="bookings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Booking Management</CardTitle>
+                <CardDescription>
+                  View and manage all upcoming appointments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={bookingColumns}
+                  data={bookings}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                    <Card className="border-[#8c52ff]/20 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Full Detail</CardTitle>
-                        <CardDescription className="text-xs">
-                          Complete interior and exterior detailing - 90 min premium service
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <FormField
-                          control={form.control}
-                          name="premium"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Price ($)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
+          {/* Earnings Tab */}
+          <TabsContent value="earnings" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ${earnings?.totalRevenue?.toLocaleString() || "0"}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    All time revenue
+                  </p>
+                </CardContent>
+              </Card>
 
-                  <div className="mt-6 p-4 border border-[#8c52ff]/20 rounded-md bg-[#8c52ff]/5">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h3 className="font-medium">Pricing Summary</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Service tiers and pricing overview
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground">Total Value</div>
-                        <div className="text-2xl font-bold">
-                          ${form.watch('basic') + form.watch('standard') + form.watch('premium') || 0}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ${earnings?.monthlyRevenue?.toLocaleString() || "0"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This month
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Average Booking Value</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ${earnings?.averageBookingValue?.toFixed(2) || "0"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Per booking
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {earnings?.totalBookings?.toLocaleString() || "0"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    All completed
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Job Statistics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Job Statistics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total Jobs</span>
+                    <span className="font-bold">{analytics?.totalJobs || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Completed Jobs</span>
+                    <span className="font-bold text-green-600">{analytics?.completedJobs || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Cancelled Jobs</span>
+                    <span className="font-bold text-red-600">{analytics?.cancelledJobs || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* User Growth */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Growth</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total Users</span>
+                    <span className="font-bold">{analytics?.userGrowth.totalUsers || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>New Users This Month</span>
+                    <span className="font-bold text-blue-600">{analytics?.userGrowth.newUsersThisMonth || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Total Providers</span>
+                    <span className="font-bold">{analytics?.userGrowth.totalProviders || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Active Providers</span>
+                    <span className="font-bold text-green-600">{analytics?.userGrowth.activeProviders || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Services */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Services</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analytics?.topServices?.map((service, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span>{service.name}</span>
+                        <div className="text-right">
+                          <div className="font-bold">{service.count} jobs</div>
+                          <div className="text-sm text-gray-500">${service.revenue}</div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <Button
-                      type="submit"
-                      disabled={updatePricingMutation.isPending}
-                      className="w-full bg-[#8c52ff] hover:bg-[#7b45e0]"
-                    >
-                      {updatePricingMutation.isPending ? "Updating..." : "Update Pricing"}
-                    </Button>
+                    )) || (
+                      <p className="text-gray-500">No service data available</p>
+                    )}
                   </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                View and manage all system users
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {users && <DataTable columns={userColumns} data={users} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              {/* Top Providers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Providers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analytics?.topProviders?.map((provider, index) => (
+                      <div key={provider.id} className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{provider.name}</div>
+                          <div className="text-sm text-gray-500">★ {provider.rating.toFixed(1)}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{provider.completedJobs} jobs</div>
+                          <div className="text-sm text-gray-500">${provider.revenue}</div>
+                        </div>
+                      </div>
+                    )) || (
+                      <p className="text-gray-500">No provider data available</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

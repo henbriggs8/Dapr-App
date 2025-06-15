@@ -380,6 +380,191 @@ export function registerRoutes(app: Express): Server {
     res.json(users);
   });
 
+  app.get("/api/admin/bookings", isAdmin, async (req, res) => {
+    try {
+      const bookings = await storage.getUnassignedBookings();
+      const allBookings = [];
+      
+      // Get all bookings and enrich with user/provider names
+      for (const booking of bookings) {
+        const customer = await storage.getUser(booking.userId);
+        const provider = booking.providerId ? await storage.getUser(booking.providerId) : null;
+        const service = await storage.getServiceById(booking.serviceId);
+        
+        allBookings.push({
+          ...booking,
+          customerName: customer?.name || customer?.username || 'Unknown Customer',
+          providerName: provider?.name || provider?.username || null,
+          serviceName: service?.name || 'Unknown Service'
+        });
+      }
+      
+      res.json(allBookings);
+    } catch (error) {
+      console.error("Error fetching admin bookings:", error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  app.get("/api/admin/earnings", isAdmin, async (req, res) => {
+    try {
+      // Calculate earnings from completed bookings
+      const allBookings = await storage.getUnassignedBookings();
+      const completedBookings = allBookings.filter(b => b.status === 'completed');
+      
+      const totalRevenue = completedBookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+      const totalBookings = completedBookings.length;
+      const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+      
+      // Mock monthly/weekly/daily breakdowns (in production, filter by date)
+      const monthlyRevenue = totalRevenue * 0.3;
+      const weeklyRevenue = totalRevenue * 0.1;
+      const todayRevenue = totalRevenue * 0.02;
+      
+      res.json({
+        totalRevenue,
+        monthlyRevenue,
+        weeklyRevenue,
+        todayRevenue,
+        averageBookingValue,
+        totalBookings
+      });
+    } catch (error) {
+      console.error("Error calculating earnings:", error);
+      res.status(500).json({ error: "Failed to calculate earnings" });
+    }
+  });
+
+  app.get("/api/admin/analytics", isAdmin, async (req, res) => {
+    try {
+      const allBookings = await storage.getUnassignedBookings();
+      const allUsers = await storage.getAllUsers();
+      const providers = allUsers.filter(u => u.isProvider);
+      const customers = allUsers.filter(u => !u.isProvider && !u.isAdmin);
+      
+      const totalJobs = allBookings.length;
+      const completedJobs = allBookings.filter(b => b.status === 'completed').length;
+      const cancelledJobs = allBookings.filter(b => b.status === 'cancelled').length;
+      
+      // Calculate service popularity
+      const serviceStats = new Map();
+      for (const booking of allBookings) {
+        const service = await storage.getServiceById(booking.serviceId);
+        const serviceName = service?.name || 'Unknown';
+        const current = serviceStats.get(serviceName) || { count: 0, revenue: 0 };
+        serviceStats.set(serviceName, {
+          count: current.count + 1,
+          revenue: current.revenue + (booking.totalPrice || 0)
+        });
+      }
+      
+      const topServices = Array.from(serviceStats.entries())
+        .map(([name, stats]) => ({ name, ...stats }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      
+      // Calculate provider performance
+      const providerStats = new Map();
+      for (const booking of allBookings.filter(b => b.providerId)) {
+        const provider = await storage.getUser(booking.providerId!);
+        const providerName = provider?.name || provider?.username || 'Unknown';
+        const current = providerStats.get(booking.providerId!) || { 
+          name: providerName, 
+          completedJobs: 0, 
+          revenue: 0, 
+          rating: provider?.rating || 5 
+        };
+        
+        if (booking.status === 'completed') {
+          providerStats.set(booking.providerId!, {
+            ...current,
+            completedJobs: current.completedJobs + 1,
+            revenue: current.revenue + (booking.totalPrice || 0)
+          });
+        }
+      }
+      
+      const topProviders = Array.from(providerStats.entries())
+        .map(([id, stats]) => ({ id: Number(id), ...stats }))
+        .sort((a, b) => b.completedJobs - a.completedJobs)
+        .slice(0, 5);
+      
+      res.json({
+        totalJobs,
+        completedJobs,
+        cancelledJobs,
+        userGrowth: {
+          totalUsers: allUsers.length,
+          newUsersThisMonth: Math.floor(allUsers.length * 0.1), // Mock calculation
+          totalProviders: providers.length,
+          activeProviders: providers.filter(p => p.currentStatus === 'online').length
+        },
+        topServices,
+        topProviders
+      });
+    } catch (error) {
+      console.error("Error generating analytics:", error);
+      res.status(500).json({ error: "Failed to generate analytics" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/status", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { action } = req.body;
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const newStatus = action === 'activate' ? 'offline' : 'inactive';
+      const updatedUser = await storage.updateProviderStatus(userId, newStatus);
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+
+  app.patch("/api/admin/bookings/:id/reassign", isAdmin, async (req, res) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      const { providerId } = req.body;
+      
+      if (isNaN(bookingId) || !providerId) {
+        return res.status(400).json({ error: "Invalid booking ID or provider ID" });
+      }
+      
+      const updatedBooking = await storage.assignBookingToProvider(bookingId, providerId);
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error reassigning booking:", error);
+      res.status(500).json({ error: "Failed to reassign booking" });
+    }
+  });
+
+  app.patch("/api/admin/bookings/:id/cancel", isAdmin, async (req, res) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ error: "Invalid booking ID" });
+      }
+      
+      const updatedBooking = await storage.updateBookingStatus(bookingId, 'cancelled');
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
   app.get("/api/admin/revenue-by-location", isAdmin, async (req, res) => {
     const revenueData = await storage.getRevenueByLocation();
     res.json(revenueData);
