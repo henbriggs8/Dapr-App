@@ -178,7 +178,7 @@ export class MemStorage implements IStorage {
       currentStatus: "online"
     });
 
-    // Create admin user with hashed password
+    // Create admin user - password will be hashed during creation
     this.initializeAdminUser().catch(console.error);
     
     // Create services with centralized pricing
@@ -305,9 +305,17 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
+    
+    // Hash password if it's not already hashed (doesn't contain a dot separator)
+    let hashedPassword = insertUser.password;
+    if (!insertUser.password.includes('.')) {
+      hashedPassword = await hashPassword(insertUser.password);
+    }
+    
     const user: User = {
       id,
       ...insertUser,
+      password: hashedPassword,
       rating: 5,
       ratingCount: 0,
       currentStatus: insertUser.currentStatus || 'offline',
