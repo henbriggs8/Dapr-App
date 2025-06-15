@@ -224,8 +224,12 @@ export default function AuthScreen() {
               onClick={handleContinue}
               disabled={
                 (isLoginMode 
-                  ? (activeTab === "phone" ? !phoneNumber || !password : !email || !password)
-                  : (activeTab === "phone" ? !phoneNumber : !email)) ||
+                  ? (activeTab === "phone" ? !phoneNumber || !password : 
+                     activeTab === "email" ? !email || !password : 
+                     !username || !password)
+                  : (activeTab === "phone" ? !phoneNumber : 
+                     activeTab === "email" ? !email : 
+                     !username)) ||
                 loginMutation.isPending || registerMutation.isPending
               }
               className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
