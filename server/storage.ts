@@ -1,7 +1,17 @@
 import { User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 const MemoryStore = createMemoryStore(session);
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -168,13 +178,8 @@ export class MemStorage implements IStorage {
       currentStatus: "online"
     });
 
-    // Create admin user
-    this.createUser({
-      username: "dapperadmin",
-      password: "admin123",
-      isAdmin: true,
-      name: "System Administrator"
-    });
+    // Create admin user with hashed password
+    this.initializeAdminUser().catch(console.error);
     
     // Create services with centralized pricing
     this.createService({
@@ -271,6 +276,16 @@ export class MemStorage implements IStorage {
       paymentDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       paymentUrl: null,
       squareOrderId: null,
+    });
+  }
+
+  private async initializeAdminUser() {
+    const hashedPassword = await hashPassword("admin123");
+    this.createUser({
+      username: "dapperadmin",
+      password: hashedPassword,
+      isAdmin: true,
+      name: "System Administrator"
     });
   }
 
