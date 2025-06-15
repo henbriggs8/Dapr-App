@@ -10,11 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"phone" | "email">("phone");
+  const [activeTab, setActiveTab] = useState<"phone" | "email" | "username">("phone");
   const [isLoginMode, setIsLoginMode] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
@@ -24,7 +25,9 @@ export default function AuthScreen() {
       // Handle login with actual authentication
       const credentials = activeTab === "phone" 
         ? { username: phoneNumber, password }
-        : { username: email, password };
+        : activeTab === "email"
+        ? { username: email, password }
+        : { username: username, password };
       
       try {
         await loginMutation.mutateAsync(credentials);
@@ -83,7 +86,7 @@ export default function AuthScreen() {
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Phone number
+              Phone
             </button>
             <button
               onClick={() => setActiveTab("email")}
@@ -94,6 +97,16 @@ export default function AuthScreen() {
               }`}
             >
               Email
+            </button>
+            <button
+              onClick={() => setActiveTab("username")}
+              className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-all ${
+                activeTab === "username"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Username
             </button>
           </div>
 
@@ -153,7 +166,7 @@ export default function AuthScreen() {
                   </p>
                 )}
               </motion.div>
-            ) : (
+            ) : activeTab === "email" ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -164,6 +177,32 @@ export default function AuthScreen() {
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+                />
+
+                {/* Password field for login mode */}
+                {isLoginMode && (
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+                  />
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <Input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
                 />
 
