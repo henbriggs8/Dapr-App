@@ -25,11 +25,11 @@ export default function ProviderAuthPage() {
     if (user) {
       if (user.isProvider) {
         // Check if onboarding is complete
-        const onboardingComplete = localStorage.getItem('provider-onboarding-complete');
+        const onboardingComplete = localStorage.getItem(`provider-onboarding-complete-${user.id}`);
         if (!onboardingComplete) {
           setLocation('/provider-onboarding/id-verification');
         } else {
-          setLocation('/provider');
+          setLocation('/');
         }
       } else {
         setLocation('/');

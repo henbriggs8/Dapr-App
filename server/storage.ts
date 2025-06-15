@@ -312,6 +312,21 @@ export class MemStorage implements IStorage {
     return user;
   }
 
+  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
+    const user = await this.getUser(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const updatedUser = {
+      ...user,
+      ...updates
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
   async updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void> {
     const user = await this.getUser(userId);
     if (user && user.isProvider) {
@@ -334,21 +349,6 @@ export class MemStorage implements IStorage {
       currentStatus: status
     };
     this.users.set(userId, updatedUser);
-    return updatedUser;
-  }
-
-  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
-    const user = await this.getUser(id);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    
-    const updatedUser = {
-      ...user,
-      ...updates
-    };
-    
-    this.users.set(id, updatedUser);
     return updatedUser;
   }
 

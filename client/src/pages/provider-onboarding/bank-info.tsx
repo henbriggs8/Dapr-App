@@ -5,6 +5,7 @@ import { ArrowLeft, CreditCard, Building, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function BankInfoPage() {
   const [, setLocation] = useLocation();
@@ -14,6 +15,7 @@ export default function BankInfoPage() {
   const [accountType, setAccountType] = useState<"checking" | "savings">("checking");
   const [useStripeConnect, setUseStripeConnect] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleStripeConnect = () => {
     toast({
@@ -42,14 +44,14 @@ export default function BankInfoPage() {
       }));
     }
     localStorage.setItem('provider-onboarding-bank-info', 'true');
-    localStorage.setItem('provider-onboarding-complete', 'true');
+    localStorage.setItem(`provider-onboarding-complete-${user?.id}`, 'true');
     
     toast({
       title: "Welcome to Dapper!",
       description: "Your onboarding is complete. Welcome to the team!",
     });
 
-    setLocation('/provider');
+    setLocation('/');
   };
 
   const handleSkip = () => {
@@ -57,8 +59,8 @@ export default function BankInfoPage() {
       title: "Bank setup skipped",
       description: "You can add payout details later in your profile settings",
     });
-    localStorage.setItem('provider-onboarding-complete', 'true');
-    setLocation('/provider');
+    localStorage.setItem(`provider-onboarding-complete-${user?.id}`, 'true');
+    setLocation('/');
   };
 
   const handleBack = () => {
