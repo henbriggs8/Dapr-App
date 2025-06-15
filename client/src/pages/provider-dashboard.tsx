@@ -271,15 +271,19 @@ export default function ProviderDashboard() {
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
+          <div className="space-y-4">
+            {/* Title Section */}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Provider Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {user.username}!</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Provider Dashboard</h1>
+              <p className="text-sm sm:text-base text-gray-600">Welcome back, {user.username}!</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">Status:</span>
+            
+            {/* Controls Section - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              {/* Status Toggle */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">Status:</span>
                 <Switch
                   checked={isOnline}
                   onCheckedChange={handleStatusToggle}
@@ -289,14 +293,17 @@ export default function ProviderDashboard() {
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
+              
+              {/* Update Location Button */}
               <Button 
                 onClick={() => updateLocationMutation.mutate()}
                 disabled={updateLocationMutation.isPending}
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto"
               >
                 <MapPin className="h-4 w-4 mr-2" />
-                Update Location
+                {updateLocationMutation.isPending ? 'Updating...' : 'Update Location'}
               </Button>
             </div>
           </div>
