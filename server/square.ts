@@ -15,7 +15,9 @@ type ApiError = {
 // Initialize the Square client
 const { accessToken, environment } = getSquareCredentials();
 export const squareClient = new SquareClient({
-  accessToken,
+  bearerAuthCredentials: {
+    accessToken
+  },
   environment
 });
 
