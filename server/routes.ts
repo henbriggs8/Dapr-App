@@ -617,6 +617,41 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Test Square connection endpoint
+  app.get("/api/test-square", async (req, res) => {
+    try {
+      const { squareClient } = await import("./square");
+      
+      // Test the connection by listing locations
+      const locationsApi = squareClient.locationsApi;
+      const response = await locationsApi.listLocations();
+      
+      if (response.result.locations && response.result.locations.length > 0) {
+        res.json({
+          status: "connected",
+          environment: process.env.SQUARE_ACCESS_TOKEN?.startsWith('sandbox') ? 'sandbox' : 'production',
+          locationCount: response.result.locations.length,
+          locations: response.result.locations.map(loc => ({
+            id: loc.id,
+            name: loc.name,
+            status: loc.status
+          }))
+        });
+      } else {
+        res.status(400).json({
+          status: "no_locations",
+          message: "Connected to Square but no locations found"
+        });
+      }
+    } catch (error: any) {
+      console.error("Square connection test failed:", error);
+      res.status(500).json({
+        status: "error",
+        message: error.message || "Failed to connect to Square"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Set up WebSocket server for real-time notifications
