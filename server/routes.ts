@@ -623,15 +623,14 @@ export function registerRoutes(app: Express): Server {
       const { squareClient } = await import("./square");
       
       // Test the connection by listing locations
-      const locationsApi = squareClient.locationsApi;
-      const response = await locationsApi.listLocations();
+      const response = await squareClient.locations.listLocations();
       
       if (response.result.locations && response.result.locations.length > 0) {
         res.json({
           status: "connected",
           environment: process.env.SQUARE_ACCESS_TOKEN?.startsWith('sandbox') ? 'sandbox' : 'production',
           locationCount: response.result.locations.length,
-          locations: response.result.locations.map(loc => ({
+          locations: response.result.locations.map((loc: any) => ({
             id: loc.id,
             name: loc.name,
             status: loc.status

@@ -1,5 +1,5 @@
 // Import Square SDK
-import { Client, Environment } from 'squareconnect';
+import { SquareClient, SquareEnvironment, SquareError } from 'square';
 import { randomBytes } from 'crypto';
 import { BookingFormData } from '@shared/schema';
 
@@ -14,7 +14,7 @@ type ApiError = {
 
 // Initialize the Square client
 const { accessToken, environment } = getSquareCredentials();
-export const squareClient = new Client({
+export const squareClient = new SquareClient({
   accessToken,
   environment
 });
@@ -25,7 +25,7 @@ function getSquareCredentials() {
   
   return {
     accessToken: process.env.SQUARE_ACCESS_TOKEN || '',
-    environment: isSandbox ? Environment.Sandbox : Environment.Production
+    environment: isSandbox ? SquareEnvironment.Sandbox : SquareEnvironment.Production
   };
 }
 
