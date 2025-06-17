@@ -540,6 +540,104 @@ export default function ProviderDashboard() {
             </Card>
           </TabsContent>
 
+          {/* Available Jobs Tab */}
+          <TabsContent value="available">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="h-5 w-5 mr-2 text-[#8c52ff]" />
+                  Available Jobs Near You
+                </CardTitle>
+                <CardDescription>
+                  Jobs within 15 miles of your location that you can accept
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingJobs ? (
+                  <div className="flex justify-center py-10">
+                    <CarWashSpinner size="md" showText text="Finding nearby jobs..." />
+                  </div>
+                ) : availableJobs.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Car className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900">No jobs available</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      There are currently no jobs available within 15 miles of your location.
+                    </p>
+                    <Button 
+                      onClick={() => refetchJobs()}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      Refresh Jobs
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {availableJobs.map((job) => (
+                      <div key={job.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                {formatCategory(job.priceTier)}
+                              </Badge>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                {job.distance} miles away
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <h4 className="font-medium text-gray-900">Car Wash Service</h4>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-1" />
+                                {job.serviceLocation}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                {job.date && job.time ? `${new Date(job.date).toLocaleDateString()} at ${job.time}` : 'Time TBD'}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                {job.totalPrice ? formatPrice(job.totalPrice) : '$0.00'}
+                              </div>
+                            </div>
+                            
+                            {job.notes && (
+                              <p className="text-sm text-gray-600">{job.notes}</p>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row gap-2 min-w-0 sm:min-w-fit">
+                            <Button
+                              onClick={() => acceptJobMutation.mutate(job.id)}
+                              disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              size="sm"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              {acceptJobMutation.isPending ? 'Accepting...' : 'Accept Job'}
+                            </Button>
+                            <Button
+                              onClick={() => rejectJobMutation.mutate(job.id)}
+                              disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
+                              variant="outline"
+                              size="sm"
+                              className="border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              {rejectJobMutation.isPending ? 'Rejecting...' : 'Pass'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Earnings Tab */}
           <TabsContent value="earnings">
             <Card>

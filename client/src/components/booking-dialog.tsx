@@ -263,7 +263,7 @@ export default function BookingDialog({
       
       toast({
         title: "Booking Confirmed!",
-        description: "Your appointment has been scheduled successfully.",
+        description: `Your ${service?.name} service has been scheduled for ${timeSlot?.date} at ${timeSlot?.startTime}. Nearby detailers have been notified and will accept your job soon.`,
       });
       
       // Navigate to confirmation page
