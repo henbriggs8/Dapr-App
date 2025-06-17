@@ -34,6 +34,45 @@ export function registerRoutes(app: Express): Server {
     res.json(pricing);
   });
 
+  // GPS Tracking endpoints
+  app.post("/api/tracking/enable/:bookingId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      const booking = await storage.enableTrackingForBooking(bookingId);
+      res.json(booking);
+    } catch (error) {
+      console.error("Enable tracking error:", error);
+      res.status(500).json({ error: "Failed to enable tracking" });
+    }
+  });
+
+  app.get("/api/tracking/:bookingId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      const trackingInfo = await storage.getTrackingInfo(bookingId);
+      res.json(trackingInfo);
+    } catch (error) {
+      console.error("Get tracking info error:", error);
+      res.status(500).json({ error: "Failed to get tracking info" });
+    }
+  });
+
+  app.get("/api/tracking/active", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const bookings = await storage.getActiveTrackingBookings(req.user.id);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Get active tracking bookings error:", error);
+      res.status(500).json({ error: "Failed to get active bookings" });
+    }
+  });
+
   // Provider endpoints
   app.post("/api/provider/location", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
@@ -41,6 +80,38 @@ export function registerRoutes(app: Express): Server {
     const { latitude, longitude } = req.body;
     await storage.updateProviderLocation(req.user.id, latitude, longitude);
     res.json({ success: true });
+  });
+
+  app.post("/api/provider/location/booking/:bookingId", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      const { latitude, longitude } = req.body;
+      
+      const booking = await storage.updateProviderLocationForBooking(bookingId, latitude, longitude);
+      
+      // Broadcast location update via WebSocket
+      const message = JSON.stringify({
+        type: 'location_update',
+        bookingId,
+        latitude,
+        longitude,
+        eta: booking.estimatedArrival,
+        distance: booking.distanceToCustomer
+      });
+      
+      wss.clients.forEach((client: WebSocket) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+      
+      res.json(booking);
+    } catch (error) {
+      console.error("Update provider location for booking error:", error);
+      res.status(500).json({ error: "Failed to update location" });
+    }
   });
 
   app.patch("/api/provider/status", isProvider, async (req, res) => {

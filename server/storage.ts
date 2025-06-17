@@ -126,6 +126,28 @@ export interface IStorage {
     timeSlots: TimeSlot[]
   ): Promise<any[]>;
   
+  // GPS Tracking methods
+  updateProviderLocationForBooking(
+    bookingId: number, 
+    latitude: number, 
+    longitude: number
+  ): Promise<Booking>;
+  getActiveTrackingBookings(userId: number): Promise<Booking[]>;
+  calculateETA(
+    providerLat: number, 
+    providerLng: number, 
+    customerLat: number, 
+    customerLng: number
+  ): Promise<{ eta: string; distance: number }>;
+  enableTrackingForBooking(bookingId: number): Promise<Booking>;
+  getTrackingInfo(bookingId: number): Promise<{
+    providerLocation: { lat: number; lng: number } | null;
+    customerLocation: { lat: number; lng: number } | null;
+    eta: string | null;
+    distance: number | null;
+    lastUpdate: string | null;
+  } | null>;
+  
   sessionStore: session.Store;
 }
 
@@ -1280,6 +1302,26 @@ export class MemStorage implements IStorage {
 
     return suggestions.slice(0, 2); // Return top 2 suggestions
   }
+
+  // GPS Tracking methods for MemStorage (simplified implementation)
+  async updateProviderLocationForBooking(bookingId: number, latitude: number, longitude: number): Promise<Booking> {
+    throw new Error("GPS tracking not implemented in MemStorage");
+  }
+  async getActiveTrackingBookings(userId: number): Promise<Booking[]> {
+    return [];
+  }
+  async calculateETA(providerLat: number, providerLng: number, customerLat: number, customerLng: number): Promise<{ eta: string; distance: number }> {
+    const distance = this.calculateDistance(providerLat, providerLng, customerLat, customerLng);
+    const estimatedMinutes = Math.round((distance / 20) * 60);
+    const eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
+    return { eta, distance };
+  }
+  async enableTrackingForBooking(bookingId: number): Promise<Booking> {
+    throw new Error("GPS tracking not implemented in MemStorage");
+  }
+  async getTrackingInfo(bookingId: number): Promise<any> {
+    return null;
+  }
 }
 
 
@@ -1888,6 +1930,111 @@ export class DatabaseStorage implements IStorage {
       reason: 'Based on your last booking',
       confidence: 0.8
     }];
+  }
+
+  // GPS Tracking methods
+  async updateProviderLocationForBooking(
+    bookingId: number, 
+    latitude: number, 
+    longitude: number
+  ): Promise<Booking> {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("Booking not found");
+
+    // Calculate distance to customer if customer location exists
+    let distance = null;
+    let eta = null;
+    
+    if (booking.serviceLatitude && booking.serviceLongitude) {
+      distance = this.calculateDistance(
+        latitude, 
+        longitude, 
+        booking.serviceLatitude, 
+        booking.serviceLongitude
+      );
+      
+      // Simple ETA calculation: distance / average speed (20 mph) * 60 minutes
+      const estimatedMinutes = Math.round((distance / 20) * 60);
+      eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
+    }
+
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set({
+        providerLatitude: latitude,
+        providerLongitude: longitude,
+        lastLocationUpdate: new Date().toISOString(),
+        distanceToCustomer: distance,
+        estimatedArrival: eta
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+
+    return updatedBooking;
+  }
+
+  async getActiveTrackingBookings(userId: number): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.userId, userId),
+          eq(bookings.trackingEnabled, true),
+          or(
+            eq(bookings.status, 'assigned'),
+            eq(bookings.status, 'confirmed'),
+            eq(bookings.status, 'in_progress')
+          )
+        )
+      );
+  }
+
+  async calculateETA(
+    providerLat: number, 
+    providerLng: number, 
+    customerLat: number, 
+    customerLng: number
+  ): Promise<{ eta: string; distance: number }> {
+    const distance = this.calculateDistance(providerLat, providerLng, customerLat, customerLng);
+    const estimatedMinutes = Math.round((distance / 20) * 60); // 20 mph average speed
+    const eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
+    
+    return { eta, distance };
+  }
+
+  async enableTrackingForBooking(bookingId: number): Promise<Booking> {
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set({ trackingEnabled: true })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+
+    return updatedBooking;
+  }
+
+  async getTrackingInfo(bookingId: number): Promise<{
+    providerLocation: { lat: number; lng: number } | null;
+    customerLocation: { lat: number; lng: number } | null;
+    eta: string | null;
+    distance: number | null;
+    lastUpdate: string | null;
+  } | null> {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    
+    if (!booking || !booking.trackingEnabled) return null;
+
+    return {
+      providerLocation: booking.providerLatitude && booking.providerLongitude 
+        ? { lat: booking.providerLatitude, lng: booking.providerLongitude }
+        : null,
+      customerLocation: booking.serviceLatitude && booking.serviceLongitude
+        ? { lat: booking.serviceLatitude, lng: booking.serviceLongitude }
+        : null,
+      eta: booking.estimatedArrival,
+      distance: booking.distanceToCustomer,
+      lastUpdate: booking.lastLocationUpdate
+    };
   }
 }
 

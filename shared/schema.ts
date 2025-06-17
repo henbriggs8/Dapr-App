@@ -105,7 +105,15 @@ export const bookings = pgTable("bookings", {
   paymentId: text("payment_id"), // Square payment ID
   paymentDate: text("payment_date"), // When payment was completed
   paymentUrl: text("payment_url"), // URL for Square checkout
-  squareOrderId: text("square_order_id") // Square order ID
+  squareOrderId: text("square_order_id"), // Square order ID
+  
+  // GPS Tracking fields
+  providerLatitude: doublePrecision("provider_latitude"), // Current provider location
+  providerLongitude: doublePrecision("provider_longitude"), // Current provider location
+  estimatedArrival: text("estimated_arrival"), // ETA in ISO string format
+  lastLocationUpdate: text("last_location_update"), // Last GPS update timestamp
+  distanceToCustomer: doublePrecision("distance_to_customer"), // Distance in miles
+  trackingEnabled: boolean("tracking_enabled").default(false) // Whether customer can track provider
 });
 
 // Relations
