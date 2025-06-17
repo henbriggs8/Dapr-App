@@ -49,6 +49,11 @@ app.use((req, res, next) => {
     res.status(200).json({ status: 'ok' });
   });
 
+  // Add a root endpoint that Replit can detect
+  app.get('/ping', (_req, res) => {
+    res.status(200).send('pong');
+  });
+
   const server = registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
