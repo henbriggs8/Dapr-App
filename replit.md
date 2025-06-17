@@ -18,7 +18,8 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
-- **Session Management**: Express sessions with PostgreSQL store
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
+- **Session Management**: Express sessions with in-memory store
 - **Authentication**: Passport.js with local strategy and bcrypt password hashing
 - **Real-time Communication**: WebSocket server for live updates
 - **File Structure**: Modular routing with separated concerns
@@ -137,6 +138,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - June 15, 2025. Fixed provider location update endpoint to return complete user object, resolving redirect issue
 - June 15, 2025. Created comprehensive Admin Dashboard with user management, booking oversight, earnings tracking, and analytics
 - June 16, 2025. Added username authentication tab and fixed admin login with proper password hashing system
+- June 17, 2025. Migrated from in-memory storage to PostgreSQL database with Drizzle ORM and proper database relations
 
 ## User Preferences
 
