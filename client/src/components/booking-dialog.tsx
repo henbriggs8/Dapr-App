@@ -18,6 +18,7 @@ import {
 } from "./ui/form";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
+import { AddressAutocomplete } from "./address-autocomplete";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
@@ -78,6 +79,12 @@ export default function BookingDialog({
   
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
+  
+  // Track service coordinates for address autocomplete
+  const [serviceCoordinates, setServiceCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // Vehicle management state - use prefill data if available, otherwise detect from storage
   const detectedVehicleSize = getVehicleSizeFromStorage();
@@ -365,6 +372,12 @@ export default function BookingDialog({
       data.time = timeSlot.startTime;
     }
     
+    // Add service coordinates if available from address autocomplete
+    if (serviceCoordinates) {
+      data.serviceLatitude = serviceCoordinates.latitude;
+      data.serviceLongitude = serviceCoordinates.longitude;
+    }
+    
     // Calculate add-ons total if any are selected
     const selectedAddOns = addOns.filter(addon => addon.selected);
     const addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
@@ -527,17 +540,28 @@ export default function BookingDialog({
               name="serviceLocation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Address</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Using your profile address" 
-                      {...field}
+                    <AddressAutocomplete
                       value={field.value || user?.address || ''}
+                      onChange={(address, details) => {
+                        field.onChange(address);
+                        
+                        // Store location coordinates in component state for submission
+                        if (details?.geometry?.location) {
+                          // These will be added to the booking data during submission
+                          setServiceCoordinates({
+                            latitude: details.geometry.location.lat(),
+                            longitude: details.geometry.location.lng()
+                          });
+                        }
+                      }}
+                      label="Service Address"
+                      placeholder="Start typing your service address..."
                       className="bg-green-50 border-green-200"
                     />
                   </FormControl>
                   <div className="text-xs text-green-600 mt-1">
-                    Using address from your profile. Edit if needed.
+                    Address auto-complete enabled. Click the location icon to use current location.
                   </div>
                   <FormMessage />
                 </FormItem>

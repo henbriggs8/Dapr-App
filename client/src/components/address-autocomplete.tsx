@@ -240,7 +240,7 @@ export function AddressAutocomplete({
           ref={inputRef}
           id="address-input"
           type="text"
-          placeholder={placeholder}
+          placeholder={isLoaded ? placeholder : "Enter your address manually"}
           value={value}
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -258,13 +258,19 @@ export function AddressAutocomplete({
             type="button"
             onClick={getCurrentLocation}
             className="p-2 text-gray-400 hover:text-[#8c52ff] transition-colors"
-            title="Use current location"
+            title={isLoaded ? "Use current location" : "Geolocation available"}
             disabled={isLoading}
           >
             <MapPin className="h-4 w-4" />
           </button>
         </div>
       </div>
+      
+      {!isLoaded && !import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+        <div className="text-xs text-amber-600 mt-1">
+          Address autocomplete unavailable - manual entry only
+        </div>
+      )}
 
       {/* Address Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
