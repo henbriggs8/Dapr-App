@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -22,6 +23,8 @@ export default function AddressScreen() {
   const [state, setState] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [locationType, setLocationType] = useState("Home");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   const handleSaveAndContinue = () => {
     // Save address data to localStorage for now
@@ -30,7 +33,9 @@ export default function AddressScreen() {
       city,
       state,
       zipCode,
-      locationType
+      locationType,
+      latitude,
+      longitude
     };
     localStorage.setItem("userAddress", JSON.stringify(addressData));
     
@@ -100,20 +105,48 @@ export default function AddressScreen() {
             ))}
           </div>
         </div>
-        {/* Street Address */}
-        <div className="space-y-2">
-          <Label htmlFor="street" className="text-sm font-medium text-gray-700">
-            Street Address
-          </Label>
-          <Input
-            id="street"
-            type="text"
-            placeholder="123 Main Street"
-            value={streetAddress}
-            onChange={(e) => setStreetAddress(e.target.value)}
-            className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
-          />
-        </div>
+        {/* Street Address with Autocomplete */}
+        <AddressAutocomplete
+          value={streetAddress}
+          onChange={(address, details) => {
+            setStreetAddress(address);
+            
+            // Auto-populate other fields from address details
+            if (details?.address_components) {
+              const components = details.address_components;
+              
+              // Extract city
+              const cityComponent = components.find(c => 
+                c.types.includes('locality') || c.types.includes('administrative_area_level_3')
+              );
+              if (cityComponent) {
+                setCity(cityComponent.long_name);
+              }
+              
+              // Extract state
+              const stateComponent = components.find(c => 
+                c.types.includes('administrative_area_level_1')
+              );
+              if (stateComponent) {
+                setState(stateComponent.short_name);
+              }
+              
+              // Extract zip code
+              const zipComponent = components.find(c => 
+                c.types.includes('postal_code')
+              );
+              if (zipComponent) {
+                setZipCode(zipComponent.long_name);
+              }
+            }
+          }}
+          onLocationSelect={(location) => {
+            setLatitude(location.lat);
+            setLongitude(location.lng);
+          }}
+          label="Street Address"
+          placeholder="Start typing your address..."
+        />
 
         {/* City */}
         <div className="space-y-2">
