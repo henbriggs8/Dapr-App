@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { CalendarCheck, Sparkles, Activity, User } from "lucide-react";
+import { CalendarCheck, Sparkles, Activity, User, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function TabNavigation() {
@@ -14,10 +14,10 @@ export default function TabNavigation() {
       active: location === "/booking"
     },
     {
-      icon: Sparkles,
-      label: "Services",
-      route: "/services",
-      active: location === "/services"
+      icon: MapPin,
+      label: "Track",
+      route: "/tracking",
+      active: location === "/tracking"
     },
     {
       icon: Activity,

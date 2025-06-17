@@ -24,6 +24,7 @@ import ServiceProgress from "@/pages/service-progress";
 import PaymentSuccessPage from "@/pages/payment-success";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
+import TrackingPage from "@/pages/tracking-page";
 import HowItWorks from "@/pages/how-it-works";
 import InteriorCleaning from "@/pages/interior-cleaning";
 import ExteriorCleaning from "@/pages/exterior-cleaning";
@@ -132,6 +133,7 @@ function Router() {
         <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
         <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
         <ProtectedRoute path="/service-progress" component={ServiceProgress} />
+        <ProtectedRoute path="/tracking" component={TrackingPage} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
         
         {/* Admin route */}
