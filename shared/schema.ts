@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, doublePrecision, json } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -106,6 +107,53 @@ export const bookings = pgTable("bookings", {
   paymentUrl: text("payment_url"), // URL for Square checkout
   squareOrderId: text("square_order_id") // Square order ID
 });
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  bookings: many(bookings),
+  providedBookings: many(bookings, { relationName: "provider" }),
+  vehicles: many(vehicles)
+}));
+
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  user: one(users, {
+    fields: [bookings.userId],
+    references: [users.id]
+  }),
+  provider: one(users, {
+    fields: [bookings.providerId],
+    references: [users.id],
+    relationName: "provider"
+  }),
+  service: one(services, {
+    fields: [bookings.serviceId],
+    references: [services.id]
+  }),
+  timeSlot: one(timeSlots, {
+    fields: [bookings.timeSlotId],
+    references: [timeSlots.id]
+  }),
+  vehicle: one(vehicles, {
+    fields: [bookings.vehicleId],
+    references: [vehicles.id]
+  })
+}));
+
+export const vehiclesRelations = relations(vehicles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [vehicles.userId],
+    references: [users.id]
+  }),
+  bookings: many(bookings)
+}));
+
+export const servicesRelations = relations(services, ({ many }) => ({
+  bookings: many(bookings)
+}));
+
+export const timeSlotsRelations = relations(timeSlots, ({ many }) => ({
+  bookings: many(bookings)
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

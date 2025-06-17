@@ -1,4 +1,6 @@
-import { User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -1280,4 +1282,613 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const hashedPassword = await hashPassword(insertUser.password);
+    const [user] = await db
+      .insert(users)
+      .values({ ...insertUser, password: hashedPassword })
+      .returning();
+    return user;
+  }
+
+  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        latitude, 
+        longitude, 
+        lastLocationUpdate: new Date().toISOString() 
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateProviderStatus(userId: number, status: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ currentStatus: status })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getProviders(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isProvider, true));
+  }
+
+  async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking> {
+    const [newBooking] = await db
+      .insert(bookings)
+      .values(booking)
+      .returning();
+    return newBooking;
+  }
+
+  async getUserBookings(userId: number): Promise<Booking[]> {
+    return await db.select().from(bookings).where(eq(bookings.userId, userId));
+  }
+
+  async getActiveBookings(providerId: number): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          inArray(bookings.status, ['assigned', 'confirmed', 'in_progress'])
+        )
+      );
+  }
+
+  async getBookingById(id: number): Promise<Booking | undefined> {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return booking || undefined;
+  }
+
+  async updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking> {
+    const updates: any = { status };
+    if (stage) updates.currentStage = stage;
+    
+    const [booking] = await db
+      .update(bookings)
+      .set(updates)
+      .where(eq(bookings.id, id))
+      .returning();
+    return booking;
+  }
+
+  async getPricingConfig(): Promise<PricingConfig> {
+    const [config] = await db.select().from(pricingConfig).orderBy(desc(pricingConfig.id)).limit(1);
+    if (!config) {
+      // Create default pricing if none exists
+      const [newConfig] = await db
+        .insert(pricingConfig)
+        .values({
+          basic: 2999,
+          standard: 4999,
+          premium: 7999,
+          updatedAt: new Date().toISOString()
+        })
+        .returning();
+      return newConfig;
+    }
+    return config;
+  }
+
+  async updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig> {
+    const [updatedConfig] = await db
+      .insert(pricingConfig)
+      .values(config)
+      .returning();
+    return updatedConfig;
+  }
+
+  async getServices(): Promise<Service[]> {
+    return await db.select().from(services);
+  }
+
+  async getServiceById(id: number): Promise<Service | undefined> {
+    const [service] = await db.select().from(services).where(eq(services.id, id));
+    return service || undefined;
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    const [newService] = await db
+      .insert(services)
+      .values(service)
+      .returning();
+    return newService;
+  }
+
+  async getTimeSlots(): Promise<TimeSlot[]> {
+    return await db.select().from(timeSlots);
+  }
+
+  async getTimeSlotById(id: number): Promise<TimeSlot | undefined> {
+    const [timeSlot] = await db.select().from(timeSlots).where(eq(timeSlots.id, id));
+    return timeSlot || undefined;
+  }
+
+  async getAvailableTimeSlots(date?: string): Promise<TimeSlot[]> {
+    if (date) {
+      return await db.select().from(timeSlots).where(
+        and(
+          eq(timeSlots.isAvailable, true),
+          eq(timeSlots.date, date)
+        )
+      );
+    }
+    
+    return await db.select().from(timeSlots).where(eq(timeSlots.isAvailable, true));
+  }
+
+  async createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot> {
+    const [newTimeSlot] = await db
+      .insert(timeSlots)
+      .values(timeSlot)
+      .returning();
+    return newTimeSlot;
+  }
+
+  async updateTimeSlot(id: number, updates: Partial<TimeSlot>): Promise<TimeSlot> {
+    const [timeSlot] = await db
+      .update(timeSlots)
+      .set(updates)
+      .where(eq(timeSlots.id, id))
+      .returning();
+    return timeSlot;
+  }
+
+  async getUserVehicles(userId: number): Promise<Vehicle[]> {
+    return await db.select().from(vehicles).where(eq(vehicles.userId, userId));
+  }
+
+  async getVehicleById(id: number): Promise<Vehicle | undefined> {
+    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, id));
+    return vehicle || undefined;
+  }
+
+  async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const [newVehicle] = await db
+      .insert(vehicles)
+      .values(vehicle)
+      .returning();
+    return newVehicle;
+  }
+
+  async updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const [vehicle] = await db
+      .update(vehicles)
+      .set(updates)
+      .where(eq(vehicles.id, id))
+      .returning();
+    return vehicle;
+  }
+
+  async deleteVehicle(id: number): Promise<boolean> {
+    const result = await db.delete(vehicles).where(eq(vehicles.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getNearbyProviders(latitude: number, longitude: number, radius: number): Promise<User[]> {
+    // Using a simple distance calculation for PostgreSQL
+    // For production, consider using PostGIS for more accurate geospatial queries
+    const providers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.isProvider, true),
+          eq(users.currentStatus, 'online')
+        )
+      );
+
+    return providers.filter(provider => {
+      if (!provider.latitude || !provider.longitude) return false;
+      const distance = this.calculateDistance(latitude, longitude, provider.latitude, provider.longitude);
+      return distance <= radius;
+    });
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = this.deg2rad(lat2 - lat1);
+    const dLon = this.deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in kilometers
+    return d;
+  }
+
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
+  }
+
+  async assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        providerId,
+        status: 'assigned',
+        assignedAt: new Date().toISOString(),
+        assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async acceptBooking(bookingId: number, providerId: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        status: 'confirmed',
+        acceptedAt: new Date().toISOString()
+      })
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.providerId, providerId)
+        )
+      )
+      .returning();
+    return booking;
+  }
+
+  async rejectBooking(bookingId: number, providerId: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        providerId: null,
+        status: 'pending',
+        rejectedAt: new Date().toISOString(),
+        previousProviders: sql`array_append(coalesce(previous_providers, '[]'::jsonb), ${providerId}::jsonb)`
+      })
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.providerId, providerId)
+        )
+      )
+      .returning();
+    return booking;
+  }
+
+  async findBookingAssignment(providerId: number): Promise<Booking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          eq(bookings.status, 'assigned')
+        )
+      )
+      .limit(1);
+    return booking || undefined;
+  }
+
+  async getBookingsByTimeframe(providerId: number, timeframe: 'day' | 'week' | 'month'): Promise<Booking[]> {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (timeframe) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+    }
+
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          gte(bookings.timestamp, startDate.toISOString())
+        )
+      );
+  }
+
+  async getUnassignedBookings(): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.status, 'pending'),
+          isNull(bookings.providerId)
+        )
+      );
+  }
+
+  async getProviderEarnings(providerId: number, period: string = 'month'): Promise<{
+    totalEarnings: number;
+    completedServices: number;
+    averageRating: number;
+    serviceTypeBreakdown: { [key: string]: number };
+  }> {
+    const completedBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          eq(bookings.status, 'completed')
+        )
+      );
+
+    const totalEarnings = completedBookings.reduce((sum, booking) => sum + (booking.providerEarnings || 0), 0);
+    const completedServices = completedBookings.length;
+    const ratingsSum = completedBookings.reduce((sum, booking) => sum + (booking.rating || 0), 0);
+    const averageRating = completedServices > 0 ? ratingsSum / completedServices : 0;
+
+    const serviceTypeBreakdown: { [key: string]: number } = {};
+    completedBookings.forEach(booking => {
+      const tier = booking.priceTier;
+      serviceTypeBreakdown[tier] = (serviceTypeBreakdown[tier] || 0) + 1;
+    });
+
+    return {
+      totalEarnings,
+      completedServices,
+      averageRating,
+      serviceTypeBreakdown
+    };
+  }
+
+  async getProviderServiceMetrics(providerId: number): Promise<{
+    averageDuration: { [key: string]: number };
+    totalServiceTime: number;
+  }> {
+    const completedBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          eq(bookings.status, 'completed')
+        )
+      );
+
+    const averageDuration: { [key: string]: number } = {};
+    const totalServiceTime = completedBookings.reduce((sum, booking) => sum + (booking.serviceDuration || 0), 0);
+
+    const tierDurations: { [key: string]: number[] } = {};
+    completedBookings.forEach(booking => {
+      const tier = booking.priceTier;
+      const duration = booking.serviceDuration || 0;
+      if (!tierDurations[tier]) tierDurations[tier] = [];
+      tierDurations[tier].push(duration);
+    });
+
+    Object.keys(tierDurations).forEach(tier => {
+      const durations = tierDurations[tier];
+      averageDuration[tier] = durations.reduce((sum, d) => sum + d, 0) / durations.length;
+    });
+
+    return { averageDuration, totalServiceTime };
+  }
+
+  async getRevenueByLocation(): Promise<{
+    totalRevenue: number;
+    locationData: {
+      latitude: number;
+      longitude: number;
+      location: string;
+      revenue: number;
+      bookingsCount: number;
+    }[];
+  }> {
+    const completedBookings = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.status, 'completed'));
+
+    const totalRevenue = completedBookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+    
+    const locationMap = new Map();
+    completedBookings.forEach(booking => {
+      if (booking.serviceLatitude && booking.serviceLongitude) {
+        const key = `${booking.serviceLatitude},${booking.serviceLongitude}`;
+        if (!locationMap.has(key)) {
+          locationMap.set(key, {
+            latitude: booking.serviceLatitude,
+            longitude: booking.serviceLongitude,
+            location: booking.serviceLocation,
+            revenue: 0,
+            bookingsCount: 0
+          });
+        }
+        const location = locationMap.get(key);
+        location.revenue += booking.totalPrice || 0;
+        location.bookingsCount += 1;
+      }
+    });
+
+    return {
+      totalRevenue,
+      locationData: Array.from(locationMap.values())
+    };
+  }
+
+  async getProviderStatusSummary(): Promise<{
+    totalProviders: number;
+    onlineProviders: number;
+    onlineProvidersList: {
+      id: number;
+      name: string;
+      username: string;
+      latitude?: number;
+      longitude?: number;
+      lastLocationUpdate?: string;
+    }[];
+  }> {
+    const allProviders = await db
+      .select()
+      .from(users)
+      .where(eq(users.isProvider, true));
+
+    const onlineProviders = allProviders.filter(p => p.currentStatus === 'online');
+
+    return {
+      totalProviders: allProviders.length,
+      onlineProviders: onlineProviders.length,
+      onlineProvidersList: onlineProviders.map(p => ({
+        id: p.id,
+        name: p.name || '',
+        username: p.username,
+        latitude: p.latitude || undefined,
+        longitude: p.longitude || undefined,
+        lastLocationUpdate: p.lastLocationUpdate || undefined
+      }))
+    };
+  }
+
+  async startServiceTimer(bookingId: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        status: 'in_progress',
+        startTime: new Date().toISOString()
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async completeServiceTimer(bookingId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking || !booking.startTime) {
+      throw new Error('Booking not found or service not started');
+    }
+
+    const startTime = new Date(booking.startTime);
+    const endTime = new Date();
+    const serviceDuration = Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // in minutes
+
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set({
+        status: 'completed',
+        endTime: endTime.toISOString(),
+        serviceDuration
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return updatedBooking;
+  }
+
+  async addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        rating,
+        ratingComment: comment
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async updateBookingPaymentInfo(
+    bookingId: number,
+    paymentInfo: {
+      paymentStatus?: string;
+      paymentId?: string;
+      paymentDate?: string;
+      paymentUrl?: string;
+      squareOrderId?: string;
+      isPaid?: boolean;
+    }
+  ): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set(paymentInfo)
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async getPendingPaymentBookings(): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        or(
+          eq(bookings.isPaid, false),
+          eq(bookings.paymentStatus, 'pending')
+        )
+      );
+  }
+
+  async generateRebookingSuggestions(
+    userId: number,
+    userBookings: Booking[],
+    services: Service[],
+    timeSlots: TimeSlot[]
+  ): Promise<any[]> {
+    // This is a simplified implementation for the database version
+    // In a real implementation, you might want to use more sophisticated algorithms
+    const completedBookings = userBookings.filter(b => b.status === 'completed');
+    
+    if (completedBookings.length === 0) {
+      return [];
+    }
+
+    const lastBooking = completedBookings[completedBookings.length - 1];
+    const preferredService = services.find(s => s.id === lastBooking.serviceId);
+    const availableSlots = timeSlots.filter(t => t.isAvailable);
+
+    return [{
+      type: 'repeat_service',
+      service: preferredService,
+      suggestedTimeSlots: availableSlots.slice(0, 3),
+      reason: 'Based on your last booking',
+      confidence: 0.8
+    }];
+  }
+}
+
+export const storage = new DatabaseStorage();
