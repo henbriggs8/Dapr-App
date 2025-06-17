@@ -226,7 +226,7 @@ export default function BookingDialog({
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      serviceLocation: parsedAddress ? 
+      serviceLocation: user?.address || parsedAddress ? 
         `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}` : "",
       serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
@@ -336,20 +336,24 @@ export default function BookingDialog({
       return;
     }
     
-    // Validate required fields
+    // Use user's profile address if no address is provided
     if (!data.serviceLocation?.trim()) {
-      toast({
-        title: "Service Address Required",
-        description: "Please scroll up and enter your service address to continue",
-        variant: "destructive",
-      });
-      // Focus on the service location field
-      const serviceLocationField = document.querySelector('input[name="serviceLocation"]') as HTMLInputElement;
-      if (serviceLocationField) {
-        serviceLocationField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        serviceLocationField.focus();
+      if (user?.address) {
+        data.serviceLocation = user.address;
+      } else {
+        toast({
+          title: "Service Address Required",
+          description: "Please add an address to your profile or enter one in the booking form",
+          variant: "destructive",
+        });
+        // Focus on the service location field
+        const serviceLocationField = document.querySelector('input[name="serviceLocation"]') as HTMLInputElement;
+        if (serviceLocationField) {
+          serviceLocationField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          serviceLocationField.focus();
+        }
+        return;
       }
-      return;
     }
     
     // Update form values with the latest service and time slot info
@@ -520,14 +524,18 @@ export default function BookingDialog({
               name="serviceLocation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Address *</FormLabel>
+                  <FormLabel>Service Address</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter your full address (e.g., 123 Main St, City, State 12345)" 
+                      placeholder="Using your profile address" 
                       {...field}
-                      value={field.value || prefillData?.selectedLocation?.address || ''}
+                      value={field.value || user?.address || ''}
+                      className="bg-green-50 border-green-200"
                     />
                   </FormControl>
+                  <div className="text-xs text-green-600 mt-1">
+                    Using address from your profile. Edit if needed.
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
