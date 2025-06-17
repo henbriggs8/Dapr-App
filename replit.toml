@@ -1,0 +1,11 @@
+[deployment]
+run = ["npm", "run", "start"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+exposeLocalhost = true
+
+[web]
+run = "npm run dev"

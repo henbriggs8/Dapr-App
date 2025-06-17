@@ -66,7 +66,7 @@ app.use((req, res, next) => {
   }
 
   const PORT = Number(process.env.PORT) || 5000;
-  const HOST = '0.0.0.0';
+  const HOST = process.env.REPL_SLUG ? '0.0.0.0' : '0.0.0.0';
 
   // Create a promise that resolves when the server is ready
   await new Promise<void>((resolve) => {
@@ -78,6 +78,11 @@ app.use((req, res, next) => {
       console.log('----------------------------------------');
       log(`Server running at http://${HOST}:${PORT}`);
       log('Application is ready to accept connections');
+      
+      // Output the URL that Replit should use for preview
+      if (process.env.REPLIT_DEV_DOMAIN) {
+        console.log(`Preview URL: https://${process.env.REPLIT_DEV_DOMAIN}`);
+      }
 
       // Test the health endpoint to ensure the server is truly ready
       fetch(`http://${HOST}:${PORT}/health`)
