@@ -49,6 +49,57 @@ export default function ProviderDashboard() {
     queryKey: ['/api/provider/active-bookings'],
   });
 
+  // Fetch available jobs (within 15 miles)
+  const { data: availableJobs = [], isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<(Booking & { distance: number })[]>({
+    queryKey: ['/api/provider/available-jobs'],
+  });
+
+  // Accept job mutation
+  const acceptJobMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/provider/accept-job/${bookingId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Accepted",
+        description: "You have successfully accepted this job!",
+      });
+      refetchJobs();
+      refetchBookings();
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reject job mutation
+  const rejectJobMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/provider/reject-job/${bookingId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Rejected",
+        description: "Job has been removed from your available jobs.",
+      });
+      refetchJobs();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Fetch provider earnings
   const { data: earnings, isLoading: isLoadingEarnings } = useQuery<ProviderEarnings>({
     queryKey: ['/api/provider/earnings'],
@@ -371,8 +422,9 @@ export default function ProviderDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="jobs" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
+            <TabsTrigger value="available">Available Jobs</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="metrics">Performance</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>

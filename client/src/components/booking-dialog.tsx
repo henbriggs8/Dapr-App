@@ -365,7 +365,14 @@ export default function BookingDialog({
     data.addOnTotal = addOnTotal;
     data.vehicleSizeTotal = vehicleSizeTotal;
     data.vehicles = vehicles;
-    data.totalPrice = service.price + addOnTotal + vehicleSizeTotal;
+    data.totalPrice = totalPrice;
+    data.status = 'unassigned'; // Set as unassigned for detailer matching
+    data.serviceLatitude = parsedAddress?.latitude || null;
+    data.serviceLongitude = parsedAddress?.longitude || null;
+    data.vehicleId = vehicles.length > 0 ? vehicles[0].id : null;
+    data.notes = `Service for ${vehicles.map(v => v.details).join(', ')}`;
+    
+    console.log("Final booking data:", data);
     bookingMutation.mutate(data);
   };
 

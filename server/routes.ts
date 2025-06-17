@@ -170,6 +170,35 @@ export function registerRoutes(app: Express): Server {
         console.error("Error updating time slot booking count:", error instanceof Error ? error.message : String(error));
       }
       
+      // Find nearby detailers for job assignment (within 15 miles)
+      if (booking.serviceLatitude && booking.serviceLongitude) {
+        try {
+          const nearbyProviders = await storage.getNearbyProviders(
+            booking.serviceLatitude, 
+            booking.serviceLongitude, 
+            15 // 15 mile radius
+          );
+          
+          // Notify nearby providers via WebSocket
+          const jobNotification = {
+            type: 'new_job_available',
+            booking: newBooking,
+            providersNotified: nearbyProviders.length
+          };
+          
+          // Send to all nearby providers
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(jobNotification));
+            }
+          });
+          
+          console.log(`Notified ${nearbyProviders.length} nearby providers about new booking ${newBooking.id}`);
+        } catch (error) {
+          console.error("Error finding nearby providers:", error);
+        }
+      }
+      
       res.status(201).json(newBooking);
     } catch (error) {
       console.error("Error creating booking:", error instanceof Error ? error.message : String(error));
@@ -616,6 +645,116 @@ export function registerRoutes(app: Express): Server {
       res.status(404).send(error instanceof Error ? error.message : "Time slot not found");
     }
   });
+
+  // Get available jobs for providers (within 15 miles)
+  app.get("/api/provider/available-jobs", async (req, res) => {
+    if (!req.user || !req.user.isProvider) return res.sendStatus(401);
+
+    try {
+      // Get provider's location
+      const provider = await storage.getUser(req.user.id);
+      if (!provider || !provider.latitude || !provider.longitude) {
+        return res.json([]);
+      }
+
+      // Get all unassigned bookings
+      const unassignedBookings = await storage.getUnassignedBookings();
+      
+      // Filter bookings within 15 miles
+      const nearbyJobs = [];
+      for (const booking of unassignedBookings) {
+        if (booking.serviceLatitude && booking.serviceLongitude) {
+          const distance = calculateDistance(
+            provider.latitude,
+            provider.longitude,
+            booking.serviceLatitude,
+            booking.serviceLongitude
+          );
+          
+          if (distance <= 15) {
+            nearbyJobs.push({...booking, distance: Math.round(distance * 10) / 10});
+          }
+        }
+      }
+
+      res.json(nearbyJobs);
+    } catch (error) {
+      console.error("Error fetching available jobs:", error);
+      res.status(500).json({ error: "Failed to fetch available jobs" });
+    }
+  });
+
+  // Accept a job
+  app.post("/api/provider/accept-job/:bookingId", async (req, res) => {
+    if (!req.user || !req.user.isProvider) return res.sendStatus(401);
+
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ error: "Invalid booking ID" });
+      }
+
+      // Check if booking is still available
+      const booking = await storage.getBookingById(bookingId);
+      if (!booking || booking.status !== 'unassigned') {
+        return res.status(400).json({ error: "Job is no longer available" });
+      }
+
+      // Assign the job to this provider
+      const updatedBooking = await storage.assignBookingToProvider(bookingId, req.user.id);
+      
+      // Notify via WebSocket that job was accepted
+      const notification = {
+        type: 'job_accepted',
+        bookingId: bookingId,
+        providerId: req.user.id,
+        providerName: req.user.name || req.user.username
+      };
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(notification));
+        }
+      });
+
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error accepting job:", error);
+      res.status(500).json({ error: "Failed to accept job" });
+    }
+  });
+
+  // Reject a job
+  app.post("/api/provider/reject-job/:bookingId", async (req, res) => {
+    if (!req.user || !req.user.isProvider) return res.sendStatus(401);
+
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ error: "Invalid booking ID" });
+      }
+
+      // Add this provider to the rejected list for this booking
+      const updatedBooking = await storage.rejectBooking(bookingId, req.user.id);
+      
+      res.json({ success: true, message: "Job rejected" });
+    } catch (error) {
+      console.error("Error rejecting job:", error);
+      res.status(500).json({ error: "Failed to reject job" });
+    }
+  });
+
+  // Helper function to calculate distance between two coordinates
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
 
   // Test Square connection endpoint
   app.get("/api/test-square", async (req, res) => {
