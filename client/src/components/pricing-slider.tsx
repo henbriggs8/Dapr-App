@@ -203,7 +203,7 @@ export default function PricingSlider({
                 transition={{ duration: 0.3 }}
                 className="text-2xl font-bold text-primary"
               >
-                ${selectedService?.price ? (selectedService.price / 100).toFixed(2) : '0.00'}
+                ${selectedService?.price || 0}
               </motion.div>
             </div>
             <div className="text-sm text-muted-foreground">

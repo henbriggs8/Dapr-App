@@ -438,13 +438,13 @@ export default function BookingDialog({
               <div className="font-medium">{service?.name}</div>
               
               <div className="text-muted-foreground">Base Price:</div>
-              <div className="font-medium">${service?.price ? (service.price / 100).toFixed(2) : '0.00'}</div>
+              <div className="font-medium">${service?.price || 0}</div>
               
               <div className="text-muted-foreground">Vehicle Size:</div>
               <div className="font-medium">+${vehicles.reduce((sum, v) => sum + v.sizeMultiplier, 0)}</div>
               
               <div className="text-muted-foreground font-semibold">Total Price:</div>
-              <div className="font-bold text-[#8c52ff]">${(totalPrice / 100).toFixed(2)}</div>
+              <div className="font-bold text-[#8c52ff]">${totalPrice}</div>
               
               <div className="text-muted-foreground">Duration:</div>
               <div className="font-medium flex items-center">
