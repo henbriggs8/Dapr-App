@@ -300,6 +300,10 @@ export default function BookingDialog({
   });
 
   const onSubmit = (data: any) => {
+    console.log("Form submitted with data:", data);
+    console.log("Current user:", user);
+    console.log("Service:", service);
+    console.log("Time slot:", timeSlot);
     
     // Check authentication first
     if (!user) {
@@ -336,9 +340,15 @@ export default function BookingDialog({
     if (!data.serviceLocation?.trim()) {
       toast({
         title: "Service Address Required",
-        description: "Please enter your service address",
+        description: "Please scroll up and enter your service address to continue",
         variant: "destructive",
       });
+      // Focus on the service location field
+      const serviceLocationField = document.querySelector('input[name="serviceLocation"]') as HTMLInputElement;
+      if (serviceLocationField) {
+        serviceLocationField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        serviceLocationField.focus();
+      }
       return;
     }
     
@@ -510,9 +520,13 @@ export default function BookingDialog({
               name="serviceLocation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Address</FormLabel>
+                  <FormLabel>Service Address *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your full address" {...field} />
+                    <Input 
+                      placeholder="Enter your full address (e.g., 123 Main St, City, State 12345)" 
+                      {...field}
+                      value={field.value || prefillData?.selectedLocation?.address || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -671,6 +685,23 @@ export default function BookingDialog({
               type="submit"
               className="w-full"
               disabled={bookingMutation.isPending}
+              onClick={(e) => {
+                console.log("Button clicked");
+                console.log("Form errors:", form.formState.errors);
+                console.log("Form values:", form.getValues());
+                
+                // Check if service location is filled
+                const values = form.getValues();
+                if (!values.serviceLocation?.trim()) {
+                  e.preventDefault();
+                  toast({
+                    title: "Service Address Required",
+                    description: "Please enter your service address to continue booking",
+                    variant: "destructive",
+                  });
+                  return false;
+                }
+              }}
             >
               {bookingMutation.isPending ? (
                 <>
