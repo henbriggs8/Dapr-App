@@ -139,6 +139,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - June 15, 2025. Created comprehensive Admin Dashboard with user management, booking oversight, earnings tracking, and analytics
 - June 16, 2025. Added username authentication tab and fixed admin login with proper password hashing system
 - June 17, 2025. Migrated from in-memory storage to PostgreSQL database with Drizzle ORM and proper database relations
+- June 17, 2025. Fixed price display formatting (converted cents to dollars) and resolved phone verification registration errors
 
 ## User Preferences
 

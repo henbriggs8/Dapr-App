@@ -78,7 +78,12 @@ export default function VerifyScreen() {
           // Create user account with actual registration
           const userData = {
             username: signupData.value,
-            password: "defaultPass123" // In production, this would be handled differently
+            password: "defaultPass123", // In production, this would be handled differently
+            name: "", // Default empty name
+            email: signupData.type === "email" ? signupData.value : "",
+            phone: signupData.type === "phone" ? signupData.value : "",
+            isProvider: false,
+            isAdmin: false
           };
           
           await registerMutation.mutateAsync(userData);
