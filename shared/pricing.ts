@@ -175,9 +175,9 @@ export const getAddOnById = (id: string): AddOnPricing | undefined => {
   return ADD_ON_PRICING.find(addOn => addOn.id === id);
 };
 
-// Display formatting
+// Display formatting - convert cents to dollars
 export const formatPrice = (price: number): string => {
-  return `$${price}`;
+  return `$${(price / 100).toFixed(2)}`;
 };
 
 export const formatPriceRange = (basePrice: number): string => {
