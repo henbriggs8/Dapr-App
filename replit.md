@@ -45,6 +45,13 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - **One-Click Rebooking**: Intelligent rebooking suggestions based on customer history and service patterns
 - **Smart Defaults**: Automatic prefilling of booking details from previous appointments
 
+### Real-time GPS Tracking System
+- **Live Location Updates**: Real-time provider location tracking via WebSocket connections
+- **ETA Calculations**: Dynamic estimated arrival times based on distance and traffic patterns
+- **Customer Interface**: Interactive tracking map with provider location, route visualization, and status updates
+- **Provider Location Broadcasting**: Automatic location updates sent to customers during active bookings
+- **Distance Monitoring**: Real-time distance calculations between provider and customer locations
+
 ### Provider Network
 - **Geolocation**: Real-time provider location tracking and assignment
 - **Status Management**: Online/offline status with last location updates

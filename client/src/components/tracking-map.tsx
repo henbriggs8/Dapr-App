@@ -248,7 +248,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Last Update:</span>
               <span className="text-sm font-medium">
-                {formatLastUpdate(currentTracking?.lastUpdate)}
+                {formatLastUpdate(currentTracking?.lastUpdate || null)}
               </span>
             </div>
 
