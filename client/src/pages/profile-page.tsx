@@ -207,7 +207,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
+    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom) + 20px)' }}>
       <div className="max-w-4xl mx-auto">
         <Card className="mb-8">
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
