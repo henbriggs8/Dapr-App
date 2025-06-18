@@ -109,7 +109,8 @@ export default function BookingScreen() {
     const dates = [];
     const today = new Date();
     
-    for (let i = 0; i < 7; i++) {
+    // Allow booking up to 30 days in advance
+    for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
@@ -130,7 +131,7 @@ export default function BookingScreen() {
   const availableTimeSlots = getAvailableTimeSlots();
 
   return (
-    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
+    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom) + 20px)' }}>
       <div className="max-w-4xl mx-auto">
         
         {/* Header with Back Button */}

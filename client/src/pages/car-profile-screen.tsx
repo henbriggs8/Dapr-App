@@ -108,7 +108,7 @@ export default function CarProfileScreen() {
   const isFormValid = year && make && model && color;
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-12 pb-8">
+    <div className="min-h-screen bg-white px-4 pt-12" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom) + 20px)' }}>
       {/* Header */}
       <div className="flex items-center mb-8">
         <button

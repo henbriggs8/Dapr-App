@@ -1486,6 +1486,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAvailableTimeSlots(date?: string): Promise<TimeSlot[]> {
     if (date) {
+      // Check if time slots exist for this date
+      const existingSlots = await db.select().from(timeSlots).where(eq(timeSlots.date, date));
+      
+      // If no slots exist for this date, create them
+      if (existingSlots.length === 0) {
+        await this.generateTimeSlotsForDate(date);
+      }
+      
       return await db.select().from(timeSlots).where(
         and(
           eq(timeSlots.isAvailable, true),
@@ -1495,6 +1503,23 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await db.select().from(timeSlots).where(eq(timeSlots.isAvailable, true));
+  }
+
+  private async generateTimeSlotsForDate(dateString: string): Promise<void> {
+    // Generate time slots from 8 AM to 4 PM for the given date
+    for (let hour = 8; hour <= 15; hour++) {
+      const startHour = hour.toString().padStart(2, '0');
+      const endHour = (hour + 1).toString().padStart(2, '0');
+      
+      await this.createTimeSlot({
+        date: dateString,
+        startTime: `${startHour}:00`,
+        endTime: `${endHour}:00`,
+        isAvailable: true,
+        maxBookings: 3,
+        currentBookings: 0
+      });
+    }
   }
 
   async createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot> {
