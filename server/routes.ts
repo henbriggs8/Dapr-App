@@ -34,6 +34,65 @@ export function registerRoutes(app: Express): Server {
     res.json(pricing);
   });
 
+  // Weather-based service recommendations
+  app.get("/api/weather/recommendations", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const { lat, lon } = req.query;
+      
+      if (!lat || !lon) {
+        return res.status(400).json({ error: "Latitude and longitude required" });
+      }
+      
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lon as string);
+      
+      if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).json({ error: "Invalid coordinates" });
+      }
+      
+      const { weatherService } = await import('./weather-service');
+      const recommendations = await weatherService.getServiceRecommendations(latitude, longitude);
+      
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Weather recommendations error:", error);
+      res.status(500).json({ error: "Failed to get weather recommendations" });
+    }
+  });
+
+  app.get("/api/weather/current", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const { lat, lon } = req.query;
+      
+      if (!lat || !lon) {
+        return res.status(400).json({ error: "Latitude and longitude required" });
+      }
+      
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lon as string);
+      
+      if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).json({ error: "Invalid coordinates" });
+      }
+      
+      const { weatherService } = await import('./weather-service');
+      const weather = await weatherService.getCurrentWeather(latitude, longitude);
+      
+      if (!weather) {
+        return res.status(503).json({ error: "Weather service unavailable" });
+      }
+      
+      res.json(weather);
+    } catch (error) {
+      console.error("Weather data error:", error);
+      res.status(500).json({ error: "Failed to get weather data" });
+    }
+  });
+
   // GPS Tracking endpoints
   app.post("/api/tracking/enable/:bookingId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);

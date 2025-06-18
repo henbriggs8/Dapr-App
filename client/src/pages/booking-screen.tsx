@@ -14,6 +14,7 @@ import ServiceCards from "@/components/service-cards";
 import { EnhancedServiceSelection } from "@/components/enhanced-service-selection";
 import { OnboardingButton } from "@/components/onboarding-button";
 import QuickRebook from "@/components/quick-rebook";
+import WeatherRecommendations from "@/components/weather-recommendations";
 
 export default function BookingScreen() {
   const { user } = useAuth();
@@ -150,6 +151,20 @@ export default function BookingScreen() {
 
         {/* Onboarding Button */}
         <OnboardingButton />
+
+        {/* Weather-Based Service Recommendations - Disabled for now */}
+        {/* {user?.latitude && user?.longitude && (
+          <WeatherRecommendations
+            latitude={user.latitude}
+            longitude={user.longitude}
+            onServiceSelect={(serviceName) => {
+              const service = services?.find(s => s.name === serviceName);
+              if (service) {
+                handleServiceSelect(service);
+              }
+            }}
+          />
+        )} */}
 
         {/* Quick Rebook Suggestions */}
         {bookings && bookings.length > 0 && (
