@@ -34,8 +34,8 @@ export default function TabNavigation() {
   ];
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 dark:bg-gray-950 dark:border-gray-800 z-50" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
-      <div className="grid grid-cols-4 h-16 pt-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 dark:bg-gray-950 dark:border-gray-800 z-50" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 30px)', paddingTop: '16px' }}>
+      <div className="grid grid-cols-4 h-20">
         {tabs.map((tab) => (
           <button
             key={tab.route}
