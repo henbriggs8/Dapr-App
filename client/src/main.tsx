@@ -15,7 +15,11 @@ if (rootElement) {
   if (PUBLISHABLE_KEY) {
     createRoot(rootElement).render(
       <StrictMode>
-        <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+        <ClerkProvider 
+          publishableKey={PUBLISHABLE_KEY} 
+          afterSignOutUrl="/"
+          allowedRedirectOrigins={[window.location.origin]}
+        >
           <App />
         </ClerkProvider>
       </StrictMode>
