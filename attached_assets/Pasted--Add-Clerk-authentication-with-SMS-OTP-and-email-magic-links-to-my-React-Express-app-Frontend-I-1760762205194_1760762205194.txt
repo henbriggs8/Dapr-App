@@ -1,0 +1,76 @@
+“Add Clerk authentication with SMS OTP and email magic links to my React + Express app.
+
+Frontend
+
+Install Clerk:
+
+npm i @clerk/clerk-react
+
+
+Wrap the app with <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>.
+
+Create an AuthGate that shows:
+
+If signed out: a simple panel with “Continue with phone” (SMS OTP) and “Continue with email” (magic link) using Clerk’s prebuilt <SignIn /> component in modal/page.
+
+If signed in: render the booking flow normally and show a compact <UserButton /> in the header.
+
+Expose a helper hook useAuthToken() that calls getToken() and attaches Authorization: Bearer <jwt> to API calls that need auth (e.g., booking, payment).
+
+Backend
+
+Install Clerk server SDK:
+
+npm i @clerk/clerk-sdk-node
+
+
+Add a middleware requireAuth that verifies the Clerk session on incoming requests:
+
+import { ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
+app.use('/api/secure', ClerkExpressRequireAuth());
+
+
+New route GET /api/secure/me that returns the Clerk user id, email/phone, and whether it’s linked to a Square customer.
+
+New route POST /api/secure/link-square:
+
+If the authenticated user has no squareCustomerId, create (or upsert) a Square Customer with their name, email, phone via the Square Customers API.
+
+Persist the mapping { clerkUserId, squareCustomerId } in a tiny table or JSON file (or Prisma if present).
+
+Return { squareCustomerId }.
+
+Square touchpoints
+
+In booking and payment routes, require auth or accept a guest flow; when authenticated, include squareCustomerId.
+
+If not linked yet, call /api/secure/link-square right after sign-in.
+
+Environment variables (Replit Secrets)
+
+CLERK_PUBLISHABLE_KEY=pk_test_...
+
+CLERK_SECRET_KEY=sk_test_...
+
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_... // also exposed to the Vite client
+
+(you already have SQUARE_* vars)
+
+Allowed origins
+
+In Clerk Dashboard → Instances → Domains & URLs:
+
+Add https://book.dapperpros.com
+
+Add your Replit domain https://dapper-booking.replit.app
+
+Acceptance
+
+Signed-out users see Sign In UI; entering phone → receive SMS OTP → authenticated.
+
+GET /api/secure/me returns user info when signed in; 401 when signed out.
+
+First authenticated action that needs Square triggers /link-square and returns a squareCustomerId.
+
+Booking/payment succeeds with the mapped squareCustomerId.
+”**
