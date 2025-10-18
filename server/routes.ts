@@ -1539,6 +1539,54 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Clerk user sync - creates/fetches user in local DB and establishes session
+  app.post('/api/auth/clerk-sync', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
+    try {
+      if (!req.auth) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const clerkUserId = req.auth.userId;
+      
+      // Get Clerk user info
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      
+      // Check if we already have a user with this Clerk ID (stored in username for now)
+      const clerkUsername = `clerk_${clerkUserId}`;
+      let user = await storage.getUserByUsername(clerkUsername);
+      
+      if (!user) {
+        // Create a new user in our database
+        const email = clerkUser.emailAddresses[0]?.emailAddress;
+        const phone = clerkUser.phoneNumbers[0]?.phoneNumber;
+        const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ');
+        
+        user = await storage.createUser({
+          username: clerkUsername,
+          password: Math.random().toString(36), // Random password, won't be used
+          isProvider: false,
+          isAdmin: false,
+          name: name || 'User',
+          email: email || null,
+          phone: phone || null
+        });
+      }
+      
+      // Establish session for this user
+      if (req.session) {
+        req.session.userId = user.id;
+        await new Promise<void>((resolve, reject) => {
+          req.session!.save((err) => err ? reject(err) : resolve());
+        });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Clerk sync error:', error);
+      res.status(500).json({ error: 'Failed to sync Clerk user' });
+    }
+  });
+
   // Clerk-authenticated secure routes
   app.get('/api/secure/me', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
     try {

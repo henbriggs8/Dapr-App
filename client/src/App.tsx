@@ -9,6 +9,7 @@ import IdVerificationPage from "@/pages/provider-onboarding/id-verification";
 import VehicleSetupPage from "@/pages/provider-onboarding/vehicle-setup";
 import BankInfoPage from "@/pages/provider-onboarding/bank-info";
 import AuthScreen from "@/pages/auth-screen";
+import ClerkAuthPage from "@/pages/clerk-auth-page";
 import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
 import AddressScreen from "@/pages/address-screen";
@@ -38,6 +39,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
 import { HomeWithOnboarding } from "@/components/home-with-onboarding";
 import TabNavigation from "@/components/tab-navigation";
+import { AuthGate } from "./components/auth-gate";
 
 function AdminRoute({
   path,
@@ -106,7 +108,8 @@ function Router() {
     <>
       <Switch>
         {/* Public routes first */}
-        <Route path="/auth" component={AuthScreen} />
+        <Route path="/auth" component={ClerkAuthPage} />
+        <Route path="/auth-legacy" component={AuthScreen} />
         <Route path="/auth-old" component={AuthPage} />
         <Route path="/provider-auth" component={ProviderAuthPage} />
         <Route path="/verify" component={VerifyScreen} />
