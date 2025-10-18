@@ -1135,6 +1135,39 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Booking is already paid');
       }
       
+      // Auto-link Clerk users to Square before payment
+      if (req.user.username.startsWith('clerk_')) {
+        const clerkUserId = req.user.username.substring(6); // Remove 'clerk_' prefix
+        
+        try {
+          // Check if already linked to Square
+          const existingMapping = await storage.getClerkSquareMapping(clerkUserId);
+          
+          if (!existingMapping) {
+            // Create Square customer and link to Clerk
+            const { createSquareCustomer } = await import('./payment-service');
+            const squareCustomerId = await createSquareCustomer(
+              req.user.email || undefined,
+              req.user.phone || undefined,
+              req.user.name || undefined
+            );
+            
+            // Create mapping
+            await storage.createClerkSquareMapping({
+              clerkUserId,
+              squareCustomerId,
+              email: req.user.email || null,
+              phone: req.user.phone || null,
+              name: req.user.name || null,
+              createdAt: new Date().toISOString()
+            });
+          }
+        } catch (squareError) {
+          console.error('Square linking error:', squareError);
+          // Continue with payment even if Square linking fails
+        }
+      }
+      
       // Get service details
       const service = await storage.getServiceById(booking.serviceId);
       if (!service) {

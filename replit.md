@@ -20,7 +20,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - **Language**: TypeScript with ES modules
 - **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
 - **Session Management**: Express sessions with in-memory store
-- **Authentication**: Passport.js with local strategy and bcrypt password hashing
+- **Authentication**: Clerk for modern auth (SMS OTP, email magic links) with legacy Passport.js support
 - **Real-time Communication**: WebSocket server for live updates
 - **File Structure**: Modular routing with separated concerns
 
@@ -158,6 +158,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - June 17, 2025. Fixed navigation tab overlap issues by increasing bottom padding across all pages to prevent content being covered
 - June 17, 2025. Extended booking system to allow advance reservations up to 30 days with dynamic time slot generation
 - June 17, 2025. Implemented dynamic weather-based service suggestions with OpenWeatherMap integration, smart recommendations based on weather conditions, and 5-day forecast display
+- October 18, 2025. Integrated Clerk authentication with SMS OTP and email magic link support, including automatic user synchronization with local database, Clerk-Square customer mapping for payment processing, and backward-compatible integration with existing authentication system
 
 ## User Preferences
 
