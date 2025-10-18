@@ -8,6 +8,31 @@ import { Loader } from '@/components/ui/loader';
 
 export default function ClerkAuthPage() {
   const [, navigate] = useLocation();
+  
+  // Check if Clerk is available
+  const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  
+  // Redirect to legacy auth if Clerk is not configured
+  useEffect(() => {
+    if (!CLERK_AVAILABLE) {
+      navigate('/auth-legacy');
+    }
+  }, [CLERK_AVAILABLE, navigate]);
+  
+  // If Clerk is not available, don't render anything (will redirect)
+  if (!CLERK_AVAILABLE) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+  
+  return <ClerkAuthPageContent />;
+}
+
+function ClerkAuthPageContent() {
+  const [, navigate] = useLocation();
   const { isSignedIn } = useClerkAuth();
   const { user: clerkUser, isLoaded } = useUser();
   const { user: localUser } = useAuth();
