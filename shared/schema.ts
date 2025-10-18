@@ -116,6 +116,16 @@ export const bookings = pgTable("bookings", {
   trackingEnabled: boolean("tracking_enabled").default(false) // Whether customer can track provider
 });
 
+export const clerkSquareMapping = pgTable("clerk_square_mapping", {
+  id: serial("id").primaryKey(),
+  clerkUserId: text("clerk_user_id").notNull().unique(),
+  squareCustomerId: text("square_customer_id").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  name: text("name"),
+  createdAt: text("created_at").notNull()
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
@@ -184,6 +194,9 @@ export const insertServiceSchema = createInsertSchema(services);
 export const insertTimeSlotSchema = createInsertSchema(timeSlots);
 export const insertBookingSchema = createInsertSchema(bookings);
 export const insertVehicleSchema = createInsertSchema(vehicles);
+export const insertClerkSquareMappingSchema = createInsertSchema(clerkSquareMapping).omit({
+  id: true
+});
 
 // Extend the booking schema with validation for location type
 export const bookingFormSchema = insertBookingSchema.extend({
@@ -211,3 +224,5 @@ export type InsertService = z.infer<typeof insertServiceSchema>;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
+export type ClerkSquareMapping = typeof clerkSquareMapping.$inferSelect;
+export type InsertClerkSquareMapping = z.infer<typeof insertClerkSquareMappingSchema>;
