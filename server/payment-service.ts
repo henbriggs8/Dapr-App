@@ -145,3 +145,37 @@ export async function verifyPaymentStatus(paymentId: string): Promise<boolean> {
     return false;
   }
 }
+
+// Create or get a Square Customer
+export async function createSquareCustomer(
+  email?: string,
+  phone?: string,
+  name?: string
+): Promise<string> {
+  try {
+    const customerRequest: any = {
+      idempotencyKey: generateIdempotencyKey()
+    };
+
+    if (email) customerRequest.emailAddress = email;
+    if (phone) customerRequest.phoneNumber = phone;
+    if (name) {
+      const nameParts = name.split(' ');
+      customerRequest.givenName = nameParts[0];
+      if (nameParts.length > 1) {
+        customerRequest.familyName = nameParts.slice(1).join(' ');
+      }
+    }
+
+    const response = await squareClient.customersApi.createCustomer(customerRequest);
+    
+    if (!response.result.customer?.id) {
+      throw new Error('Failed to create Square customer');
+    }
+    
+    return response.result.customer.id;
+  } catch (error: any) {
+    console.error('Square customer creation error:', error);
+    throw new Error(error?.message || 'Failed to create Square customer');
+  }
+}

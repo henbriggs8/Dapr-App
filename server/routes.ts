@@ -5,6 +5,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
+import { clerkAuthMiddleware, ClerkRequest } from "./clerk-middleware";
+import { clerkClient } from "@clerk/clerk-sdk-node";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -1534,6 +1536,78 @@ export function registerRoutes(app: Express): Server {
       res.json(bookings);
     } catch (error) {
       res.status(500).send(error instanceof Error ? error.message : 'Failed to get unassigned bookings');
+    }
+  });
+
+  // Clerk-authenticated secure routes
+  app.get('/api/secure/me', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
+    try {
+      if (!req.auth) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const clerkUserId = req.auth.userId;
+      
+      // Get Clerk user info
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      
+      // Check if user is linked to Square
+      const squareMapping = await storage.getClerkSquareMapping(clerkUserId);
+      
+      res.json({
+        id: clerkUser.id,
+        email: clerkUser.emailAddresses[0]?.emailAddress || null,
+        phone: clerkUser.phoneNumbers[0]?.phoneNumber || null,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        squareCustomerId: squareMapping?.squareCustomerId || null,
+        isLinkedToSquare: !!squareMapping
+      });
+    } catch (error) {
+      console.error('Secure /me error:', error);
+      res.status(500).json({ error: 'Failed to get user info' });
+    }
+  });
+
+  app.post('/api/secure/link-square', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
+    try {
+      if (!req.auth) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const clerkUserId = req.auth.userId;
+      
+      // Check if already linked
+      const existingMapping = await storage.getClerkSquareMapping(clerkUserId);
+      if (existingMapping) {
+        return res.json({ squareCustomerId: existingMapping.squareCustomerId });
+      }
+      
+      // Get Clerk user info
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      
+      const email = clerkUser.emailAddresses[0]?.emailAddress;
+      const phone = clerkUser.phoneNumbers[0]?.phoneNumber;
+      const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ');
+      
+      // Create Square customer
+      const { createSquareCustomer } = await import('./payment-service');
+      const squareCustomerId = await createSquareCustomer(email, phone, name);
+      
+      // Create mapping
+      const mapping = await storage.createClerkSquareMapping({
+        clerkUserId,
+        squareCustomerId,
+        email: email || null,
+        phone: phone || null,
+        name: name || null,
+        createdAt: new Date().toISOString()
+      });
+      
+      res.json({ squareCustomerId: mapping.squareCustomerId });
+    } catch (error) {
+      console.error('Link Square error:', error);
+      res.status(500).json({ error: 'Failed to link Square customer' });
     }
   });
   

@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -147,6 +147,10 @@ export interface IStorage {
     distance: number | null;
     lastUpdate: string | null;
   } | null>;
+  
+  // Clerk-Square mapping methods
+  getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined>;
+  createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping>;
   
   sessionStore: session.Store;
 }
@@ -1322,6 +1326,14 @@ export class MemStorage implements IStorage {
   async getTrackingInfo(bookingId: number): Promise<any> {
     return null;
   }
+
+  // Clerk-Square mapping methods for MemStorage (not implemented)
+  async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {
+    throw new Error("Clerk-Square mapping not implemented in MemStorage");
+  }
+  async createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping> {
+    throw new Error("Clerk-Square mapping not implemented in MemStorage");
+  }
 }
 
 
@@ -2073,6 +2085,22 @@ export class DatabaseStorage implements IStorage {
       distance: booking.distanceToCustomer,
       lastUpdate: booking.lastLocationUpdate
     };
+  }
+
+  async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(clerkSquareMapping)
+      .where(eq(clerkSquareMapping.clerkUserId, clerkUserId));
+    return mapping || undefined;
+  }
+
+  async createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping> {
+    const [newMapping] = await db
+      .insert(clerkSquareMapping)
+      .values(mapping)
+      .returning();
+    return newMapping;
   }
 }
 
