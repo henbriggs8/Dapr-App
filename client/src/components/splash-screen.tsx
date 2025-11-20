@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import logoImage from '@assets/Dapper logo black_1763662840219.png';
+import logoImage from '../../../attached_assets/Dapper logo black_1763662840219.png';
 
 interface SplashScreenProps {
   onComplete: () => void;
