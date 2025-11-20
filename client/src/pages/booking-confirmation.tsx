@@ -3,9 +3,9 @@ import { useLocation, useRoute, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Calendar, Clock, MapPin, Car, ArrowRight, Home, RefreshCw } from "lucide-react";
+import { CheckCircle, Calendar, Clock, MapPin, Car, ArrowRight, Home, RefreshCw, User, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Booking, Service, TimeSlot } from "@shared/schema";
+import { Booking, Service, TimeSlot, User as UserType } from "@shared/schema";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 import confetti from "react-confetti";
 
@@ -48,12 +48,55 @@ export default function BookingConfirmation() {
     enabled: !!bookingId,
   });
 
-  const isLoading = isLoadingBookings || isLoadingServices || isLoadingTimeSlots;
+  // Fetch providers
+  const { data: providers, isLoading: isLoadingProviders } = useQuery<UserType[]>({
+    queryKey: ["/api/providers"],
+    enabled: !!bookingId,
+  });
+
+  const isLoading = isLoadingBookings || isLoadingServices || isLoadingTimeSlots || isLoadingProviders;
+  
+  // Countdown timer state
+  const [timeUntilService, setTimeUntilService] = useState<string>("");
 
   // Find the specific booking
   const booking = bookingId && bookings ? bookings.find(b => b.id === bookingId) : null;
   const service = booking && services ? services.find(s => s.id === booking.serviceId) : null;
   const timeSlot = booking && timeSlots ? timeSlots.find(t => t.id === booking.timeSlotId) : null;
+  const provider = providers && providers.length > 0 ? providers[0] : null;
+
+  // Calculate time until service
+  useEffect(() => {
+    if (!timeSlot) return;
+
+    const calculateTimeRemaining = () => {
+      const serviceDateTime = new Date(`${timeSlot.date}T${timeSlot.startTime}`);
+      const now = new Date();
+      const diff = serviceDateTime.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeUntilService("Service time has passed");
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeUntilService(`${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours > 1 ? 's' : ''}`);
+      } else if (hours > 0) {
+        setTimeUntilService(`${hours} hour${hours > 1 ? 's' : ''}, ${minutes} minute${minutes > 1 ? 's' : ''}`);
+      } else {
+        setTimeUntilService(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+      }
+    };
+
+    calculateTimeRemaining();
+    const interval = setInterval(calculateTimeRemaining, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [timeSlot]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -214,6 +257,61 @@ export default function BookingConfirmation() {
             <span>Processing your request...</span>
           </div>
         </div>
+
+        {/* Countdown Timer Card */}
+        {timeUntilService && (
+          <Card className="mb-6 bg-gradient-to-br from-[#8c52ff] to-purple-600 text-white border-none shadow-lg">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <div className="text-sm font-medium opacity-90 mb-2">Service Appointment In</div>
+                <div className="text-4xl font-bold mb-2">{timeUntilService}</div>
+                <div className="flex items-center justify-center gap-2 text-sm opacity-90">
+                  <Clock className="h-4 w-4" />
+                  <span>{timeSlot && formatDate(timeSlot.date)} at {timeSlot && formatTime(timeSlot.startTime)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Provider Card */}
+        {provider && (
+          <Card className="mb-6 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5 text-[#8c52ff]" />
+                Your Service Professional
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#8c52ff] to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {provider.name ? provider.name.charAt(0) : 'D'}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">{provider.name || 'Dapper Service Pro'}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium">{provider.rating || '5.0'}</span>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      • {provider.ratingCount || '0'} services completed
+                    </span>
+                  </div>
+                  {provider.description && (
+                    <p className="text-sm text-gray-600 mt-2">{provider.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="text-sm text-blue-800">
+                  <strong>{provider.name || 'Your pro'}</strong> will contact you shortly to confirm your appointment and answer any questions.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Booking Details Card */}
         <Card className="mb-6 border-2 border-green-200 shadow-lg">
