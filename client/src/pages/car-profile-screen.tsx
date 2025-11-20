@@ -105,6 +105,14 @@ export default function CarProfileScreen() {
     setLocation("/onboarding/first-wash-offer");
   };
 
+  const handleSkipVehicle = () => {
+    // Set a flag that user doesn't have a vehicle yet
+    localStorage.setItem("skipVehicle", "true");
+    
+    // Navigate to first wash offer screen
+    setLocation("/onboarding/first-wash-offer");
+  };
+
   const isFormValid = year && make && model && color;
 
   return (
@@ -234,17 +242,13 @@ export default function CarProfileScreen() {
           </Button>
         </div>
 
-        {/* Add Another Vehicle Option */}
+        {/* Skip Vehicle Option */}
         <div className="pt-2">
           <button
-            onClick={() => {
-              // For now, just show a message that this feature is coming soon
-              alert("Multiple vehicles support coming soon!");
-            }}
-            className="w-full flex items-center justify-center gap-2 h-12 text-[#8c52ff] font-medium border border-[#8c52ff] rounded-lg hover:bg-[#8c52ff]/5"
+            onClick={handleSkipVehicle}
+            className="w-full h-12 text-gray-600 font-medium hover:bg-gray-50 rounded-lg border border-gray-300"
           >
-            <Plus className="h-5 w-5" />
-            Add Another Vehicle
+            I don't have a vehicle yet
           </button>
         </div>
       </motion.div>
