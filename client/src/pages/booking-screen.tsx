@@ -39,7 +39,7 @@ export default function BookingScreen() {
   
   // Query time slots for the selected date
   const { data: timeSlots, isLoading: timeSlotsLoading } = useQuery<TimeSlot[]>({
-    queryKey: ["/api/timeslots", selectedDate],
+    queryKey: [`/api/timeslots?date=${selectedDate}`, selectedDate],
     enabled: !!selectedDate,
   });
   
