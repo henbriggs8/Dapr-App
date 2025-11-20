@@ -388,7 +388,7 @@ export default function BookingDialog({
     data.addOnTotal = addOnTotal;
     data.vehicleSizeTotal = vehicleSizeTotal;
     data.vehicles = vehicles;
-    data.totalPrice = totalPrice;
+    data.totalPrice = Math.round(totalPrice); // Round to integer for database
     data.status = 'unassigned'; // Set as unassigned for detailer matching
     data.serviceLatitude = parsedAddress?.latitude || null;
     data.serviceLongitude = parsedAddress?.longitude || null;
