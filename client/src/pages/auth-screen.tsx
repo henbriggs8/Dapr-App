@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronDown } from "lucide-react";
+import { SiApple, SiGoogle } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -270,7 +271,7 @@ export default function AuthScreen() {
               onClick={() => console.log("Continue with Apple")}
             >
               <div className="flex items-center justify-center gap-3">
-                <span className="text-lg">🍎</span>
+                <SiApple className="text-xl" />
                 <span>Continue with Apple</span>
               </div>
             </Button>
@@ -281,7 +282,7 @@ export default function AuthScreen() {
               onClick={() => console.log("Continue with Google")}
             >
               <div className="flex items-center justify-center gap-3">
-                <span className="text-lg">🔍</span>
+                <SiGoogle className="text-xl" />
                 <span>Continue with Google</span>
               </div>
             </Button>
