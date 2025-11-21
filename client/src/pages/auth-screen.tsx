@@ -12,12 +12,11 @@ import dapperVanImage from "../dapper-van.png";
 
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"phone" | "email" | "username">("phone");
+  const [activeTab, setActiveTab] = useState<"phone" | "email">("phone");
   const [isLoginMode, setIsLoginMode] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
@@ -27,9 +26,7 @@ export default function AuthScreen() {
       // Handle login with actual authentication
       const credentials = activeTab === "phone" 
         ? { username: phoneNumber, password }
-        : activeTab === "email"
-        ? { username: email, password }
-        : { username: username, password };
+        : { username: email, password };
       
       try {
         await loginMutation.mutateAsync(credentials);
@@ -109,16 +106,6 @@ export default function AuthScreen() {
             >
               Email
             </button>
-            <button
-              onClick={() => setActiveTab("username")}
-              className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-all ${
-                activeTab === "username"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Username
-            </button>
           </div>
 
           {/* Input Section */}
@@ -177,7 +164,7 @@ export default function AuthScreen() {
                   </p>
                 )}
               </motion.div>
-            ) : activeTab === "email" ? (
+            ) : (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -202,32 +189,6 @@ export default function AuthScreen() {
                   />
                 )}
               </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4"
-              >
-                <Input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
-                />
-
-                {/* Password field for login mode */}
-                {isLoginMode && (
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
-                  />
-                )}
-              </motion.div>
             )}
 
             {/* Continue Button */}
@@ -235,12 +196,8 @@ export default function AuthScreen() {
               onClick={handleContinue}
               disabled={
                 (isLoginMode 
-                  ? (activeTab === "phone" ? !phoneNumber || !password : 
-                     activeTab === "email" ? !email || !password : 
-                     !username || !password)
-                  : (activeTab === "phone" ? !phoneNumber : 
-                     activeTab === "email" ? !email : 
-                     !username)) ||
+                  ? (activeTab === "phone" ? !phoneNumber || !password : !email || !password)
+                  : (activeTab === "phone" ? !phoneNumber : !email)) ||
                 loginMutation.isPending || registerMutation.isPending
               }
               className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
