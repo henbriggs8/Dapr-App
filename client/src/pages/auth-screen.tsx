@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import dapperVanImage from "../dapper-van.png";
 
 export default function AuthScreen() {
   const [, setLocation] = useLocation();
@@ -59,18 +60,27 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 pt-12">
+      {/* Header with Back Button - Positioned Absolutely */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 pt-12">
         <button 
           onClick={handleBack}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 hover:bg-white/90 bg-white/80 backdrop-blur-sm rounded-full transition-colors shadow-sm"
         >
           <ArrowLeft className="h-6 w-6 text-gray-700" />
         </button>
-        <h1 className="text-xl font-semibold text-gray-900">
+        <h1 className="text-xl font-semibold text-gray-900 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
           {isLoginMode ? "Log in" : "Sign up"}
         </h1>
         <div className="w-10" /> {/* Spacer for centering */}
+      </div>
+
+      {/* Hero Image */}
+      <div className="w-full h-64 overflow-hidden">
+        <img 
+          src={dapperVanImage} 
+          alt="Dapper mobile car wash van"
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Main Content */}
