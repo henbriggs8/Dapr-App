@@ -1,8 +1,11 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App";
 import { SplashScreen } from "./components/splash-screen";
 import "./index.css";
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function Root() {
   const [showSplash, setShowSplash] = useState(true);
@@ -21,7 +24,13 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
-      <Root />
+      {CLERK_PUBLISHABLE_KEY ? (
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+          <Root />
+        </ClerkProvider>
+      ) : (
+        <Root />
+      )}
     </StrictMode>
   );
 }
