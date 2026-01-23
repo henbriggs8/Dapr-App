@@ -108,7 +108,7 @@ function Router() {
     <>
       <Switch>
         {/* Public routes first */}
-        <Route path="/auth" component={ClerkAuthPage} />
+        <Route path="/auth" component={AuthScreen} />
         <Route path="/auth/:rest*" component={ClerkAuthPage} />
         <Route path="/auth-legacy" component={AuthScreen} />
         <Route path="/auth-old" component={AuthPage} />
