@@ -3,7 +3,7 @@ import { useAuth } from '@clerk/clerk-react';
 export function useAuthToken() {
   const { getToken, isSignedIn } = useAuth();
 
-  const getAuthHeaders = async () => {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (!isSignedIn) {
       return {};
     }
