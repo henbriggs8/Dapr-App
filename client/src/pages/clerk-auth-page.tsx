@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
-import { SignIn, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react';
+import { SignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
-import { useAuthToken } from '@/hooks/useAuthToken';
-import { queryClient } from '@/lib/queryClient';
 import { Loader } from '@/components/ui/loader';
 import dapperVan from '../dapper-van.png';
 
@@ -26,47 +24,35 @@ export default function ClerkAuthPage() {
 
 function ClerkAuthPageContent() {
   const [, navigate] = useLocation();
-  const { isSignedIn } = useClerkAuth();
-  const { user: clerkUser, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useClerkAuth();
   const { user: localUser } = useAuth();
-  const { getAuthHeaders } = useAuthToken();
 
   useEffect(() => {
-    async function syncUser() {
-      if (isSignedIn && clerkUser && !localUser) {
-        try {
-          const headers = await getAuthHeaders();
-
-          const res = await fetch('/api/auth/clerk-sync', {
-            method: 'POST',
-            headers: {
-              ...headers,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (res.ok) {
-            const userData = await res.json();
-            queryClient.setQueryData(['/api/user'], userData);
-            navigate('/');
-          }
-        } catch (error) {
-          console.error('Failed to sync Clerk user:', error);
-        }
-      } else if (localUser) {
-        navigate('/');
-      }
+    if (localUser) {
+      navigate('/');
     }
-
-    if (isLoaded) {
-      syncUser();
-    }
-  }, [isSignedIn, clerkUser, localUser, isLoaded, navigate, getAuthHeaders]);
+  }, [localUser, navigate]);
 
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-950 rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+          <img
+            src={dapperVan}
+            alt="Dapper Mobile Car Wash"
+            className="w-48 h-auto mx-auto mb-4"
+          />
+          <Loader size="lg" />
+          <p className="text-muted-foreground mt-4">Setting up your account...</p>
+        </div>
       </div>
     );
   }
@@ -95,9 +81,8 @@ function ClerkAuthPageContent() {
               card: "shadow-none bg-transparent",
             }
           }}
-          routing="path"
-          path="/auth"
-          fallbackRedirectUrl="/"
+          routing="hash"
+          fallbackRedirectUrl="/auth"
         />
       </div>
     </div>

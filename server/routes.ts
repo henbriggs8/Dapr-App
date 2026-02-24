@@ -1605,13 +1605,13 @@ export function registerRoutes(app: Express): Server {
         });
       }
       
-      // Establish session for this user
-      if (req.session) {
-        req.session.userId = user.id;
-        await new Promise<void>((resolve, reject) => {
-          req.session!.save((err) => err ? reject(err) : resolve());
+      // Establish passport session for this user
+      await new Promise<void>((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) reject(err);
+          else resolve();
         });
-      }
+      });
       
       res.json(user);
     } catch (error) {

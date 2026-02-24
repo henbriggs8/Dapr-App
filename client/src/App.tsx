@@ -31,6 +31,8 @@ import CarSeatCleaning from "@/pages/car-seat-cleaning";
 import FAQ from "@/pages/faq";
 import Corporate from "@/pages/corporate";
 
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -156,14 +158,89 @@ function Router() {
   );
 }
 
+function ClerkSyncWrapper({ children }: { children: ReactNode }) {
+  const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+  if (!CLERK_AVAILABLE) {
+    return <>{children}</>;
+  }
+
+  return <ClerkSyncInner>{children}</ClerkSyncInner>;
+}
+
+function ClerkSyncInner({ children }: { children: ReactNode }) {
+  const { isSignedIn, isLoaded: isAuthLoaded, getToken } = useClerkAuth();
+  const { user: localUser, isLoading: isLocalLoading } = useAuth();
+  const syncingRef = useRef(false);
+  const [syncComplete, setSyncComplete] = useState(false);
+
+  useEffect(() => {
+    async function doSync() {
+      if (syncingRef.current) return;
+      if (!isAuthLoaded) return;
+      if (!isSignedIn) {
+        setSyncComplete(true);
+        return;
+      }
+      if (localUser) {
+        setSyncComplete(true);
+        return;
+      }
+      if (isLocalLoading) return;
+
+      syncingRef.current = true;
+      try {
+        const token = await getToken();
+        if (!token) {
+          setSyncComplete(true);
+          return;
+        }
+
+        const res = await fetch('/api/auth/clerk-sync', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+          queryClient.setQueryData(['/api/user'], userData);
+        }
+      } catch (error) {
+        console.error('Clerk sync error:', error);
+      } finally {
+        syncingRef.current = false;
+        setSyncComplete(true);
+      }
+    }
+
+    doSync();
+  }, [isAuthLoaded, isSignedIn, localUser, isLocalLoading, getToken]);
+
+  if (!syncComplete && isSignedIn && !localUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <WebSocketProvider>
-          <Router />
-          <Toaster />
-        </WebSocketProvider>
+        <ClerkSyncWrapper>
+          <WebSocketProvider>
+            <Router />
+            <Toaster />
+          </WebSocketProvider>
+        </ClerkSyncWrapper>
       </AuthProvider>
     </QueryClientProvider>
   );

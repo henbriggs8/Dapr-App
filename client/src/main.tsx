@@ -8,10 +8,14 @@ import "./index.css";
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function Root() {
-  const [showSplash, setShowSplash] = useState(true);
+  const alreadyShown = sessionStorage.getItem('splash_shown') === 'true';
+  const [showSplash, setShowSplash] = useState(!alreadyShown);
 
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return <SplashScreen onComplete={() => {
+      sessionStorage.setItem('splash_shown', 'true');
+      setShowSplash(false);
+    }} />;
   }
 
   return <App />;
