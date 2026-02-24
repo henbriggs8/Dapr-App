@@ -3,31 +3,24 @@ import { SignIn, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthToken } from '@/hooks/useAuthToken';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { queryClient } from '@/lib/queryClient';
 import { Loader } from '@/components/ui/loader';
+import dapperVan from '../dapper-van.png';
 
 export default function ClerkAuthPage() {
-  const [, navigate] = useLocation();
-  
-  // Check if Clerk is available
   const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-  
-  // Redirect to legacy auth if Clerk is not configured
-  useEffect(() => {
-    if (!CLERK_AVAILABLE) {
-      navigate('/auth-legacy');
-    }
-  }, [CLERK_AVAILABLE, navigate]);
-  
-  // If Clerk is not available, don't render anything (will redirect)
+
   if (!CLERK_AVAILABLE) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader size="lg" />
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Authentication Not Configured</h2>
+          <p className="text-muted-foreground">Please configure Clerk to enable sign-in.</p>
+        </div>
       </div>
     );
   }
-  
+
   return <ClerkAuthPageContent />;
 }
 
@@ -42,10 +35,8 @@ function ClerkAuthPageContent() {
     async function syncUser() {
       if (isSignedIn && clerkUser && !localUser) {
         try {
-          // Get Clerk JWT token
           const headers = await getAuthHeaders();
-          
-          // Sync with local database and create session
+
           const res = await fetch('/api/auth/clerk-sync', {
             method: 'POST',
             headers: {
@@ -56,17 +47,13 @@ function ClerkAuthPageContent() {
 
           if (res.ok) {
             const userData = await res.json();
-            // Update the local user query cache
             queryClient.setQueryData(['/api/user'], userData);
-            
-            // Navigate to home after successful sync
             navigate('/');
           }
         } catch (error) {
           console.error('Failed to sync Clerk user:', error);
         }
       } else if (localUser) {
-        // User is already synced, navigate to home
         navigate('/');
       }
     }
@@ -87,7 +74,12 @@ function ClerkAuthPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-950 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
+          <img
+            src={dapperVan}
+            alt="Dapper Mobile Car Wash"
+            className="w-48 h-auto mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Welcome to Dapper
           </h1>
@@ -95,8 +87,8 @@ function ClerkAuthPageContent() {
             Sign in to book premium car wash services
           </p>
         </div>
-        
-        <SignIn 
+
+        <SignIn
           appearance={{
             elements: {
               rootBox: "w-full",
@@ -105,7 +97,7 @@ function ClerkAuthPageContent() {
           }}
           routing="path"
           path="/auth"
-          afterSignInUrl="/"
+          fallbackRedirectUrl="/"
         />
       </div>
     </div>

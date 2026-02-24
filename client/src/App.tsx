@@ -3,12 +3,10 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import AuthPage from "@/pages/auth-page";
 import ProviderAuthPage from "@/pages/provider-auth-page";
 import IdVerificationPage from "@/pages/provider-onboarding/id-verification";
 import VehicleSetupPage from "@/pages/provider-onboarding/vehicle-setup";
 import BankInfoPage from "@/pages/provider-onboarding/bank-info";
-import AuthScreen from "@/pages/auth-screen";
 import ClerkAuthPage from "@/pages/clerk-auth-page";
 import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
@@ -108,10 +106,8 @@ function Router() {
     <>
       <Switch>
         {/* Public routes first */}
-        <Route path="/auth" component={AuthScreen} />
+        <Route path="/auth" component={ClerkAuthPage} />
         <Route path="/auth/:rest*" component={ClerkAuthPage} />
-        <Route path="/auth-legacy" component={AuthScreen} />
-        <Route path="/auth-old" component={AuthPage} />
         <Route path="/provider-auth" component={ProviderAuthPage} />
         <Route path="/verify" component={VerifyScreen} />
         <Route path="/onboarding/address" component={AddressScreen} />
