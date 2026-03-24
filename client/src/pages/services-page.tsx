@@ -1,24 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
 import { useLocation } from "wouter";
-import { Plus, Droplet, Wrench, Sparkles, Shield, ChevronRight } from "lucide-react";
-
-const addOns = [
-  { name: "Leather Treatment", description: "Deep condition and protect leather surfaces", price: 35, icon: Wrench },
-  { name: "Clay Bar Treatment", description: "Remove embedded contaminants from paint", price: 45, icon: Droplet },
-  { name: "Interior Sanitization", description: "Disinfect all interior surfaces", price: 25, icon: Shield },
-  { name: "Premium Wax", description: "Long-lasting protection with carnauba wax", price: 30, icon: Sparkles },
-];
+import { ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ADD_ONS, getSelectedAddOnIds, saveSelectedAddOnIds } from "@/utils/add-ons";
 
 export default function ServicesPage() {
   const [, setLocation] = useLocation();
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
 
   const { data: services, isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
 
+  // Load persisted add-on selections on mount
+  useEffect(() => {
+    setSelectedAddOns(getSelectedAddOnIds());
+  }, []);
+
   const packages = services?.filter((s) => s.category !== "premium") ?? [];
   const signature = services?.find((s) => s.category === "premium");
+
+  const toggleAddOn = (id: string) => {
+    const updated = selectedAddOns.includes(id)
+      ? selectedAddOns.filter((a) => a !== id)
+      : [...selectedAddOns, id];
+    setSelectedAddOns(updated);
+    saveSelectedAddOnIds(updated);
+  };
 
   return (
     <div
@@ -93,26 +102,35 @@ export default function ServicesPage() {
 
       {/* Add-Ons */}
       <div className="px-6 pt-6">
-        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Add-ons</h2>
-        <div className="border-t border-gray-200">
-          {addOns.map((addon) => (
-            <div
-              key={addon.name}
-              className="flex justify-between items-center py-5 border-b border-gray-200"
-            >
-              <div className="flex-1 min-w-0 pr-4">
-                <h3 className="text-base text-black">{addon.name}</h3>
-                <p className="text-sm text-gray-500 leading-snug mt-0.5">{addon.description}</p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-base font-medium text-black">${addon.price}</span>
-                <button className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-black transition-colors">
-                  <Plus className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Add-ons</h2>
+        <p className="text-xs text-gray-400 mb-4">Select any extras to include with your service</p>
+        <div className="flex flex-wrap gap-2">
+          {ADD_ONS.map((addon) => {
+            const isSelected = selectedAddOns.includes(addon.id);
+            return (
+              <button
+                key={addon.id}
+                onClick={() => toggleAddOn(addon.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                  isSelected
+                    ? "bg-[#8c52ff] border-[#8c52ff] text-white"
+                    : "bg-white border-gray-200 text-black hover:border-gray-400"
+                }`}
+              >
+                {addon.name}
+                <span className={`ml-1.5 text-xs ${isSelected ? "text-purple-200" : "text-gray-400"}`}>
+                  +${addon.price}
+                </span>
+              </button>
+            );
+          })}
         </div>
+        {selectedAddOns.length > 0 && (
+          <p className="text-xs text-[#8c52ff] mt-3 font-medium">
+            {selectedAddOns.length} add-on{selectedAddOns.length > 1 ? "s" : ""} selected · +$
+            {ADD_ONS.filter((a) => selectedAddOns.includes(a.id)).reduce((sum, a) => sum + a.price, 0)} total
+          </p>
+        )}
       </div>
     </div>
   );

@@ -24,6 +24,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
+import { ADD_ONS, getSelectedAddOnIds, clearSelectedAddOns } from "@/utils/add-ons";
 import { useLocation } from "wouter";
 
 interface PrefillData {
@@ -62,20 +63,16 @@ export default function BookingDialog({
   const parsedAddress = savedAddress ? JSON.parse(savedAddress) : null;
   const parsedVehicle = savedVehicle ? JSON.parse(savedVehicle) : null;
   
-  // Define add-ons using centralized pricing
+  // Define add-ons — initialized from services-page selections in localStorage
   const [addOns, setAddOns] = useState<{
     id: string;
     name: string;
     price: number;
     selected: boolean;
-  }[]>([
-    { id: "dog-hair", name: "Dog Hair Removal", price: 20, selected: false },
-    { id: "car-seat", name: "Child Car Seat Steam Clean", price: 30, selected: false },
-    { id: "odor", name: "Odor Eliminator", price: 50, selected: false },
-    { id: "engine", name: "Engine Bay Detail", price: 50, selected: false },
-    { id: "leather", name: "Leather Revive", price: 40, selected: false },
-    { id: "stain", name: "Heavy Stain Removal", price: 50, selected: false },
-  ]);
+  }[]>(() => {
+    const preSelected = getSelectedAddOnIds();
+    return ADD_ONS.map((a) => ({ ...a, selected: preSelected.includes(a.id) }));
+  });
   
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -264,6 +261,9 @@ export default function BookingDialog({
       
       // Store booking data for confirmation page
       localStorage.setItem('latest-booking', JSON.stringify(data));
+      
+      // Clear add-on selections after successful booking
+      clearSelectedAddOns();
       
       // Close dialog
       onClose();
