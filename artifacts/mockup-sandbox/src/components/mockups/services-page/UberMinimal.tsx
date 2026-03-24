@@ -49,7 +49,7 @@ export function UberMinimal() {
                   <div className="text-right">
                     <span className="text-lg font-medium">{service.price}</span>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-black transition-colors" />
+                  <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
                 </div>
               </div>
               <div className="flex justify-between items-center pr-8">
@@ -72,7 +72,7 @@ export function UberMinimal() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-lg font-medium">$299</span>
-              <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
+              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
             </div>
           </div>
           <p className="text-sm text-gray-400 leading-relaxed">
