@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
 import { useLocation } from "wouter";
-import { Plus, Droplet, Wrench, Sparkles, Shield, ChevronRight, CheckCircle2 } from "lucide-react";
-import { formatPrice } from "@shared/pricing";
+import { Plus, Droplet, Wrench, Sparkles, Shield, ChevronRight } from "lucide-react";
 
 const addOns = [
   { name: "Leather Treatment", description: "Deep condition and protect leather surfaces", price: 35, icon: Wrench },
@@ -11,19 +10,15 @@ const addOns = [
   { name: "Premium Wax", description: "Long-lasting protection with carnauba wax", price: 30, icon: Sparkles },
 ];
 
-const signatureFeatures = [
-  "Steam extraction cleaning",
-  "Paint decontamination",
-  "Full interior deep clean & conditioning",
-  "Engine bay detailing",
-];
-
 export default function ServicesPage() {
   const [, setLocation] = useLocation();
 
   const { data: services, isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
+
+  const packages = services?.filter((s) => s.category !== "premium") ?? [];
+  const signature = services?.find((s) => s.category === "premium");
 
   return (
     <div
@@ -50,16 +45,16 @@ export default function ServicesPage() {
               ))}
             </>
           ) : (
-            services?.map((service) => (
+            packages.map((service) => (
               <div
                 key={service.id}
                 className="flex flex-col py-6 border-b border-gray-200 cursor-pointer"
-                onClick={() => setLocation("/")}
+                onClick={() => setLocation("/booking")}
               >
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="text-lg font-medium text-black">{service.name}</h3>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-medium text-black">{formatPrice(service.price)}</span>
+                    <span className="text-lg font-medium text-black">${service.price}</span>
                     <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
                   </div>
                 </div>
@@ -73,33 +68,28 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {/* Signature Package */}
-      <div className="px-6 pt-6 pb-2">
-        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Signature</h2>
-        <div
-          className="bg-gray-950 text-white p-6 cursor-pointer hover:bg-black transition-colors"
-          onClick={() => setLocation("/")}
-        >
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-lg font-medium mb-1">Dapper Signature Detail</h3>
-              <span className="text-xs text-gray-400 font-medium tracking-wide">180 MIN</span>
+      {/* Signature Block */}
+      {signature && (
+        <div className="px-6 pt-6 pb-2">
+          <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Signature</h2>
+          <div
+            className="bg-gray-950 text-white p-6 cursor-pointer hover:bg-black transition-colors"
+            onClick={() => setLocation("/booking")}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-medium mb-1">{signature.name}</h3>
+                <span className="text-xs text-gray-400 font-medium tracking-wide uppercase">{signature.duration} min</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-medium">${signature.price}</span>
+                <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-medium">$299</span>
-              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
-            </div>
+            <p className="text-sm text-gray-400 leading-relaxed">{signature.description}</p>
           </div>
-          <ul className="space-y-2 mb-0">
-            {signatureFeatures.map((feature) => (
-              <li key={feature} className="flex items-center gap-2.5 text-sm text-gray-400">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#8c52ff] shrink-0" />
-                {feature}
-              </li>
-            ))}
-          </ul>
         </div>
-      </div>
+      )}
 
       {/* Add-Ons */}
       <div className="px-6 pt-6">
