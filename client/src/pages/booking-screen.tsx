@@ -122,7 +122,7 @@ export default function BookingScreen() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen pb-32">
         <CarWashSpinner size="lg" showText text="Loading booking options..." />
       </div>
     );
