@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby, Gift, Copy, Share, Home, FileText, Activity, User } from "lucide-react";
+import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby, Gift, Copy, Share, Home, FileText, Activity, User, Droplets } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -51,9 +51,9 @@ export default function HomeScreen() {
   const featureTiles = [
     {
       id: 1,
-      icon: <HelpCircle className="h-6 w-6" />,
-      label: "How It Works",
-      route: "/how-it-works"
+      icon: <Droplets className="h-6 w-6" />,
+      label: "Full Car Cleaning",
+      route: "/services"
     },
     {
       id: 2,
