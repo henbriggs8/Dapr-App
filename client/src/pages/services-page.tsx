@@ -1,37 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Plus, Star, Droplet, Wrench, Sparkles, Clock, CheckCircle2, Shield } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus, Droplet, Wrench, Sparkles, Shield, ChevronRight, CheckCircle2 } from "lucide-react";
 import { formatPrice } from "@shared/pricing";
 
 const addOns = [
-  {
-    name: "Leather Treatment",
-    description: "Deep condition and protect leather surfaces",
-    price: 35,
-    icon: Wrench,
-  },
-  {
-    name: "Clay Bar Treatment",
-    description: "Remove embedded contaminants from paint",
-    price: 45,
-    icon: Droplet,
-  },
-  {
-    name: "Interior Sanitization",
-    description: "Disinfect all interior surfaces",
-    price: 25,
-    icon: Shield,
-  },
-  {
-    name: "Premium Wax",
-    description: "Long-lasting protection with carnauba wax",
-    price: 30,
-    icon: Sparkles,
-  },
+  { name: "Leather Treatment", description: "Deep condition and protect leather surfaces", price: 35, icon: Wrench },
+  { name: "Clay Bar Treatment", description: "Remove embedded contaminants from paint", price: 45, icon: Droplet },
+  { name: "Interior Sanitization", description: "Disinfect all interior surfaces", price: 25, icon: Shield },
+  { name: "Premium Wax", description: "Long-lasting protection with carnauba wax", price: 30, icon: Sparkles },
 ];
 
 const signatureFeatures = [
@@ -42,7 +19,6 @@ const signatureFeatures = [
 ];
 
 export default function ServicesPage() {
-  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: services, isLoading } = useQuery<Service[]>({
@@ -51,154 +27,102 @@ export default function ServicesPage() {
 
   return (
     <div
-      className="w-full min-h-screen bg-white px-4 sm:px-6 lg:px-8 py-6"
+      className="min-h-screen bg-white font-sans"
       style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
     >
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mb-8"
-      >
-        <p className="text-xs font-semibold tracking-widest text-[#8c52ff] uppercase mb-1">
-          What we offer
-        </p>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Services</h1>
-      </motion.div>
+      <div className="pt-14 pb-8 px-6 border-b border-gray-200">
+        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapper</p>
+        <h1 className="text-3xl font-medium tracking-tight text-black">Services</h1>
+      </div>
 
-      <div className="space-y-10">
-        {/* Core Services */}
-        <section>
-          <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">
-            Core Packages
-          </h2>
-
+      {/* Core Packages */}
+      <div className="px-6 pt-6 pb-2">
+        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Packages</h2>
+        <div className="border-t border-gray-200">
           {isLoading ? (
-            <div className="space-y-3">
+            <>
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-28 rounded-2xl bg-gray-100 animate-pulse" />
+                <div key={i} className="py-6 border-b border-gray-200">
+                  <div className="h-4 bg-gray-100 rounded w-1/3 mb-2 animate-pulse" />
+                  <div className="h-3 bg-gray-100 rounded w-2/3 animate-pulse" />
+                </div>
               ))}
-            </div>
+            </>
           ) : (
-            <div className="space-y-3">
-              {services?.map((service, index) => (
-                <motion.div
-                  key={service.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                  className="group flex items-center justify-between p-5 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#8c52ff]/30 hover:shadow-sm transition-all duration-200"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900 text-base">{service.name}</h3>
-                    </div>
-                    <p className="text-sm text-gray-500 leading-snug line-clamp-1">
-                      {service.description}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-400">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{service.duration} min</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2 ml-4 shrink-0">
-                    <span className="text-lg font-bold text-gray-900">
-                      {formatPrice(service.price)}
-                    </span>
-                    <Button
-                      size="sm"
-                      className="bg-[#8c52ff] hover:bg-[#7b40f0] text-white text-xs px-4 rounded-full"
-                      onClick={() => setLocation("/")}
-                    >
-                      Book
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Signature Detail */}
-        <section>
-          <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">
-            Signature Package
-          </h2>
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="rounded-2xl bg-[#1a0a3c] p-6 text-white relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-40 h-40 bg-[#8c52ff]/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl pointer-events-none" />
-
-            <div className="relative">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-[#c4a0ff] text-xs font-semibold tracking-widest uppercase mb-1">
-                    Best Value
-                  </p>
-                  <h3 className="text-xl font-bold">Dapper Signature Detail</h3>
-                  <p className="text-white/60 text-sm mt-0.5">3-hour comprehensive package</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">$299</div>
-                  <div className="text-white/50 text-xs">180 min</div>
-                </div>
-              </div>
-
-              <ul className="space-y-2 mb-5">
-                {signatureFeatures.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-white/80">
-                    <CheckCircle2 className="h-4 w-4 text-[#c4a0ff] shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                className="w-full bg-[#8c52ff] hover:bg-[#7b40f0] text-white rounded-full font-semibold"
+            services?.map((service) => (
+              <div
+                key={service.id}
+                className="flex flex-col py-6 border-b border-gray-200 cursor-pointer"
                 onClick={() => setLocation("/")}
               >
-                Book Signature Detail
-              </Button>
-            </div>
-          </motion.div>
-        </section>
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="text-lg font-medium text-black">{service.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-medium text-black">{formatPrice(service.price)}</span>
+                    <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pr-8">
+                  <p className="text-sm text-gray-500 leading-relaxed max-w-[80%]">{service.description}</p>
+                  <span className="text-xs text-gray-400 font-medium">{service.duration} min</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
-        {/* Add-Ons */}
-        <section>
-          <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">
-            Add-Ons
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {addOns.map((addon, index) => (
-              <motion.div
-                key={addon.name}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.07 }}
-                className="flex flex-col p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-[#8c52ff]/30 hover:shadow-sm transition-all duration-200"
-              >
-                <div className="bg-[#8c52ff]/10 w-9 h-9 rounded-xl flex items-center justify-center mb-3">
-                  <addon.icon className="h-4.5 w-4.5 text-[#8c52ff]" />
-                </div>
-                <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-0.5">
-                  {addon.name}
-                </h3>
-                <p className="text-xs text-gray-400 leading-snug flex-1">{addon.description}</p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="font-bold text-gray-900 text-sm">${addon.price}</span>
-                  <button className="flex items-center gap-1 text-[#8c52ff] text-xs font-semibold">
-                    <Plus className="h-3.5 w-3.5" /> Add
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+      {/* Signature Package */}
+      <div className="px-6 pt-6 pb-2">
+        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Signature</h2>
+        <div
+          className="bg-gray-950 text-white p-6 cursor-pointer hover:bg-black transition-colors"
+          onClick={() => setLocation("/")}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-lg font-medium mb-1">Dapper Signature Detail</h3>
+              <span className="text-xs text-gray-400 font-medium tracking-wide">180 MIN</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-medium">$299</span>
+              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+            </div>
           </div>
-        </section>
+          <ul className="space-y-2 mb-0">
+            {signatureFeatures.map((feature) => (
+              <li key={feature} className="flex items-center gap-2.5 text-sm text-gray-400">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#8c52ff] shrink-0" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Add-Ons */}
+      <div className="px-6 pt-6">
+        <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Add-ons</h2>
+        <div className="border-t border-gray-200">
+          {addOns.map((addon) => (
+            <div
+              key={addon.name}
+              className="flex justify-between items-center py-5 border-b border-gray-200"
+            >
+              <div className="flex-1 min-w-0 pr-4">
+                <h3 className="text-base text-black">{addon.name}</h3>
+                <p className="text-sm text-gray-500 leading-snug mt-0.5">{addon.description}</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-base font-medium text-black">${addon.price}</span>
+                <button className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-black transition-colors">
+                  <Plus className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

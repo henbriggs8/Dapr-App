@@ -1,66 +1,41 @@
 import { useLocation } from "wouter";
-import { CalendarCheck, Sparkles, Activity, User, MapPin } from "lucide-react";
-import { motion } from "framer-motion";
+import { CalendarCheck, MapPin, Activity, User } from "lucide-react";
 
 export default function TabNavigation() {
   const [location, setLocation] = useLocation();
-  
-  // Define tab items with their routes, icons, and labels
+
   const tabs = [
-    {
-      icon: CalendarCheck,
-      label: "Book",
-      route: "/booking",
-      active: location === "/booking"
-    },
-    {
-      icon: MapPin,
-      label: "Track",
-      route: "/tracking",
-      active: location === "/tracking"
-    },
-    {
-      icon: Activity,
-      label: "Activity",
-      route: "/activity",
-      active: location === "/activity"
-    },
-    {
-      icon: User,
-      label: "Profile",
-      route: "/profile",
-      active: location === "/profile"
-    }
+    { icon: CalendarCheck, label: "Book", route: "/booking" },
+    { icon: MapPin, label: "Track", route: "/tracking" },
+    { icon: Activity, label: "Activity", route: "/activity" },
+    { icon: User, label: "Profile", route: "/profile" },
   ];
-  
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 dark:bg-gray-950 dark:border-gray-800 z-50" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 30px)', paddingTop: '16px' }}>
-      <div className="grid grid-cols-4 h-20">
-        {tabs.map((tab) => (
-          <button
-            key={tab.route}
-            className="flex flex-col items-center justify-center relative"
-            onClick={() => setLocation(tab.route)}
-          >
-            <div 
-              className={`flex flex-col items-center justify-center ${
-                tab.active ? "text-[#8c52ff]" : "text-muted-foreground"
-              }`}
+    <div
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)", paddingTop: "10px" }}
+    >
+      <div className="grid grid-cols-4">
+        {tabs.map((tab) => {
+          const active = location === tab.route;
+          return (
+            <button
+              key={tab.route}
+              className="flex flex-col items-center justify-center py-2 gap-1"
+              onClick={() => setLocation(tab.route)}
             >
-              {tab.active && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute -top-3 w-12 h-1 bg-[#8c52ff] rounded-b-full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                />
-              )}
-              <tab.icon className={`h-5 w-5 mb-1 ${tab.active ? 'text-[#8c52ff]' : ''}`} />
-              <span className="text-xs">{tab.label}</span>
-            </div>
-          </button>
-        ))}
+              <tab.icon
+                className={`h-5 w-5 ${active ? "text-[#8c52ff]" : "text-gray-400"}`}
+              />
+              <span
+                className={`text-xs font-medium ${active ? "text-[#8c52ff]" : "text-gray-400"}`}
+              >
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

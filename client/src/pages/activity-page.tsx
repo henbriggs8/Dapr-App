@@ -1,263 +1,241 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Bell, Gift, MessageSquare, ChevronRight } from "lucide-react";
-import { formatDistance } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { useLocation } from "wouter";
+
+const notifications = [
+  {
+    id: 1,
+    title: "Booking Reminder",
+    message: "Your car wash appointment is tomorrow at 2:00 PM",
+    time: "2 hours ago",
+    read: false,
+    type: "reminder",
+  },
+  {
+    id: 2,
+    title: "Service Update",
+    message: "Your car wash service has been completed! Rate your experience.",
+    time: "1 day ago",
+    read: true,
+    type: "update",
+  },
+  {
+    id: 3,
+    title: "Special Offer",
+    message: "Get 15% off your next premium detail this week only!",
+    time: "3 days ago",
+    read: true,
+    type: "promotion",
+  },
+];
+
+const loyaltyPoints = 750;
+const nextRewardAt = 1000;
+const loyaltyTier = "Silver";
+
+const loyaltyBenefits = [
+  { emoji: "🎁", title: "Free Birthday Detail", description: "One free Basic wash during your birthday month" },
+  { emoji: "💰", title: "10% Off Every 5th Wash", description: "Automatic discount applied to qualifying bookings" },
+  { emoji: "⚡", title: "Priority Booking", description: "Access to premium time slots before they're released" },
+];
+
+const statusColors: Record<string, string> = {
+  completed: "bg-black",
+  in_progress: "bg-gray-500",
+  cancelled: "bg-gray-300",
+  confirmed: "bg-gray-400",
+};
 
 export default function ActivityPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("bookings");
-  
-  // Query bookings
+  const [activeTab, setActiveTab] = useState<"bookings" | "messages" | "loyalty">("bookings");
+
   const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
     enabled: !!user,
   });
-  
-  // Query services (to get service details for bookings)
-  const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
-  });
-  
-  // Query time slots (to get time details for bookings)
-  const { data: timeSlots, isLoading: timeSlotsLoading } = useQuery<TimeSlot[]>({
-    queryKey: ["/api/timeslots"],
-  });
-  
-  const isLoading = bookingsLoading || servicesLoading || timeSlotsLoading;
-  
+  const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: timeSlots } = useQuery<TimeSlot[]>({ queryKey: ["/api/timeslots"] });
+
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
   };
-  
-  // Mock notifications for demo purposes
-  const notifications = [
-    {
-      id: 1,
-      title: "Booking Reminder",
-      message: "Your car wash appointment is tomorrow at 2:00 PM",
-      time: "2 hours ago",
-      read: false,
-      type: "reminder"
-    },
-    {
-      id: 2,
-      title: "Service Update",
-      message: "Your car wash service has been completed! Rate your experience.",
-      time: "1 day ago",
-      read: true,
-      type: "update"
-    },
-    {
-      id: 3,
-      title: "Special Offer",
-      message: "Get 15% off your next premium detail this week only!",
-      time: "3 days ago",
-      read: true,
-      type: "promotion"
-    }
+
+  const tabs = [
+    { id: "bookings" as const, label: "Bookings" },
+    { id: "messages" as const, label: "Messages" },
+    { id: "loyalty" as const, label: "Loyalty" },
   ];
-  
-  // Mock loyalty data
-  const loyaltyPoints = 750;
-  const nextRewardAt = 1000;
-  const loyaltyTier = "Silver";
-  
+
   return (
-    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4 pb-20 sm:pb-24" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
-      <h1 className="text-3xl font-bold mb-2">Activity</h1>
-      <p className="text-muted-foreground mb-6">Track your bookings and rewards</p>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full mb-6">
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          <TabsTrigger value="loyalty">Loyalty</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="bookings" className="mt-0">
-          {isLoading ? (
-            <div className="text-center py-8">Loading your bookings...</div>
+    <div
+      className="min-h-screen bg-white font-sans"
+      style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+    >
+      {/* Header */}
+      <div className="pt-14 pb-6 px-6 border-b border-gray-200">
+        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapper</p>
+        <h1 className="text-3xl font-medium tracking-tight text-black">Activity</h1>
+      </div>
+
+      {/* Tab Switcher */}
+      <div className="flex border-b border-gray-200 px-6">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`mr-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-black text-black"
+                : "border-transparent text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Bookings Tab */}
+      {activeTab === "bookings" && (
+        <div className="px-6 pt-6">
+          {bookingsLoading ? (
+            <div className="border-t border-gray-200">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="py-6 border-b border-gray-200">
+                  <div className="h-4 bg-gray-100 rounded w-1/3 mb-2 animate-pulse" />
+                  <div className="h-3 bg-gray-100 rounded w-2/3 animate-pulse" />
+                </div>
+              ))}
+            </div>
           ) : bookings && bookings.length > 0 ? (
-            <div className="space-y-4">
+            <div className="border-t border-gray-200">
               {bookings.map((booking) => {
-                const service = services?.find(s => s.id === booking.serviceId);
-                const timeSlot = timeSlots?.find(t => t.id === booking.timeSlotId);
-                
+                const service = services?.find((s) => s.id === booking.serviceId);
+                const timeSlot = timeSlots?.find((t) => t.id === booking.timeSlotId);
                 return (
-                  <Card 
-                    key={booking.id} 
-                    className="cursor-pointer border hover:border-[#8c52ff] transition-all"
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between py-5 border-b border-gray-200 cursor-pointer"
                     onClick={() => setLocation(`/booking?id=${booking.id}`)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className={`mt-1 rounded-full w-3 h-3 ${
-                            booking.status === 'completed' ? 'bg-green-500' : 
-                            booking.status === 'in_progress' ? 'bg-blue-500' : 
-                            booking.status === 'cancelled' ? 'bg-red-500' : 
-                            'bg-amber-500'
-                          }`} />
-                          <div>
-                            <h3 className="font-medium">{service?.name}</h3>
-                            <p className="text-sm text-muted-foreground flex items-center mt-1">
-                              <Calendar className="h-3 w-3 inline mr-1" />
-                              {timeSlot ? formatDate(timeSlot.date) : 'Loading...'}
-                              {timeSlot && (
-                                <>
-                                  <span className="mx-1">•</span>
-                                  <Clock className="h-3 w-3 inline mx-1" />
-                                  {timeSlot.startTime}
-                                </>
-                              )}
-                            </p>
-                            {booking.status === 'in_progress' && (
-                              <div className="mt-2">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span>Service in progress</span>
-                                  <span>75%</span>
-                                </div>
-                                <Progress value={75} className="h-2" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <Badge 
-                            variant={
-                              booking.status === 'completed' ? 'default' : 
-                              booking.status === 'in_progress' ? 'secondary' : 
-                              booking.status === 'cancelled' ? 'destructive' : 
-                              'outline'
-                            }
-                            className={booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''}
-                          >
-                            {booking.status.replace('_', ' ')}
-                          </Badge>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground ml-2" />
-                        </div>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-1.5 rounded-full w-2 h-2 shrink-0 ${statusColors[booking.status] || "bg-gray-300"}`}
+                      />
+                      <div>
+                        <h3 className="text-base font-medium text-black">{service?.name || "Service"}</h3>
+                        <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {timeSlot ? formatDate(timeSlot.date) : "—"}
+                          {timeSlot && (
+                            <>
+                              <span className="mx-0.5">·</span>
+                              <Clock className="h-3 w-3" />
+                              {timeSlot.startTime}
+                            </>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5 capitalize">
+                          {booking.status.replace("_", " ")}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                  </div>
                 );
               })}
             </div>
           ) : (
-            <Card className="border-dashed border-2">
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground mb-4">You don't have any bookings yet</p>
-                <Button onClick={() => setLocation("/")}>Book a Service</Button>
-              </CardContent>
-            </Card>
+            <div className="py-16 text-center border-t border-gray-200">
+              <p className="text-gray-500 mb-4">No bookings yet</p>
+              <button
+                onClick={() => setLocation("/")}
+                className="text-sm font-medium text-[#8c52ff] underline underline-offset-4"
+              >
+                Book a service
+              </button>
+            </div>
           )}
-        </TabsContent>
-        
-        <TabsContent value="messages" className="mt-0">
-          <div className="space-y-4">
-            {notifications.map((notification) => (
-              <Card key={notification.id} className={`border ${!notification.read ? 'bg-muted/30 border-[#8c52ff]/30' : ''}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className={`rounded-full p-2 ${
-                      notification.type === 'reminder' ? 'bg-blue-100 text-blue-500' :
-                      notification.type === 'update' ? 'bg-green-100 text-green-500' :
-                      'bg-amber-100 text-amber-500'
-                    }`}>
-                      {notification.type === 'reminder' ? (
-                        <Bell className="h-5 w-5" />
-                      ) : notification.type === 'update' ? (
-                        <MessageSquare className="h-5 w-5" />
-                      ) : (
-                        <Gift className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium">{notification.title}</h3>
-                        <span className="text-xs text-muted-foreground">{notification.time}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-                    </div>
+        </div>
+      )}
+
+      {/* Messages Tab */}
+      {activeTab === "messages" && (
+        <div className="px-6 pt-6">
+          <div className="border-t border-gray-200">
+            {notifications.map((n) => (
+              <div
+                key={n.id}
+                className="flex items-start gap-4 py-5 border-b border-gray-200"
+              >
+                <div className="w-2 h-2 rounded-full mt-2 shrink-0 bg-gray-300">
+                  {!n.read && <div className="w-2 h-2 rounded-full bg-black" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <h3 className={`text-sm font-medium ${!n.read ? "text-black" : "text-gray-600"}`}>
+                      {n.title}
+                    </h3>
+                    <span className="text-xs text-gray-400 ml-3 shrink-0">{n.time}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
+                </div>
+              </div>
             ))}
           </div>
-        </TabsContent>
-        
-        <TabsContent value="loyalty" className="mt-0">
-          <Card className="mb-6 bg-gradient-to-r from-[#8c52ff] to-[#5e17eb] text-white">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Dapper Rewards</span>
-                <span className="text-3xl">{loyaltyPoints}</span>
-              </CardTitle>
-              <CardDescription className="text-white/80">
-                {loyaltyTier} Member
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-sm flex justify-between">
-                  <span>Next reward at {nextRewardAt} points</span>
-                  <span>{Math.round((loyaltyPoints / nextRewardAt) * 100)}%</span>
-                </div>
-                <Progress value={(loyaltyPoints / nextRewardAt) * 100} className="h-2 bg-white/20" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <h3 className="font-semibold text-lg mb-4">Your Benefits</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Avatar className="h-10 w-10 border border-[#8c52ff]">
-                <AvatarFallback className="bg-[#8c52ff]/20 text-[#8c52ff]">🎁</AvatarFallback>
-              </Avatar>
+        </div>
+      )}
+
+      {/* Loyalty Tab */}
+      {activeTab === "loyalty" && (
+        <div className="px-6 pt-6">
+          {/* Points Block */}
+          <div className="bg-gray-950 text-white p-6 mb-6">
+            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-3">Dapper Rewards</p>
+            <div className="flex justify-between items-baseline mb-4">
               <div>
-                <h4 className="font-medium">Free Birthday Detail</h4>
-                <p className="text-sm text-muted-foreground">
-                  One free Basic wash during your birthday month
-                </p>
+                <span className="text-4xl font-medium">{loyaltyPoints}</span>
+                <span className="text-gray-400 text-sm ml-2">pts</span>
               </div>
+              <span className="text-sm text-gray-400">{loyaltyTier} Member</span>
             </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Avatar className="h-10 w-10 border border-[#8c52ff]">
-                <AvatarFallback className="bg-[#8c52ff]/20 text-[#8c52ff]">💰</AvatarFallback>
-              </Avatar>
-              <div>
-                <h4 className="font-medium">10% Off Every 5th Wash</h4>
-                <p className="text-sm text-muted-foreground">
-                  Automatic discount applied to qualifying bookings
-                </p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Next reward at {nextRewardAt} points</span>
+                <span>{Math.round((loyaltyPoints / nextRewardAt) * 100)}%</span>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Avatar className="h-10 w-10 border border-[#8c52ff]">
-                <AvatarFallback className="bg-[#8c52ff]/20 text-[#8c52ff]">⚡</AvatarFallback>
-              </Avatar>
-              <div>
-                <h4 className="font-medium">Priority Booking</h4>
-                <p className="text-sm text-muted-foreground">
-                  Access to premium time slots before they're released
-                </p>
+              <div className="w-full h-1 bg-gray-800 rounded-full">
+                <div
+                  className="h-1 bg-white rounded-full"
+                  style={{ width: `${(loyaltyPoints / nextRewardAt) * 100}%` }}
+                />
               </div>
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          {/* Benefits */}
+          <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Your Benefits</h3>
+          <div className="border-t border-gray-200">
+            {loyaltyBenefits.map((benefit) => (
+              <div key={benefit.title} className="flex items-start gap-4 py-5 border-b border-gray-200">
+                <span className="text-xl mt-0.5">{benefit.emoji}</span>
+                <div>
+                  <h4 className="text-base font-medium text-black">{benefit.title}</h4>
+                  <p className="text-sm text-gray-500 mt-0.5">{benefit.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

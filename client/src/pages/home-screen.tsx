@@ -1,6 +1,5 @@
 import { useLocation } from "wouter";
-import { Calendar, HelpCircle, Building2, Car, Sparkles, Baby, Gift, Copy, Share, Home, FileText, Activity, User, Droplets } from "lucide-react";
-import { motion } from "framer-motion";
+import { Calendar, Building2, Car, Sparkles, Baby, HelpCircle, Gift, Copy, Share, Droplets, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,16 +16,9 @@ export default function HomeScreen() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
-      toast({
-        title: "Link copied!",
-        description: "Referral link copied to clipboard",
-      });
-    } catch (err) {
-      toast({
-        title: "Copy failed",
-        description: "Unable to copy link to clipboard",
-        variant: "destructive",
-      });
+      toast({ title: "Link copied!", description: "Referral link copied to clipboard" });
+    } catch {
+      toast({ title: "Copy failed", description: "Unable to copy link", variant: "destructive" });
     }
   };
 
@@ -38,264 +30,119 @@ export default function HomeScreen() {
           text: "Join Dapper and get $20 off your first mobile car wash service.",
           url: referralLink,
         });
-      } catch (err) {
-        // User cancelled sharing or sharing failed
+      } catch {
         copyToClipboard();
       }
     } else {
-      // Fallback to copy
       copyToClipboard();
     }
   };
 
   const featureTiles = [
-    {
-      id: 1,
-      icon: <Droplets className="h-6 w-6" />,
-      label: "Full Car Cleaning",
-      route: "/services"
-    },
-    {
-      id: 2,
-      icon: <Car className="h-6 w-6" />,
-      label: "Interior Cleaning",
-      route: "/interior-cleaning"
-    },
-    {
-      id: 3,
-      icon: <Sparkles className="h-6 w-6" />,
-      label: "Exterior Cleaning",
-      route: "/exterior-cleaning"
-    },
-    {
-      id: 4,
-      icon: <Baby className="h-6 w-6" />,
-      label: "Child Car Seat Cleaning",
-      route: "/car-seat-cleaning"
-    },
-    {
-      id: 5,
-      icon: <HelpCircle className="h-6 w-6" />,
-      label: "FAQ",
-      route: "/faq"
-    },
-    {
-      id: 6,
-      icon: <Building2 className="h-6 w-6" />,
-      label: "Corporate Packages",
-      route: "/corporate"
-    }
+    { icon: Droplets, label: "Full Car Cleaning", route: "/services" },
+    { icon: Car, label: "Interior Cleaning", route: "/interior-cleaning" },
+    { icon: Sparkles, label: "Exterior Cleaning", route: "/exterior-cleaning" },
+    { icon: Baby, label: "Child Car Seat Cleaning", route: "/car-seat-cleaning" },
+    { icon: HelpCircle, label: "FAQ", route: "/faq" },
+    { icon: Building2, label: "Corporate Packages", route: "/corporate" },
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <div className="relative h-64 overflow-hidden">
-        <img 
-          src="/hero-final.jpg" 
-          alt="Professional car detailing service with Dapper branding"
+    <div className="min-h-screen bg-white font-sans" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
+      {/* Hero */}
+      <div className="relative h-56 overflow-hidden">
+        <img
+          src="/hero-final.jpg"
+          alt="Professional car detailing"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <div className="text-center px-4">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-3xl md:text-4xl font-bold text-white mb-2"
-            >
-              Redefining the Car Wash
-            </motion.h1>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-2xl"
-            >
-              🚗🧼
-            </motion.div>
+        <div className="absolute inset-0 bg-black/50 flex flex-col justify-end px-6 pb-6">
+          <p className="text-xs font-semibold tracking-widest text-white/60 uppercase mb-1">Dapper</p>
+          <h1 className="text-2xl font-medium text-white tracking-tight">Redefining the Car Wash</h1>
+        </div>
+      </div>
+
+      {/* Book CTA */}
+      <div className="px-6 pt-8 pb-6 border-b border-gray-200">
+        <button
+          onClick={() => setLocation("/booking")}
+          className="w-full flex items-center justify-between group"
+        >
+          <div>
+            <h2 className="text-lg font-medium text-black">Get a Wash</h2>
+            <p className="text-sm text-gray-500 mt-0.5">In as little as 15 minutes</p>
           </div>
-        </div>
-      </div>
-
-      {/* Header Area */}
-      <div className="px-4 pt-8 pb-6">
-        <div className="max-w-md mx-auto">
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            onClick={() => setLocation("/booking")}
-            className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-6 text-left transition-colors duration-200 active:scale-95 transform"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="bg-[#8c52ff] rounded-full p-3">
-                <Calendar className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Tap to Get A Wash</h2>
-                <p className="text-gray-600 text-sm mt-1">in as little as 15 minutes</p>
-              </div>
-            </div>
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Feature Tiles Section */}
-      <div className="px-4 pb-20">
-        <div className="max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {featureTiles.map((tile, index) => (
-              <motion.button
-                key={tile.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                onClick={() => setLocation(tile.route)}
-                className="bg-white border border-gray-200 hover:border-[#8c52ff] rounded-xl p-4 text-left transition-all duration-200 hover:shadow-md active:scale-95 transform"
-              >
-                <div className="flex flex-col items-start space-y-3">
-                  <div className="bg-gray-100 rounded-full p-2 text-[#8c52ff]">
-                    {tile.icon}
-                  </div>
-                  <span className="font-semibold text-gray-900 text-sm leading-tight">
-                    {tile.label}
-                  </span>
-                </div>
-              </motion.button>
-            ))}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-400">Book now</span>
+            <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
           </div>
+        </button>
+      </div>
+
+      {/* Services List */}
+      <div className="px-6 pt-6 pb-2">
+        <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Services</h3>
+        <div className="border-t border-gray-200">
+          {featureTiles.map((tile) => (
+            <button
+              key={tile.route}
+              onClick={() => setLocation(tile.route)}
+              className="w-full flex items-center justify-between py-5 border-b border-gray-200 group"
+            >
+              <div className="flex items-center gap-4">
+                <tile.icon className="h-5 w-5 text-gray-400" />
+                <span className="text-base text-black">{tile.label}</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Referral Banner */}
-      <div className="px-4 pb-20">
-        <div className="max-w-md mx-auto">
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            onClick={() => setShowReferralModal(true)}
-            className="w-full bg-gradient-to-r from-[#8c52ff] to-[#7c47eb] hover:from-[#7c47eb] hover:to-[#6b3bdf] rounded-xl p-6 text-white transition-all duration-200 active:scale-95 transform shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="bg-white/20 rounded-full p-3">
-                  <Gift className="h-6 w-6 text-white" />
-                </div>
-                <div className="text-left">
-                  <h3 className="text-xl font-bold">Give $20, Get $20</h3>
-                  <p className="text-white/90 text-sm">Refer friends and both save!</p>
-                </div>
-              </div>
-              <div className="text-white/80">
-                <Share className="h-5 w-5" />
-              </div>
-            </div>
-          </motion.button>
-        </div>
+      {/* Referral Strip */}
+      <div className="px-6 pt-6">
+        <button
+          onClick={() => setShowReferralModal(true)}
+          className="w-full bg-gray-950 text-white p-5 flex items-center justify-between hover:bg-black transition-colors"
+        >
+          <div className="text-left">
+            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-1">Refer a Friend</p>
+            <h3 className="text-base font-medium">Give $20, Get $20</h3>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+        </button>
       </div>
 
       {/* Referral Modal */}
       <Dialog open={showReferralModal} onOpenChange={setShowReferralModal}>
-        <DialogContent className="mx-4 rounded-xl">
+        <DialogContent className="mx-4 rounded-none border-gray-200">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold">
-              Give $20, Get $20
-            </DialogTitle>
+            <DialogTitle className="text-xl font-medium">Give $20, Get $20</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-6 pt-4">
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-[#8c52ff] to-[#7c47eb] rounded-full p-4 w-16 h-16 mx-auto mb-4">
-                <Gift className="h-8 w-8 text-white" />
-              </div>
-              <p className="text-gray-600">
-                Share your referral link and both you and your friend get $20 off your next wash!
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Your referral link:</label>
+          <div className="space-y-5 pt-2">
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Share your referral link and both you and your friend get $20 off your next wash.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Your referral link</label>
               <div className="flex gap-2">
-                <Input 
-                  value={referralLink} 
-                  readOnly 
-                  className="flex-1 bg-gray-50"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-2"
-                >
+                <Input value={referralLink} readOnly className="flex-1 rounded-none border-gray-200 bg-gray-50 text-sm" />
+                <Button variant="outline" size="sm" onClick={copyToClipboard} className="rounded-none border-gray-200">
                   <Copy className="h-4 w-4" />
-                  Copy
                 </Button>
               </div>
             </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={shareLink}
-                className="flex-1 bg-[#8c52ff] hover:bg-[#7c47eb] text-white"
-              >
-                <Share className="h-4 w-4 mr-2" />
-                Share Link
+            <div className="flex gap-3 pt-1">
+              <Button onClick={shareLink} className="flex-1 bg-black hover:bg-gray-900 text-white rounded-none">
+                <Share className="h-4 w-4 mr-2" /> Share Link
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowReferralModal(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowReferralModal(false)} className="flex-1 rounded-none border-gray-200">
                 Close
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-pb">
-        <div className="flex items-center justify-around py-2">
-          <button
-            onClick={() => setLocation("/booking")}
-            className="flex flex-col items-center p-3 min-w-0 flex-1"
-          >
-            <Calendar className="h-6 w-6 text-[#8c52ff]" />
-            <span className="text-xs text-[#8c52ff] font-medium mt-1">Book Now</span>
-          </button>
-          
-          <button
-            onClick={() => setLocation("/services")}
-            className="flex flex-col items-center p-3 min-w-0 flex-1"
-          >
-            <FileText className="h-6 w-6 text-gray-400" />
-            <span className="text-xs text-gray-400 mt-1">Services</span>
-          </button>
-          
-          <button
-            onClick={() => setLocation("/activity")}
-            className="flex flex-col items-center p-3 min-w-0 flex-1"
-          >
-            <Activity className="h-6 w-6 text-gray-400" />
-            <span className="text-xs text-gray-400 mt-1">Activity</span>
-          </button>
-          
-          <button
-            onClick={() => setLocation("/profile")}
-            className="flex flex-col items-center p-3 min-w-0 flex-1"
-          >
-            <User className="h-6 w-6 text-gray-400" />
-            <span className="text-xs text-gray-400 mt-1">Account</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom spacing for mobile navigation */}
-      <div className="pb-20 sm:pb-8"></div>
     </div>
   );
 }

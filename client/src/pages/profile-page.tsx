@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
@@ -12,21 +10,17 @@ import { insertUserSchema, Booking, Vehicle, insertVehicleSchema } from "@shared
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Phone, Home, LogOut, Car, Plus, Pencil, Trash2 } from "lucide-react";
-import RatingDisplay from "@/components/rating-display";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const profileSchema = insertUserSchema.extend({
   name: z.string().min(1, "Name is required"),
@@ -38,14 +32,13 @@ const profileSchema = insertUserSchema.extend({
   longitude: z.coerce.number().optional(),
 });
 
-// Create a Zod schema for validating vehicle form inputs
 const vehicleSchema = insertVehicleSchema.extend({
-  year: z.coerce.number().min(1900, "Year must be at least 1900").max(new Date().getFullYear() + 1, `Year cannot exceed ${new Date().getFullYear() + 1}`),
+  year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
   make: z.string().min(1, "Make is required"),
   model: z.string().min(1, "Model is required"),
   color: z.string().optional().or(z.literal("")),
   licensePlate: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal(""))
+  notes: z.string().optional().or(z.literal("")),
 });
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
@@ -56,11 +49,11 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "vehicles" | "bookings">("profile");
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
-  
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
@@ -79,34 +72,11 @@ export default function ProfilePage() {
     },
   });
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof profileSchema>) => {
-      const res = await apiRequest("PATCH", "/api/user", data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved successfully",
-      });
-    },
-  });
-
   const vehicleForm = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: {
-      userId: user?.id,
-      year: undefined,
-      make: "",
-      model: "",
-      color: "",
-      licensePlate: "",
-      notes: ""
-    }
+    defaultValues: { userId: user?.id, year: undefined, make: "", model: "", color: "", licensePlate: "", notes: "" },
   });
 
-  // Reset form values when editing an existing vehicle
   useEffect(() => {
     if (selectedVehicle) {
       vehicleForm.reset({
@@ -116,22 +86,24 @@ export default function ProfilePage() {
         model: selectedVehicle.model,
         color: selectedVehicle.color || "",
         licensePlate: selectedVehicle.licensePlate || "",
-        notes: selectedVehicle.notes || ""
+        notes: selectedVehicle.notes || "",
       });
     } else {
-      vehicleForm.reset({
-        userId: user?.id,
-        year: undefined,
-        make: "",
-        model: "",
-        color: "",
-        licensePlate: "",
-        notes: ""
-      });
+      vehicleForm.reset({ userId: user?.id, year: undefined, make: "", model: "", color: "", licensePlate: "", notes: "" });
     }
   }, [selectedVehicle, user?.id, vehicleForm]);
 
-  // Create vehicle mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof profileSchema>) => {
+      const res = await apiRequest("PATCH", "/api/user", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Profile updated", description: "Your changes have been saved" });
+    },
+  });
+
   const createVehicleMutation = useMutation({
     mutationFn: async (data: VehicleFormValues) => {
       const res = await apiRequest("POST", "/api/vehicles", data);
@@ -139,16 +111,12 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Vehicle added",
-        description: "Your vehicle has been added successfully",
-      });
+      toast({ title: "Vehicle added" });
       setDialogOpen(false);
       setSelectedVehicle(null);
     },
   });
 
-  // Update vehicle mutation
   const updateVehicleMutation = useMutation({
     mutationFn: async (data: { id: number; updates: Partial<Vehicle> }) => {
       const res = await apiRequest("PATCH", `/api/vehicles/${data.id}`, data.updates);
@@ -156,16 +124,12 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Vehicle updated",
-        description: "Your vehicle information has been updated successfully",
-      });
+      toast({ title: "Vehicle updated" });
       setDialogOpen(false);
       setSelectedVehicle(null);
     },
   });
 
-  // Delete vehicle mutation
   const deleteVehicleMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/vehicles/${id}`);
@@ -173,26 +137,18 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Vehicle deleted",
-        description: "Your vehicle has been removed successfully",
-      });
+      toast({ title: "Vehicle removed" });
     },
   });
 
-  // Handler for submitting the vehicle form
   const handleVehicleSubmit = (data: VehicleFormValues) => {
     if (selectedVehicle) {
-      updateVehicleMutation.mutate({
-        id: selectedVehicle.id,
-        updates: data
-      });
+      updateVehicleMutation.mutate({ id: selectedVehicle.id, updates: data });
     } else {
       createVehicleMutation.mutate(data);
     }
   };
 
-  // Handler for opening vehicle form dialog
   const openVehicleDialog = (vehicle?: Vehicle) => {
     setSelectedVehicle(vehicle || null);
     setDialogOpen(true);
@@ -201,478 +157,314 @@ export default function ProfilePage() {
   if (bookingsLoading || vehiclesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen pb-32">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
       </div>
     );
   }
 
+  const tabs = [
+    { id: "profile" as const, label: "Profile" },
+    ...(!user?.isProvider ? [{ id: "vehicles" as const, label: "Vehicles" }, { id: "bookings" as const, label: "Bookings" }] : []),
+  ];
+
   return (
-    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom) + 20px)' }}>
-      <div className="max-w-4xl mx-auto">
-        <Card className="mb-8">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.profileImage || undefined} />
-                <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle className="text-2xl">{user?.name}</CardTitle>
-                {user?.isProvider && (
-                  <RatingDisplay 
-                    rating={user.rating || 5} 
-                    count={user.ratingCount || 0} 
-                  />
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center justify-center gap-2"
-                onClick={() => setLocation('/')}
-              >
-                <Car className="h-4 w-4" />
-                Book a Service
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                className="flex items-center justify-center gap-2"
-                disabled={logoutMutation.isPending}
-                onClick={() => {
-                  logoutMutation.mutate(undefined, {
-                    onSuccess: () => {
-                      setLocation('/auth');
-                      toast({
-                        title: "Signed out",
-                        description: "You have been successfully signed out",
-                      });
-                    }
-                  });
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+    <div
+      className="min-h-screen bg-white font-sans"
+      style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+    >
+      {/* Header */}
+      <div className="pt-14 pb-6 px-6 border-b border-gray-200">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Account</p>
+            <h1 className="text-3xl font-medium tracking-tight text-black">{user?.name || "Profile"}</h1>
+            {user?.email && <p className="text-sm text-gray-500 mt-1">{user.email}</p>}
+          </div>
+          <button
+            onClick={() => {
+              logoutMutation.mutate(undefined, {
+                onSuccess: () => {
+                  setLocation("/auth");
+                  toast({ title: "Signed out" });
+                },
+              });
+            }}
+            disabled={logoutMutation.isPending}
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-black transition-colors mt-1"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
+      </div>
 
-        <Tabs defaultValue="profile">
-          <TabsList className="w-full">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            {!user?.isProvider && (
-              <>
-                <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-                <TabsTrigger value="bookings">Bookings</TabsTrigger>
-              </>
-            )}
-          </TabsList>
+      {/* Book CTA row */}
+      <button
+        onClick={() => setLocation("/")}
+        className="w-full flex items-center justify-between px-6 py-5 border-b border-gray-200"
+      >
+        <div className="flex items-center gap-3">
+          <Car className="h-4 w-4 text-gray-400" />
+          <span className="text-base text-black">Book a service</span>
+        </div>
+        <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+      </button>
 
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Profile</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit((data) =>
-                      updateProfileMutation.mutate(data)
-                    )}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" /> Email Address
-                          </FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="you@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" /> Phone Number
-                          </FormLabel>
-                          <FormControl>
-                            <Input type="tel" placeholder="(123) 456-7890" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Home className="h-4 w-4" /> Home Address
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St, Anytown, CA 12345" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+      {/* Tab Switcher */}
+      <div className="flex border-b border-gray-200 px-6">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`mr-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-black text-black"
+                : "border-transparent text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-                    {user?.isProvider && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Business Description</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+      {/* Profile Tab */}
+      {activeTab === "profile" && (
+        <div className="px-6 pt-6">
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit((data) => updateProfileMutation.mutate(data))}
+              className="space-y-0"
+            >
+              {[
+                { name: "name" as const, label: "Full Name", placeholder: "Your name", type: "text" },
+                { name: "email" as const, label: "Email", placeholder: "you@example.com", type: "email" },
+                { name: "phone" as const, label: "Phone", placeholder: "(123) 456-7890", type: "tel" },
+                { name: "address" as const, label: "Home Address", placeholder: "123 Main St", type: "text" },
+              ].map((fieldConfig) => (
+                <FormField
+                  key={fieldConfig.name}
+                  control={form.control}
+                  name={fieldConfig.name}
+                  render={({ field }) => (
+                    <FormItem className="py-5 border-b border-gray-200 space-y-1">
+                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">
+                        {fieldConfig.label}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type={fieldConfig.type}
+                          placeholder={fieldConfig.placeholder}
+                          {...field}
+                          className="border-0 border-b border-gray-200 rounded-none px-0 text-base text-black placeholder:text-gray-300 focus-visible:ring-0 focus-visible:border-black transition-colors"
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="latitude"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Latitude</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    step="any" 
-                                    {...field} 
-                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="longitude"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Longitude</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    step="any" 
-                                    {...field}
-                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <Button
-                      type="submit"
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      Save Changes
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="vehicles">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>My Vehicles</CardTitle>
-                  <CardDescription>
-                    Manage your vehicles for car wash services
-                  </CardDescription>
-                </div>
-                <Button
-                  onClick={() => openVehicleDialog()}
-                  className="flex items-center gap-2"
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+              {user?.isProvider && (
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="py-5 border-b border-gray-200 space-y-1">
+                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">
+                        Business Description
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          className="border-0 border-b border-gray-200 rounded-none px-0 resize-none text-base placeholder:text-gray-300 focus-visible:ring-0"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              <div className="pt-6">
+                <button
+                  type="submit"
+                  disabled={updateProfileMutation.isPending}
+                  className="bg-black text-white text-sm font-medium px-8 py-3 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  <Plus className="h-4 w-4" />
-                  Add Vehicle
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {vehicles.length === 0 ? (
-                  <div className="text-center p-6 border rounded-lg border-dashed">
-                    <Car className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium mb-1">No vehicles added</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Add your vehicle details to streamline the booking process
+                  {updateProfileMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      )}
+
+      {/* Vehicles Tab */}
+      {activeTab === "vehicles" && (
+        <div className="px-6 pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase">My Vehicles</h2>
+            <button
+              onClick={() => openVehicleDialog()}
+              className="flex items-center gap-1 text-sm font-medium text-[#8c52ff]"
+            >
+              <Plus className="h-4 w-4" /> Add
+            </button>
+          </div>
+
+          {vehicles.length === 0 ? (
+            <div className="py-16 text-center border-t border-gray-200">
+              <p className="text-gray-500 mb-4">No vehicles added yet</p>
+              <button
+                onClick={() => openVehicleDialog()}
+                className="text-sm font-medium text-[#8c52ff] underline underline-offset-4"
+              >
+                Add your first vehicle
+              </button>
+            </div>
+          ) : (
+            <div className="border-t border-gray-200">
+              {vehicles.map((vehicle) => (
+                <div key={vehicle.id} className="flex items-center justify-between py-5 border-b border-gray-200">
+                  <div>
+                    <h3 className="text-base font-medium text-black">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {[vehicle.color, vehicle.licensePlate].filter(Boolean).join(" · ")}
                     </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => openVehicleDialog()}
-                      className="flex items-center gap-2 mx-auto"
+                    {vehicle.notes && (
+                      <p className="text-xs text-gray-400 mt-0.5">{vehicle.notes}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openVehicleDialog(vehicle)}
+                      className="p-2 text-gray-400 hover:text-black transition-colors"
                     >
-                      <Plus className="h-4 w-4" />
-                      Add Your First Vehicle
-                    </Button>
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Delete this vehicle?")) deleteVehicleMutation.mutate(vehicle.id);
+                      }}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {vehicles.map((vehicle) => (
-                      <Card key={vehicle.id} className="overflow-hidden">
-                        <CardContent className="p-0">
-                          <div className="flex items-center justify-between p-6">
-                            <div className="flex items-center gap-4">
-                              <div className="flex-shrink-0 h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
-                                <Car className="h-6 w-6 text-primary" />
-                              </div>
-                              <div>
-                                <h3 className="font-medium">
-                                  {vehicle.year} {vehicle.make} {vehicle.model}
-                                </h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                  {vehicle.color && (
-                                    <Badge variant="outline" className="text-xs font-normal">
-                                      {vehicle.color}
-                                    </Badge>
-                                  )}
-                                  {vehicle.licensePlate && (
-                                    <Badge variant="secondary" className="text-xs font-normal">
-                                      {vehicle.licensePlate}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openVehicleDialog(vehicle)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => {
-                                  if (confirm("Are you sure you want to delete this vehicle?")) {
-                                    deleteVehicleMutation.mutate(vehicle.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          {vehicle.notes && (
-                            <div className="border-t px-6 py-3 text-sm text-muted-foreground">
-                              {vehicle.notes}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Vehicle Form Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedVehicle ? "Edit Vehicle" : "Add New Vehicle"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {selectedVehicle 
-                      ? "Update your vehicle information below" 
-                      : "Enter your vehicle details to add it to your profile"}
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...vehicleForm}>
-                  <form 
-                    onSubmit={vehicleForm.handleSubmit(handleVehicleSubmit)} 
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={vehicleForm.control}
-                      name="year"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Year</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="2023" 
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={vehicleForm.control}
-                      name="make"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Make</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Toyota" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={vehicleForm.control}
-                      name="model"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Model</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Camry" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={vehicleForm.control}
-                      name="color"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Color (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Blue" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={vehicleForm.control}
-                      name="licensePlate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>License Plate (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="ABC123" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={vehicleForm.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes (Optional)</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Any special instructions or details about your vehicle"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <Button
-                        type="submit"
-                        disabled={
-                          createVehicleMutation.isPending || 
-                          updateVehicleMutation.isPending
-                        }
-                      >
-                        {(createVehicleMutation.isPending || updateVehicleMutation.isPending) && (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        )}
-                        {selectedVehicle ? "Update Vehicle" : "Add Vehicle"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <div className="grid gap-4">
-              {bookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">
-                          Booking #{booking.id}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(booking.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium capitalize">
-                          {booking.priceTier} Package
-                        </div>
-                        <div className="text-sm text-muted-foreground capitalize">
-                          Status: {booking.status}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                </div>
               ))}
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Bookings Tab */}
+      {activeTab === "bookings" && (
+        <div className="px-6 pt-6">
+          <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Booking History</h2>
+          {bookings.length === 0 ? (
+            <div className="py-16 text-center border-t border-gray-200">
+              <p className="text-gray-500">No bookings yet</p>
+            </div>
+          ) : (
+            <div className="border-t border-gray-200">
+              {bookings.map((booking) => (
+                <div key={booking.id} className="flex justify-between items-center py-5 border-b border-gray-200">
+                  <div>
+                    <h3 className="text-base font-medium text-black capitalize">
+                      {booking.priceTier} Package
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {new Date(booking.timestamp).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <span className="text-sm text-gray-400 capitalize">{booking.status.replace("_", " ")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vehicle Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-none">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-medium">
+              {selectedVehicle ? "Edit Vehicle" : "Add Vehicle"}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              {selectedVehicle ? "Update your vehicle details." : "Enter your vehicle details."}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...vehicleForm}>
+            <form onSubmit={vehicleForm.handleSubmit(handleVehicleSubmit)} className="space-y-4">
+              {[
+                { name: "year" as const, label: "Year", placeholder: "2023", type: "number" },
+                { name: "make" as const, label: "Make", placeholder: "Toyota", type: "text" },
+                { name: "model" as const, label: "Model", placeholder: "Camry", type: "text" },
+                { name: "color" as const, label: "Color (optional)", placeholder: "Blue", type: "text" },
+                { name: "licensePlate" as const, label: "License Plate (optional)", placeholder: "ABC123", type: "text" },
+              ].map((fc) => (
+                <FormField
+                  key={fc.name}
+                  control={vehicleForm.control}
+                  name={fc.name}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">{fc.label}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type={fc.type}
+                          placeholder={fc.placeholder}
+                          {...field}
+                          onChange={(e) =>
+                            fc.type === "number"
+                              ? field.onChange(e.target.value ? Number(e.target.value) : undefined)
+                              : field.onChange(e.target.value)
+                          }
+                          className="rounded-none border-gray-200"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+              <FormField
+                control={vehicleForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Notes (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Special instructions..." {...field} className="rounded-none border-gray-200 resize-none" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <button
+                  type="submit"
+                  disabled={createVehicleMutation.isPending || updateVehicleMutation.isPending}
+                  className="bg-black text-white text-sm font-medium px-6 py-2.5 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {(createVehicleMutation.isPending || updateVehicleMutation.isPending) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  {selectedVehicle ? "Update Vehicle" : "Add Vehicle"}
+                </button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
