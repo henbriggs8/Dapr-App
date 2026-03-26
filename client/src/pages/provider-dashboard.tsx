@@ -1,10 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -14,15 +9,13 @@ import {
   Clock, 
   DollarSign, 
   Star, 
-  Users, 
   Car, 
   CheckCircle, 
   XCircle, 
   Play, 
   Square as StopIcon,
-  BarChart3,
-  Calendar,
-  TrendingUp
+  Navigation,
+  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 import { ProviderProfileTab } from "@/components/provider-profile-tab";
@@ -40,10 +33,13 @@ interface ProviderMetrics {
   totalServiceTime: number;
 }
 
+type Tab = "jobs" | "available" | "earnings" | "metrics" | "profile";
+
 export default function ProviderDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(user?.currentStatus === 'online');
+  const [activeTab, setActiveTab] = useState<Tab>("jobs");
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingBookings, refetch: refetchBookings } = useQuery<Booking[]>({
@@ -329,483 +325,400 @@ export default function ProviderDashboard() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen pb-32">
-        <CarWashSpinner size="lg" showText text="Loading dashboard..." />
+      <div className="flex items-center justify-center min-h-screen">
+        <CarWashSpinner size="lg" showText text="Loading..." />
       </div>
     );
   }
 
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "jobs", label: "Jobs" },
+    { key: "available", label: "Available" },
+    { key: "earnings", label: "Earnings" },
+    { key: "metrics", label: "Stats" },
+    { key: "profile", label: "Profile" },
+  ];
+
+  const statusDot = isOnline
+    ? "bg-green-500"
+    : "bg-gray-400";
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm">
-          <div className="space-y-4">
-            {/* Title Section */}
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Provider Dashboard</h1>
-              <p className="text-sm sm:text-base text-gray-600">Welcome back, {user.username}!</p>
-            </div>
-            
-            {/* Controls Section - Stack on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-              {/* Status Toggle */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700">Status:</span>
-                <Switch
-                  checked={isOnline}
-                  onCheckedChange={handleStatusToggle}
-                  disabled={updateStatusMutation.isPending}
-                />
-                <span className={`text-sm font-medium ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
-              
-              {/* Update Location Button */}
-              <Button 
-                onClick={() => updateLocationMutation.mutate()}
-                disabled={updateLocationMutation.isPending}
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                {updateLocationMutation.isPending ? 'Updating...' : 'Update Location'}
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white pb-24">
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <DollarSign className="h-8 w-8 text-green-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                    <p className="text-2xl font-bold">
-                      {earnings ? formatPrice(earnings.totalEarnings) : '$0.00'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* ── Header ────────────────────────────────────────────── */}
+      <div className="px-6 pt-14 pb-6 border-b border-gray-200">
+        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapper Pro</p>
+        <h1 className="text-3xl font-medium tracking-tight text-black">
+          {user.name || user.username}
+        </h1>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <CheckCircle className="h-8 w-8 text-blue-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Completed Services</p>
-                    <p className="text-2xl font-bold">
-                      {earnings?.completedServices || 0}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Status + Location row */}
+        <div className="flex items-center justify-between mt-4">
+          {/* Online/Offline pill toggle */}
+          <button
+            onClick={() => handleStatusToggle(!isOnline)}
+            disabled={updateStatusMutation.isPending}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+              isOnline
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-gray-200 bg-white text-gray-500"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${statusDot}`} />
+            {updateStatusMutation.isPending ? "Updating..." : isOnline ? "Online" : "Offline"}
+          </button>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Star className="h-8 w-8 text-yellow-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                    <p className="text-2xl font-bold">
-                      {earnings?.averageRating ? earnings.averageRating.toFixed(1) : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Car className="h-8 w-8 text-purple-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Active Jobs</p>
-                    <p className="text-2xl font-bold">
-                      {activeBookings.filter(b => ['assigned', 'in_progress'].includes(b.status)).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Update location */}
+          <button
+            onClick={() => updateLocationMutation.mutate()}
+            disabled={updateLocationMutation.isPending}
+            className="flex items-center gap-1.5 text-sm text-[#8c52ff] font-medium"
+          >
+            <Navigation className="w-4 h-4" />
+            {updateLocationMutation.isPending ? "Locating..." : "Update location"}
+          </button>
         </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="jobs" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
-            <TabsTrigger value="available">Available Jobs</TabsTrigger>
-            <TabsTrigger value="earnings">Earnings</TabsTrigger>
-            <TabsTrigger value="metrics">Performance</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-          </TabsList>
-
-          {/* Active Jobs Tab */}
-          <TabsContent value="jobs">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                  Active Bookings
-                </CardTitle>
-                <CardDescription>
-                  Manage your current and upcoming service appointments
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingBookings ? (
-                  <div className="flex justify-center py-10">
-                    <CarWashSpinner size="md" showText text="Loading bookings..." />
-                  </div>
-                ) : activeBookings.length === 0 ? (
-                  <div className="text-center py-10">
-                    <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No active bookings at the moment</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      New bookings will appear here when assigned to you
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {activeBookings.map((booking) => (
-                      <div key={booking.id} className="border rounded-lg p-4 space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="font-medium">Booking #{booking.id}</h3>
-                              <Badge className={getStatusBadgeColor(booking.status)}>
-                                {booking.status.replace('_', ' ')}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-2" />
-                                {booking.serviceLocation}
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-2" />
-                                {booking.date} at {booking.time}
-                              </div>
-                              <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 mr-2" />
-                                {formatPrice(booking.totalPrice || 0)}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col gap-2">
-                            {booking.status === 'pending_assignment' && (
-                              <div className="flex space-x-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => acceptBookingMutation.mutate(booking.id)}
-                                  disabled={acceptBookingMutation.isPending}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Accept
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => rejectBookingMutation.mutate(booking.id)}
-                                  disabled={rejectBookingMutation.isPending}
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Reject
-                                </Button>
-                              </div>
-                            )}
-                            
-                            {booking.status === 'assigned' && (
-                              <div className="flex flex-col gap-2">
-                                {!(booking as any).arrivalTime && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => markArrivedMutation.mutate(booking.id)}
-                                    disabled={markArrivedMutation.isPending}
-                                    className="bg-[#8c52ff] hover:bg-[#7a3fee] text-white"
-                                  >
-                                    <MapPin className="h-4 w-4 mr-2" />
-                                    {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  onClick={() => startServiceMutation.mutate(booking.id)}
-                                  disabled={startServiceMutation.isPending}
-                                  className="bg-blue-600 hover:bg-blue-700"
-                                >
-                                  <Play className="h-4 w-4 mr-2" />
-                                  Start Service
-                                </Button>
-                              </div>
-                            )}
-                            
-                            {booking.status === 'in_progress' && (
-                              <Button
-                                size="sm"
-                                onClick={() => completeServiceMutation.mutate(booking.id)}
-                                disabled={completeServiceMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <StopIcon className="h-4 w-4 mr-2" />
-                                Complete
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Time adjustment panel — shown when arrived */}
-                        {(booking as any).arrivalTime && (
-                          <TimeAdjustmentPanel
-                            bookingId={booking.id}
-                            baseDurationMinutes={(booking as any).estimatedDurationMinutes || 60}
-                            arrivalTime={(booking as any).arrivalTime}
-                            initialAdjustments={(booking as any).timeAdjustments || undefined}
-                            initialNotes={(booking as any).providerNotes || ""}
-                            estimatedCompletionTime={(booking as any).estimatedCompletionTime}
-                            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Available Jobs Tab */}
-          <TabsContent value="available">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                  Available Jobs Near You
-                </CardTitle>
-                <CardDescription>
-                  Jobs within 15 miles of your location that you can accept
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingJobs ? (
-                  <div className="flex justify-center py-10">
-                    <CarWashSpinner size="md" showText text="Finding nearby jobs..." />
-                  </div>
-                ) : availableJobs.length === 0 ? (
-                  <div className="text-center py-10">
-                    <Car className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium text-gray-900">No jobs available</h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      There are currently no jobs available within 15 miles of your location.
-                    </p>
-                    <Button 
-                      onClick={() => refetchJobs()}
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      Refresh Jobs
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {availableJobs.map((job) => (
-                      <div key={job.id} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                {formatCategory(job.priceTier)}
-                              </Badge>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {job.distance} miles away
-                              </Badge>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <h4 className="font-medium text-gray-900">Car Wash Service</h4>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 mr-1" />
-                                {job.serviceLocation}
-                              </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-1" />
-                                {job.date && job.time ? `${new Date(job.date).toLocaleDateString()} at ${job.time}` : 'Time TBD'}
-                              </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                {job.totalPrice ? formatPrice(job.totalPrice) : '$0.00'}
-                              </div>
-                            </div>
-                            
-                            {job.notes && (
-                              <p className="text-sm text-gray-600">{job.notes}</p>
-                            )}
-                          </div>
-                          
-                          <div className="flex flex-col sm:flex-row gap-2 min-w-0 sm:min-w-fit">
-                            <Button
-                              onClick={() => acceptJobMutation.mutate(job.id)}
-                              disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              size="sm"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              {acceptJobMutation.isPending ? 'Accepting...' : 'Accept Job'}
-                            </Button>
-                            <Button
-                              onClick={() => rejectJobMutation.mutate(job.id)}
-                              disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              {rejectJobMutation.isPending ? 'Rejecting...' : 'Pass'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Earnings Tab */}
-          <TabsContent value="earnings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                  Earnings Overview
-                </CardTitle>
-                <CardDescription>
-                  Track your earnings and service breakdown
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingEarnings ? (
-                  <div className="flex justify-center py-10">
-                    <CarWashSpinner size="md" showText text="Loading earnings..." />
-                  </div>
-                ) : !earnings ? (
-                  <div className="py-10 text-center text-muted-foreground">
-                    No earnings data available yet. Complete some services to see your earnings.
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Service Type Breakdown */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Service Type Breakdown</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(earnings.serviceTypeBreakdown).map(([type, count]) => (
-                          <Card key={type}>
-                            <CardContent className="p-4">
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-[#8c52ff]">{count}</p>
-                                <p className="text-sm text-gray-600">{formatCategory(type)}</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Performance Metrics Tab */}
-          <TabsContent value="metrics">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2 text-[#8c52ff]" />
-                  Service Metrics
-                </CardTitle>
-                <CardDescription>
-                  Track your service performance and timing metrics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingMetrics ? (
-                  <div className="flex justify-center py-10">
-                    <CarWashSpinner size="md" showText text="Loading service metrics..." />
-                  </div>
-                ) : !metricsData ? (
-                  <div className="py-10 text-center text-muted-foreground">
-                    No service metrics available yet. Complete some services to see your metrics.
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Service Duration Metrics */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Service Duration</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Average Duration by Service Type</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-4">
-                              {Object.entries(metricsData.averageDuration).length > 0 ? (
-                                Object.entries(metricsData.averageDuration).map(([category, duration]) => (
-                                  <div key={category} className="flex justify-between items-center">
-                                    <div>
-                                      <span className="font-medium">{formatCategory(category)}</span>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                                      <span>{formatDuration(duration)}</span>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-muted-foreground text-sm">No service duration data yet</p>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Total Service Time</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-center py-6">
-                              <div className="text-3xl font-bold text-[#8c52ff] mb-2">
-                                {formatDuration(metricsData.totalServiceTime)}
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                Total time spent on services
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Profile Tab */}
-          <TabsContent value="profile">
-            <ProviderProfileTab />
-          </TabsContent>
-        </Tabs>
       </div>
+
+      {/* ── Stats bar ─────────────────────────────────────────── */}
+      <div className="bg-gray-950 text-white px-6 py-5 grid grid-cols-3 divide-x divide-gray-800">
+        <div className="pr-4">
+          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Earnings</p>
+          <p className="text-xl font-semibold">{earnings ? formatPrice(earnings.totalEarnings) : "—"}</p>
+        </div>
+        <div className="px-4">
+          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Completed</p>
+          <p className="text-xl font-semibold">{earnings?.completedServices ?? "—"}</p>
+        </div>
+        <div className="pl-4">
+          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Rating</p>
+          <p className="text-xl font-semibold">
+            {earnings?.averageRating ? earnings.averageRating.toFixed(1) : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Tab bar ───────────────────────────────────────────── */}
+      <div className="flex border-b border-gray-200 px-4 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-shrink-0 px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? "border-[#8c52ff] text-[#8c52ff]"
+                : "border-transparent text-gray-500 hover:text-black"
+            }`}
+          >
+            {tab.label}
+            {tab.key === "available" && availableJobs.length > 0 && (
+              <span className="ml-1.5 text-xs bg-[#8c52ff] text-white rounded-full px-1.5 py-0.5">
+                {availableJobs.length}
+              </span>
+            )}
+            {tab.key === "jobs" && activeBookings.length > 0 && (
+              <span className="ml-1.5 text-xs bg-black text-white rounded-full px-1.5 py-0.5">
+                {activeBookings.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Active Jobs ───────────────────────────────────────── */}
+      {activeTab === "jobs" && (
+        <div>
+          <div className="px-6 pt-6 pb-2">
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Active Bookings</p>
+          </div>
+
+          {isLoadingBookings ? (
+            <div className="flex justify-center py-16">
+              <CarWashSpinner size="md" showText text="Loading bookings..." />
+            </div>
+          ) : activeBookings.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <Car className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No active bookings</p>
+            </div>
+          ) : (
+            <div>
+              {activeBookings.map((booking, i) => (
+                <div key={booking.id} className={`px-6 py-5 ${i < activeBookings.length - 1 ? "border-b border-gray-200" : ""}`}>
+                  {/* Status + ID */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        booking.status === 'in_progress' ? 'bg-green-500' :
+                        booking.status === 'assigned' ? 'bg-[#8c52ff]' :
+                        booking.status === 'pending_assignment' ? 'bg-yellow-400' : 'bg-gray-300'
+                      }`} />
+                      <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        {booking.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">#{booking.id}</span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="space-y-1 mb-4">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-black leading-snug">{booking.serviceLocation}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <p className="text-sm text-gray-500">{booking.date} at {booking.time}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <p className="text-sm font-semibold text-black">{formatPrice(booking.totalPrice || 0)}</p>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  {booking.status === 'pending_assignment' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => acceptBookingMutation.mutate(booking.id)}
+                        disabled={acceptBookingMutation.isPending}
+                        className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                      >
+                        <CheckCircle className="w-4 h-4 inline mr-1.5" />
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => rejectBookingMutation.mutate(booking.id)}
+                        disabled={rejectBookingMutation.isPending}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-200 text-black text-sm font-medium"
+                      >
+                        <XCircle className="w-4 h-4 inline mr-1.5 text-gray-400" />
+                        Decline
+                      </button>
+                    </div>
+                  )}
+
+                  {booking.status === 'assigned' && (
+                    <div className="flex gap-2">
+                      {!(booking as any).arrivalTime && (
+                        <button
+                          onClick={() => markArrivedMutation.mutate(booking.id)}
+                          disabled={markArrivedMutation.isPending}
+                          className="flex-1 py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
+                        >
+                          <MapPin className="w-4 h-4 inline mr-1.5" />
+                          {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => startServiceMutation.mutate(booking.id)}
+                        disabled={startServiceMutation.isPending}
+                        className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                      >
+                        <Play className="w-4 h-4 inline mr-1.5" />
+                        Start Service
+                      </button>
+                    </div>
+                  )}
+
+                  {booking.status === 'in_progress' && (
+                    <button
+                      onClick={() => completeServiceMutation.mutate(booking.id)}
+                      disabled={completeServiceMutation.isPending}
+                      className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                    >
+                      <StopIcon className="w-4 h-4 inline mr-1.5" />
+                      Mark Complete
+                    </button>
+                  )}
+
+                  {/* Time adjustment panel */}
+                  {(booking as any).arrivalTime && (
+                    <TimeAdjustmentPanel
+                      bookingId={booking.id}
+                      baseDurationMinutes={(booking as any).estimatedDurationMinutes || 60}
+                      arrivalTime={(booking as any).arrivalTime}
+                      initialAdjustments={(booking as any).timeAdjustments || undefined}
+                      initialNotes={(booking as any).providerNotes || ""}
+                      estimatedCompletionTime={(booking as any).estimatedCompletionTime}
+                      onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Available Jobs ────────────────────────────────────── */}
+      {activeTab === "available" && (
+        <div>
+          <div className="px-6 pt-6 pb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Available Near You</p>
+            <button
+              onClick={() => refetchJobs()}
+              className="text-xs text-[#8c52ff] font-medium"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {isLoadingJobs ? (
+            <div className="flex justify-center py-16">
+              <CarWashSpinner size="md" showText text="Finding jobs..." />
+            </div>
+          ) : availableJobs.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No jobs available within 15 miles</p>
+            </div>
+          ) : (
+            <div>
+              {availableJobs.map((job, i) => (
+                <div key={job.id} className={`px-6 py-5 ${i < availableJobs.length - 1 ? "border-b border-gray-200" : ""}`}>
+                  {/* Tier + distance */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 font-medium">
+                      {formatCategory(job.priceTier)}
+                    </span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Navigation className="w-3 h-3" />
+                      {job.distance} mi away
+                    </span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="space-y-1 mb-4">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-black leading-snug">{job.serviceLocation}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <p className="text-sm text-gray-500">
+                        {job.date && job.time ? `${new Date(job.date).toLocaleDateString()} at ${job.time}` : 'Time TBD'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <p className="text-sm font-semibold text-black">{job.totalPrice ? formatPrice(job.totalPrice) : '$0.00'}</p>
+                    </div>
+                    {job.notes && <p className="text-sm text-gray-500 pl-5">{job.notes}</p>}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => acceptJobMutation.mutate(job.id)}
+                      disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
+                      className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                    >
+                      {acceptJobMutation.isPending ? 'Accepting...' : 'Accept Job'}
+                    </button>
+                    <button
+                      onClick={() => rejectJobMutation.mutate(job.id)}
+                      disabled={acceptJobMutation.isPending || rejectJobMutation.isPending}
+                      className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium"
+                    >
+                      Pass
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Earnings ──────────────────────────────────────────── */}
+      {activeTab === "earnings" && (
+        <div>
+          <div className="px-6 pt-6 pb-2">
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Earnings</p>
+          </div>
+
+          {isLoadingEarnings ? (
+            <div className="flex justify-center py-16">
+              <CarWashSpinner size="md" showText text="Loading earnings..." />
+            </div>
+          ) : !earnings ? (
+            <div className="px-6 py-16 text-center">
+              <p className="text-gray-400 text-sm">Complete services to see earnings</p>
+            </div>
+          ) : (
+            <div>
+              {/* Total highlight */}
+              <div className="px-6 py-6 border-b border-gray-200">
+                <p className="text-xs text-gray-500 mb-1">Total earned</p>
+                <p className="text-4xl font-semibold text-black">{formatPrice(earnings.totalEarnings)}</p>
+              </div>
+
+              {/* Service breakdown */}
+              <div className="px-6 pt-4 pb-2">
+                <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">By Service Type</p>
+              </div>
+              {Object.entries(earnings.serviceTypeBreakdown).map(([type, count], i, arr) => (
+                <div key={type} className={`px-6 py-4 flex items-center justify-between ${i < arr.length - 1 ? "border-b border-gray-200" : ""}`}>
+                  <span className="text-sm text-black">{formatCategory(type)}</span>
+                  <span className="text-sm font-semibold text-[#8c52ff]">{count} services</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Metrics ───────────────────────────────────────────── */}
+      {activeTab === "metrics" && (
+        <div>
+          <div className="px-6 pt-6 pb-2">
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Performance</p>
+          </div>
+
+          {isLoadingMetrics ? (
+            <div className="flex justify-center py-16">
+              <CarWashSpinner size="md" showText text="Loading stats..." />
+            </div>
+          ) : !metricsData ? (
+            <div className="px-6 py-16 text-center">
+              <p className="text-gray-400 text-sm">Complete services to see performance stats</p>
+            </div>
+          ) : (
+            <div>
+              {/* Total time highlight */}
+              <div className="px-6 py-6 border-b border-gray-200">
+                <p className="text-xs text-gray-500 mb-1">Total service time</p>
+                <p className="text-4xl font-semibold text-[#8c52ff]">{formatDuration(metricsData.totalServiceTime)}</p>
+              </div>
+
+              {/* Duration by service type */}
+              <div className="px-6 pt-4 pb-2">
+                <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Avg Duration by Service</p>
+              </div>
+              {Object.entries(metricsData.averageDuration).length === 0 ? (
+                <p className="px-6 py-4 text-sm text-gray-400">No data yet</p>
+              ) : (
+                Object.entries(metricsData.averageDuration).map(([category, duration], i, arr) => (
+                  <div key={category} className={`px-6 py-4 flex items-center justify-between ${i < arr.length - 1 ? "border-b border-gray-200" : ""}`}>
+                    <span className="text-sm text-black">{formatCategory(category)}</span>
+                    <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      {formatDuration(duration)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Profile ───────────────────────────────────────────── */}
+      {activeTab === "profile" && (
+        <ProviderProfileTab />
+      )}
     </div>
   );
 }
