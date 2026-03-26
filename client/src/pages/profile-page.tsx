@@ -181,7 +181,11 @@ export default function ProfilePage() {
             {user?.email && <p className="text-sm text-gray-500 mt-1">{user.email}</p>}
           </div>
           <button
-            onClick={() => {
+            onClick={async () => {
+              const clerkInstance = (window as any).Clerk;
+              if (clerkInstance?.signOut) {
+                try { await clerkInstance.signOut(); } catch (_) {}
+              }
               logoutMutation.mutate(undefined, {
                 onSuccess: () => {
                   setLocation("/auth");

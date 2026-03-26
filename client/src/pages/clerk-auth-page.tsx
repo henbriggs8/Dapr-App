@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { SignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader } from '@/components/ui/loader';
 import dapperVan from '../dapper-van.png';
@@ -84,6 +84,16 @@ function ClerkAuthPageContent() {
           routing="hash"
           fallbackRedirectUrl="/auth"
         />
+
+        <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+          <p className="text-sm text-gray-500 mb-1">Are you a service provider?</p>
+          <Link
+            href="/provider-auth"
+            className="text-sm font-semibold text-[#8c52ff] hover:underline"
+          >
+            Sign in to your provider account →
+          </Link>
+        </div>
       </div>
     </div>
   );

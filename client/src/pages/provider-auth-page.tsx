@@ -234,6 +234,17 @@ export default function ProviderAuthPage() {
                 {isLoginMode ? "New to Dapper? Join our team" : "Already a Detail Pro? Sign in"}
               </button>
             </div>
+
+            {/* Link back to customer login */}
+            <div className="pt-2 border-t border-gray-100 text-center">
+              <p className="text-sm text-gray-400 mb-1">Looking to book a wash?</p>
+              <a
+                href="/auth"
+                className="text-sm font-semibold text-[#8c52ff] hover:underline"
+              >
+                Sign in as a customer →
+              </a>
+            </div>
           </div>
         </div>
       </div>

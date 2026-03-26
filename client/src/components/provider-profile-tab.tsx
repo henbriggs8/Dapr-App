@@ -75,10 +75,15 @@ export function ProviderProfileTab() {
     setIsEditing(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Sign out from Clerk first if available, so it doesn't re-sync the session
+    const clerkInstance = (window as any).Clerk;
+    if (clerkInstance?.signOut) {
+      try { await clerkInstance.signOut(); } catch (_) {}
+    }
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        navigate("/auth");
+        navigate("/provider-auth");
       }
     });
   };
