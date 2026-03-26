@@ -1394,6 +1394,62 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Provider marks arrival — sets arrivalTime, calculates initial ETA, notifies customer
+  app.post('/api/bookings/:id/arrive', async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    try {
+      const { baseDurationMinutes = 60 } = req.body;
+      const booking = await storage.markArrived(id, baseDurationMinutes);
+      // Broadcast to customer via WebSocket
+      const userClients = clients.get(booking.userId) || [];
+      userClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'provider_arrived',
+            bookingId: booking.id,
+            arrivalTime: booking.arrivalTime,
+            estimatedCompletionTime: booking.estimatedCompletionTime,
+            extraTimeMinutes: booking.extraTimeMinutes,
+            timeAdjustments: booking.timeAdjustments,
+          }));
+        }
+      });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to mark arrival' });
+    }
+  });
+
+  // Provider updates time adjustments — recalculates ETA, notifies customer
+  app.patch('/api/bookings/:id/time-adjustments', async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    try {
+      const { adjustments, providerNotes } = req.body;
+      if (!Array.isArray(adjustments)) return res.status(400).json({ error: 'adjustments must be an array' });
+      const booking = await storage.updateTimeAdjustments(id, adjustments, providerNotes);
+      // Broadcast ETA update to customer via WebSocket
+      const userClients = clients.get(booking.userId) || [];
+      userClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'eta_update',
+            bookingId: booking.id,
+            estimatedCompletionTime: booking.estimatedCompletionTime,
+            extraTimeMinutes: booking.extraTimeMinutes,
+            timeAdjustments: booking.timeAdjustments,
+          }));
+        }
+      });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to update adjustments' });
+    }
+  });
+
   // Booking assignment system endpoints
   
   // Get bookings by timeframe for provider dashboard

@@ -1,0 +1,182 @@
+Build a live time adjustment feature for the Dapper mobile detailing app.
+
+Goal
+
+When a Detail Pro arrives on-site, they should see a provider-only control panel with clickable buttons to add extra time to the service if the vehicle condition requires it.
+
+The customer should then see their estimated completion time update live on their tracking page.
+
+Feature requirements
+1. Provider-only “Add Time” controls
+
+Create a section on the provider side called:
+
+“Adjust Service Time”
+
+Show these preset buttons:
+
+Excessive Pet Hair → +20 min
+Heavy Stains → +15 min
+XL Vehicle → +10 min
+Adhesive Removal → +10 min
+
+Each button should:
+
+be tappable once
+visually show when selected
+add its minutes to the total estimated completion time
+update the job record in the backend
+
+Also allow:
+
+deselecting a button to remove the added time
+optional notes field for the provider
+a running summary:
+Base service duration
+Added time
+Updated estimated completion time
+2. ETA logic
+
+Each job should have:
+
+baseDurationMinutes
+extraTimeMinutes
+adjustments[]
+arrivalTime
+estimatedCompletionTime
+
+Formula:
+
+estimatedCompletionTime = arrivalTime + baseDurationMinutes + extraTimeMinutes
+
+Example:
+
+Dapper OG = 150 min
+Provider selects:
+Excessive Pet Hair (+20)
+XL Vehicle (+10)
+
+Then:
+
+extraTimeMinutes = 30
+estimatedCompletionTime = arrivalTime + 180 min
+3. Provider workflow
+
+On the provider side:
+
+show the adjustment buttons only after the tech marks:
+“I’ve arrived”
+once arrived, set arrivalTime = now
+then show the time adjustment UI
+include a button:
+“Update Customer ETA”
+saving should persist the new estimated completion time
+4. Customer tracking page
+
+On the customer side tracking page:
+
+show:
+technician has arrived
+current service status
+estimated completion time
+if the provider adds time adjustments, update the ETA live
+also show a small message like:
+
+“Your detail required a little extra care, so your estimated completion time has been updated.”
+
+If adjustments exist, show a short breakdown:
+
+Excessive Pet Hair +20 min
+XL Vehicle +10 min
+
+Keep this visually clean and premium.
+
+5. Real-time updates
+
+Implement real-time sync so when the provider updates the service time, the customer tracking page updates automatically without refresh.
+
+Use whichever is easiest in this Replit app:
+
+WebSockets
+Socket.io
+Supabase realtime
+polling every 15–30 seconds if realtime is too complex for now
+
+If using polling, structure it so it can later be upgraded to realtime.
+
+6. Database / backend model
+
+Add these fields to the job model:
+
+type TimeAdjustment = {
+key: 'pet_hair' | 'heavy_stains' | 'xl_vehicle' | 'adhesive_removal'
+label: string
+minutes: number
+selected: boolean
+}
+
+Job fields:
+
+{
+id: string,
+status: 'en_route' | 'arrived' | 'in_progress' | 'completed',
+arrivalTime: string | null,
+baseDurationMinutes: number,
+extraTimeMinutes: number,
+estimatedCompletionTime: string | null,
+adjustments: TimeAdjustment[],
+providerNotes?: string
+}
+
+Create API routes:
+
+POST /api/jobs/:id/arrive
+sets status to arrived
+sets arrivalTime = now
+calculates initial ETA
+PATCH /api/jobs/:id/adjustments
+accepts selected adjustments
+recalculates extraTimeMinutes
+recalculates estimatedCompletionTime
+returns updated job
+GET /api/jobs/:id/tracking
+returns public tracking data for the customer page
+7. UI design
+
+Keep the UI bold, minimal, and premium.
+
+Provider UI
+section card with title:
+Adjust Service Time
+large pill buttons or cards for each condition
+selected state should be clearly highlighted
+show total added time in a bold summary box
+show updated completion time below
+Customer UI
+elegant progress/tracking page
+show:
+Arrived
+In Progress
+Estimated Completion: 3:45 PM
+if time changes, animate or highlight the updated ETA subtly
+
+Use simple Uber-like design:
+
+clean typography
+strong hierarchy
+minimal clutter
+rounded cards
+clear status labels
+8. Guardrails
+only providers can access adjustment controls
+customers can only view tracking info
+each adjustment should only count once
+calculations must always be server-side, not just client-side
+return primitives only in JSON responses
+9. Acceptance criteria
+provider marks arrived
+provider selects one or more condition buttons
+ETA recalculates correctly
+customer tracking page reflects new completion estimate
+removing an adjustment updates ETA again
+UI feels clean and mobile-first

@@ -140,6 +140,10 @@ export interface IStorage {
     customerLng: number
   ): Promise<{ eta: string; distance: number }>;
   enableTrackingForBooking(bookingId: number): Promise<Booking>;
+  // Time adjustment methods
+  markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking>;
+  updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking>;
+
   getTrackingInfo(bookingId: number): Promise<{
     providerLocation: { lat: number; lng: number } | null;
     customerLocation: { lat: number; lng: number } | null;
@@ -1327,6 +1331,14 @@ export class MemStorage implements IStorage {
     return null;
   }
 
+  async markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking> {
+    throw new Error("markArrived not implemented in MemStorage");
+  }
+
+  async updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking> {
+    throw new Error("updateTimeAdjustments not implemented in MemStorage");
+  }
+
   // Clerk-Square mapping methods for MemStorage (not implemented)
   async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {
     throw new Error("Clerk-Square mapping not implemented in MemStorage");
@@ -2085,6 +2097,44 @@ export class DatabaseStorage implements IStorage {
       distance: booking.distanceToCustomer,
       lastUpdate: booking.lastLocationUpdate
     };
+  }
+
+  async markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking> {
+    const arrivalTime = new Date().toISOString();
+    const estimatedCompletionTime = new Date(Date.now() + baseDurationMinutes * 60 * 1000).toISOString();
+    const [booking] = await db
+      .update(bookings)
+      .set({
+        arrivalTime,
+        estimatedCompletionTime,
+        extraTimeMinutes: 0,
+        timeAdjustments: [],
+        status: 'in_progress',
+        startTime: arrivalTime,
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking> {
+    const [existing] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!existing || !existing.arrivalTime) throw new Error('Booking not found or not yet arrived');
+
+    const extraTimeMinutes = adjustments
+      .filter((a) => a.selected)
+      .reduce((sum: number, a: any) => sum + a.minutes, 0);
+
+    const estimatedCompletionTime = new Date(
+      new Date(existing.arrivalTime).getTime() +
+      ((existing.serviceDuration || 60) + extraTimeMinutes) * 60 * 1000
+    ).toISOString();
+
+    const updates: any = { timeAdjustments: adjustments, extraTimeMinutes, estimatedCompletionTime };
+    if (providerNotes !== undefined) updates.providerNotes = providerNotes;
+
+    const [booking] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
+    return booking;
   }
 
   async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {

@@ -19,14 +19,30 @@ interface TrackingInfo {
   lastUpdate: string | null;
 }
 
+interface ArrivalStatus {
+  arrived: boolean;
+  arrivalTime: string | null;
+  estimatedCompletionTime: string | null;
+  extraTimeMinutes: number;
+  adjustmentDetails: Array<{ label: string; minutes: number }>;
+  providerNotes?: string;
+}
+
 export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
   const [wsConnected, setWsConnected] = useState(false);
   const [liveTracking, setLiveTracking] = useState<TrackingInfo | null>(null);
+  const [arrivalStatus, setArrivalStatus] = useState<ArrivalStatus>({
+    arrived: false,
+    arrivalTime: null,
+    estimatedCompletionTime: null,
+    extraTimeMinutes: 0,
+    adjustmentDetails: [],
+  });
 
   // Query for initial tracking data
-  const { data: trackingData, refetch } = useQuery<TrackingInfo>({
+  const { data: trackingData } = useQuery<TrackingInfo>({
     queryKey: [`/api/tracking/${bookingId}`],
-    refetchInterval: 10000, // Refresh every 10 seconds as fallback
+    refetchInterval: 10000,
   });
 
   // WebSocket connection for real-time updates
@@ -37,20 +53,40 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
 
     socket.onopen = () => {
       setWsConnected(true);
-      console.log('GPS tracking WebSocket connected');
     };
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
         if (data.type === 'location_update' && data.bookingId === bookingId) {
           setLiveTracking({
             providerLocation: { lat: data.latitude, lng: data.longitude },
             customerLocation: trackingData?.customerLocation || null,
             eta: data.eta,
             distance: data.distance,
-            lastUpdate: new Date().toISOString()
+            lastUpdate: new Date().toISOString(),
           });
+        }
+
+        if (data.type === 'provider_arrived' && data.bookingId === bookingId) {
+          setArrivalStatus({
+            arrived: true,
+            arrivalTime: data.arrivalTime,
+            estimatedCompletionTime: data.estimatedCompletionTime,
+            extraTimeMinutes: 0,
+            adjustmentDetails: [],
+          });
+        }
+
+        if (data.type === 'eta_update' && data.bookingId === bookingId) {
+          setArrivalStatus((prev) => ({
+            ...prev,
+            estimatedCompletionTime: data.estimatedCompletionTime,
+            extraTimeMinutes: data.extraTimeMinutes || 0,
+            adjustmentDetails: data.adjustments?.filter((a: any) => a.selected) || [],
+            providerNotes: data.providerNotes,
+          }));
         }
       } catch (error) {
         console.error('GPS tracking WebSocket message error:', error);
@@ -59,15 +95,17 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
 
     socket.onclose = () => {
       setWsConnected(false);
-      console.log('GPS tracking WebSocket disconnected');
     };
 
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, [bookingId, trackingData]);
 
   const currentTracking = liveTracking || trackingData;
+
+  const formatCompletionTime = (isoString: string | null) => {
+    if (!isoString) return null;
+    return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
 
   const formatETA = (eta: string | null) => {
     if (!eta) return 'Calculating...';
@@ -199,38 +237,68 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
           </CardContent>
         </Card>
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* ETA Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Estimated Arrival
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatETA(currentTracking?.eta || null)}
+        {/* Arrival banner */}
+        {arrivalStatus.arrived && (
+          <div className="bg-gray-950 text-white rounded-xl px-5 py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#8c52ff] animate-pulse" />
+              <span className="text-sm font-semibold text-[#8c52ff] uppercase tracking-widest">Provider Arrived</span>
+            </div>
+            {arrivalStatus.estimatedCompletionTime && (
+              <div>
+                <p className="text-xs text-gray-400">Estimated completion</p>
+                <p className="text-3xl font-bold">{formatCompletionTime(arrivalStatus.estimatedCompletionTime)}</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+            {arrivalStatus.adjustmentDetails.length > 0 && (
+              <div className="border-t border-gray-800 pt-3 space-y-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Time adjustments</p>
+                {arrivalStatus.adjustmentDetails.map((adj, i) => (
+                  <div key={i} className="flex justify-between text-sm text-gray-300">
+                    <span>{adj.label}</span>
+                    <span>+{adj.minutes}m</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {arrivalStatus.providerNotes && (
+              <p className="text-xs text-gray-400 border-t border-gray-800 pt-2">{arrivalStatus.providerNotes}</p>
+            )}
+          </div>
+        )}
 
-          {/* Distance Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Navigation className="h-4 w-4" />
-                Distance Away
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {formatDistance(currentTracking?.distance || null)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Status Cards */}
+        {!arrivalStatus.arrived && (
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Estimated Arrival
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatETA(currentTracking?.eta || null)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Navigation className="h-4 w-4" />
+                  Distance Away
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatDistance(currentTracking?.distance || null)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Service Status */}
         <Card>
@@ -240,8 +308,8 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Current Status:</span>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                Provider En Route
+              <Badge variant="secondary" className={arrivalStatus.arrived ? "bg-[#8c52ff]/10 text-[#8c52ff]" : "bg-blue-100 text-blue-800"}>
+                {arrivalStatus.arrived ? "Provider On-Site" : "Provider En Route"}
               </Badge>
             </div>
             
@@ -252,7 +320,6 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
               </span>
             </div>
 
-            {/* Contact Provider Button */}
             <Button className="w-full" variant="outline">
               <Phone className="h-4 w-4 mr-2" />
               Contact Provider
@@ -275,19 +342,31 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-                  <motion.div
-                    className="w-2 h-2 rounded-full bg-white"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${arrivalStatus.arrived ? "bg-green-500" : "bg-blue-500"}`}>
+                  {arrivalStatus.arrived ? (
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  ) : (
+                    <motion.div
+                      className="w-2 h-2 rounded-full bg-white"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  )}
                 </div>
-                <span className="text-sm font-medium">Provider on the way</span>
+                <span className="text-sm font-medium">{arrivalStatus.arrived ? "Provider arrived" : "Provider on the way"}</span>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-gray-300" />
-                <span className="text-sm text-gray-500">Service in progress</span>
+                <div className={`w-4 h-4 rounded-full ${arrivalStatus.arrived ? "bg-[#8c52ff]" : "bg-gray-300"}`}>
+                  {arrivalStatus.arrived && (
+                    <motion.div
+                      className="w-full h-full rounded-full bg-[#8c52ff]"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                  )}
+                </div>
+                <span className={`text-sm ${arrivalStatus.arrived ? "font-medium" : "text-gray-500"}`}>Service in progress</span>
               </div>
               
               <div className="flex items-center gap-3">

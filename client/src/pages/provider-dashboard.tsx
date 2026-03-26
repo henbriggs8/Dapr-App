@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ProviderProfileTab } from "@/components/provider-profile-tab";
+import { TimeAdjustmentPanel } from "@/components/time-adjustment-panel";
 
 interface ProviderEarnings {
   totalEarnings: number;
@@ -261,6 +262,21 @@ export default function ProviderDashboard() {
     },
   });
 
+  // Mark arrived mutation
+  const markArrivedMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/arrive`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
+      toast({ title: "Arrival confirmed", description: "The customer has been notified you've arrived." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to mark arrival", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleStatusToggle = (checked: boolean) => {
     const newStatus = checked ? 'online' : 'offline';
     updateStatusMutation.mutate(newStatus);
@@ -483,9 +499,9 @@ export default function ProviderDashboard() {
                             </div>
                           </div>
                           
-                          <div className="flex space-x-2">
+                          <div className="flex flex-col gap-2">
                             {booking.status === 'pending_assignment' && (
-                              <>
+                              <div className="flex space-x-2">
                                 <Button
                                   size="sm"
                                   onClick={() => acceptBookingMutation.mutate(booking.id)}
@@ -504,19 +520,32 @@ export default function ProviderDashboard() {
                                   <XCircle className="h-4 w-4 mr-2" />
                                   Reject
                                 </Button>
-                              </>
+                              </div>
                             )}
                             
                             {booking.status === 'assigned' && (
-                              <Button
-                                size="sm"
-                                onClick={() => startServiceMutation.mutate(booking.id)}
-                                disabled={startServiceMutation.isPending}
-                                className="bg-blue-600 hover:bg-blue-700"
-                              >
-                                <Play className="h-4 w-4 mr-2" />
-                                Start Service
-                              </Button>
+                              <div className="flex flex-col gap-2">
+                                {!(booking as any).arrivalTime && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => markArrivedMutation.mutate(booking.id)}
+                                    disabled={markArrivedMutation.isPending}
+                                    className="bg-[#8c52ff] hover:bg-[#7a3fee] text-white"
+                                  >
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  onClick={() => startServiceMutation.mutate(booking.id)}
+                                  disabled={startServiceMutation.isPending}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Start Service
+                                </Button>
+                              </div>
                             )}
                             
                             {booking.status === 'in_progress' && (
@@ -532,6 +561,19 @@ export default function ProviderDashboard() {
                             )}
                           </div>
                         </div>
+
+                        {/* Time adjustment panel — shown when arrived */}
+                        {(booking as any).arrivalTime && (
+                          <TimeAdjustmentPanel
+                            bookingId={booking.id}
+                            baseDurationMinutes={(booking as any).estimatedDurationMinutes || 60}
+                            arrivalTime={(booking as any).arrivalTime}
+                            initialAdjustments={(booking as any).timeAdjustments || undefined}
+                            initialNotes={(booking as any).providerNotes || ""}
+                            estimatedCompletionTime={(booking as any).estimatedCompletionTime}
+                            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

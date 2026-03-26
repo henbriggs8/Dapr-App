@@ -113,7 +113,14 @@ export const bookings = pgTable("bookings", {
   estimatedArrival: text("estimated_arrival"), // ETA in ISO string format
   lastLocationUpdate: text("last_location_update"), // Last GPS update timestamp
   distanceToCustomer: doublePrecision("distance_to_customer"), // Distance in miles
-  trackingEnabled: boolean("tracking_enabled").default(false) // Whether customer can track provider
+  trackingEnabled: boolean("tracking_enabled").default(false), // Whether customer can track provider
+
+  // Time adjustment fields
+  arrivalTime: text("arrival_time"), // When provider marked arrived (ISO string)
+  extraTimeMinutes: integer("extra_time_minutes").default(0), // Total extra minutes from adjustments
+  estimatedCompletionTime: text("estimated_completion_time"), // Calculated ETA for service completion
+  timeAdjustments: json("time_adjustments").default([]), // Array of TimeAdjustment objects
+  providerNotes: text("provider_notes") // Optional provider notes about the job
 });
 
 export const clerkSquareMapping = pgTable("clerk_square_mapping", {
