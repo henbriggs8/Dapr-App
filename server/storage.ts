@@ -19,7 +19,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User>;
+  updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   createBooking(booking: Omit<Booking, 'id'>): Promise<Booking>;
@@ -367,7 +367,7 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
+  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User> {
     const user = await this.getUser(id);
     if (!user) {
       throw new Error('User not found');
@@ -1382,7 +1382,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description'>>): Promise<User> {
+  async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User> {
     const [user] = await db
       .update(users)
       .set(updates)

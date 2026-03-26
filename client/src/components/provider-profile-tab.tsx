@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Edit3, Save, X, LogOut, Mail, Phone, MapPin, FileText, Star } from "lucide-react";
+import { Edit3, Save, X, LogOut, Mail, Phone, MapPin, FileText, Star, Camera, User } from "lucide-react";
 import { useLocation } from "wouter";
 
 export function ProviderProfileTab() {
@@ -11,6 +11,8 @@ export function ProviderProfileTab() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -35,6 +37,39 @@ export function ProviderProfileTab() {
     },
   });
 
+  const updateAvatarMutation = useMutation({
+    mutationFn: async (profileImage: string) => {
+      const res = await apiRequest("PATCH", "/api/user/profile", { profileImage });
+      return await res.json();
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["/api/user"], updatedUser);
+      setImagePreview(null);
+      toast({ title: "Photo updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update photo", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Please choose an image under 5MB", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setImagePreview(base64);
+      updateAvatarMutation.mutate(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCancel = () => {
     setFormData({
       name: user?.name || "",
@@ -58,8 +93,64 @@ export function ProviderProfileTab() {
 
   if (!user) return null;
 
+  const avatarSrc = imagePreview || user.profileImage;
+
   return (
     <div className="pb-10">
+
+      {/* ── Avatar ──────────────────────────────────────────────── */}
+      <div className="flex flex-col items-center px-6 pt-8 pb-6 border-b border-gray-200">
+        <div className="relative">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center group"
+            disabled={updateAvatarMutation.isPending}
+          >
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-10 h-10 text-gray-300" />
+            )}
+
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+
+            {/* Loading overlay */}
+            {updateAvatarMutation.isPending && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </button>
+
+          {/* Camera badge */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#8c52ff] flex items-center justify-center shadow-sm"
+          >
+            <Camera className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        <p className="mt-3 text-base font-medium text-black">{user.name || user.username}</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {updateAvatarMutation.isPending ? "Uploading photo..." : "Tap photo to change"}
+        </p>
+      </div>
 
       {/* Section label */}
       <div className="px-6 pt-6 pb-2">
