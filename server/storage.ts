@@ -1374,10 +1374,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const hashedPassword = await hashPassword(insertUser.password);
+    // Only hash if not already hashed (auth route may have already hashed it)
+    const passwordToStore = insertUser.password.includes('.')
+      ? insertUser.password
+      : await hashPassword(insertUser.password);
     const [user] = await db
       .insert(users)
-      .values({ ...insertUser, password: hashedPassword })
+      .values({ ...insertUser, password: passwordToStore })
       .returning();
     return user;
   }
