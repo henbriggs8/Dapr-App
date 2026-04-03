@@ -390,8 +390,9 @@ export default function BookingDialog({
     data.vehicles = vehicles;
     data.totalPrice = Math.round(totalPrice); // Round to integer for database
     data.status = 'unassigned'; // Set as unassigned for detailer matching
-    data.serviceLatitude = parsedAddress?.latitude || null;
-    data.serviceLongitude = parsedAddress?.longitude || null;
+    // Use coordinates from address autocomplete selection; fall back to saved address coords
+    data.serviceLatitude = serviceCoordinates?.latitude ?? parsedAddress?.latitude ?? null;
+    data.serviceLongitude = serviceCoordinates?.longitude ?? parsedAddress?.longitude ?? null;
     data.vehicleId = vehicles.length > 0 ? vehicles[0].id : null;
     data.notes = `Service for ${vehicles.map(v => v.details).join(', ')}`;
     
@@ -728,10 +729,10 @@ export default function BookingDialog({
                 const values = form.getValues();
                 console.log("Form values:", values);
                 
-                // Create booking data directly
+                // Create booking data directly — use what the user entered in the address field
                 const bookingData = {
-                  serviceLocation: user?.address || "123 Main Street, City, State 12345",
-                  serviceLocationType: "home",
+                  serviceLocation: values.serviceLocation || user?.address || "",
+                  serviceLocationType: values.serviceLocationType || "home",
                   priceTier: service?.category || "basic",
                   providerId: provider.id,
                   serviceId: serviceId,
@@ -743,8 +744,8 @@ export default function BookingDialog({
                   vehicles: vehicles,
                   totalPrice: totalPrice,
                   status: 'unassigned',
-                  serviceLatitude: null,
-                  serviceLongitude: null,
+                  serviceLatitude: serviceCoordinates?.latitude ?? parsedAddress?.latitude ?? null,
+                  serviceLongitude: serviceCoordinates?.longitude ?? parsedAddress?.longitude ?? null,
                   vehicleId: vehicles.length > 0 ? vehicles[0].id : null,
                   notes: `Service for ${vehicles.map(v => v.details).join(', ')}`,
                   date: timeSlot?.date,
