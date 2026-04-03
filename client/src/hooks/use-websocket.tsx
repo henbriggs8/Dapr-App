@@ -70,6 +70,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           
           if (data.type === "auth_confirmed") {
             console.log("WebSocket auth confirmed for user:", data.userId);
+          } else if (data.type === "job_accepted") {
+            // A provider accepted a job — refresh customer bookings and provider active list
+            queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
+          } else if (data.type === "new_job_available") {
+            // A new booking was created — refresh provider available jobs
+            queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
           } else if (data.type === "booking_update") {
             // Invalidate booking queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });

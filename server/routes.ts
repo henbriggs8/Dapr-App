@@ -784,33 +784,35 @@ export function registerRoutes(app: Express): Server {
     if (!req.user || !req.user.isProvider) return res.sendStatus(401);
 
     try {
-      // Get provider's location
       const provider = await storage.getUser(req.user.id);
-      if (!provider || !provider.latitude || !provider.longitude) {
-        return res.json([]);
-      }
+      if (!provider) return res.sendStatus(401);
 
-      // Get all unassigned bookings
       const unassignedBookings = await storage.getUnassignedBookings();
-      
-      // Filter bookings within 15 miles
-      const nearbyJobs = [];
+
+      const providerHasLocation = !!(provider.latitude && provider.longitude);
+
+      const jobs = [];
       for (const booking of unassignedBookings) {
-        if (booking.serviceLatitude && booking.serviceLongitude) {
+        const bookingHasLocation = !!(booking.serviceLatitude && booking.serviceLongitude);
+
+        if (providerHasLocation && bookingHasLocation) {
+          // Both have coordinates — apply 15-mile radius filter
           const distance = calculateDistance(
-            provider.latitude,
-            provider.longitude,
-            booking.serviceLatitude,
-            booking.serviceLongitude
+            provider.latitude!,
+            provider.longitude!,
+            booking.serviceLatitude!,
+            booking.serviceLongitude!
           );
-          
           if (distance <= 15) {
-            nearbyJobs.push({...booking, distance: Math.round(distance * 10) / 10});
+            jobs.push({ ...booking, distance: Math.round(distance * 10) / 10 });
           }
+        } else {
+          // Missing coordinates on one or both sides — include without distance
+          jobs.push({ ...booking, distance: null });
         }
       }
 
-      res.json(nearbyJobs);
+      res.json(jobs);
     } catch (error) {
       console.error("Error fetching available jobs:", error);
       res.status(500).json({ error: "Failed to fetch available jobs" });
@@ -827,9 +829,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid booking ID" });
       }
 
-      // Check if booking is still available
+      // Check if booking is still available (pending = unassigned to any provider)
       const booking = await storage.getBookingById(bookingId);
-      if (!booking || booking.status !== 'unassigned') {
+      if (!booking || booking.status !== 'pending' || booking.providerId) {
         return res.status(400).json({ error: "Job is no longer available" });
       }
 

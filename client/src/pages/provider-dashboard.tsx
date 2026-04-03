@@ -47,7 +47,7 @@ export default function ProviderDashboard() {
   });
 
   // Fetch available jobs (within 15 miles)
-  const { data: availableJobs = [], isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<(Booking & { distance: number })[]>({
+  const { data: availableJobs = [], isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<(Booking & { distance: number | null })[]>({
     queryKey: ['/api/provider/available-jobs'],
   });
 
@@ -572,7 +572,8 @@ export default function ProviderDashboard() {
           ) : availableJobs.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">No jobs available within 15 miles</p>
+              <p className="text-gray-400 text-sm">No jobs available right now</p>
+              <p className="text-gray-300 text-xs mt-1">Check back soon or tap Refresh</p>
             </div>
           ) : (
             <div>
@@ -583,10 +584,12 @@ export default function ProviderDashboard() {
                     <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 font-medium">
                       {formatCategory(job.priceTier)}
                     </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Navigation className="w-3 h-3" />
-                      {job.distance} mi away
-                    </span>
+                    {job.distance != null && (
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Navigation className="w-3 h-3" />
+                        {job.distance} mi away
+                      </span>
+                    )}
                   </div>
 
                   {/* Details */}
