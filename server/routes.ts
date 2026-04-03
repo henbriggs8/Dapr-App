@@ -243,7 +243,7 @@ export function registerRoutes(app: Express): Server {
       // Create a properly typed booking object with all required fields
       const booking = {
         userId: bookingWithoutId.userId,
-        providerId: bookingWithoutId.providerId || null,
+        providerId: null, // Always null on creation — providers are assigned via accept-job flow
         serviceId: bookingWithoutId.serviceId,
         timeSlotId: bookingWithoutId.timeSlotId,
         serviceLocation: bookingWithoutId.serviceLocation,
