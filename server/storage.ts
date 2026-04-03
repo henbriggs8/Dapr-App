@@ -982,13 +982,17 @@ export class MemStorage implements IStorage {
       throw new Error('Booking not found');
     }
     
+    // Atomic guard: reject if already claimed by another provider
+    if (booking.status !== 'pending' || booking.providerId != null) {
+      throw new Error('Job is no longer available');
+    }
+    
     const provider = await this.getUser(providerId);
     if (!provider || !provider.isProvider) {
       throw new Error('Provider not found');
     }
     
     const now = new Date();
-    // Set expiry time for assignment (5 minutes from now)
     const expiryTime = new Date(now.getTime() + 5 * 60000);
     
     const updatedBooking = {
@@ -1648,16 +1652,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking> {
+    // Atomic update: only succeeds if the booking is still pending and unassigned
     const [booking] = await db
       .update(bookings)
       .set({
         providerId,
         status: 'assigned',
         assignedAt: new Date().toISOString(),
-        assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
+        assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString()
       })
-      .where(eq(bookings.id, bookingId))
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.status, 'pending'),
+          isNull(bookings.providerId)
+        )
+      )
       .returning();
+    if (!booking) {
+      throw new Error('Job is no longer available');
+    }
     return booking;
   }
 

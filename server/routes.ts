@@ -789,11 +789,11 @@ export function registerRoutes(app: Express): Server {
 
       const unassignedBookings = await storage.getUnassignedBookings();
 
-      const providerHasLocation = !!(provider.latitude && provider.longitude);
+      const providerHasLocation = provider.latitude != null && provider.longitude != null;
 
       const jobs = [];
       for (const booking of unassignedBookings) {
-        const bookingHasLocation = !!(booking.serviceLatitude && booking.serviceLongitude);
+        const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
 
         if (providerHasLocation && bookingHasLocation) {
           // Both have coordinates — apply 15-mile radius filter
