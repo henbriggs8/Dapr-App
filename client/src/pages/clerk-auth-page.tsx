@@ -338,20 +338,26 @@ function EmailCollectScreen({
   onSubmit,
   loading,
   error,
+  required = false,
 }: {
   onSubmit: (email: string) => void;
   loading: boolean;
   error: string;
+  required?: boolean;
 }) {
   const [email, setEmail] = useState('');
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">One more thing</p>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">
+        {required ? 'Almost there' : 'One more thing'}
+      </p>
       <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-[#111] leading-tight">
-        Add your email
+        {required ? 'Verify your email' : 'Add your email'}
       </h1>
       <p className="mt-3 text-[13px] leading-5 text-[#9b9b9b]">
-        Your email lets you reset your password and receive booking confirmations.
+        {required
+          ? "We'll send a quick code to confirm your email address."
+          : 'Your email lets you reset your password and receive booking confirmations.'}
       </p>
 
       <div className="mt-8 space-y-3">
@@ -362,6 +368,7 @@ function EmailCollectScreen({
           placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && email.trim() && onSubmit(email.trim())}
           className={`${inputCls} rounded-xl`}
         />
         {error && <ErrorBanner msg={error} />}
@@ -369,20 +376,22 @@ function EmailCollectScreen({
 
       <button
         type="button"
-        disabled={loading}
+        disabled={loading || !email.trim()}
         onClick={() => onSubmit(email.trim())}
         className={`${primaryBtn} mt-6`}
       >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save email'}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : required ? 'Send code' : 'Save email'}
       </button>
 
-      <button
-        type="button"
-        onClick={() => onSubmit('')}
-        className="mt-4 text-center text-[13px] text-[#9b9b9b] underline-offset-2 hover:underline"
-      >
-        Skip for now
-      </button>
+      {!required && (
+        <button
+          type="button"
+          onClick={() => onSubmit('')}
+          className="mt-4 text-center text-[13px] text-[#9b9b9b] underline-offset-2 hover:underline"
+        >
+          Skip for now
+        </button>
+      )}
     </div>
   );
 }
@@ -517,6 +526,7 @@ function AuthFlow() {
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [signUpNeedsEmail, setSignUpNeedsEmail] = useState(false);
 
   // Navigate home once local user is synced (must be in effect, not render)
   useEffect(() => {
@@ -648,11 +658,19 @@ function AuthFlow() {
       if (mode === 'signUp') {
         const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
         if (result.status === 'complete') {
+          // Phone-only sign-up complete — optionally collect email
           setPendingSessionId(result.createdSessionId!);
+          setSignUpNeedsEmail(false);
+          setOtpCode('');
+          setStep('emailCollect');
+        } else if (result.status === 'missing_requirements') {
+          // Clerk also requires email for sign-up
+          setSignUpNeedsEmail(true);
+          setPendingSessionId(null);
           setOtpCode('');
           setStep('emailCollect');
         } else {
-          setError('Verification incomplete. Please try again.');
+          setError(`Verification error (status: ${result.status}). Please try again.`);
         }
       } else {
         const strategy = isResettingPassword ? 'reset_password_phone_code' : 'phone_code';
@@ -679,13 +697,26 @@ function AuthFlow() {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn!.attemptFirstFactor({
-        strategy: 'email_code',
-        code: otpCode,
-      });
-      if (result.status === 'complete') {
-        await setSignInActive!({ session: result.createdSessionId });
-        setStep('welcome');
+      if (signUpNeedsEmail) {
+        // Verifying email as part of sign-up completion
+        const result = await signUp!.attemptEmailAddressVerification({ code: otpCode });
+        if (result.status === 'complete') {
+          setSignUpNeedsEmail(false);
+          await setSignUpActive!({ session: result.createdSessionId });
+          setStep('welcome');
+        } else {
+          setError(`Verification incomplete (status: ${result.status}). Please try again.`);
+        }
+      } else {
+        // Sign-in via email code
+        const result = await signIn!.attemptFirstFactor({
+          strategy: 'email_code',
+          code: otpCode,
+        });
+        if (result.status === 'complete') {
+          await setSignInActive!({ session: result.createdSessionId });
+          setStep('welcome');
+        }
       }
     } catch (err: any) {
       setError(clerkError(err));
@@ -697,7 +728,10 @@ function AuthFlow() {
   const handleResend = async () => {
     setError('');
     try {
-      if (mode === 'signUp') {
+      if (signUpNeedsEmail && step === 'emailOtp') {
+        // Resend email verification code during sign-up
+        await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+      } else if (mode === 'signUp') {
         await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
       } else if (isResettingPassword) {
         await signIn!.create({ strategy: 'reset_password_phone_code', identifier: e164 });
@@ -761,14 +795,35 @@ function AuthFlow() {
   };
 
   const handleEmailCollect = async (email: string) => {
-    if (email) {
-      localStorage.setItem('pendingEmail', email);
+    setError('');
+    setLoading(true);
+    try {
+      if (signUpNeedsEmail) {
+        if (!email) {
+          setError('An email address is required to complete sign-up.');
+          setLoading(false);
+          return;
+        }
+        // Tell Clerk about the email and send verification code
+        await signUp!.update({ emailAddress: email });
+        await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+        localStorage.setItem('pendingEmail', email);
+        setOtpCode('');
+        setStep('emailOtp');
+      } else {
+        // Email is optional — save locally and activate session
+        if (email) localStorage.setItem('pendingEmail', email);
+        if (pendingSessionId) {
+          await setSignUpActive!({ session: pendingSessionId });
+          setPendingSessionId(null);
+        }
+        setStep('welcome');
+      }
+    } catch (err: any) {
+      setError(clerkError(err));
+    } finally {
+      setLoading(false);
     }
-    if (pendingSessionId) {
-      await setSignUpActive!({ session: pendingSessionId });
-      setPendingSessionId(null);
-    }
-    setStep('welcome');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -822,20 +877,28 @@ function AuthFlow() {
     return (
       <OtpScreen
         title="Check your email"
-        subtitle="We sent a 6-digit code to your email address. Check your inbox and spam folder."
+        subtitle={signUpNeedsEmail
+          ? `We sent a 6-digit code to ${localStorage.getItem('pendingEmail') ?? 'your email'}. Check your inbox and spam folder.`
+          : "We sent a 6-digit code to your email address. Check your inbox and spam folder."}
         code={otpCode}
         setCode={setOtpCode}
         prefix="email"
-        onBack={() => { setStep('landing'); setError(''); setOtpCode(''); }}
+        onBack={() => {
+          setStep(signUpNeedsEmail ? 'emailCollect' : 'landing');
+          setError('');
+          setOtpCode('');
+        }}
         onNext={handleEmailOtpNext}
         loading={loading}
         error={error}
+        onResend={signUpNeedsEmail ? handleResend : undefined}
+        resendLabel="Resend code"
       />
     );
   }
 
   if (step === 'emailCollect') {
-    return <EmailCollectScreen onSubmit={handleEmailCollect} loading={loading} error={error} />;
+    return <EmailCollectScreen onSubmit={handleEmailCollect} loading={loading} error={error} required={signUpNeedsEmail} />;
   }
 
   if (step === 'setPassword') {
