@@ -79,8 +79,6 @@ function OtpGrid({
       {digits.map((digit, i) => (
         <input
           key={i}
-          data-otp-[prefix]={i}
-          /* workaround: attribute set inline below */
           ref={(el) => el?.setAttribute(`data-otp-${prefix}`, String(i))}
           value={digit}
           onChange={(e) => update(i, e.target.value)}
