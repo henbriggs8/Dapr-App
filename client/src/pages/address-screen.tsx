@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { ArrowLeft, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 const US_STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY",
 ];
+
+const primaryBtn =
+  "flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#111] text-[13px] font-semibold text-white disabled:opacity-30 transition active:scale-[0.98]";
+
+const inputCls =
+  "flex h-12 w-full border border-[#ececec] bg-[#f6f6f6] px-4 text-[14px] text-[#111] outline-none placeholder:text-[#b2b2b2]";
 
 export default function AddressScreen() {
   const [, setLocation] = useLocation();
@@ -26,189 +26,130 @@ export default function AddressScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  const handleSaveAndContinue = () => {
-    // Save address data to localStorage for now
-    const addressData = {
-      streetAddress,
-      city,
-      state,
-      zipCode,
-      locationType,
-      latitude,
-      longitude
-    };
-    localStorage.setItem("userAddress", JSON.stringify(addressData));
-    
-    // Navigate to car profile screen
+  const isValid = streetAddress && city && state && zipCode;
+
+  const handleContinue = () => {
+    localStorage.setItem(
+      "userAddress",
+      JSON.stringify({ streetAddress, city, state, zipCode, locationType, latitude, longitude })
+    );
     setLocation("/onboarding/car-profile");
   };
 
-  const isFormValid = streetAddress && city && state && zipCode;
-
   return (
-    <div className="min-h-screen bg-white px-4 pt-12 pb-8">
-      {/* Header */}
-      <div className="flex items-center mb-8">
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+      {/* Back + step */}
+      <div className="flex items-center justify-between mb-10">
         <button
-          onClick={() => setLocation("/")}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full"
+          onClick={() => setLocation("/onboarding/name")}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-600" />
+          <ArrowLeft className="h-4 w-4" />
         </button>
-        <h1 className="text-xl font-semibold text-gray-900 ml-4">
-          Service Address
-        </h1>
+        <span className="text-[12px] text-[#aaa]">Step 2 of 4</span>
       </div>
 
-      {/* Icon and Title */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
-      >
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-[#8c52ff]/10 rounded-full mb-4">
-          <MapPin className="h-8 w-8 text-[#8c52ff]" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Where should we send your detailer?
-        </h2>
-        <p className="text-gray-600 text-base">
-          We'll send a professional detailer to your location
-        </p>
-      </motion.div>
+      {/* Heading */}
+      <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Service location</p>
+      <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111] mb-2">
+        Where do we come to you?
+      </h1>
+      <p className="text-[13px] text-[#8a8a8a] mb-8 leading-5">
+        We'll send a detailer directly to your location.
+      </p>
 
-      {/* Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="space-y-6"
-      >
-        {/* Location Type Selector */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">
-            Location Type
-          </Label>
-          <div className="flex gap-3">
-            {["Home", "Work", "Other"].map((type) => (
-              <button
-                key={type}
-                onClick={() => setLocationType(type)}
-                className={`flex-1 h-12 rounded-lg border-2 font-medium transition-all ${
-                  locationType === type
-                    ? "border-[#8c52ff] bg-[#8c52ff]/5 text-[#8c52ff]"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* Street Address with Autocomplete */}
-        <AddressAutocomplete
-          value={streetAddress}
-          onChange={(address, details) => {
-            setStreetAddress(address);
-            
-            // Auto-populate other fields from address details
-            if (details?.address_components) {
-              const components = details.address_components;
-              
-              // Extract city
-              const cityComponent = components.find(c => 
-                c.types.includes('locality') || c.types.includes('administrative_area_level_3')
-              );
-              if (cityComponent) {
-                setCity(cityComponent.long_name);
-              }
-              
-              // Extract state
-              const stateComponent = components.find(c => 
-                c.types.includes('administrative_area_level_1')
-              );
-              if (stateComponent) {
-                setState(stateComponent.short_name);
-              }
-              
-              // Extract zip code
-              const zipComponent = components.find(c => 
-                c.types.includes('postal_code')
-              );
-              if (zipComponent) {
-                setZipCode(zipComponent.long_name);
-              }
-            }
-          }}
-          onLocationSelect={(location) => {
-            setLatitude(location.lat);
-            setLongitude(location.lng);
-          }}
-          label="Street Address"
-          placeholder="Start typing your address..."
-        />
+      {/* Location type pills */}
+      <div className="flex gap-2 mb-6">
+        {["Home", "Work", "Other"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setLocationType(type)}
+            className={`flex-1 h-10 rounded-full text-[13px] font-medium border transition ${
+              locationType === type
+                ? "border-[#111] bg-[#111] text-white"
+                : "border-[#ececec] bg-white text-[#666]"
+            }`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
 
-        {/* City */}
-        <div className="space-y-2">
-          <Label htmlFor="city" className="text-sm font-medium text-gray-700">
-            City
-          </Label>
-          <Input
-            id="city"
-            type="text"
-            placeholder="San Francisco"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+      {/* Fields */}
+      <div className="flex flex-col gap-4 flex-1">
+        {/* Street address autocomplete */}
+        <div>
+          <p className="text-[10px] font-semibold tracking-widest text-[#aaa] uppercase mb-2">Street address</p>
+          <AddressAutocomplete
+            value={streetAddress}
+            onChange={(address, details) => {
+              setStreetAddress(address);
+              if (details?.address_components) {
+                const c = details.address_components;
+                const city = c.find((x: any) => x.types.includes("locality") || x.types.includes("administrative_area_level_3"));
+                const st = c.find((x: any) => x.types.includes("administrative_area_level_1"));
+                const zip = c.find((x: any) => x.types.includes("postal_code"));
+                if (city) setCity(city.long_name);
+                if (st) setState(st.short_name);
+                if (zip) setZipCode(zip.long_name);
+              }
+            }}
+            onLocationSelect={(loc) => { setLatitude(loc.lat); setLongitude(loc.lng); }}
+            label=""
+            placeholder="Start typing your address…"
           />
         </div>
 
-        {/* State and ZIP Code */}
-        <div className="grid grid-cols-5 gap-4">
-          <div className="col-span-2 space-y-2">
-            <Label htmlFor="state" className="text-sm font-medium text-gray-700">
-              State
-            </Label>
-            <Select onValueChange={setState} value={state}>
-              <SelectTrigger className="h-14 border-gray-300 focus:ring-[#8c52ff] focus:border-transparent">
-                <SelectValue placeholder="CA" />
-              </SelectTrigger>
-              <SelectContent>
-                {US_STATES.map((stateCode) => (
-                  <SelectItem key={stateCode} value={stateCode}>
-                    {stateCode}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* City */}
+        <div>
+          <p className="text-[10px] font-semibold tracking-widest text-[#aaa] uppercase mb-2">City</p>
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="San Francisco"
+            className={inputCls}
+          />
+        </div>
+
+        {/* State + ZIP */}
+        <div className="flex gap-3">
+          <div className="w-28">
+            <p className="text-[10px] font-semibold tracking-widest text-[#aaa] uppercase mb-2">State</p>
+            <select
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="flex h-12 w-full border border-[#ececec] bg-[#f6f6f6] px-3 text-[14px] text-[#111] outline-none appearance-none"
+            >
+              <option value="">—</option>
+              {US_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
-          
-          <div className="col-span-3 space-y-2">
-            <Label htmlFor="zip" className="text-sm font-medium text-gray-700">
-              ZIP Code
-            </Label>
-            <Input
-              id="zip"
-              type="text"
-              placeholder="94102"
+          <div className="flex-1">
+            <p className="text-[10px] font-semibold tracking-widest text-[#aaa] uppercase mb-2">ZIP code</p>
+            <input
               value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
-              className="h-14 px-4 text-base border-gray-300 focus:ring-[#8c52ff] focus:border-transparent"
+              onChange={(e) => setZipCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              placeholder="94102"
+              inputMode="numeric"
+              className={inputCls}
             />
           </div>
         </div>
+      </div>
 
-        {/* Save & Continue Button */}
-        <div className="pt-4">
-          <Button
-            onClick={handleSaveAndContinue}
-            disabled={!isFormValid}
-            className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] disabled:bg-gray-300 disabled:text-gray-500 rounded-lg"
-          >
-            Save & Continue
-          </Button>
-        </div>
-      </motion.div>
+      {/* CTA */}
+      <div className="pt-8">
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={!isValid}
+          className={primaryBtn}
+        >
+          Continue <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

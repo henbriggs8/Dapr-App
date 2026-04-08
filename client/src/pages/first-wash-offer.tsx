@@ -1,129 +1,81 @@
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { ArrowLeft, Gift, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 
 export default function FirstWashOffer() {
   const [, setLocation] = useLocation();
 
-  const handleBookFreeWash = () => {
-    // Mark onboarding as completed
+  const handleBook = () => {
     localStorage.setItem("onboardingCompleted", "true");
-    
-    // Navigate to booking screen
     setLocation("/booking");
   };
 
-  const handleNotNow = () => {
-    // Mark onboarding as completed but skip the free wash
+  const handleSkip = () => {
     localStorage.setItem("onboardingCompleted", "true");
-    
-    // Navigate to home screen
     setLocation("/");
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-12 pb-8">
-      {/* Header */}
-      <div className="flex items-center mb-8">
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+      {/* Back + step */}
+      <div className="flex items-center justify-between mb-10">
         <button
           onClick={() => setLocation("/onboarding/car-profile")}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-600" />
+          <ArrowLeft className="h-4 w-4" />
         </button>
-        <h1 className="text-xl font-semibold text-gray-900 ml-4">
-          Welcome Offer
-        </h1>
+        <span className="text-[12px] text-[#aaa]">Step 4 of 4</span>
       </div>
 
-      {/* Main Content */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center flex-1 flex flex-col justify-center"
-      >
-        {/* Icon with Animation */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-[#8c52ff] to-[#7c47eb] rounded-full mb-8 mx-auto relative"
-        >
-          <Gift className="h-12 w-12 text-white" />
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-2 -right-2"
-          >
-            <Sparkles className="h-8 w-8 text-yellow-400" />
-          </motion.div>
-        </motion.div>
+      {/* Icon */}
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3eeff] mb-8">
+        <Sparkles className="h-8 w-8 text-[#8c52ff]" />
+      </div>
 
-        {/* Headline */}
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-3xl font-bold text-gray-900 mb-4"
-        >
-          Get Your First Wash Free
-        </motion.h2>
+      {/* Heading */}
+      <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Welcome offer</p>
+      <h1 className="text-[32px] font-semibold leading-[1.05] tracking-[-0.04em] text-[#111] mb-4">
+        Your first wash<br />is on us.
+      </h1>
+      <p className="text-[14px] text-[#8a8a8a] leading-6 mb-2">
+        Just cover the tip — we'll take care of the rest.
+      </p>
+      <p className="text-[13px] text-[#b2b2b2] leading-5 mb-12">
+        Premium mobile detailing delivered to your door. Cancel anytime.
+      </p>
 
-        {/* Subtext */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="text-lg text-gray-600 mb-2 leading-relaxed"
-        >
-          Just cover the tip — we'll handle the rest
-        </motion.p>
+      {/* Offer detail rows */}
+      <div className="flex flex-col border-t border-[#ececec]">
+        {[
+          { label: "Exterior hand wash", value: "Included" },
+          { label: "Interior vacuum", value: "Included" },
+          { label: "Windows cleaned", value: "Included" },
+          { label: "Tip for detailer", value: "Up to you" },
+        ].map(({ label, value }) => (
+          <div key={label} className="flex items-center justify-between py-4 border-b border-[#ececec]">
+            <span className="text-[14px] text-[#111]">{label}</span>
+            <span className="text-[13px] text-[#8c52ff] font-medium">{value}</span>
+          </div>
+        ))}
+      </div>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="text-base text-gray-500 mb-12 leading-relaxed"
+      {/* CTAs */}
+      <div className="mt-auto pt-8 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={handleBook}
+          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#8c52ff] text-[13px] font-semibold text-white transition active:scale-[0.98]"
         >
-          Experience premium car detailing at your location with our welcome offer
-        </motion.p>
-
-        {/* CTA Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="space-y-4"
+          Book my free wash <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleSkip}
+          className="text-center text-[13px] text-[#aaa] py-2"
         >
-          <Button
-            onClick={handleBookFreeWash}
-            className="w-full h-14 text-base font-semibold bg-[#8c52ff] hover:bg-[#7c47eb] rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
-          >
-            Book My Free Wash
-          </Button>
-
-          <button
-            onClick={handleNotNow}
-            className="w-full h-12 text-gray-500 font-medium hover:text-gray-700 transition-colors"
-          >
-            Not now
-          </button>
-        </motion.div>
-
-        {/* Fine Print */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-8 pt-8 border-t border-gray-100"
-        >
-          <p className="text-xs text-gray-400 leading-relaxed">
-            *Free wash includes exterior wash and interior vacuum. Tip for detailer not included. 
-            Valid for new customers only. One per household.
-          </p>
-        </motion.div>
-      </motion.div>
+          Maybe later
+        </button>
+      </div>
     </div>
   );
 }

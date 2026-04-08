@@ -9,42 +9,32 @@ interface OnboardingWrapperProps {
 export function OnboardingWrapper({ children }: OnboardingWrapperProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
-  const [shouldCheckOnboarding, setShouldCheckOnboarding] = useState(true);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    // Only check onboarding for regular users (not admin/provider) and only once
-    if (user && !user.isAdmin && !user.isProvider && shouldCheckOnboarding) {
-      // Prevent checking onboarding if already on an onboarding page
-      if (location.startsWith("/onboarding/")) {
-        setShouldCheckOnboarding(false);
-        return;
-      }
+    if (!user || user.isAdmin || user.isProvider || checked) return;
+    if (location.startsWith("/onboarding/")) { setChecked(true); return; }
 
-      const hasCompletedOnboarding = localStorage.getItem("onboardingCompleted");
-      const hasAddress = localStorage.getItem("userAddress");
-      const hasVehicle = localStorage.getItem("userVehicle");
-      
-      // If onboarding not completed, redirect to appropriate step
-      if (!hasCompletedOnboarding) {
-        if (!hasAddress) {
-          setLocation("/onboarding/address");
-          setShouldCheckOnboarding(false);
-          return;
-        }
-        if (!hasVehicle) {
-          setLocation("/onboarding/car-profile");
-          setShouldCheckOnboarding(false);
-          return;
-        }
-        // If has address and vehicle but not completed, show offer
-        setLocation("/onboarding/first-wash-offer");
-        setShouldCheckOnboarding(false);
-        return;
-      }
-      
-      setShouldCheckOnboarding(false);
+    const onboardingCompleted = localStorage.getItem("onboardingCompleted");
+    if (onboardingCompleted) { setChecked(true); return; }
+
+    const hasName    = localStorage.getItem("userName");
+    const hasAddress = localStorage.getItem("userAddress");
+    const hasVehicle = localStorage.getItem("userVehicle");
+    const skippedVehicle = localStorage.getItem("skipVehicle");
+
+    if (!hasName) {
+      setLocation("/onboarding/name");
+    } else if (!hasAddress) {
+      setLocation("/onboarding/address");
+    } else if (!hasVehicle && !skippedVehicle) {
+      setLocation("/onboarding/car-profile");
+    } else {
+      setLocation("/onboarding/first-wash-offer");
     }
-  }, [user, location, setLocation, shouldCheckOnboarding]);
+
+    setChecked(true);
+  }, [user, location, setLocation, checked]);
 
   return <>{children}</>;
 }
