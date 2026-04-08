@@ -1,0 +1,451 @@
+import React, { useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, ChevronDown } from "lucide-react";
+
+/**
+ * Dapper / Dapr custom auth flow shell
+ *
+ * Paste into Replit as a page/component.
+ * This is the FRONTEND STRUCTURE + STYLING for the flow you mocked up.
+ *
+ * Next step after this:
+ * Replace the placeholder submit handlers with Clerk methods.
+ *
+ * Suggested wiring points:
+ * - handlePhoneNext() -> Clerk sign-in / sign-up start
+ * - handlePasswordNext() -> Clerk password attempt
+ * - handlePhoneCodeNext() -> Clerk phone code verification
+ * - handleEmailCodeNext() -> Clerk email code verification
+ * - handleContinue() -> route into app
+ */
+
+const screenFrame =
+  "relative mx-auto h-[812px] w-[375px] overflow-hidden rounded-[34px] bg-white shadow-[0_20px_70px_rgba(0,0,0,0.08)] ring-1 ring-black/5";
+
+const mutedButton =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f1f1f1] px-5 text-[14px] font-medium text-[#111] transition hover:bg-[#e9e9e9] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed";
+
+const primaryButton =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#111] px-5 text-[14px] font-medium text-white transition hover:bg-black/90 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed";
+
+const inputClass =
+  "h-12 w-full rounded-none border border-[#ececec] bg-[#f6f6f6] px-4 text-[14px] text-[#111] outline-none placeholder:text-[#a3a3a3] focus:border-[#d7d7d7]";
+
+const otpInputClass =
+  "h-12 w-11 border border-[#dcdcdc] bg-white text-center text-[20px] font-medium outline-none focus:border-black";
+
+const phonePreviewImage =
+  "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80";
+
+function StatusBar() {
+  return (
+    <div className="flex items-center justify-between px-6 pt-3 text-[11px] font-medium text-[#111]">
+      <span>9:41</span>
+      <div className="flex items-center gap-1 text-[10px]">
+        <span>◔◔◔</span>
+      </div>
+    </div>
+  );
+}
+
+function BottomHomeBar() {
+  return <div className="absolute bottom-2 left-1/2 h-1.5 w-32 -translate-x-1/2 rounded-full bg-black" />;
+}
+
+function StepTitle({ children }) {
+  return <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111]">{children}</h1>;
+}
+
+function StepCopy({ children }) {
+  return <p className="mt-2 text-[13px] leading-5 text-[#8a8a8a]">{children}</p>;
+}
+
+function FooterNav({ onBack, onNext, nextDisabled = false, nextLabel = "Next" }) {
+  return (
+    <div className="absolute bottom-8 left-0 right-0 flex items-center justify-between px-5">
+      <button type="button" onClick={onBack} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1] text-[#111] transition hover:bg-[#e9e9e9]">
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+
+      <button type="button" onClick={onNext} disabled={nextDisabled} className={`${mutedButton} min-w-[88px]`}>
+        <span>{nextLabel}</span>
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function LandingScreen({ phone, setPhone, onNext }) {
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-4">
+        <div className="overflow-hidden rounded-none">
+          <img src={phonePreviewImage} alt="Dapper vehicle" className="h-[220px] w-full object-cover" />
+        </div>
+
+        <div className="mt-8 px-1">
+          <h2 className="max-w-[270px] text-[31px] font-semibold leading-[1.02] tracking-[-0.04em] text-[#111]">
+            Use your Dapper account to get set up
+          </h2>
+        </div>
+
+        <div className="mt-8 flex h-12 items-center overflow-hidden border border-[#ececec] bg-[#f6f6f6]">
+          <div className="flex h-full w-[90px] items-center justify-center gap-2 border-r border-[#ececec] text-[13px] text-[#111]">
+            <span>+1</span>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </div>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="232 188 7651"
+            className="h-full flex-1 bg-transparent px-4 text-[14px] text-[#111] outline-none placeholder:text-[#b2b2b2]"
+          />
+        </div>
+      </div>
+
+      <div className="absolute bottom-8 left-0 right-0 px-5">
+        <button type="button" onClick={onNext} className={`${primaryButton} w-full`}>
+          Next
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+function PhoneInputScreen({ phone, setPhone, onNext, onGoogle }) {
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-10">
+        <div className="text-[22px] font-semibold tracking-[-0.03em] text-[#111]">Enter your mobile number</div>
+
+        <div className="mt-8 flex h-12 items-center border border-[#ececec] bg-[#f6f6f6]">
+          <button type="button" className="flex h-full w-[58px] items-center justify-center gap-1 border-r border-[#ececec] text-[18px]">
+            <span>🇬🇧</span>
+            <ChevronDown className="h-3.5 w-3.5 text-[#777]" />
+          </button>
+
+          <div className="flex flex-1 items-center px-3 text-[14px] text-[#8e8e8e]">
+            <span className="mr-2">+44</span>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Mobile number"
+              className="w-full bg-transparent outline-none placeholder:text-[#b2b2b2]"
+            />
+          </div>
+        </div>
+
+        <button type="button" onClick={onNext} className={`${primaryButton} mt-5 w-full rounded-none`}>
+          Next
+          <ArrowRight className="h-4 w-4" />
+        </button>
+
+        <p className="mt-4 text-[10px] leading-4 text-[#9a9a9a]">
+          By proceeding, you consent to get calls, WhatsApp or SMS messages, including by automated means, from us and its affiliates to the number provided.
+        </p>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#ececec]" />
+          <span className="text-[11px] text-[#a0a0a0]">or</span>
+          <div className="h-px flex-1 bg-[#ececec]" />
+        </div>
+
+        <button type="button" onClick={onGoogle} className="flex h-12 w-full items-center justify-center gap-3 border border-[#cecece] bg-white text-[14px] font-medium text-[#111] transition hover:bg-[#fafafa]">
+          <span className="text-[18px]">G</span>
+          Continue with google
+        </button>
+      </div>
+
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+function PasswordInputScreen({ password, setPassword, onBack, onNext }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-20">
+        <div className="text-[22px] font-semibold tracking-[-0.03em] text-[#111]">Welcome back, Henry</div>
+
+        <div className="relative mt-8">
+          <input
+            type={show ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Please enter your password"
+            className={`${inputClass} pr-11`}
+          />
+          <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]">
+            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-2.5">
+          <button type="button" className="w-fit rounded-full bg-[#f1f1f1] px-4 py-2 text-[13px] font-medium text-[#111]">
+            I’ve forgotten my password
+          </button>
+          <button type="button" className="w-fit rounded-full bg-[#f1f1f1] px-4 py-2 text-[13px] font-medium text-[#111]">
+            I can’t sign in
+          </button>
+        </div>
+      </div>
+
+      <FooterNav onBack={onBack} onNext={onNext} nextDisabled={!password.trim()} />
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+function PhoneCodeScreen({ code, setCode, onBack, onNext }) {
+  const digits = useMemo(() => {
+    const arr = ["", "", "", ""];
+    code.slice(0, 4).split("").forEach((digit, i) => {
+      arr[i] = digit;
+    });
+    return arr;
+  }, [code]);
+
+  const updateDigit = (index, value) => {
+    const clean = value.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[index] = clean;
+    setCode(next.join(""));
+
+    if (clean) {
+      const nextEl = document.querySelector(`[data-otp-phone='${index + 1}']`);
+      if (nextEl) nextEl.focus();
+    }
+  };
+
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-20">
+        <div className="max-w-[280px] text-[22px] font-semibold leading-7 tracking-[-0.03em] text-[#111]">
+          Enter the 4-digit code sent to you at 05599224612
+        </div>
+
+        <div className="mt-8 flex gap-2">
+          {digits.map((digit, index) => (
+            <input
+              key={index}
+              data-otp-phone={index}
+              value={digit}
+              onChange={(e) => updateDigit(index, e.target.value)}
+              className={otpInputClass}
+              inputMode="numeric"
+              maxLength={1}
+            />
+          ))}
+        </div>
+
+        <button type="button" className="mt-6 rounded-full bg-[#f1f1f1] px-4 py-2 text-[12px] text-[#8c8c8c]">
+          I haven’t received a code (0:09)
+        </button>
+
+        <button type="button" className="mt-4 block rounded-full bg-[#f1f1f1] px-4 py-2 text-[13px] font-medium text-[#111]">
+          Log in with password
+        </button>
+      </div>
+
+      <FooterNav onBack={onBack} onNext={onNext} nextDisabled={code.length !== 4} />
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+function EmailCodeScreen({ code, setCode, onBack, onNext }) {
+  const digits = useMemo(() => {
+    const arr = ["", "", "", ""];
+    code.slice(0, 4).split("").forEach((digit, i) => {
+      arr[i] = digit;
+    });
+    return arr;
+  }, [code]);
+
+  const updateDigit = (index, value) => {
+    const clean = value.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[index] = clean;
+    setCode(next.join(""));
+
+    if (clean) {
+      const nextEl = document.querySelector(`[data-otp-email='${index + 1}']`);
+      if (nextEl) nextEl.focus();
+    }
+  };
+
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-20">
+        <div className="max-w-[290px] text-[22px] font-semibold leading-7 tracking-[-0.03em] text-[#111]">
+          Enter the 4-digit code sent to you at: johndoe@email.com
+        </div>
+
+        <div className="mt-8 flex gap-2">
+          {digits.map((digit, index) => (
+            <input
+              key={index}
+              data-otp-email={index}
+              value={digit}
+              onChange={(e) => updateDigit(index, e.target.value)}
+              className={otpInputClass}
+              inputMode="numeric"
+              maxLength={1}
+            />
+          ))}
+        </div>
+
+        <p className="mt-3 text-[10px] leading-4 text-[#a0a0a0]">Tip: Make sure to check your inbox and spam folders</p>
+
+        <button type="button" className="mt-4 block rounded-full bg-[#f1f1f1] px-4 py-2 text-[13px] font-medium text-[#111]">
+          Log in with password
+        </button>
+      </div>
+
+      <FooterNav onBack={onBack} onNext={onNext} nextDisabled={code.length !== 4} />
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+function WelcomeScreen({ onContinue }) {
+  return (
+    <div className={screenFrame}>
+      <StatusBar />
+
+      <div className="px-4 pt-20">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-[#0b5cff] text-[#111]">
+          <Check className="h-7 w-7" strokeWidth={3} />
+        </div>
+
+        <div className="mt-7 text-[30px] font-semibold tracking-[-0.04em] text-[#111]">All set.</div>
+        <p className="mt-4 max-w-[260px] text-[13px] leading-5 text-[#9b9b9b]">
+          You’ll be signed into your account in a moment. If nothing happens, click continue.
+        </p>
+
+        <button type="button" onClick={onContinue} className={`${mutedButton} mt-7`}>
+          Continue
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <BottomHomeBar />
+    </div>
+  );
+}
+
+export default function DapperAuthFlow() {
+  const [step, setStep] = useState("landing");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+
+  const handlePhoneStart = async () => {
+    // Clerk hook point:
+    // await signIn.create({ identifier: phone })
+    setStep("phone");
+  };
+
+  const handlePhoneNext = async () => {
+    // Clerk hook point:
+    // Decide whether this person should enter password or code
+    // Example:
+    // - existing user -> password
+    // - passwordless -> phoneCode
+    setStep("password");
+  };
+
+  const handlePasswordNext = async () => {
+    // Clerk hook point:
+    // attempt password sign in
+    // If second factor required, route accordingly
+    setStep("phoneCode");
+  };
+
+  const handlePhoneCodeNext = async () => {
+    // Clerk hook point:
+    // verify phone code
+    setStep("emailCode");
+  };
+
+  const handleEmailCodeNext = async () => {
+    // Clerk hook point:
+    // verify email code
+    setStep("welcome");
+  };
+
+  const handleContinue = async () => {
+    // route to dashboard/home
+    alert("Continue into app");
+  };
+
+  return (
+    <div className="min-h-screen bg-[#e8e8e8] px-6 py-10">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="mb-8">
+          <h2 className="text-[22px] font-semibold tracking-[-0.03em] text-[#111]">Dapper custom auth flow</h2>
+          <p className="mt-2 text-sm text-[#666]">Paste this into Replit, then wire each step to Clerk. The layout is intentionally close to your mockup.</p>
+        </div>
+
+        <div className="flex flex-wrap gap-8">
+          {step === "landing" && (
+            <LandingScreen phone={phone} setPhone={setPhone} onNext={handlePhoneStart} />
+          )}
+
+          {step === "phone" && (
+            <PhoneInputScreen
+              phone={phone}
+              setPhone={setPhone}
+              onNext={handlePhoneNext}
+              onGoogle={() => alert("Hook this up to Clerk OAuth")}
+            />
+          )}
+
+          {step === "password" && (
+            <PasswordInputScreen
+              password={password}
+              setPassword={setPassword}
+              onBack={() => setStep("phone")}
+              onNext={handlePasswordNext}
+            />
+          )}
+
+          {step === "phoneCode" && (
+            <PhoneCodeScreen
+              code={phoneCode}
+              setCode={setPhoneCode}
+              onBack={() => setStep("password")}
+              onNext={handlePhoneCodeNext}
+            />
+          )}
+
+          {step === "emailCode" && (
+            <EmailCodeScreen
+              code={emailCode}
+              setCode={setEmailCode}
+              onBack={() => setStep("phoneCode")}
+              onNext={handleEmailCodeNext}
+            />
+          )}
+
+          {step === "welcome" && <WelcomeScreen onContinue={handleContinue} />}
+        </div>
+      </div>
+    </div>
+  );
+}
