@@ -101,8 +101,6 @@ function LandingScreen({
   onGoogle,
   loading,
   error,
-  mode,
-  setMode,
 }: {
   phone: string;
   setPhone: (v: string) => void;
@@ -110,10 +108,7 @@ function LandingScreen({
   onGoogle: () => void;
   loading: boolean;
   error: string;
-  mode: 'signIn' | 'signUp';
-  setMode: (m: 'signIn' | 'signUp') => void;
 }) {
-
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Hero image */}
@@ -128,7 +123,7 @@ function LandingScreen({
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10">
         <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Dapper</p>
         <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111] mb-8">
-          {mode === 'signUp' ? <>Create your<br />Dapper account</> : <>Use your Dapper account<br />to get set up</>}
+          Use your phone number<br />to set up your Dapper account
         </h1>
 
         {/* Phone input */}
@@ -157,7 +152,7 @@ function LandingScreen({
             className={primaryBtn}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-              <>{mode === 'signUp' ? 'Create account' : 'Next'} <ArrowRight className="h-4 w-4" /></>
+              <>Next <ArrowRight className="h-4 w-4" /></>
             )}
           </button>
 
@@ -180,33 +175,8 @@ function LandingScreen({
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            Sign up with Google
           </button>
-
-          {/* Toggle sign-in / sign-up */}
-          <p className="text-center text-[13px] text-[#888] pt-1">
-            {mode === 'signIn' ? (
-              <>Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setMode('signUp')}
-                  className="text-[#8c52ff] font-medium"
-                >
-                  Create one
-                </button>
-              </>
-            ) : (
-              <>Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setMode('signIn')}
-                  className="text-[#8c52ff] font-medium"
-                >
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
         </div>
       </div>
     </div>
@@ -645,8 +615,6 @@ function AuthFlow() {
         onGoogle={handleGoogleSignIn}
         loading={loading}
         error={error}
-        mode={mode}
-        setMode={setMode}
       />
     );
   }
