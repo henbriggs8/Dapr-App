@@ -109,6 +109,8 @@ function LandingScreen({
   loading: boolean;
   error: string;
 }) {
+  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Hero image */}
@@ -123,7 +125,7 @@ function LandingScreen({
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10">
         <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Dapper</p>
         <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111] mb-8">
-          Use your Dapper account<br />to get set up
+          {mode === 'signUp' ? <>Create your<br />Dapper account</> : <>Use your Dapper account<br />to get set up</>}
         </h1>
 
         {/* Phone input */}
@@ -152,7 +154,7 @@ function LandingScreen({
             className={primaryBtn}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-              <>Next <ArrowRight className="h-4 w-4" /></>
+              <>{mode === 'signUp' ? 'Create account' : 'Next'} <ArrowRight className="h-4 w-4" /></>
             )}
           </button>
 
@@ -177,6 +179,31 @@ function LandingScreen({
             </svg>
             Continue with Google
           </button>
+
+          {/* Toggle sign-in / sign-up */}
+          <p className="text-center text-[13px] text-[#888] pt-1">
+            {mode === 'signIn' ? (
+              <>Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('signUp')}
+                  className="text-[#8c52ff] font-medium"
+                >
+                  Create one
+                </button>
+              </>
+            ) : (
+              <>Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('signIn')}
+                  className="text-[#8c52ff] font-medium"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </div>
     </div>
