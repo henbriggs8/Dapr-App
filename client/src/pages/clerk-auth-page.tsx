@@ -112,8 +112,8 @@ function LandingScreen({
       {/* Hero image */}
       <div className="h-[42vh] overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80"
-          alt="Car being washed"
+          src="/dapper-jeep-desert.jpg"
+          alt="Dapper mobile car wash"
           className="w-full h-full object-cover"
         />
       </div>
