@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, ChevronDown, Loader2 } from 'lucide-react';
 import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
@@ -101,6 +101,8 @@ function LandingScreen({
   onGoogle,
   loading,
   error,
+  mode,
+  setMode,
 }: {
   phone: string;
   setPhone: (v: string) => void;
@@ -108,8 +110,9 @@ function LandingScreen({
   onGoogle: () => void;
   loading: boolean;
   error: string;
+  mode: 'signIn' | 'signUp';
+  setMode: (m: 'signIn' | 'signUp') => void;
 }) {
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -414,11 +417,10 @@ function AuthFlow() {
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
 
-  // If already signed in and synced, go home
-  if (localUser) {
-    navigate('/');
-    return null;
-  }
+  // Navigate home once local user is synced (must be in effect, not render)
+  useEffect(() => {
+    if (localUser) navigate('/');
+  }, [localUser]);
 
   if (isSignedIn && !localUser) {
     return (
@@ -643,6 +645,8 @@ function AuthFlow() {
         onGoogle={handleGoogleSignIn}
         loading={loading}
         error={error}
+        mode={mode}
+        setMode={setMode}
       />
     );
   }
