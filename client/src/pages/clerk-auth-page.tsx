@@ -334,6 +334,135 @@ function OtpScreen({
   );
 }
 
+function EmailCollectScreen({
+  onSubmit,
+  loading,
+  error,
+}: {
+  onSubmit: (email: string) => void;
+  loading: boolean;
+  error: string;
+}) {
+  const [email, setEmail] = useState('');
+  return (
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">One more thing</p>
+      <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-[#111] leading-tight">
+        Add your email
+      </h1>
+      <p className="mt-3 text-[13px] leading-5 text-[#9b9b9b]">
+        Your email lets you reset your password and receive booking confirmations.
+      </p>
+
+      <div className="mt-8 space-y-3">
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className={`${inputCls} rounded-xl`}
+        />
+        {error && <ErrorBanner msg={error} />}
+      </div>
+
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => onSubmit(email.trim())}
+        className={`${primaryBtn} mt-6`}
+      >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save email'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onSubmit('')}
+        className="mt-4 text-center text-[13px] text-[#9b9b9b] underline-offset-2 hover:underline"
+      >
+        Skip for now
+      </button>
+    </div>
+  );
+}
+
+function SetPasswordScreen({
+  onSubmit,
+  loading,
+  error,
+}: {
+  onSubmit: (password: string) => void;
+  loading: boolean;
+  error: string;
+}) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const handleSubmit = () => {
+    setLocalError('');
+    if (newPassword.length < 8) {
+      setLocalError('Password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setLocalError('Passwords do not match.');
+      return;
+    }
+    onSubmit(newPassword);
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">Reset password</p>
+      <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-[#111] leading-tight">
+        Set a new password
+      </h1>
+      <p className="mt-3 text-[13px] leading-5 text-[#9b9b9b]">
+        Choose a strong password you haven't used before.
+      </p>
+
+      <div className="mt-8 space-y-3">
+        <div className="relative">
+          <input
+            type={showPw ? 'text' : 'password'}
+            placeholder="New password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            className={`${inputCls} rounded-xl pr-12`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw(v => !v)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b9b9b]"
+          >
+            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <input
+          type={showPw ? 'text' : 'password'}
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          className={`${inputCls} rounded-xl`}
+        />
+        {(localError || error) && <ErrorBanner msg={localError || error} />}
+      </div>
+
+      <button
+        type="button"
+        disabled={loading}
+        onClick={handleSubmit}
+        className={`${primaryBtn} mt-6`}
+      >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set password'}
+      </button>
+    </div>
+  );
+}
+
 function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-24 pb-10">
@@ -355,7 +484,7 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Step = 'landing' | 'password' | 'phoneOtp' | 'emailOtp' | 'welcome';
+type Step = 'landing' | 'password' | 'phoneOtp' | 'emailOtp' | 'emailCollect' | 'setPassword' | 'welcome';
 
 export default function ClerkAuthPage() {
   const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -386,6 +515,8 @@ function AuthFlow() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
   // Navigate home once local user is synced (must be in effect, not render)
   useEffect(() => {
@@ -517,19 +648,22 @@ function AuthFlow() {
       if (mode === 'signUp') {
         const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
         if (result.status === 'complete') {
-          await setSignUpActive!({ session: result.createdSessionId });
-          setStep('welcome');
+          setPendingSessionId(result.createdSessionId!);
+          setOtpCode('');
+          setStep('emailCollect');
         } else {
           setError('Verification incomplete. Please try again.');
         }
       } else {
-        const result = await signIn!.attemptFirstFactor({
-          strategy: 'phone_code',
-          code: otpCode,
-        });
+        const strategy = isResettingPassword ? 'reset_password_phone_code' : 'phone_code';
+        const result = await signIn!.attemptFirstFactor({ strategy, code: otpCode });
         if (result.status === 'complete') {
           await setSignInActive!({ session: result.createdSessionId });
+          setIsResettingPassword(false);
           setStep('welcome');
+        } else if (result.status === 'needs_new_password') {
+          setOtpCode('');
+          setStep('setPassword');
         } else if (result.status === 'needs_second_factor') {
           setError('Additional verification required.');
         }
@@ -565,6 +699,8 @@ function AuthFlow() {
     try {
       if (mode === 'signUp') {
         await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      } else if (isResettingPassword) {
+        await signIn!.create({ strategy: 'reset_password_phone_code', identifier: e164 });
       } else {
         const factor = signIn!.supportedFirstFactors?.find((f: any) => f.strategy === 'phone_code') as any;
         if (factor) await signIn!.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId: factor.phoneNumberId });
@@ -592,16 +728,47 @@ function AuthFlow() {
     setLoading(true);
     try {
       await signIn!.create({
-        strategy: 'reset_password_email_code',
+        strategy: 'reset_password_phone_code',
         identifier: e164,
       });
       setOtpCode('');
-      setStep('emailOtp');
+      setIsResettingPassword(true);
+      setStep('phoneOtp');
     } catch (err: any) {
       setError(clerkError(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSetPassword = async (newPassword: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await signIn!.resetPassword({ password: newPassword });
+      if (result.status === 'complete') {
+        await setSignInActive!({ session: result.createdSessionId });
+        setIsResettingPassword(false);
+        setStep('welcome');
+      } else {
+        setError('Could not reset password. Please try again.');
+      }
+    } catch (err: any) {
+      setError(clerkError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailCollect = async (email: string) => {
+    if (email) {
+      localStorage.setItem('pendingEmail', email);
+    }
+    if (pendingSessionId) {
+      await setSignUpActive!({ session: pendingSessionId });
+      setPendingSessionId(null);
+    }
+    setStep('welcome');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -661,6 +828,20 @@ function AuthFlow() {
         prefix="email"
         onBack={() => { setStep('landing'); setError(''); setOtpCode(''); }}
         onNext={handleEmailOtpNext}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+
+  if (step === 'emailCollect') {
+    return <EmailCollectScreen onSubmit={handleEmailCollect} loading={loading} error={error} />;
+  }
+
+  if (step === 'setPassword') {
+    return (
+      <SetPasswordScreen
+        onSubmit={handleSetPassword}
         loading={loading}
         error={error}
       />
