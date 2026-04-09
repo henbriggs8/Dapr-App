@@ -174,12 +174,14 @@ export default function HomeScreen() {
                   🎁 {card.reward}
                 </div>
               )}
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={(e) => e.stopPropagation()}
-                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm"
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm cursor-pointer"
               >
                 <Heart className="h-4 w-4 text-[#555]" />
-              </button>
+              </div>
               <img
                 src={card.image}
                 alt={card.title}
