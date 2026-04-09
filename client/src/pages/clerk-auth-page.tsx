@@ -95,20 +95,21 @@ function OtpGrid({
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 function LandingScreen({
-  phone,
-  setPhone,
+  email,
+  setEmail,
   onNext,
   onGoogle,
   loading,
   error,
 }: {
-  phone: string;
-  setPhone: (v: string) => void;
+  email: string;
+  setEmail: (v: string) => void;
   onNext: () => void;
   onGoogle: () => void;
   loading: boolean;
   error: string;
 }) {
+  const canSubmit = email.includes('@') && email.includes('.');
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Hero image */}
@@ -123,24 +124,20 @@ function LandingScreen({
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10">
         <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Dapper</p>
         <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111] mb-8">
-          Use your phone number<br />to set up your Dapper account
+          Enter your email<br />to get started with Dapper
         </h1>
 
-        {/* Phone input */}
-        <div className="flex h-12 items-center border border-[#ececec] bg-[#f6f6f6] mb-2">
-          <div className="flex h-full w-[72px] shrink-0 items-center justify-center gap-1 border-r border-[#ececec] text-[13px] text-[#111]">
-            <span>+1</span>
-            <ChevronDown className="h-3 w-3 text-[#999]" />
-          </div>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-            onKeyDown={(e) => e.key === 'Enter' && onNext()}
-            placeholder="(555) 000-0000"
-            className="h-full flex-1 bg-transparent px-4 text-[14px] text-[#111] outline-none placeholder:text-[#b2b2b2]"
-            inputMode="tel"
-          />
-        </div>
+        {/* Email input */}
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext()}
+          placeholder="Email address"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          className={`${inputCls} mb-2`}
+        />
 
         {error && <ErrorBanner msg={error} />}
 
@@ -148,7 +145,7 @@ function LandingScreen({
           <button
             type="button"
             onClick={onNext}
-            disabled={phone.length < 10 || loading}
+            disabled={!canSubmit || loading}
             className={primaryBtn}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
@@ -175,7 +172,7 @@ function LandingScreen({
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Sign up with Google
+            Continue with Google
           </button>
         </div>
       </div>
@@ -492,91 +489,131 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
 }
 
 function ProfileInfoScreen({
-  phone,
+  email,
   firstName,
   setFirstName,
   lastName,
   setLastName,
-  email,
-  setEmail,
+  phone,
+  setPhone,
+  password,
+  setPassword,
   onBack,
   onNext,
   loading,
   error,
 }: {
-  phone: string;
+  email: string;
   firstName: string;
   setFirstName: (v: string) => void;
   lastName: string;
   setLastName: (v: string) => void;
-  email: string;
-  setEmail: (v: string) => void;
+  phone: string;
+  setPhone: (v: string) => void;
+  password: string;
+  setPassword: (v: string) => void;
   onBack: () => void;
   onNext: () => void;
   loading: boolean;
   error: string;
 }) {
-  const canSubmit = firstName.trim() && lastName.trim() && email.trim() && email.includes('@');
+  const [showPw, setShowPw] = useState(false);
+  const [confirmPw, setConfirmPw] = useState('');
+  const [localError, setLocalError] = useState('');
+
+  const handleNext = () => {
+    setLocalError('');
+    if (password.length < 8) { setLocalError('Password must be at least 8 characters.'); return; }
+    if (password !== confirmPw) { setLocalError('Passwords do not match.'); return; }
+    onNext();
+  };
+
+  const canSubmit = firstName.trim() && lastName.trim() && phone.replace(/\D/g, '').length >= 10 && password.length >= 8;
+
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
       <BackButton onBack={onBack} />
 
-      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-8">
-        Set up your profile
+      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-1">
+        Create your account
       </h1>
+      <p className="text-[13px] text-[#9b9b9b] mb-8">{email}</p>
 
       <div className="flex flex-col gap-3">
         <input
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
-          placeholder="First Name"
+          placeholder="First name"
           autoComplete="given-name"
           className={inputCls}
         />
         <input
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
-          placeholder="Last Name"
+          placeholder="Last name"
           autoComplete="family-name"
           className={inputCls}
         />
 
-        {/* Phone — pre-filled, read-only */}
+        {/* Phone number */}
         <div className="flex h-12 items-center border border-[#ececec] bg-[#f6f6f6]">
           <div className="flex h-full w-[72px] shrink-0 items-center justify-center gap-1 border-r border-[#ececec] text-[13px] text-[#111]">
-            <span>🇺🇸</span>
-            <span className="text-[12px] text-[#999]">+1</span>
+            <span>+1</span>
+            <ChevronDown className="h-3 w-3 text-[#999]" />
           </div>
-          <span className="flex-1 px-4 text-[14px] text-[#555]">{phone}</span>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+            placeholder="(555) 000-0000"
+            className="h-full flex-1 bg-transparent px-4 text-[14px] text-[#111] outline-none placeholder:text-[#b2b2b2]"
+            inputMode="tel"
+          />
         </div>
 
+        {/* Password */}
+        <div className="relative">
+          <input
+            type={showPw ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Create a password"
+            autoComplete="new-password"
+            className={`${inputCls} pr-12`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]"
+          >
+            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext()}
-          placeholder="Email*"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
+          type={showPw ? 'text' : 'password'}
+          value={confirmPw}
+          onChange={(e) => setConfirmPw(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleNext()}
+          placeholder="Confirm password"
+          autoComplete="new-password"
           className={inputCls}
         />
       </div>
 
-      {error && <ErrorBanner msg={error} />}
+      {(localError || error) && <ErrorBanner msg={localError || error} />}
 
       <div className="mt-auto pt-8 flex flex-col gap-4">
         <button
           type="button"
-          onClick={onNext}
+          onClick={handleNext}
           disabled={!canSubmit || loading}
           className={primaryBtn}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            <>Next <ArrowRight className="h-4 w-4" /></>
+            <>Create account <ArrowRight className="h-4 w-4" /></>
           )}
         </button>
         <p className="text-center text-[11px] leading-4 text-[#a0a0a0] px-4">
-          By proceeding, you consent to get calls, WhatsApp or SMS messages, including by automated means, from Dapper and its affiliates to the number provided.
+          By proceeding, you consent to receive SMS messages from Dapper to the number provided.
         </p>
       </div>
     </div>
@@ -613,18 +650,25 @@ function AuthFlow() {
   const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
 
   const [step, setStep] = useState<Step>(isDemo ? 'profileInfo' : 'landing');
-  const [phone, setPhone] = useState(isDemo ? '5550000000' : '');
+  // Landing: email identifier
+  const [landingEmail, setLandingEmail] = useState(isDemo ? 'demo@example.com' : '');
+  // Sign-in password screen
   const [password, setPassword] = useState('');
+  // OTP code
   const [otpCode, setOtpCode] = useState('');
+  // OTP subtitle phone hint (set when sign-in returns phone factor)
+  const [otpPhoneHint, setOtpPhoneHint] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [signUpNeedsEmail, setSignUpNeedsEmail] = useState(false);
+  // Sign-up profile info
   const [signUpFirstName, setSignUpFirstName] = useState('');
   const [signUpLastName, setSignUpLastName] = useState('');
-  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPhone, setSignUpPhone] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
 
   // Navigate home once local user is synced (must be in effect, not render)
   useEffect(() => {
@@ -648,8 +692,8 @@ function AuthFlow() {
     );
   }
 
-  // Normalize phone to E.164
-  const e164 = `+1${phone.replace(/\D/g, '')}`;
+  // E.164 from the phone collected at profile info (used for OTP fallback on existing accounts)
+  const e164 = `+1${signUpPhone.replace(/\D/g, '')}`;
 
   const clerkError = (err: any): string => {
     const first = err?.errors?.[0];
@@ -664,44 +708,43 @@ function AuthFlow() {
 
   // ── Step handlers ──────────────────────────────────────────────────────────
 
-  const handlePhoneNext = async () => {
+  const handleEmailNext = async () => {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn!.create({ identifier: e164 });
+      const result = await signIn!.create({ identifier: landingEmail });
 
-      // Determine which first factor to use
+      // Determine which first factor to use — prefer password, then phone OTP, then email OTP
       const factors = result.supportedFirstFactors ?? [];
-      const phoneFactor = factors.find((f: any) => f.strategy === 'phone_code');
       const passwordFactor = factors.find((f: any) => f.strategy === 'password');
+      const phoneFactor = factors.find((f: any) => f.strategy === 'phone_code');
       const emailFactor = factors.find((f: any) => f.strategy === 'email_code');
 
       setMode('signIn');
 
-      // Prefer phone OTP → email OTP → password (user doesn't know auto-generated password)
-      if (phoneFactor) {
+      if (passwordFactor) {
+        setStep('password');
+      } else if (phoneFactor) {
+        setOtpPhoneHint((phoneFactor as any).safeIdentifier ?? '');
         await signIn!.prepareFirstFactor({
           strategy: 'phone_code',
-          phoneNumberId: phoneFactor.phoneNumberId,
+          phoneNumberId: (phoneFactor as any).phoneNumberId,
         });
         setOtpCode('');
         setStep('phoneOtp');
       } else if (emailFactor) {
         await signIn!.prepareFirstFactor({
           strategy: 'email_code',
-          emailAddressId: emailFactor.emailAddressId,
+          emailAddressId: (emailFactor as any).emailAddressId,
         });
         setOtpCode('');
         setStep('emailOtp');
-      } else if (passwordFactor) {
-        setStep('password');
       } else {
         setError('No supported sign-in method found for this account.');
       }
     } catch (err: any) {
       const msg = clerkError(err);
       if (msg === '__new_user__') {
-        // New user — collect profile info first, then create sign-up
         setMode('signUp');
         setStep('profileInfo');
       } else {
@@ -720,19 +763,22 @@ function AuthFlow() {
       // Store profile info for onboarding pre-fill
       localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
       localStorage.setItem('onboardingLastName', signUpLastName.trim());
-      localStorage.setItem('pendingEmail', signUpEmail.trim());
-      localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
+      localStorage.setItem('pendingEmail', landingEmail.trim());
+      localStorage.setItem('pendingSignUpEmail', landingEmail.trim());
 
-      // Create the user via our backend admin API — this completely bypasses
-      // Clerk's sign-up flow and avoids stale sign-up / email-verification issues.
+      const phoneE164 = `+1${signUpPhone.replace(/\D/g, '')}`;
+
+      // Create the user via our backend admin API with email + password + phone.
+      // This completely bypasses Clerk's sign-up flow.
       const resp = await fetch('/api/auth/clerk/complete-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phoneNumber: e164,
+          email: landingEmail.trim(),
+          phoneNumber: phoneE164,
           firstName: signUpFirstName.trim() || 'New',
           lastName: signUpLastName.trim() || 'User',
-          // Do NOT send email to Clerk — we store it in our own DB only.
+          password: signUpPassword,
         }),
       });
       if (!resp.ok) {
@@ -740,12 +786,19 @@ function AuthFlow() {
         throw new Error(body.error ?? 'Could not create account. Please try again.');
       }
 
-      // User is now a complete Clerk user. Initiate a sign-in phone OTP
-      // (not a sign-up) so there is no stale sign-up object involved.
-      await signIn!.create({ strategy: 'phone_code', identifier: e164 });
+      // Sign in directly with email + password — no OTP needed.
+      const result = await signIn!.create({
+        identifier: landingEmail.trim(),
+        password: signUpPassword,
+      });
+      if (result.status === 'complete') {
+        await setSignInActive!({ session: result.createdSessionId });
+        setStep('welcome');
+        return;
+      }
+      // Fallback: if Clerk needs something else, go to password screen
       setMode('signIn');
-      setOtpCode('');
-      setStep('phoneOtp');
+      setStep('password');
     } catch (err: any) {
       setError(err.message ?? clerkError(err));
     } finally {
@@ -968,9 +1021,9 @@ function AuthFlow() {
   if (step === 'landing') {
     return (
       <LandingScreen
-        phone={phone}
-        setPhone={setPhone}
-        onNext={handlePhoneNext}
+        email={landingEmail}
+        setEmail={setLandingEmail}
+        onNext={handleEmailNext}
         onGoogle={handleGoogleSignIn}
         loading={loading}
         error={error}
@@ -981,13 +1034,15 @@ function AuthFlow() {
   if (step === 'profileInfo') {
     return (
       <ProfileInfoScreen
-        phone={phone}
+        email={landingEmail}
         firstName={signUpFirstName}
         setFirstName={setSignUpFirstName}
         lastName={signUpLastName}
         setLastName={setSignUpLastName}
-        email={signUpEmail}
-        setEmail={setSignUpEmail}
+        phone={signUpPhone}
+        setPhone={setSignUpPhone}
+        password={signUpPassword}
+        setPassword={setSignUpPassword}
         onBack={() => { setStep('landing'); setError(''); }}
         onNext={handleProfileInfoNext}
         loading={loading}
@@ -1014,7 +1069,7 @@ function AuthFlow() {
     return (
       <OtpScreen
         title="Enter the code"
-        subtitle={`We sent a 6-digit code to ${e164}. It may take a moment to arrive.`}
+        subtitle={`We sent a 6-digit code to ${otpPhoneHint || e164 || 'your phone'}. It may take a moment to arrive.`}
         code={otpCode}
         setCode={setOtpCode}
         prefix="phone"

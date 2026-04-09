@@ -1637,41 +1637,47 @@ export function registerRoutes(app: Express): Server {
   // Creates the user via Clerk admin API and returns a short-lived sign-in token.
   app.post('/api/auth/clerk/complete-signup', async (req: Request, res: Response) => {
     try {
-      const { phoneNumber, firstName, lastName, email } = req.body as {
-        phoneNumber: string;
+      const { email, phoneNumber, firstName, lastName, password } = req.body as {
+        email: string;
+        phoneNumber?: string;
         firstName: string;
         lastName: string;
-        email?: string;
+        password?: string;
       };
-      if (!phoneNumber) return res.status(400).json({ error: 'phoneNumber required' });
+      if (!email) return res.status(400).json({ error: 'email required' });
 
-      // Check if user already exists by phone number
-      const existingList = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
-      let clerkUser = existingList.data?.[0] ?? existingList[0 as any] ?? null;
+      // Check if user already exists by email
+      let clerkUser: any = null;
+      try {
+        const byEmail = await clerkClient.users.getUserList({ emailAddress: [email] });
+        clerkUser = byEmail.data?.[0] ?? byEmail[0 as any] ?? null;
+      } catch { /* getUserList may throw — fall through to create */ }
+
+      // Also check by phone if not found by email
+      if (!clerkUser && phoneNumber) {
+        try {
+          const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
+          clerkUser = byPhone.data?.[0] ?? byPhone[0 as any] ?? null;
+        } catch { /* fall through */ }
+      }
 
       if (!clerkUser) {
-        // Create the user via Clerk admin API — bypasses the stale sign-up entirely
         const createParams: any = {
-          phoneNumber: [phoneNumber],
+          emailAddress: [email],
           firstName: firstName || 'New',
           lastName: lastName || 'User',
           skipPasswordChecks: true,
           skipPasswordRequirement: true,
         };
-        // Only include email if provided and non-empty
-        if (email && email.trim()) {
-          createParams.emailAddress = [email.trim()];
-        }
+        if (phoneNumber) createParams.phoneNumber = [phoneNumber];
+        if (password) createParams.password = password;
         clerkUser = await clerkClient.users.createUser(createParams);
+      } else if (password) {
+        // Update password on existing user
+        await clerkClient.users.updateUser(clerkUser.id, { password, skipPasswordChecks: true });
       }
 
-      // Issue a short-lived sign-in token the frontend can use with the 'ticket' strategy
-      const tokenRes = await clerkClient.signInTokens.createSignInToken({
-        userId: clerkUser.id,
-        expiresInSeconds: 60,
-      });
-
-      return res.json({ signInToken: tokenRes.token });
+      return res.json({ userId: clerkUser.id });
     } catch (err: any) {
       console.error('clerk/complete-signup error:', err);
       return res.status(500).json({ error: err.message ?? 'Failed to complete sign-up' });
