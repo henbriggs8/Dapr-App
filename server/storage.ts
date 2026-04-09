@@ -16,6 +16,7 @@ async function hashPassword(password: string) {
 }
 
 export interface IStorage {
+  initialize(): Promise<void>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -319,6 +320,10 @@ export class MemStorage implements IStorage {
       isAdmin: true,
       name: "System Administrator"
     });
+  }
+
+  async initialize(): Promise<void> {
+    // MemStorage seeds data in constructor — nothing extra needed
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -2168,6 +2173,22 @@ export class DatabaseStorage implements IStorage {
       .values(mapping)
       .returning();
     return newMapping;
+  }
+
+  async initialize(): Promise<void> {
+    // Seed default admin user if not present
+    const existing = await this.getUserByUsername("dapperadmin");
+    if (!existing) {
+      const hashed = await hashPassword("admin123");
+      await db.insert(users).values({
+        username: "dapperadmin",
+        password: hashed,
+        isAdmin: true,
+        isProvider: false,
+        name: "Dapper Admin",
+      });
+      console.log("[storage] Default admin user created (dapperadmin)");
+    }
   }
 }
 
