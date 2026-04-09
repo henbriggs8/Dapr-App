@@ -717,47 +717,37 @@ function AuthFlow() {
     if (isDemo) { setStep('phoneOtp'); return; }
     setLoading(true);
     try {
-      // Store profile info for onboarding pre-fill regardless of Clerk state
+      // Store profile info for onboarding pre-fill
       localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
       localStorage.setItem('onboardingLastName', signUpLastName.trim());
       localStorage.setItem('pendingEmail', signUpEmail.trim());
       localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
 
-      // Abandon any stale/pending sign-up first so we always start fresh
-      // with the current Clerk settings (avoids old email requirements being cached).
-      try {
-        if (signUp?.status === 'missing_requirements' || signUp?.status === 'abandoned') {
-          await (signUp as any).abandon?.();
-        }
-      } catch { /* ignore abandon errors */ }
-
-      const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
-      try {
-        await signUp!.create({
+      // Create the user via our backend admin API — this completely bypasses
+      // Clerk's sign-up flow and avoids stale sign-up / email-verification issues.
+      const resp = await fetch('/api/auth/clerk/complete-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           phoneNumber: e164,
-          firstName: signUpFirstName.trim(),
-          lastName: signUpLastName.trim(),
-          password: tempPw,
-        });
-      } catch (createErr: any) {
-        // create() failed — there may be a stale pending sign-up for this phone.
-        // Try updating the existing sign-up with fresh fields instead.
-        if (signUp?.id) {
-          await signUp!.update({
-            firstName: signUpFirstName.trim(),
-            lastName: signUpLastName.trim(),
-            password: tempPw,
-          });
-        } else {
-          throw createErr;
-        }
+          firstName: signUpFirstName.trim() || 'New',
+          lastName: signUpLastName.trim() || 'User',
+          // Do NOT send email to Clerk — we store it in our own DB only.
+        }),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Could not create account. Please try again.');
       }
 
-      await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      // User is now a complete Clerk user. Initiate a sign-in phone OTP
+      // (not a sign-up) so there is no stale sign-up object involved.
+      await signIn!.create({ strategy: 'phone_code', identifier: e164 });
+      setMode('signIn');
       setOtpCode('');
       setStep('phoneOtp');
     } catch (err: any) {
-      setError(clerkError(err));
+      setError(err.message ?? clerkError(err));
     } finally {
       setLoading(false);
     }
@@ -805,84 +795,8 @@ function AuthFlow() {
           await setSignUpActive!({ session: result.createdSessionId });
           setOtpCode('');
           setStep('welcome');
-        } else if (result.status === 'missing_requirements') {
-          const missing: string[] = (result as any).missingFields ?? [];
-          const unverified: string[] = (result as any).unverifiedFields ?? [];
-
-          const updates: Record<string, string> = {};
-          if (missing.includes('first_name') || missing.includes('last_name')) {
-            updates.firstName = signUpFirstName.trim() || 'New';
-            updates.lastName = signUpLastName.trim() || 'User';
-          }
-          if (missing.includes('username')) updates.username = `user_${Date.now()}`;
-          if (missing.includes('password')) {
-            updates.password = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
-          }
-          // If Clerk still requires email (Require email is ON in Clerk dashboard),
-          // provide it from what the user entered — this avoids the verification step
-          // because "Verify at sign-up" is OFF.
-          const storedEmail = localStorage.getItem('pendingSignUpEmail') || signUpEmail.trim();
-          if (missing.includes('email_address') && storedEmail) {
-            updates.emailAddress = storedEmail;
-          }
-
-          // Try updating with whatever we have
-          const updated = await signUp!.update(Object.keys(updates).length > 0 ? updates : {});
-          if (updated.status === 'complete') {
-            await setSignUpActive!({ session: updated.createdSessionId });
-            setOtpCode('');
-            setStep('welcome');
-            return;
-          }
-
-          const stillMissing: string[] = (updated as any).missingFields ?? missing;
-          const stillUnverified: string[] = (updated as any).unverifiedFields ?? unverified;
-
-          if (stillUnverified.includes('email_address')) {
-            // Email is stuck on the sign-up from a previous attempt.
-            // Try to clear it by passing null so the sign-up can complete via phone only.
-            try {
-              const cleared = await signUp!.update({ emailAddress: null } as any);
-              if (cleared.status === 'complete') {
-                await setSignUpActive!({ session: cleared.createdSessionId });
-                setOtpCode('');
-                setStep('welcome');
-                return;
-              }
-            } catch { /* clearing email not supported — fall through to backend approach */ }
-
-            // If clearing email failed, use our backend to create the user directly
-            // bypassing the stale sign-up object entirely.
-            try {
-              const resp = await fetch('/api/auth/clerk/complete-signup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  phoneNumber: e164,
-                  firstName: signUpFirstName.trim() || 'New',
-                  lastName: signUpLastName.trim() || 'User',
-                  email: localStorage.getItem('pendingSignUpEmail') || '',
-                }),
-              });
-              if (resp.ok) {
-                const { signInToken } = await resp.json();
-                const result = await signIn!.create({ strategy: 'ticket', ticket: signInToken });
-                if (result.status === 'complete') {
-                  await setSignInActive!({ session: result.createdSessionId });
-                  setOtpCode('');
-                  setStep('welcome');
-                  return;
-                }
-              }
-            } catch { /* fall through */ }
-
-            setError('This phone number has a stuck sign-up. Please go to your Clerk dashboard and delete the user with this number, then try again.');
-          } else {
-            setError(`Sign-up incomplete (${stillMissing.join(', ') || 'unknown issue'}). Please try again.`);
-          }
-
         } else {
-          setError(`Unexpected status: ${result.status}. Please try again.`);
+          setError(`Verification failed (${result.status}). Please try again.`);
         }
       } else {
         const strategy = isResettingPassword ? 'reset_password_phone_code' : 'phone_code';
