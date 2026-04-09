@@ -658,12 +658,37 @@ function AuthFlow() {
       if (mode === 'signUp') {
         const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
         if (result.status === 'complete') {
-          // Phone-only sign-up complete — activate session and proceed
           await setSignUpActive!({ session: result.createdSessionId });
           setOtpCode('');
           setStep('welcome');
+        } else if (result.status === 'missing_requirements') {
+          // Some fields (e.g. name) are required in Clerk but not yet collected.
+          // Auto-fill with placeholders so sign-up completes; onboarding will
+          // overwrite with real values.
+          const missing: string[] = (signUp as any).missingFields ?? [];
+          const updates: Record<string, string> = {};
+          if (missing.includes('first_name') || missing.includes('last_name')) {
+            updates.firstName = 'New';
+            updates.lastName = 'User';
+          }
+          if (missing.includes('email_address')) {
+            setError('Please disable the Email requirement in your Clerk dashboard, then try again.');
+            return;
+          }
+          if (Object.keys(updates).length > 0) {
+            const updated = await signUp!.update(updates);
+            if (updated.status === 'complete') {
+              await setSignUpActive!({ session: updated.createdSessionId });
+              setOtpCode('');
+              setStep('welcome');
+            } else {
+              setError(`Sign-up still incomplete after update (${updated.status}). Check Clerk dashboard required fields.`);
+            }
+          } else {
+            setError(`Missing required fields: ${missing.join(', ')}. Check your Clerk dashboard settings.`);
+          }
         } else {
-          setError(`Verification error (status: ${result.status}). Please try again.`);
+          setError(`Unexpected status: ${result.status}. Please try again.`);
         }
       } else {
         const strategy = isResettingPassword ? 'reset_password_phone_code' : 'phone_code';
