@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, ChevronDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
@@ -95,21 +95,30 @@ function OtpGrid({
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 function LandingScreen({
-  email,
-  setEmail,
+  phone,
+  setPhone,
   onNext,
   onGoogle,
   loading,
   error,
 }: {
-  email: string;
-  setEmail: (v: string) => void;
+  phone: string;
+  setPhone: (v: string) => void;
   onNext: () => void;
   onGoogle: () => void;
   loading: boolean;
   error: string;
 }) {
-  const canSubmit = email.includes('@') && email.includes('.');
+  const digits = phone.replace(/\D/g, '');
+  const canSubmit = digits.length >= 10;
+
+  const formatDisplay = (raw: string) => {
+    const d = raw.replace(/\D/g, '').slice(0, 10);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Hero image */}
@@ -124,20 +133,26 @@ function LandingScreen({
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10">
         <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Dapper</p>
         <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111] mb-8">
-          Enter your email<br />to get started with Dapper
+          Enter your phone<br />to get started with Dapper
         </h1>
 
-        {/* Email input */}
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext()}
-          placeholder="Email address"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          className={`${inputCls} mb-2`}
-        />
+        {/* Phone input with +1 prefix */}
+        <div className={`flex h-12 items-center border border-[#ececec] bg-[#f6f6f6] mb-2`}>
+          <div className="flex h-full w-[52px] shrink-0 items-center justify-center border-r border-[#ececec] text-[14px] font-medium text-[#111]">
+            +1
+          </div>
+          <input
+            value={formatDisplay(phone)}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext()}
+            placeholder="(555) 000-0000"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            autoFocus
+            className="h-full flex-1 bg-transparent px-4 text-[14px] text-[#111] outline-none placeholder:text-[#a3a3a3]"
+          />
+        </div>
 
         {error && <ErrorBanner msg={error} />}
 
@@ -489,13 +504,13 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
 }
 
 function ProfileInfoScreen({
+  phone,
   email,
+  setEmail,
   firstName,
   setFirstName,
   lastName,
   setLastName,
-  phone,
-  setPhone,
   password,
   setPassword,
   onBack,
@@ -503,13 +518,13 @@ function ProfileInfoScreen({
   loading,
   error,
 }: {
+  phone: string;
   email: string;
+  setEmail: (v: string) => void;
   firstName: string;
   setFirstName: (v: string) => void;
   lastName: string;
   setLastName: (v: string) => void;
-  phone: string;
-  setPhone: (v: string) => void;
   password: string;
   setPassword: (v: string) => void;
   onBack: () => void;
@@ -528,7 +543,12 @@ function ProfileInfoScreen({
     onNext();
   };
 
-  const canSubmit = firstName.trim() && lastName.trim() && phone.replace(/\D/g, '').length >= 10 && password.length >= 8;
+  const digits = phone.replace(/\D/g, '');
+  const displayPhone = digits.length >= 10
+    ? `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    : phone;
+
+  const canSubmit = firstName.trim() && lastName.trim() && password.length >= 8;
 
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
@@ -537,7 +557,7 @@ function ProfileInfoScreen({
       <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-1">
         Create your account
       </h1>
-      <p className="text-[13px] text-[#9b9b9b] mb-8">{email}</p>
+      <p className="text-[13px] text-[#9b9b9b] mb-8">{displayPhone}</p>
 
       <div className="flex flex-col gap-3">
         <input
@@ -555,20 +575,16 @@ function ProfileInfoScreen({
           className={inputCls}
         />
 
-        {/* Phone number */}
-        <div className="flex h-12 items-center border border-[#ececec] bg-[#f6f6f6]">
-          <div className="flex h-full w-[72px] shrink-0 items-center justify-center gap-1 border-r border-[#ececec] text-[13px] text-[#111]">
-            <span>+1</span>
-            <ChevronDown className="h-3 w-3 text-[#999]" />
-          </div>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-            placeholder="(555) 000-0000"
-            className="h-full flex-1 bg-transparent px-4 text-[14px] text-[#111] outline-none placeholder:text-[#b2b2b2]"
-            inputMode="tel"
-          />
-        </div>
+        {/* Email address */}
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email address"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          className={inputCls}
+        />
 
         {/* Password */}
         <div className="relative">
@@ -650,8 +666,8 @@ function AuthFlow() {
   const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
 
   const [step, setStep] = useState<Step>(isDemo ? 'profileInfo' : 'landing');
-  // Landing: email identifier
-  const [landingEmail, setLandingEmail] = useState(isDemo ? 'demo@example.com' : '');
+  // Landing: phone identifier
+  const [landingPhone, setLandingPhone] = useState(isDemo ? '5550000000' : '');
   // Sign-in password screen
   const [password, setPassword] = useState('');
   // OTP code
@@ -667,7 +683,7 @@ function AuthFlow() {
   // Sign-up profile info
   const [signUpFirstName, setSignUpFirstName] = useState('');
   const [signUpLastName, setSignUpLastName] = useState('');
-  const [signUpPhone, setSignUpPhone] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
 
   // Navigate home once local user is synced (must be in effect, not render)
@@ -692,8 +708,8 @@ function AuthFlow() {
     );
   }
 
-  // E.164 from the phone collected at profile info (used for OTP fallback on existing accounts)
-  const e164 = `+1${signUpPhone.replace(/\D/g, '')}`;
+  // E.164 from the landing phone number
+  const e164 = `+1${landingPhone.replace(/\D/g, '')}`;
 
   const clerkError = (err: any): string => {
     const first = err?.errors?.[0];
@@ -712,7 +728,7 @@ function AuthFlow() {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn!.create({ identifier: landingEmail });
+      const result = await signIn!.create({ identifier: e164 });
 
       // Determine which first factor to use — prefer password, then phone OTP, then email OTP
       const factors = result.supportedFirstFactors ?? [];
@@ -763,19 +779,19 @@ function AuthFlow() {
       // Store profile info for onboarding pre-fill
       localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
       localStorage.setItem('onboardingLastName', signUpLastName.trim());
-      localStorage.setItem('pendingEmail', landingEmail.trim());
-      localStorage.setItem('pendingSignUpEmail', landingEmail.trim());
+      if (signUpEmail.trim()) {
+        localStorage.setItem('pendingEmail', signUpEmail.trim());
+        localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
+      }
 
-      const phoneE164 = `+1${signUpPhone.replace(/\D/g, '')}`;
-
-      // Create the user via our backend admin API with email + password + phone.
+      // Create the user via our backend admin API with phone + password + optional email.
       // This completely bypasses Clerk's sign-up flow.
       const resp = await fetch('/api/auth/clerk/complete-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: landingEmail.trim(),
-          phoneNumber: phoneE164,
+          email: signUpEmail.trim() || undefined,
+          phoneNumber: e164,
           firstName: signUpFirstName.trim() || 'New',
           lastName: signUpLastName.trim() || 'User',
           password: signUpPassword,
@@ -788,7 +804,7 @@ function AuthFlow() {
 
       // Sign in directly with email + password — no OTP needed.
       const result = await signIn!.create({
-        identifier: landingEmail.trim(),
+        identifier: e164,
         password: signUpPassword,
       });
       if (result.status === 'complete') {
@@ -1021,8 +1037,8 @@ function AuthFlow() {
   if (step === 'landing') {
     return (
       <LandingScreen
-        email={landingEmail}
-        setEmail={setLandingEmail}
+        phone={landingPhone}
+        setPhone={setLandingPhone}
         onNext={handleEmailNext}
         onGoogle={handleGoogleSignIn}
         loading={loading}
@@ -1034,13 +1050,13 @@ function AuthFlow() {
   if (step === 'profileInfo') {
     return (
       <ProfileInfoScreen
-        email={landingEmail}
+        phone={landingPhone}
+        email={signUpEmail}
+        setEmail={setSignUpEmail}
         firstName={signUpFirstName}
         setFirstName={setSignUpFirstName}
         lastName={signUpLastName}
         setLastName={setSignUpLastName}
-        phone={signUpPhone}
-        setPhone={setSignUpPhone}
         password={signUpPassword}
         setPassword={setSignUpPassword}
         onBack={() => { setStep('landing'); setError(''); }}

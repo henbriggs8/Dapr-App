@@ -1638,40 +1638,40 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/auth/clerk/complete-signup', async (req: Request, res: Response) => {
     try {
       const { email, phoneNumber, firstName, lastName, password } = req.body as {
-        email: string;
-        phoneNumber?: string;
+        email?: string;
+        phoneNumber: string;
         firstName: string;
         lastName: string;
         password?: string;
       };
-      if (!email) return res.status(400).json({ error: 'email required' });
+      if (!phoneNumber) return res.status(400).json({ error: 'phoneNumber required' });
 
-      // Check if user already exists by email
+      // Check if user already exists by phone (primary identifier)
       let clerkUser: any = null;
       try {
-        const byEmail = await clerkClient.users.getUserList({ emailAddress: [email] });
-        const byEmailArr: any[] = Array.isArray(byEmail) ? byEmail : ((byEmail as any).data ?? []);
-        clerkUser = byEmailArr[0] ?? null;
-      } catch { /* getUserList may throw — fall through to create */ }
+        const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
+        const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
+        clerkUser = byPhoneArr[0] ?? null;
+      } catch { /* fall through */ }
 
-      // Also check by phone if not found by email
-      if (!clerkUser && phoneNumber) {
+      // Also check by email if provided and not found by phone
+      if (!clerkUser && email) {
         try {
-          const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
-          const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
-          clerkUser = byPhoneArr[0] ?? null;
-        } catch { /* fall through */ }
+          const byEmail = await clerkClient.users.getUserList({ emailAddress: [email] });
+          const byEmailArr: any[] = Array.isArray(byEmail) ? byEmail : ((byEmail as any).data ?? []);
+          clerkUser = byEmailArr[0] ?? null;
+        } catch { /* getUserList may throw — fall through to create */ }
       }
 
       if (!clerkUser) {
         const createParams: any = {
-          emailAddress: [email],
+          phoneNumber: [phoneNumber],
           firstName: firstName || 'New',
           lastName: lastName || 'User',
           skipPasswordChecks: true,
           skipPasswordRequirement: true,
         };
-        if (phoneNumber) createParams.phoneNumber = [phoneNumber];
+        if (email) createParams.emailAddress = [email];
         if (password) createParams.password = password;
         clerkUser = await clerkClient.users.createUser(createParams);
       } else if (password) {
