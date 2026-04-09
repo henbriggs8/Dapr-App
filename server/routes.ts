@@ -1650,14 +1650,16 @@ export function registerRoutes(app: Express): Server {
       let clerkUser: any = null;
       try {
         const byEmail = await clerkClient.users.getUserList({ emailAddress: [email] });
-        clerkUser = byEmail.data?.[0] ?? byEmail[0 as any] ?? null;
+        const byEmailArr: any[] = Array.isArray(byEmail) ? byEmail : ((byEmail as any).data ?? []);
+        clerkUser = byEmailArr[0] ?? null;
       } catch { /* getUserList may throw — fall through to create */ }
 
       // Also check by phone if not found by email
       if (!clerkUser && phoneNumber) {
         try {
           const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
-          clerkUser = byPhone.data?.[0] ?? byPhone[0 as any] ?? null;
+          const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
+          clerkUser = byPhoneArr[0] ?? null;
         } catch { /* fall through */ }
       }
 
