@@ -678,9 +678,8 @@ function AuthFlow() {
 
       setMode('signIn');
 
-      if (passwordFactor) {
-        setStep('password');
-      } else if (phoneFactor) {
+      // Prefer phone OTP → email OTP → password (user doesn't know auto-generated password)
+      if (phoneFactor) {
         await signIn!.prepareFirstFactor({
           strategy: 'phone_code',
           phoneNumberId: phoneFactor.phoneNumberId,
@@ -694,6 +693,8 @@ function AuthFlow() {
         });
         setOtpCode('');
         setStep('emailOtp');
+      } else if (passwordFactor) {
+        setStep('password');
       } else {
         setError('No supported sign-in method found for this account.');
       }
@@ -716,19 +717,29 @@ function AuthFlow() {
     if (isDemo) { setStep('phoneOtp'); return; }
     setLoading(true);
     try {
-      const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
-      await signUp!.create({
-        phoneNumber: e164,
-        firstName: signUpFirstName.trim(),
-        lastName: signUpLastName.trim(),
-        password: tempPw,
-      });
-      await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
-      // Pre-fill onboarding with what user already typed
+      // Store profile info for onboarding pre-fill regardless of Clerk state
       localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
       localStorage.setItem('onboardingLastName', signUpLastName.trim());
       localStorage.setItem('pendingEmail', signUpEmail.trim());
       localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
+
+      try {
+        const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+        await signUp!.create({
+          phoneNumber: e164,
+          firstName: signUpFirstName.trim(),
+          lastName: signUpLastName.trim(),
+          password: tempPw,
+        });
+      } catch {
+        // If create() fails, there's likely a stale/pending sign-up for this number.
+        // The existing signUp object from the hook already has the pending state — try to use it.
+        if (!signUp?.phoneNumberId && !signUp?.id) {
+          throw new Error('Could not start sign-up. Please try a different phone number or contact support.');
+        }
+      }
+
+      await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
       setOtpCode('');
       setStep('phoneOtp');
     } catch (err: any) {
