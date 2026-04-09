@@ -189,6 +189,18 @@ function LandingScreen({
             </svg>
             Continue with Google
           </button>
+
+          {/* Detail Pro sign-in */}
+          <p className="text-center text-[12px] text-[#aaa] pt-1">
+            A detail pro?{" "}
+            <button
+              type="button"
+              onClick={() => window.location.href = "/provider-auth"}
+              className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+            >
+              Sign in as a Detail Pro
+            </button>
+          </p>
         </div>
       </div>
     </div>
