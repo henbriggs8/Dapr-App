@@ -605,7 +605,8 @@ function AuthFlow() {
         // New user — start sign-up
         try {
           setMode('signUp');
-          await signUp!.create({ phoneNumber: e164, firstName: 'New', lastName: 'User' });
+          const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+          await signUp!.create({ phoneNumber: e164, firstName: 'New', lastName: 'User', password: tempPw });
           await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
           setOtpCode('');
           setStep('phoneOtp');
@@ -673,16 +674,24 @@ function AuthFlow() {
           if (missing.includes('username')) {
             updates.username = `user_${Date.now()}`;
           }
-          // Always try to update — even if fields list is stale/cached.
-          // If nothing to update, attempt a no-op update to re-check status.
-          const updated = await signUp!.update(Object.keys(updates).length > 0 ? updates : {});
-          if (updated.status === 'complete') {
-            await setSignUpActive!({ session: updated.createdSessionId });
-            setOtpCode('');
-            setStep('welcome');
+          if (missing.includes('password')) {
+            updates.password = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+          }
+          if (Object.keys(updates).length > 0) {
+            const updated = await signUp!.update(updates);
+            if (updated.status === 'complete') {
+              await setSignUpActive!({ session: updated.createdSessionId });
+              setOtpCode('');
+              setStep('welcome');
+              return;
+            }
+          }
+          const stillMissing: string[] = (signUp as any).missingFields ?? missing;
+          const needsEmail = stillMissing.includes('email_address');
+          if (needsEmail) {
+            setError('Email is still required in your Clerk dashboard. Go to: Clerk Dashboard → User & Authentication → Email, Phone, Username → Email address → turn off "Required".');
           } else {
-            const stillMissing: string[] = (updated as any).missingFields ?? missing;
-            setError(`Sign-up requires: ${stillMissing.join(', ')}. Please review your Clerk dashboard required fields.`);
+            setError(`Sign-up incomplete. Still missing: ${stillMissing.join(', ')}.`);
           }
         } else {
           setError(`Unexpected status: ${result.status}. Please try again.`);
