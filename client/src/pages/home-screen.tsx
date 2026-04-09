@@ -1,148 +1,206 @@
 import { useLocation } from "wouter";
-import { Calendar, Building2, Car, Sparkles, Baby, HelpCircle, Gift, Copy, Share, Droplets, ChevronRight } from "lucide-react";
+import { ChevronDown, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart } from "lucide-react";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+
+const ACCENT = "#8c52ff";
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
-  const [showReferralModal, setShowReferralModal] = useState(false);
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"sameday" | "services">("sameday");
 
-  const referralLink = "https://autodapper.com/referral/henry123";
+  const categories = [
+    { icon: Car, label: "Interior", route: "/interior-cleaning" },
+    { icon: Droplets, label: "Exterior", route: "/exterior-cleaning" },
+    { icon: Sparkles, label: "Hand wax", route: "/booking" },
+    { icon: MoreHorizontal, label: "More", route: "/services" },
+  ];
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      toast({ title: "Link copied!", description: "Referral link copied to clipboard" });
-    } catch {
-      toast({ title: "Copy failed", description: "Unable to copy link", variant: "destructive" });
-    }
-  };
-
-  const shareLink = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Get $20 off your first car wash!",
-          text: "Join Dapper and get $20 off your first mobile car wash service.",
-          url: referralLink,
-        });
-      } catch {
-        copyToClipboard();
-      }
-    } else {
-      copyToClipboard();
-    }
-  };
-
-  const featureTiles = [
-    { icon: Droplets, label: "Full Car Cleaning", route: "/services" },
-    { icon: Car, label: "Interior Cleaning", route: "/interior-cleaning" },
-    { icon: Sparkles, label: "Exterior Cleaning", route: "/exterior-cleaning" },
-    { icon: Baby, label: "Child Car Seat Cleaning", route: "/car-seat-cleaning" },
-    { icon: HelpCircle, label: "FAQ", route: "/faq" },
-    { icon: Building2, label: "Corporate Packages", route: "/corporate" },
+  const serviceCards = [
+    {
+      id: 1,
+      image: "/dapper-van-house.jpg",
+      reward: "5 washes until $50 reward",
+      title: "At Home Maintenance Wash",
+      price: "$39",
+      duration: "15–30 min",
+      route: "/booking",
+    },
+    {
+      id: 2,
+      image: "/interior-detail.jpg",
+      title: "Interior Detailing",
+      price: "$89",
+      duration: "45–90 min",
+      route: "/booking",
+    },
+    {
+      id: 3,
+      image: "/exterior-wash.jpg",
+      title: "Exterior Detail",
+      price: "$49",
+      duration: "30–45 min",
+      route: "/booking",
+    },
+    {
+      id: 4,
+      image: "/dapper-lambo.jpg",
+      title: "Reserve Ahead",
+      price: "From $39",
+      duration: "Schedule anytime",
+      route: "/booking",
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-white font-sans" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
-      {/* Hero */}
-      <div className="relative h-56 overflow-hidden">
-        <img
-          src="/hero-final.jpg"
-          alt="Professional car detailing"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/50 flex flex-col justify-end px-6 pb-6">
-          <p className="text-xs font-semibold tracking-widest text-white/60 uppercase mb-1">Dapper</p>
-          <h1 className="text-2xl font-medium text-white tracking-tight">Redefining the Car Wash</h1>
-        </div>
+    <div
+      className="min-h-screen bg-white"
+      style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+    >
+      {/* ── Top tabs ────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 px-4 pt-12 pb-3">
+        <button
+          onClick={() => setActiveTab("sameday")}
+          className={`px-5 py-2 rounded-full text-[13px] font-semibold transition ${
+            activeTab === "sameday"
+              ? "bg-[#111] text-white"
+              : "bg-transparent text-[#9a9a9a]"
+          }`}
+        >
+          Same Day
+        </button>
+        <button
+          onClick={() => { setActiveTab("services"); setLocation("/services"); }}
+          className={`px-5 py-2 rounded-full text-[13px] font-semibold transition ${
+            activeTab === "services"
+              ? "bg-[#111] text-white"
+              : "bg-transparent text-[#9a9a9a]"
+          }`}
+        >
+          Services
+        </button>
       </div>
 
-      {/* Book CTA */}
-      <div className="px-6 pt-8 pb-6 border-b border-gray-200">
+      {/* ── Location bar ────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pb-4">
+        <button className="flex items-center gap-1.5 text-[14px] font-medium text-[#111]">
+          Now&nbsp;•&nbsp;Scottsdale
+          <ChevronDown className="h-4 w-4 text-[#555]" />
+        </button>
+        <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f3f3]">
+          <SlidersHorizontal className="h-4 w-4 text-[#111]" />
+        </button>
+      </div>
+
+      {/* ── Service type grid ────────────────────────────────────────── */}
+      <div className="px-4 pb-4 grid grid-cols-2 gap-3">
+        {/* Car Wash */}
         <button
           onClick={() => setLocation("/booking")}
-          className="w-full flex items-center justify-between group"
+          className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
-          <div>
-            <h2 className="text-lg font-medium text-black">Get a Wash</h2>
-            <p className="text-sm text-gray-500 mt-0.5">In as little as 15 minutes</p>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
+            <Droplets className="h-5 w-5" style={{ color: ACCENT }} />
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-400">Book now</span>
-            <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+          <span className="text-[14px] font-semibold text-[#111]">Car Wash</span>
+        </button>
+
+        {/* Fleet */}
+        <button
+          onClick={() => setLocation("/corporate")}
+          className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
+            <Truck className="h-5 w-5" style={{ color: ACCENT }} />
           </div>
+          <span className="text-[14px] font-semibold text-[#111]">Fleet</span>
+          <span
+            className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+            style={{ background: ACCENT }}
+          >
+            Promo
+          </span>
         </button>
       </div>
 
-      {/* Services List */}
-      <div className="px-6 pt-6 pb-2">
-        <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Services</h3>
-        <div className="border-t border-gray-200">
-          {featureTiles.map((tile) => (
-            <button
-              key={tile.route}
-              onClick={() => setLocation(tile.route)}
-              className="w-full flex items-center justify-between py-5 border-b border-gray-200 group"
-            >
-              <div className="flex items-center gap-4">
-                <tile.icon className="h-5 w-5 text-gray-400" />
-                <span className="text-base text-black">{tile.label}</span>
-              </div>
-              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
-            </button>
-          ))}
+      {/* ── Category icons ───────────────────────────────────────────── */}
+      <div className="flex items-start justify-around px-6 pb-5">
+        {categories.map(({ icon: Icon, label, route }) => (
+          <button
+            key={label}
+            onClick={() => setLocation(route)}
+            className="flex flex-col items-center gap-2 active:opacity-70 transition"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3eeff]">
+              <Icon className="h-5 w-5" style={{ color: ACCENT }} />
+            </div>
+            <span className="text-[11px] font-medium text-[#555]">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Promo banner ─────────────────────────────────────────────── */}
+      <div className="mx-4 mb-4 rounded-2xl overflow-hidden flex items-center bg-[#f3eeff] px-4 py-4 gap-4">
+        <div className="flex-1">
+          <p className="text-[13px] font-bold text-[#111] leading-tight">
+            Save big on any<br />Dapper Maintenance<br />Plan
+          </p>
+          <button
+            onClick={() => setLocation("/booking")}
+            className="mt-3 flex items-center gap-1 text-[12px] font-semibold text-[#111] border border-[#ccc] rounded-full px-3 py-1.5 bg-white"
+          >
+            Browse offer →
+          </button>
+        </div>
+        <div className="w-28 h-20 rounded-xl overflow-hidden shrink-0">
+          <img src="/dapper-van-house.jpg" className="w-full h-full object-cover" alt="Dapper van" />
         </div>
       </div>
 
-      {/* Referral Strip */}
-      <div className="px-6 pt-6">
-        <button
-          onClick={() => setShowReferralModal(true)}
-          className="w-full bg-gray-950 text-white p-5 flex items-center justify-between hover:bg-black transition-colors"
-        >
-          <div className="text-left">
-            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-1">Refer a Friend</p>
-            <h3 className="text-base font-medium">Give $20, Get $20</h3>
-          </div>
-          <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
-        </button>
-      </div>
+      {/* ── Service photo cards ──────────────────────────────────────── */}
+      <div className="px-4 flex flex-col gap-5">
+        {serviceCards.map((card) => (
+          <button
+            key={card.id}
+            onClick={() => setLocation(card.route)}
+            className="w-full text-left active:opacity-90 transition"
+          >
+            {/* Photo */}
+            <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-2.5">
+              {card.reward && (
+                <div
+                  className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-white"
+                  style={{ background: ACCENT }}
+                >
+                  🎁 {card.reward}
+                </div>
+              )}
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm"
+              >
+                <Heart className="h-4 w-4 text-[#555]" />
+              </button>
+              <img
+                src={card.image}
+                alt={card.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
 
-      {/* Referral Modal */}
-      <Dialog open={showReferralModal} onOpenChange={setShowReferralModal}>
-        <DialogContent className="mx-4 rounded-none border-gray-200">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-medium">Give $20, Get $20</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5 pt-2">
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Share your referral link and both you and your friend get $20 off your next wash.
-            </p>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Your referral link</label>
-              <div className="flex gap-2">
-                <Input value={referralLink} readOnly className="flex-1 rounded-none border-gray-200 bg-gray-50 text-sm" />
-                <Button variant="outline" size="sm" onClick={copyToClipboard} className="rounded-none border-gray-200">
-                  <Copy className="h-4 w-4" />
-                </Button>
+            {/* Info row */}
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-[#111]">{card.title}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Clock className="h-3.5 w-3.5 text-[#aaa]" />
+                  <p className="text-[12px] text-[#888]">{card.duration}</p>
+                </div>
               </div>
+              <p className="text-[15px] font-bold text-[#111] mt-0.5">{card.price}</p>
             </div>
-            <div className="flex gap-3 pt-1">
-              <Button onClick={shareLink} className="flex-1 bg-black hover:bg-gray-900 text-white rounded-none">
-                <Share className="h-4 w-4 mr-2" /> Share Link
-              </Button>
-              <Button variant="outline" onClick={() => setShowReferralModal(false)} className="flex-1 rounded-none border-gray-200">
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
