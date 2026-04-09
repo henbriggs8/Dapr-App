@@ -60,8 +60,6 @@ const CAR_MODELS: { [key: string]: string[] } = {
   "Other": ["Custom","Kit Car","Classic","Modified"],
 };
 
-const CAR_COLORS = ["Black","White","Silver","Gray","Red","Blue","Green","Brown","Gold","Orange","Yellow","Purple","Pink","Tan","Maroon","Other"];
-
 const primaryBtn =
   "flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#111] text-[13px] font-semibold text-white disabled:opacity-30 transition active:scale-[0.98]";
 
@@ -77,38 +75,35 @@ export default function CarProfileScreen() {
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [color, setColor] = useState("");
 
   const availableModels = make && CAR_MODELS[make] ? CAR_MODELS[make] : [];
-
   const handleMakeChange = (val: string) => { setMake(val); setModel(""); };
-
-  const isValid = year && make && model && color;
+  const isValid = year && make && model;
 
   const handleSave = () => {
-    localStorage.setItem("userVehicle", JSON.stringify({ year, make, model, color }));
-    setLocation("/onboarding/first-wash-offer");
+    localStorage.setItem("userVehicle", JSON.stringify({ year, make, model }));
+    localStorage.setItem("onboardingCompleted", "true");
+    setLocation("/");
   };
 
   const handleSkip = () => {
     localStorage.setItem("skipVehicle", "true");
-    setLocation("/onboarding/first-wash-offer");
+    localStorage.setItem("onboardingCompleted", "true");
+    setLocation("/");
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
-      {/* Back + step */}
       <div className="flex items-center justify-between mb-10">
         <button
-          onClick={() => setLocation("/onboarding/address")}
+          onClick={() => setLocation("/onboarding/name")}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-[12px] text-[#aaa]">Step 3 of 4</span>
+        <span className="text-[12px] text-[#aaa]">Step 2 of 2</span>
       </div>
 
-      {/* Heading */}
       <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Your vehicle</p>
       <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111] mb-2">
         Tell us about your car
@@ -117,9 +112,7 @@ export default function CarProfileScreen() {
         Helps us bring the right equipment to every job.
       </p>
 
-      {/* Form */}
       <div className="flex flex-col gap-4 flex-1">
-        {/* Year + Make */}
         <div className="flex gap-3">
           <div className="w-28">
             <FieldLabel label="Year" />
@@ -137,7 +130,6 @@ export default function CarProfileScreen() {
           </div>
         </div>
 
-        {/* Model */}
         <div>
           <FieldLabel label="Model" />
           <select
@@ -150,18 +142,8 @@ export default function CarProfileScreen() {
             {availableModels.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
-
-        {/* Color */}
-        <div>
-          <FieldLabel label="Color" />
-          <select value={color} onChange={(e) => setColor(e.target.value)} className={selectCls}>
-            <option value="">Select color</option>
-            {CAR_COLORS.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
       </div>
 
-      {/* CTAs */}
       <div className="pt-8 flex flex-col gap-3">
         <button
           type="button"

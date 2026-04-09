@@ -199,13 +199,14 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
 
     try {
-      const { name, email, phone, address, description, profileImage } = req.body;
+      const { name, email, phone, address, description, profileImage, birthday } = req.body;
       const updatedUser = await storage.updateUserProfile(req.user.id, {
         name,
         email,
         phone,
         address,
         description,
+        ...(birthday !== undefined && { birthday }),
         ...(profileImage !== undefined && { profileImage }),
       });
       res.json(updatedUser);

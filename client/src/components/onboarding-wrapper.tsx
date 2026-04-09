@@ -19,18 +19,15 @@ export function OnboardingWrapper({ children }: OnboardingWrapperProps) {
     if (onboardingCompleted) { setChecked(true); return; }
 
     const hasName    = localStorage.getItem("userName");
-    const hasAddress = localStorage.getItem("userAddress");
     const hasVehicle = localStorage.getItem("userVehicle");
     const skippedVehicle = localStorage.getItem("skipVehicle");
 
     if (!hasName) {
       setLocation("/onboarding/name");
-    } else if (!hasAddress) {
-      setLocation("/onboarding/address");
     } else if (!hasVehicle && !skippedVehicle) {
       setLocation("/onboarding/car-profile");
     } else {
-      setLocation("/onboarding/first-wash-offer");
+      localStorage.setItem("onboardingCompleted", "true");
     }
 
     setChecked(true);

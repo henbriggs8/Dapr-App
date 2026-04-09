@@ -662,12 +662,6 @@ function AuthFlow() {
           await setSignUpActive!({ session: result.createdSessionId });
           setOtpCode('');
           setStep('welcome');
-        } else if (result.status === 'missing_requirements') {
-          // Clerk also requires email for sign-up
-          setSignUpNeedsEmail(true);
-          setPendingSessionId(null);
-          setOtpCode('');
-          setStep('emailCollect');
         } else {
           setError(`Verification error (status: ${result.status}). Please try again.`);
         }

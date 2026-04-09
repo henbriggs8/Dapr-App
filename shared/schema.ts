@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   ratingCount: integer("rating_count").default(0),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  birthday: text("birthday"),
   description: text("description"),
   profileImage: text("profile_image"),
   currentStatus: text("current_status").default('offline'),
