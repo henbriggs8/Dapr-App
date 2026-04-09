@@ -23,7 +23,9 @@ export default function ProviderAuthPage() {
   // Handle user redirects with useEffect to avoid setState during render
   useEffect(() => {
     if (user) {
-      if (user.isProvider) {
+      if (user.isAdmin) {
+        setLocation('/admin');
+      } else if (user.isProvider) {
         // Check if onboarding is complete
         const onboardingComplete = localStorage.getItem(`provider-onboarding-complete-${user.id}`);
         if (!onboardingComplete) {
@@ -167,7 +169,7 @@ export default function ProviderAuthPage() {
             {/* Phone/Email Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                {activeTab === "phone" ? "Phone Number" : "Email Address"}
+                {activeTab === "phone" ? "Phone Number" : isLoginMode ? "Email or Username" : "Email Address"}
               </label>
               
               {activeTab === "phone" ? (
@@ -188,8 +190,8 @@ export default function ProviderAuthPage() {
                 </div>
               ) : (
                 <Input
-                  type="email"
-                  placeholder="Email address"
+                  type="text"
+                  placeholder={isLoginMode ? "Email address or username" : "Email address"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-14 text-base rounded-lg border-gray-300 focus:border-[#8c52ff] focus:ring-[#8c52ff]"
