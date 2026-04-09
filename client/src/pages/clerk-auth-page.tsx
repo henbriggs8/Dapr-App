@@ -658,11 +658,10 @@ function AuthFlow() {
       if (mode === 'signUp') {
         const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
         if (result.status === 'complete') {
-          // Phone-only sign-up complete — optionally collect email
-          setPendingSessionId(result.createdSessionId!);
-          setSignUpNeedsEmail(false);
+          // Phone-only sign-up complete — activate session and proceed
+          await setSignUpActive!({ session: result.createdSessionId });
           setOtpCode('');
-          setStep('emailCollect');
+          setStep('welcome');
         } else if (result.status === 'missing_requirements') {
           // Clerk also requires email for sign-up
           setSignUpNeedsEmail(true);
