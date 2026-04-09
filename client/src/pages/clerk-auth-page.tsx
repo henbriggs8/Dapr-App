@@ -605,7 +605,7 @@ function AuthFlow() {
         // New user — start sign-up
         try {
           setMode('signUp');
-          await signUp!.create({ phoneNumber: e164 });
+          await signUp!.create({ phoneNumber: e164, firstName: 'New', lastName: 'User' });
           await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
           setOtpCode('');
           setStep('phoneOtp');
@@ -662,30 +662,27 @@ function AuthFlow() {
           setOtpCode('');
           setStep('welcome');
         } else if (result.status === 'missing_requirements') {
-          // Some fields (e.g. name) are required in Clerk but not yet collected.
-          // Auto-fill with placeholders so sign-up completes; onboarding will
-          // overwrite with real values.
+          // Some Clerk-required fields aren't filled yet. Auto-fill what we can
+          // with placeholders; onboarding will overwrite with real values.
           const missing: string[] = (signUp as any).missingFields ?? [];
           const updates: Record<string, string> = {};
           if (missing.includes('first_name') || missing.includes('last_name')) {
             updates.firstName = 'New';
             updates.lastName = 'User';
           }
-          if (missing.includes('email_address')) {
-            setError('Please disable the Email requirement in your Clerk dashboard, then try again.');
-            return;
+          if (missing.includes('username')) {
+            updates.username = `user_${Date.now()}`;
           }
-          if (Object.keys(updates).length > 0) {
-            const updated = await signUp!.update(updates);
-            if (updated.status === 'complete') {
-              await setSignUpActive!({ session: updated.createdSessionId });
-              setOtpCode('');
-              setStep('welcome');
-            } else {
-              setError(`Sign-up still incomplete after update (${updated.status}). Check Clerk dashboard required fields.`);
-            }
+          // Always try to update — even if fields list is stale/cached.
+          // If nothing to update, attempt a no-op update to re-check status.
+          const updated = await signUp!.update(Object.keys(updates).length > 0 ? updates : {});
+          if (updated.status === 'complete') {
+            await setSignUpActive!({ session: updated.createdSessionId });
+            setOtpCode('');
+            setStep('welcome');
           } else {
-            setError(`Missing required fields: ${missing.join(', ')}. Check your Clerk dashboard settings.`);
+            const stillMissing: string[] = (updated as any).missingFields ?? missing;
+            setError(`Sign-up requires: ${stillMissing.join(', ')}. Please review your Clerk dashboard required fields.`);
           }
         } else {
           setError(`Unexpected status: ${result.status}. Please try again.`);
