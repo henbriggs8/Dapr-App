@@ -835,19 +835,22 @@ function AuthFlow() {
             return;
           }
 
-          // If email is unverified but NOT required for sign-up verification,
-          // we don't send an email OTP — the account is usable without it.
-          // Only fall through to email verification if email is in missingFields
-          // (meaning it's truly blocking completion).
           const stillMissing: string[] = (updated as any).missingFields ?? missing;
           const stillUnverified: string[] = (updated as any).unverifiedFields ?? unverified;
-          if (stillUnverified.includes('email_address') && !stillMissing.includes('email_address')) {
-            // Email provided but unverified — Clerk blocks sign-up despite "Verify at sign-up: OFF"
-            // Turn off "Require email address" in Clerk dashboard to fix this,
-            // OR accept the verification step.
-            setError('Your Clerk dashboard has "Require email address" ON which forces email verification. Please turn off "Require email address" in Clerk → User & Authentication → Email, Phone, Username.');
+
+          if (stillUnverified.includes('email_address')) {
+            // Email is on the sign-up (from a previous attempt) and is unverified.
+            // Clerk requires it verified to complete — send the email code now.
+            try {
+              await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+              setSignUpNeedsEmail(true);
+              setOtpCode('');
+              setStep('emailOtp');
+            } catch {
+              setError('Could not send email verification. Please try again.');
+            }
           } else {
-            setError(`Sign-up incomplete. Please try again.`);
+            setError(`Sign-up incomplete (${stillMissing.join(', ') || 'unknown issue'}). Please try again.`);
           }
 
         } else {
