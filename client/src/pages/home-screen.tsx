@@ -20,7 +20,7 @@ export default function HomeScreen() {
       id: 1,
       image: "/dapper-van-house.jpg",
       reward: "5 washes until $50 reward",
-      title: "At Home Maintenance Wash",
+      title: "Essential Wash",
       price: "$39",
       duration: "15–30 min",
       route: "/booking",
@@ -28,7 +28,7 @@ export default function HomeScreen() {
     {
       id: 2,
       image: "/interior-detail.jpg",
-      title: "Interior Detailing",
+      title: "Interior Detail",
       price: "$89",
       duration: "45–90 min",
       route: "/booking",
@@ -36,8 +36,8 @@ export default function HomeScreen() {
     {
       id: 3,
       image: "/exterior-wash.jpg",
-      title: "Exterior Detail",
-      price: "$49",
+      title: "Refresh Detail",
+      price: "$149",
       duration: "30–45 min",
       route: "/booking",
     },
