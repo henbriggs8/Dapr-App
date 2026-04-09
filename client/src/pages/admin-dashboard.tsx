@@ -477,8 +477,8 @@ export default function AdminDashboard() {
               const active = bookings.filter(b => b.status === "in_progress" || b.status === "accepted");
               const onlineProviders = providerStatus.filter((p: any) => p.status === "online");
               const todayCompleted = bookings.filter(b => {
-                const today = new Date().toDateString();
-                return b.status === "completed" && new Date(b.scheduledDate || "").toDateString() === today;
+                const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+                return b.status === "completed" && b.date === today;
               });
 
               return (
@@ -558,14 +558,14 @@ export default function AdminDashboard() {
                             <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border border-red-100 bg-red-50/40">
                               <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.serviceType}</span>
+                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.priceTier}</span>
                                   <Badge variant="outline" className="text-xs">${job.totalPrice}</Badge>
                                 </div>
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {job.address || "Address not set"}
+                                  <MapPin className="h-3 w-3" /> {job.serviceLocation || "Address not set"}
                                 </p>
                                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {job.scheduledDate ? new Date(job.scheduledDate).toLocaleString() : "ASAP"}
+                                  <Clock className="h-3 w-3" /> {job.date ? `${job.date} ${job.time ?? ""}`.trim() : "ASAP"}
                                 </p>
                                 <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
                               </div>
@@ -613,13 +613,13 @@ export default function AdminDashboard() {
                             <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border bg-blue-50/30">
                               <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.serviceType}</span>
+                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.priceTier}</span>
                                   <Badge className="text-xs bg-blue-500">
                                     {job.status === "in_progress" ? "Washing" : "Accepted"}
                                   </Badge>
                                 </div>
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {job.address || "Address not set"}
+                                  <MapPin className="h-3 w-3" /> {job.serviceLocation || "Address not set"}
                                 </p>
                                 <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
                                 <p className="text-xs text-gray-500">Pro: {job.providerName || `Provider #${job.providerId}`}</p>
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
                                     </div>
                                     {currentJob ? (
                                       <p className="text-xs text-blue-600 flex items-center gap-1">
-                                        <Zap className="h-3 w-3" /> Job #{currentJob.id} · {currentJob.serviceType}
+                                        <Zap className="h-3 w-3" /> Job #{currentJob.id} · {currentJob.serviceName || currentJob.priceTier}
                                       </p>
                                     ) : isOnline ? (
                                       <p className="text-xs text-green-600">Available</p>
