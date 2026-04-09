@@ -723,19 +723,33 @@ function AuthFlow() {
       localStorage.setItem('pendingEmail', signUpEmail.trim());
       localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
 
+      // Abandon any stale/pending sign-up first so we always start fresh
+      // with the current Clerk settings (avoids old email requirements being cached).
       try {
-        const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+        if (signUp?.status === 'missing_requirements' || signUp?.status === 'abandoned') {
+          await (signUp as any).abandon?.();
+        }
+      } catch { /* ignore abandon errors */ }
+
+      const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+      try {
         await signUp!.create({
           phoneNumber: e164,
           firstName: signUpFirstName.trim(),
           lastName: signUpLastName.trim(),
           password: tempPw,
         });
-      } catch {
-        // If create() fails, there's likely a stale/pending sign-up for this number.
-        // The existing signUp object from the hook already has the pending state — try to use it.
-        if (!signUp?.phoneNumberId && !signUp?.id) {
-          throw new Error('Could not start sign-up. Please try a different phone number or contact support.');
+      } catch (createErr: any) {
+        // create() failed — there may be a stale pending sign-up for this phone.
+        // Try updating the existing sign-up with fresh fields instead.
+        if (signUp?.id) {
+          await signUp!.update({
+            firstName: signUpFirstName.trim(),
+            lastName: signUpLastName.trim(),
+            password: tempPw,
+          });
+        } else {
+          throw createErr;
         }
       }
 
@@ -850,7 +864,18 @@ function AuthFlow() {
           setOtpCode('');
           setStep('setPassword');
         } else if (result.status === 'needs_second_factor') {
-          setError('Additional verification required.');
+          // Try to use phone as second factor if available
+          const secondFactors = (result as any).supportedSecondFactors ?? [];
+          const phoneSF = secondFactors.find((f: any) => f.strategy === 'phone_code');
+          if (phoneSF) {
+            await signIn!.prepareSecondFactor({ strategy: 'phone_code' });
+            setOtpCode('');
+            // Stay on phoneOtp step — next verify call will use second factor
+          } else {
+            setError('A second verification step is required. Please contact support.');
+          }
+        } else {
+          setError(`Verification returned unexpected status (${result.status}). Please try again.`);
         }
       }
     } catch (err: any) {
