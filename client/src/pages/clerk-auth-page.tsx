@@ -491,9 +491,101 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   );
 }
 
+function ProfileInfoScreen({
+  phone,
+  firstName,
+  setFirstName,
+  lastName,
+  setLastName,
+  email,
+  setEmail,
+  onBack,
+  onNext,
+  loading,
+  error,
+}: {
+  phone: string;
+  firstName: string;
+  setFirstName: (v: string) => void;
+  lastName: string;
+  setLastName: (v: string) => void;
+  email: string;
+  setEmail: (v: string) => void;
+  onBack: () => void;
+  onNext: () => void;
+  loading: boolean;
+  error: string;
+}) {
+  const canSubmit = firstName.trim() && lastName.trim() && email.trim() && email.includes('@');
+  return (
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+      <BackButton onBack={onBack} />
+
+      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-8">
+        Set up your profile
+      </h1>
+
+      <div className="flex flex-col gap-3">
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="First Name"
+          autoComplete="given-name"
+          className={inputCls}
+        />
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last Name"
+          autoComplete="family-name"
+          className={inputCls}
+        />
+
+        {/* Phone — pre-filled, read-only */}
+        <div className="flex h-12 items-center border border-[#ececec] bg-[#f6f6f6]">
+          <div className="flex h-full w-[72px] shrink-0 items-center justify-center gap-1 border-r border-[#ececec] text-[13px] text-[#111]">
+            <span>🇺🇸</span>
+            <span className="text-[12px] text-[#999]">+1</span>
+          </div>
+          <span className="flex-1 px-4 text-[14px] text-[#555]">{phone}</span>
+        </div>
+
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext()}
+          placeholder="Email*"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          className={inputCls}
+        />
+      </div>
+
+      {error && <ErrorBanner msg={error} />}
+
+      <div className="mt-auto pt-8 flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canSubmit || loading}
+          className={primaryBtn}
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            <>Next <ArrowRight className="h-4 w-4" /></>
+          )}
+        </button>
+        <p className="text-center text-[11px] leading-4 text-[#a0a0a0] px-4">
+          By proceeding, you consent to get calls, WhatsApp or SMS messages, including by automated means, from Dapper and its affiliates to the number provided.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Step = 'landing' | 'password' | 'phoneOtp' | 'emailOtp' | 'emailCollect' | 'setPassword' | 'welcome';
+type Step = 'landing' | 'profileInfo' | 'password' | 'phoneOtp' | 'emailOtp' | 'emailCollect' | 'setPassword' | 'welcome';
 
 export default function ClerkAuthPage() {
   const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -527,6 +619,9 @@ function AuthFlow() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [signUpNeedsEmail, setSignUpNeedsEmail] = useState(false);
+  const [signUpFirstName, setSignUpFirstName] = useState('');
+  const [signUpLastName, setSignUpLastName] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
 
   // Navigate home once local user is synced (must be in effect, not render)
   useEffect(() => {
@@ -602,20 +697,38 @@ function AuthFlow() {
     } catch (err: any) {
       const msg = clerkError(err);
       if (msg === '__new_user__') {
-        // New user — start sign-up
-        try {
-          setMode('signUp');
-          const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
-          await signUp!.create({ phoneNumber: e164, firstName: 'New', lastName: 'User', password: tempPw });
-          await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
-          setOtpCode('');
-          setStep('phoneOtp');
-        } catch (signUpErr: any) {
-          setError(clerkError(signUpErr));
-        }
+        // New user — collect profile info first, then create sign-up
+        setMode('signUp');
+        setStep('profileInfo');
       } else {
         setError(msg);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileInfoNext = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
+      await signUp!.create({
+        phoneNumber: e164,
+        firstName: signUpFirstName.trim(),
+        lastName: signUpLastName.trim(),
+        emailAddress: signUpEmail.trim(),
+        password: tempPw,
+      });
+      await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      // Pre-fill onboarding with what user already typed
+      localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
+      localStorage.setItem('onboardingLastName', signUpLastName.trim());
+      localStorage.setItem('pendingEmail', signUpEmail.trim());
+      setOtpCode('');
+      setStep('phoneOtp');
+    } catch (err: any) {
+      setError(clerkError(err));
     } finally {
       setLoading(false);
     }
@@ -859,6 +972,24 @@ function AuthFlow() {
         setPhone={setPhone}
         onNext={handlePhoneNext}
         onGoogle={handleGoogleSignIn}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+
+  if (step === 'profileInfo') {
+    return (
+      <ProfileInfoScreen
+        phone={phone}
+        firstName={signUpFirstName}
+        setFirstName={setSignUpFirstName}
+        lastName={signUpLastName}
+        setLastName={setSignUpLastName}
+        email={signUpEmail}
+        setEmail={setSignUpEmail}
+        onBack={() => { setStep('landing'); setError(''); }}
+        onNext={handleProfileInfoNext}
         loading={loading}
         error={error}
       />

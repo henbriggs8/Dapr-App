@@ -30,8 +30,8 @@ const selectCls =
 
 export default function OnboardingNameScreen() {
   const [, setLocation] = useLocation();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(() => localStorage.getItem("onboardingFirstName") || "");
+  const [lastName, setLastName] = useState(() => localStorage.getItem("onboardingLastName") || "");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
   const [birthYear, setBirthYear] = useState("");
