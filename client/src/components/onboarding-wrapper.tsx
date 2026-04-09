@@ -21,11 +21,14 @@ export function OnboardingWrapper({ children }: OnboardingWrapperProps) {
     const hasName    = localStorage.getItem("userName");
     const hasVehicle = localStorage.getItem("userVehicle");
     const skippedVehicle = localStorage.getItem("skipVehicle");
+    const sawFirstWash = localStorage.getItem("sawFirstWash");
 
     if (!hasName) {
       setLocation("/onboarding/name");
     } else if (!hasVehicle && !skippedVehicle) {
       setLocation("/onboarding/car-profile");
+    } else if (!sawFirstWash) {
+      setLocation("/onboarding/first-wash-offer");
     } else {
       localStorage.setItem("onboardingCompleted", "true");
     }

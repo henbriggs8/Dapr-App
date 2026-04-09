@@ -82,14 +82,12 @@ export default function CarProfileScreen() {
 
   const handleSave = () => {
     localStorage.setItem("userVehicle", JSON.stringify({ year, make, model }));
-    localStorage.setItem("onboardingCompleted", "true");
-    setLocation("/");
+    setLocation("/onboarding/first-wash-offer");
   };
 
   const handleSkip = () => {
     localStorage.setItem("skipVehicle", "true");
-    localStorage.setItem("onboardingCompleted", "true");
-    setLocation("/");
+    setLocation("/onboarding/first-wash-offer");
   };
 
   return (
@@ -101,7 +99,7 @@ export default function CarProfileScreen() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-[12px] text-[#aaa]">Step 2 of 2</span>
+        <span className="text-[12px] text-[#aaa]">Step 2 of 3</span>
       </div>
 
       <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Your vehicle</p>

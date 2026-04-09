@@ -83,7 +83,7 @@ export default function OnboardingNameScreen() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-[12px] text-[#aaa]">Step 1 of 2</span>
+        <span className="text-[12px] text-[#aaa]">Step 1 of 3</span>
       </div>
 
       <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Your profile</p>

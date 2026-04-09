@@ -5,11 +5,13 @@ export default function FirstWashOffer() {
   const [, setLocation] = useLocation();
 
   const handleBook = () => {
+    localStorage.setItem("sawFirstWash", "true");
     localStorage.setItem("onboardingCompleted", "true");
     setLocation("/booking");
   };
 
   const handleSkip = () => {
+    localStorage.setItem("sawFirstWash", "true");
     localStorage.setItem("onboardingCompleted", "true");
     setLocation("/");
   };
@@ -24,7 +26,7 @@ export default function FirstWashOffer() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-[12px] text-[#aaa]">Step 4 of 4</span>
+        <span className="text-[12px] text-[#aaa]">Step 3 of 3</span>
       </div>
 
       {/* Icon */}
