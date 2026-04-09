@@ -1632,6 +1632,52 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Backend-assisted sign-up completion — used when a stale sign-up has an unverified
+  // email stuck to it and the user does not want to verify email.
+  // Creates the user via Clerk admin API and returns a short-lived sign-in token.
+  app.post('/api/auth/clerk/complete-signup', async (req: Request, res: Response) => {
+    try {
+      const { phoneNumber, firstName, lastName, email } = req.body as {
+        phoneNumber: string;
+        firstName: string;
+        lastName: string;
+        email?: string;
+      };
+      if (!phoneNumber) return res.status(400).json({ error: 'phoneNumber required' });
+
+      // Check if user already exists by phone number
+      const existingList = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
+      let clerkUser = existingList.data?.[0] ?? existingList[0 as any] ?? null;
+
+      if (!clerkUser) {
+        // Create the user via Clerk admin API — bypasses the stale sign-up entirely
+        const createParams: any = {
+          phoneNumber: [phoneNumber],
+          firstName: firstName || 'New',
+          lastName: lastName || 'User',
+          skipPasswordChecks: true,
+          skipPasswordRequirement: true,
+        };
+        // Only include email if provided and non-empty
+        if (email && email.trim()) {
+          createParams.emailAddress = [email.trim()];
+        }
+        clerkUser = await clerkClient.users.createUser(createParams);
+      }
+
+      // Issue a short-lived sign-in token the frontend can use with the 'ticket' strategy
+      const tokenRes = await clerkClient.signInTokens.createSignInToken({
+        userId: clerkUser.id,
+        expiresInSeconds: 60,
+      });
+
+      return res.json({ signInToken: tokenRes.token });
+    } catch (err: any) {
+      console.error('clerk/complete-signup error:', err);
+      return res.status(500).json({ error: err.message ?? 'Failed to complete sign-up' });
+    }
+  });
+
   // Clerk user sync - creates/fetches user in local DB and establishes session
   app.post('/api/auth/clerk-sync', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
     try {

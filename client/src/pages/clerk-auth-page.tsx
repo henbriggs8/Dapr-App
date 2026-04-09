@@ -839,16 +839,44 @@ function AuthFlow() {
           const stillUnverified: string[] = (updated as any).unverifiedFields ?? unverified;
 
           if (stillUnverified.includes('email_address')) {
-            // Email is on the sign-up (from a previous attempt) and is unverified.
-            // Clerk requires it verified to complete — send the email code now.
+            // Email is stuck on the sign-up from a previous attempt.
+            // Try to clear it by passing null so the sign-up can complete via phone only.
             try {
-              await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
-              setSignUpNeedsEmail(true);
-              setOtpCode('');
-              setStep('emailOtp');
-            } catch {
-              setError('Could not send email verification. Please try again.');
-            }
+              const cleared = await signUp!.update({ emailAddress: null } as any);
+              if (cleared.status === 'complete') {
+                await setSignUpActive!({ session: cleared.createdSessionId });
+                setOtpCode('');
+                setStep('welcome');
+                return;
+              }
+            } catch { /* clearing email not supported — fall through to backend approach */ }
+
+            // If clearing email failed, use our backend to create the user directly
+            // bypassing the stale sign-up object entirely.
+            try {
+              const resp = await fetch('/api/auth/clerk/complete-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phoneNumber: e164,
+                  firstName: signUpFirstName.trim() || 'New',
+                  lastName: signUpLastName.trim() || 'User',
+                  email: localStorage.getItem('pendingSignUpEmail') || '',
+                }),
+              });
+              if (resp.ok) {
+                const { signInToken } = await resp.json();
+                const result = await signIn!.create({ strategy: 'ticket', ticket: signInToken });
+                if (result.status === 'complete') {
+                  await setSignInActive!({ session: result.createdSessionId });
+                  setOtpCode('');
+                  setStep('welcome');
+                  return;
+                }
+              }
+            } catch { /* fall through */ }
+
+            setError('This phone number has a stuck sign-up. Please go to your Clerk dashboard and delete the user with this number, then try again.');
           } else {
             setError(`Sign-up incomplete (${stillMissing.join(', ') || 'unknown issue'}). Please try again.`);
           }
