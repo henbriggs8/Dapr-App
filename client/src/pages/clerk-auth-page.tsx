@@ -717,7 +717,6 @@ function AuthFlow() {
         phoneNumber: e164,
         firstName: signUpFirstName.trim(),
         lastName: signUpLastName.trim(),
-        emailAddress: signUpEmail.trim(),
         password: tempPw,
       });
       await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
@@ -725,6 +724,7 @@ function AuthFlow() {
       localStorage.setItem('onboardingFirstName', signUpFirstName.trim());
       localStorage.setItem('onboardingLastName', signUpLastName.trim());
       localStorage.setItem('pendingEmail', signUpEmail.trim());
+      localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
       setOtpCode('');
       setStep('phoneOtp');
     } catch (err: any) {
@@ -779,36 +779,46 @@ function AuthFlow() {
           const missing: string[] = (result as any).missingFields ?? [];
           const unverified: string[] = (result as any).unverifiedFields ?? [];
 
-          // Email verification needed — send code and let user verify
-          if (unverified.includes('email_address')) {
-            await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
-            setSignUpNeedsEmail(true);
-            setOtpCode('');
-            setStep('emailOtp');
-            return;
-          }
-
-          // Auto-fill any remaining missing fields
           const updates: Record<string, string> = {};
           if (missing.includes('first_name') || missing.includes('last_name')) {
-            updates.firstName = 'New';
-            updates.lastName = 'User';
+            updates.firstName = signUpFirstName.trim() || 'New';
+            updates.lastName = signUpLastName.trim() || 'User';
           }
           if (missing.includes('username')) updates.username = `user_${Date.now()}`;
           if (missing.includes('password')) {
             updates.password = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
           }
-          if (Object.keys(updates).length > 0) {
-            const updated = await signUp!.update(updates);
-            if (updated.status === 'complete') {
-              await setSignUpActive!({ session: updated.createdSessionId });
-              setOtpCode('');
-              setStep('welcome');
-              return;
-            }
+          // If Clerk still requires email (Require email is ON in Clerk dashboard),
+          // provide it from what the user entered — this avoids the verification step
+          // because "Verify at sign-up" is OFF.
+          const storedEmail = localStorage.getItem('pendingSignUpEmail') || signUpEmail.trim();
+          if (missing.includes('email_address') && storedEmail) {
+            updates.emailAddress = storedEmail;
           }
-          const stillMissing: string[] = (signUp as any).missingFields ?? missing;
-          setError(`Sign-up incomplete. Please try again. (${stillMissing.join(', ') || 'unknown'})`);
+
+          // Try updating with whatever we have
+          const updated = await signUp!.update(Object.keys(updates).length > 0 ? updates : {});
+          if (updated.status === 'complete') {
+            await setSignUpActive!({ session: updated.createdSessionId });
+            setOtpCode('');
+            setStep('welcome');
+            return;
+          }
+
+          // If email is unverified but NOT required for sign-up verification,
+          // we don't send an email OTP — the account is usable without it.
+          // Only fall through to email verification if email is in missingFields
+          // (meaning it's truly blocking completion).
+          const stillMissing: string[] = (updated as any).missingFields ?? missing;
+          const stillUnverified: string[] = (updated as any).unverifiedFields ?? unverified;
+          if (stillUnverified.includes('email_address') && !stillMissing.includes('email_address')) {
+            // Email provided but unverified — Clerk blocks sign-up despite "Verify at sign-up: OFF"
+            // Turn off "Require email address" in Clerk dashboard to fix this,
+            // OR accept the verification step.
+            setError('Your Clerk dashboard has "Require email address" ON which forces email verification. Please turn off "Require email address" in Clerk → User & Authentication → Email, Phone, Username.');
+          } else {
+            setError(`Sign-up incomplete. Please try again.`);
+          }
 
         } else {
           setError(`Unexpected status: ${result.status}. Please try again.`);
