@@ -24,7 +24,15 @@ import {
   MoreHorizontal,
   ArrowUpDown,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Radio,
+  MapPin,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  Zap,
+  RefreshCw,
+  Car
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -103,13 +111,24 @@ export default function AdminDashboard() {
     },
   });
 
-  // Fetch all bookings
-  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<AdminBooking[]>({
+  // Fetch all bookings (auto-refresh for dispatch)
+  const { data: bookings = [], isLoading: bookingsLoading, dataUpdatedAt: bookingsUpdatedAt } = useQuery<AdminBooking[]>({
     queryKey: ["/api/admin/bookings"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/bookings");
       return await res.json();
     },
+    refetchInterval: 15000,
+  });
+
+  // Fetch provider status (auto-refresh)
+  const { data: providerStatus = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/provider-status"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/provider-status");
+      return await res.json();
+    },
+    refetchInterval: 15000,
   });
 
   // Fetch earnings data
@@ -426,8 +445,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="dispatch" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="dispatch" className="flex items-center gap-2">
+              <Radio className="h-4 w-4" />
+              Dispatch
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users
@@ -445,6 +468,229 @@ export default function AdminDashboard() {
               Analytics
             </TabsTrigger>
           </TabsList>
+
+          {/* Dispatch Tab */}
+          <TabsContent value="dispatch" className="space-y-4">
+            {/* Live Stats Bar */}
+            {(() => {
+              const unassigned = bookings.filter(b => b.status === "pending" && !b.providerId);
+              const active = bookings.filter(b => b.status === "in_progress" || b.status === "accepted");
+              const onlineProviders = providerStatus.filter((p: any) => p.status === "online");
+              const todayCompleted = bookings.filter(b => {
+                const today = new Date().toDateString();
+                return b.status === "completed" && new Date(b.scheduledDate || "").toDateString() === today;
+              });
+
+              return (
+                <>
+                  <div className="grid grid-cols-4 gap-4">
+                    <Card className="border-red-100 bg-red-50">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Unassigned</p>
+                            <p className="text-3xl font-bold text-red-700">{unassigned.length}</p>
+                          </div>
+                          <AlertCircle className="h-8 w-8 text-red-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-blue-100 bg-blue-50">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Active Jobs</p>
+                            <p className="text-3xl font-bold text-blue-700">{active.length}</p>
+                          </div>
+                          <Zap className="h-8 w-8 text-blue-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-100 bg-green-50">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Pros Online</p>
+                            <p className="text-3xl font-bold text-green-700">{onlineProviders.length}</p>
+                          </div>
+                          <Car className="h-8 w-8 text-green-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Done Today</p>
+                            <p className="text-3xl font-bold text-gray-800">{todayCompleted.length}</p>
+                          </div>
+                          <CheckCircle2 className="h-8 w-8 text-gray-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Auto-refresh indicator */}
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <RefreshCw className="h-3 w-3" />
+                    Auto-refreshing every 15s · Last updated {new Date(bookingsUpdatedAt).toLocaleTimeString()}
+                  </div>
+
+                  {/* Main dispatch layout */}
+                  <div className="grid grid-cols-3 gap-4 items-start">
+                    {/* Job Queue — 2/3 */}
+                    <div className="col-span-2 space-y-4">
+                      {/* Unassigned Jobs */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            Needs Assignment
+                            {unassigned.length > 0 && (
+                              <Badge variant="destructive" className="ml-1">{unassigned.length}</Badge>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {unassigned.length === 0 ? (
+                            <p className="text-sm text-gray-400 py-4 text-center">All jobs are assigned</p>
+                          ) : unassigned.map((job) => (
+                            <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border border-red-100 bg-red-50/40">
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.serviceType}</span>
+                                  <Badge variant="outline" className="text-xs">${job.totalPrice}</Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" /> {job.address || "Address not set"}
+                                </p>
+                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" /> {job.scheduledDate ? new Date(job.scheduledDate).toLocaleString() : "ASAP"}
+                                </p>
+                                <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
+                              </div>
+                              <div className="ml-3 min-w-[160px]">
+                                <Select
+                                  onValueChange={(providerId) => {
+                                    reassignBookingMutation.mutate({ bookingId: job.id, providerId: parseInt(providerId) });
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Assign to pro…" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {onlineProviders.length === 0 && (
+                                      <SelectItem value="none" disabled>No pros online</SelectItem>
+                                    )}
+                                    {onlineProviders.map((p: any) => (
+                                      <SelectItem key={p.id} value={String(p.id)}>
+                                        {p.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+
+                      {/* Active Jobs */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Zap className="h-4 w-4 text-blue-500" />
+                            In Progress
+                            {active.length > 0 && (
+                              <Badge className="ml-1 bg-blue-500">{active.length}</Badge>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {active.length === 0 ? (
+                            <p className="text-sm text-gray-400 py-4 text-center">No active jobs right now</p>
+                          ) : active.map((job) => (
+                            <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border bg-blue-50/30">
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.serviceType}</span>
+                                  <Badge className="text-xs bg-blue-500">
+                                    {job.status === "in_progress" ? "Washing" : "Accepted"}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" /> {job.address || "Address not set"}
+                                </p>
+                                <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
+                                <p className="text-xs text-gray-500">Pro: {job.providerName || `Provider #${job.providerId}`}</p>
+                              </div>
+                              <div className="ml-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs h-8 text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => cancelBookingMutation.mutate(job.id)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Provider Roster — 1/3 */}
+                    <div className="col-span-1">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Car className="h-4 w-4" />
+                            Detail Pros
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {providerStatus.length === 0 ? (
+                            <p className="text-sm text-gray-400 text-center py-4">No providers found</p>
+                          ) : (
+                            [...providerStatus]
+                              .sort((a: any, b: any) => (b.status === "online" ? 1 : 0) - (a.status === "online" ? 1 : 0))
+                              .map((p: any) => {
+                                const currentJob = active.find(b => b.providerId === p.id);
+                                const isOnline = p.status === "online";
+                                return (
+                                  <div key={p.id} className={`p-3 rounded-lg border ${isOnline ? "border-green-100 bg-green-50/40" : "border-gray-100 bg-gray-50/40 opacity-60"}`}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-300"}`} />
+                                      <span className="text-sm font-medium truncate">{p.name}</span>
+                                    </div>
+                                    {currentJob ? (
+                                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                                        <Zap className="h-3 w-3" /> Job #{currentJob.id} · {currentJob.serviceType}
+                                      </p>
+                                    ) : isOnline ? (
+                                      <p className="text-xs text-green-600">Available</p>
+                                    ) : (
+                                      <p className="text-xs text-gray-400">Offline</p>
+                                    )}
+                                    {p.lastLocation && (
+                                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
+                                        <MapPin className="h-3 w-3 shrink-0" />
+                                        {p.lastLocation}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </TabsContent>
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
