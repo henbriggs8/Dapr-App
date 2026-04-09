@@ -776,17 +776,25 @@ function AuthFlow() {
           setOtpCode('');
           setStep('welcome');
         } else if (result.status === 'missing_requirements') {
-          // Some Clerk-required fields aren't filled yet. Auto-fill what we can
-          // with placeholders; onboarding will overwrite with real values.
-          const missing: string[] = (signUp as any).missingFields ?? [];
+          const missing: string[] = (result as any).missingFields ?? [];
+          const unverified: string[] = (result as any).unverifiedFields ?? [];
+
+          // Email verification needed — send code and let user verify
+          if (unverified.includes('email_address')) {
+            await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+            setSignUpNeedsEmail(true);
+            setOtpCode('');
+            setStep('emailOtp');
+            return;
+          }
+
+          // Auto-fill any remaining missing fields
           const updates: Record<string, string> = {};
           if (missing.includes('first_name') || missing.includes('last_name')) {
             updates.firstName = 'New';
             updates.lastName = 'User';
           }
-          if (missing.includes('username')) {
-            updates.username = `user_${Date.now()}`;
-          }
+          if (missing.includes('username')) updates.username = `user_${Date.now()}`;
           if (missing.includes('password')) {
             updates.password = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
           }
@@ -800,12 +808,8 @@ function AuthFlow() {
             }
           }
           const stillMissing: string[] = (signUp as any).missingFields ?? missing;
-          const needsEmail = stillMissing.includes('email_address');
-          if (needsEmail) {
-            setError('Email is still required in your Clerk dashboard. Go to: Clerk Dashboard → User & Authentication → Email, Phone, Username → Email address → turn off "Required".');
-          } else {
-            setError(`Sign-up incomplete. Still missing: ${stillMissing.join(', ')}.`);
-          }
+          setError(`Sign-up incomplete. Please try again. (${stillMissing.join(', ') || 'unknown'})`);
+
         } else {
           setError(`Unexpected status: ${result.status}. Please try again.`);
         }
