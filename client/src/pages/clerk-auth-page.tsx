@@ -609,8 +609,11 @@ function AuthFlow() {
   const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
   const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
 
-  const [step, setStep] = useState<Step>('landing');
-  const [phone, setPhone] = useState('');
+  // Demo mode: ?demo=1 in URL lets you preview sign-up screens without Clerk
+  const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
+
+  const [step, setStep] = useState<Step>(isDemo ? 'profileInfo' : 'landing');
+  const [phone, setPhone] = useState(isDemo ? '5550000000' : '');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -710,6 +713,7 @@ function AuthFlow() {
 
   const handleProfileInfoNext = async () => {
     setError('');
+    if (isDemo) { setStep('phoneOtp'); return; }
     setLoading(true);
     try {
       const tempPw = `Dp${Math.random().toString(36).slice(2, 10)}!${Date.now().toString(36)}`;
@@ -767,6 +771,7 @@ function AuthFlow() {
 
   const handlePhoneOtpNext = async () => {
     setError('');
+    if (isDemo) { setStep('welcome'); return; }
     setLoading(true);
     try {
       if (mode === 'signUp') {
