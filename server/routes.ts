@@ -25,6 +25,19 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Apple Pay domain verification for Square
+  app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
+    const path = require("path");
+    const fs = require("fs");
+    const filePath = path.join(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association");
+    if (fs.existsSync(filePath)) {
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send("Not found");
+    }
+  });
+
   // Public endpoints
   app.get("/api/providers", async (req, res) => {
     const providers = await storage.getProviders();
