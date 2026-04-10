@@ -29,8 +29,14 @@ export function registerRoutes(app: Express): Server {
   app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
     const path = require("path");
     const fs = require("fs");
-    const filePath = path.join(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association");
-    if (fs.existsSync(filePath)) {
+    // Check both dev (client/public) and production (dist/public) paths
+    const candidates = [
+      path.join(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association"),
+      path.join(__dirname, "public/.well-known/apple-developer-merchantid-domain-association"),
+      path.resolve("dist/public/.well-known/apple-developer-merchantid-domain-association"),
+    ];
+    const filePath = candidates.find(p => fs.existsSync(p));
+    if (filePath) {
       res.setHeader("Content-Type", "application/octet-stream");
       res.sendFile(filePath);
     } else {
