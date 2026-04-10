@@ -224,13 +224,7 @@ export default function HomeScreen() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
             <Truck className="h-5 w-5" style={{ color: ACCENT }} />
           </div>
-          <span className="text-[14px] font-semibold text-[#111]">Fleet</span>
-          <span
-            className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-            style={{ background: ACCENT }}
-          >
-            Promo
-          </span>
+          <span className="text-[14px] font-semibold text-[#111]">Fleet Wash</span>
         </button>
       </div>
 
