@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -92,10 +92,10 @@ export default function HomeScreen() {
   const { street, full } = parseAddress(user?.address);
 
   const categories = [
-    { icon: Car, label: "Interior", route: "/interior-cleaning" },
-    { icon: Droplets, label: "Exterior", route: "/exterior-cleaning" },
-    { icon: Sparkles, label: "Hand wax", route: "/booking" },
-    { icon: MoreHorizontal, label: "More", route: "/services" },
+    { icon: null, image: "/carseat.png", label: "Interior", route: "/interior-cleaning" },
+    { icon: Droplets, image: null, label: "Exterior", route: "/exterior-cleaning" },
+    { icon: Sparkles, image: null, label: "Hand wax", route: "/booking" },
+    { icon: MoreHorizontal, image: null, label: "More", route: "/services" },
   ];
 
   const serviceCards = [
@@ -230,14 +230,18 @@ export default function HomeScreen() {
 
       {/* ── Category icons ───────────────────────────────────────────── */}
       <div className="flex items-start justify-around px-6 pb-5">
-        {categories.map(({ icon: Icon, label, route }) => (
+        {categories.map(({ icon: Icon, image, label, route }) => (
           <button
             key={label}
             onClick={() => setLocation(route)}
             className="flex flex-col items-center gap-2 active:opacity-70 transition"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
-              <Icon className="h-5 w-5" style={{ color: ACCENT }} />
+              {image ? (
+                <img src={image} alt={label} className="h-7 w-7 object-contain" />
+              ) : Icon ? (
+                <Icon className="h-5 w-5" style={{ color: ACCENT }} />
+              ) : null}
             </div>
             <span className="text-[11px] font-medium text-[#555]">{label}</span>
           </button>
