@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -95,7 +95,7 @@ export default function HomeScreen() {
   const categories: { icon: React.ElementType | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
     { icon: null, image: "/carseat.png", label: "Interior", route: "/interior-cleaning" },
     { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/exterior-cleaning" },
-    { icon: Sparkles, image: null, label: "Hand wax", route: "/booking" },
+    { icon: null, image: "/sports-car.png", label: "Full Detail", route: "/booking" },
     { icon: MoreHorizontal, image: null, label: "More", route: "/services" },
   ];
 
