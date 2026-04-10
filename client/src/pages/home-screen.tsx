@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -222,7 +222,7 @@ export default function HomeScreen() {
           className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
-            <Droplets className="h-5 w-5" style={{ color: ACCENT }} />
+            <Truck className="h-5 w-5" style={{ color: ACCENT }} />
           </div>
           <span className="text-[14px] font-semibold text-[#111]">Fleet Wash</span>
         </button>
