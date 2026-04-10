@@ -1,23 +1,43 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
 
 function parseAddress(address: string | null | undefined) {
-  if (!address) return { street: "Scottsdale", full: null };
+  if (!address) return { street: "Set location", full: null };
   const parts = address.split(",").map((p) => p.trim());
   const street = parts[0] || address;
   return { street, full: address };
+}
+
+async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+  const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+  if (!res.ok) throw new Error("Geocoding failed");
+  const data = await res.json();
+  const a = data.address || {};
+  const house = a.house_number || "";
+  const road = a.road || a.pedestrian || a.path || "";
+  const city = a.city || a.town || a.village || a.county || "";
+  const state = a.state || "";
+  const zip = a.postcode || "";
+  const street = [house, road].filter(Boolean).join(" ");
+  return [street, city, [state, zip].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
 }
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"sameday" | "services">("sameday");
   const [addressOpen, setAddressOpen] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
   const { getToken } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: user } = useQuery<{ address?: string | null }>({
     queryKey: ["/api/user"],
@@ -30,6 +50,45 @@ export default function HomeScreen() {
       return res.json();
     },
   });
+
+  async function detectLocation() {
+    setLocateError(null);
+    if (!navigator.geolocation) {
+      setLocateError("Location not supported on this device.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const address = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+          const token = await getToken();
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+          await fetch("/api/user/profile", {
+            method: "PATCH",
+            headers,
+            credentials: "include",
+            body: JSON.stringify({ address }),
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        } catch {
+          setLocateError("Could not look up address. Try again.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocateError("Location permission denied. Enable it in your device settings.");
+        } else {
+          setLocateError("Could not get your location. Try again.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   const { street, full } = parseAddress(user?.address);
 
@@ -100,13 +159,42 @@ export default function HomeScreen() {
         </div>
 
         {/* Expanded address dropdown */}
-        {addressOpen && full && (
-          <div className="mt-2 mb-1 flex items-start gap-2 rounded-2xl bg-[#f8f8f8] px-4 py-3">
-            <MapPin className="h-4 w-4 mt-0.5 shrink-0" style={{ color: ACCENT }} />
-            <div>
-              <p className="text-[13px] font-semibold text-[#111]">{full}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Service location from your profile</p>
+        {addressOpen && (
+          <div className="mt-2 mb-1 rounded-2xl bg-[#f8f8f8] px-4 py-3 flex flex-col gap-2">
+            {/* Current saved address */}
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+              <div>
+                <p className="text-[13px] font-semibold text-[#111]">
+                  {full || "No address saved yet"}
+                </p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Service location from your profile</p>
+              </div>
             </div>
+
+            {/* Divider */}
+            <div className="h-px bg-gray-200" />
+
+            {/* Use current location button */}
+            <button
+              onClick={detectLocation}
+              disabled={locating}
+              className="flex items-center gap-2 active:opacity-70 transition"
+            >
+              {locating ? (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" style={{ color: ACCENT }} />
+              ) : (
+                <MapPin className="h-4 w-4 shrink-0" style={{ color: ACCENT }} />
+              )}
+              <span className="text-[13px] font-semibold" style={{ color: ACCENT }}>
+                {locating ? "Detecting location…" : "Use current location"}
+              </span>
+            </button>
+
+            {/* Error message */}
+            {locateError && (
+              <p className="text-[11px] text-red-500">{locateError}</p>
+            )}
           </div>
         )}
       </div>
