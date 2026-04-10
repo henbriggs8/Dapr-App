@@ -19,7 +19,7 @@ export function UberMinimal() {
       name: "Full Detail",
       price: "$149",
       duration: "150 min",
-      description: "everything in Interior + clay bar + hand wax"
+      description: "everything in interior/exterior + steam clean & luxe wax"
     }
   ];
 
