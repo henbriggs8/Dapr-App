@@ -239,7 +239,7 @@ export default function HomeScreen() {
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
               {custom ? custom : image ? (
-                <img src={image} alt={label} className="h-7 w-7 object-contain" />
+                <img src={image} alt={label} className="h-10 w-10 object-contain" />
               ) : Icon ? (
                 <Icon className="h-5 w-5" style={{ color: ACCENT }} />
               ) : null}
