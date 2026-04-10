@@ -130,7 +130,7 @@ export default function HomeScreen() {
             onClick={() => setLocation(route)}
             className="flex flex-col items-center gap-2 active:opacity-70 transition"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3eeff]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
               <Icon className="h-5 w-5" style={{ color: ACCENT }} />
             </div>
             <span className="text-[11px] font-medium text-[#555]">{label}</span>
