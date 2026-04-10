@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Armchair, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -92,7 +92,7 @@ export default function HomeScreen() {
   const { street, full } = parseAddress(user?.address);
 
   const categories = [
-    { icon: Car, label: "Interior", route: "/interior-cleaning" },
+    { icon: Armchair, label: "Interior", route: "/interior-cleaning" },
     { icon: Droplets, label: "Exterior", route: "/exterior-cleaning" },
     { icon: Sparkles, label: "Hand wax", route: "/booking" },
     { icon: MoreHorizontal, label: "More", route: "/services" },
