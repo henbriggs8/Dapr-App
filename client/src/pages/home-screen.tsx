@@ -6,23 +6,6 @@ import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
 
-function CarBubblesIcon({ color }: { color: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {/* Car body */}
-      <path d="M2 14h14v3H2z" />
-      {/* Car roof */}
-      <path d="M4 14l2.5-4h7l2.5 4" />
-      {/* Wheels */}
-      <circle cx="6" cy="17.5" r="1.5" />
-      <circle cx="12" cy="17.5" r="1.5" />
-      {/* Bubbles */}
-      <circle cx="19" cy="6" r="1.8" />
-      <circle cx="22.5" cy="11" r="1.2" />
-      <circle cx="20" cy="2.5" r="1" />
-    </svg>
-  );
-}
 
 function parseAddress(address: string | null | undefined) {
   if (!address) return { street: "Set location", full: null };
@@ -111,7 +94,7 @@ export default function HomeScreen() {
 
   const categories: { icon: React.ElementType | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
     { icon: null, image: "/carseat.png", label: "Interior", route: "/interior-cleaning" },
-    { icon: null, image: null, label: "Exterior", route: "/exterior-cleaning", custom: <CarBubblesIcon color={ACCENT} /> },
+    { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/exterior-cleaning" },
     { icon: Sparkles, image: null, label: "Hand wax", route: "/booking" },
     { icon: MoreHorizontal, image: null, label: "More", route: "/services" },
   ];
