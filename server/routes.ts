@@ -197,11 +197,31 @@ export function registerRoutes(app: Express): Server {
 
   // User profile update endpoint
   app.patch("/api/user/profile", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    let userId: number | undefined = req.user?.id;
+
+    // Also support Clerk bearer token auth for customers
+    if (!userId) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        try {
+          const token = authHeader.substring(7);
+          const { clerkClient: cc } = await import("@clerk/clerk-sdk-node");
+          const verified = await cc.verifyToken(token);
+          if (verified?.sub) {
+            const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
+            if (localUser) userId = localUser.id;
+          }
+        } catch {
+          // fall through
+        }
+      }
+    }
+
+    if (!userId) return res.sendStatus(401);
 
     try {
       const { name, email, phone, address, description, profileImage, birthday } = req.body;
-      const updatedUser = await storage.updateUserProfile(req.user.id, {
+      const updatedUser = await storage.updateUserProfile(userId, {
         name,
         email,
         phone,

@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
 
@@ -16,9 +17,18 @@ export default function HomeScreen() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"sameday" | "services">("sameday");
   const [addressOpen, setAddressOpen] = useState(false);
+  const { getToken } = useAuth();
 
   const { data: user } = useQuery<{ address?: string | null }>({
     queryKey: ["/api/user"],
+    queryFn: async () => {
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/user", { headers, credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
   });
 
   const { street, full } = parseAddress(user?.address);

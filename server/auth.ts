@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { clerkClient } from "@clerk/clerk-sdk-node";
 
 declare global {
   namespace Express {
@@ -113,8 +114,28 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+  app.get("/api/user", async (req, res) => {
+    // Passport session auth (providers/admins)
+    if (req.isAuthenticated()) {
+      return res.json(req.user);
+    }
+
+    // Clerk bearer token auth (customers)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      try {
+        const verified = await clerkClient.verifyToken(token);
+        if (verified?.sub) {
+          const clerkUsername = `clerk_${verified.sub}`;
+          const user = await storage.getUserByUsername(clerkUsername);
+          if (user) return res.json(user);
+        }
+      } catch {
+        // fall through to 401
+      }
+    }
+
+    return res.sendStatus(401);
   });
 }
