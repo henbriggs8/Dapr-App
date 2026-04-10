@@ -7,6 +7,8 @@ import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
 import { clerkAuthMiddleware, ClerkRequest } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
+import fs from "fs";
+import path from "path";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -27,13 +29,10 @@ export function registerRoutes(app: Express): Server {
 
   // Apple Pay domain verification for Square
   app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
-    const path = require("path");
-    const fs = require("fs");
-    // Check both dev (client/public) and production (dist/public) paths
+    const filename = "apple-developer-merchantid-domain-association";
     const candidates = [
-      path.join(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association"),
-      path.join(__dirname, "public/.well-known/apple-developer-merchantid-domain-association"),
-      path.resolve("dist/public/.well-known/apple-developer-merchantid-domain-association"),
+      path.resolve(process.cwd(), "client/public/.well-known", filename),
+      path.resolve(process.cwd(), "dist/public/.well-known", filename),
     ];
     const filePath = candidates.find(p => fs.existsSync(p));
     if (filePath) {
