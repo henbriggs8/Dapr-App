@@ -1,12 +1,27 @@
 import { useLocation } from "wouter";
-import { ChevronDown, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Car, Sparkles, MoreHorizontal, Clock, Heart, MapPin } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 const ACCENT = "#8c52ff";
+
+function parseAddress(address: string | null | undefined) {
+  if (!address) return { street: "Scottsdale", full: null };
+  const parts = address.split(",").map((p) => p.trim());
+  const street = parts[0] || address;
+  return { street, full: address };
+}
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"sameday" | "services">("sameday");
+  const [addressOpen, setAddressOpen] = useState(false);
+
+  const { data: user } = useQuery<{ address?: string | null }>({
+    queryKey: ["/api/user"],
+  });
+
+  const { street, full } = parseAddress(user?.address);
 
   const categories = [
     { icon: Car, label: "Interior", route: "/interior-cleaning" },
@@ -56,8 +71,38 @@ export default function HomeScreen() {
       className="min-h-screen bg-white"
       style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
     >
+      {/* ── Location bar ────────────────────────────────────────────── */}
+      <div className="px-4 pt-12 pb-2">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setAddressOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-[14px] font-medium text-[#111]"
+          >
+            Now&nbsp;•&nbsp;{street}
+            {addressOpen
+              ? <ChevronUp className="h-4 w-4 text-[#555]" />
+              : <ChevronDown className="h-4 w-4 text-[#555]" />
+            }
+          </button>
+          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f3f3]">
+            <SlidersHorizontal className="h-4 w-4 text-[#111]" />
+          </button>
+        </div>
+
+        {/* Expanded address dropdown */}
+        {addressOpen && full && (
+          <div className="mt-2 mb-1 flex items-start gap-2 rounded-2xl bg-[#f8f8f8] px-4 py-3">
+            <MapPin className="h-4 w-4 mt-0.5 shrink-0" style={{ color: ACCENT }} />
+            <div>
+              <p className="text-[13px] font-semibold text-[#111]">{full}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Service location from your profile</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Top tabs ────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 pt-12 pb-3">
+      <div className="flex items-center gap-2 px-4 pt-2 pb-3">
         <button
           onClick={() => setActiveTab("sameday")}
           className={`px-5 py-2 rounded-full text-[13px] font-semibold transition ${
@@ -77,17 +122,6 @@ export default function HomeScreen() {
           }`}
         >
           Services
-        </button>
-      </div>
-
-      {/* ── Location bar ────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pb-4">
-        <button className="flex items-center gap-1.5 text-[14px] font-medium text-[#111]">
-          Now&nbsp;•&nbsp;Scottsdale
-          <ChevronDown className="h-4 w-4 text-[#555]" />
-        </button>
-        <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f3f3]">
-          <SlidersHorizontal className="h-4 w-4 text-[#111]" />
         </button>
       </div>
 
