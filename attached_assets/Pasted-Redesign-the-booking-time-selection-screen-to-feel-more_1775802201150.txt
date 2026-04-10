@@ -1,0 +1,100 @@
+Redesign the booking time selection screen to feel more like an on-demand service such as Uber or DoorDash, instead of a traditional appointment calendar.
+
+Goal
+
+Default the booking flow to feel like:
+“I want this right now.”
+
+Customers should still be able to schedule ahead, but the default should emphasize the fastest available arrival.
+
+UI changes
+1. Add a booking mode toggle at the top
+
+Create a segmented control directly under the service card:
+
+Now
+Schedule later
+
+Default selected state: Now
+
+Style:
+
+bold, clean, premium
+rounded pill toggle
+active tab dark / high contrast
+inactive tab subtle
+2. Redesign the “Now” view
+
+When Now is selected, do not show a list of exact hourly appointment slots.
+
+Instead, show arrival options such as:
+
+ASAP — Arrives in 35–50 min
+Next available — Arrives in 50–65 min
+Later today — 2:00–3:00 PM
+
+The first option should be the strongest visual CTA.
+
+3. Add a primary on-demand card
+
+At the top of the “Now” section, create a bold featured card:
+
+Title: Book ASAP
+Subtitle: Earliest arrival: 35–50 min
+Optional badge: Most popular
+CTA feel: strong, instant, premium
+
+This should visually feel like the main action on the page.
+
+4. Keep “Schedule later” as secondary
+
+When the user taps Schedule later, then switch to a more traditional scheduling interface:
+
+date picker
+hourly or windowed time slots
+future booking options
+
+This mode should still look premium, but it should not be the default.
+
+5. Improve the copy
+
+Replace “Select time” with:
+
+When do you want us there?
+or
+Choose your arrival window
+
+Use copy that makes the service feel on-demand and fast.
+
+6. Optional supporting UI
+
+In the “Now” view, add small trust-building live availability signals like:
+
+2 Detail Pros nearby
+Live availability
+Best for same-day service
+
+Keep these subtle and minimal.
+
+Design direction
+
+Use a premium, simple, modern design inspired by Uber and DoorDash:
+
+bold hierarchy
+one obvious primary action
+rounded cards
+minimal clutter
+strong typography
+mobile-first
+clean spacing
+instant booking feel
+Behavior
+Default screen state = Now
+Customer should be able to choose ASAP or another arrival window quickly
+Switching to “Schedule later” should reveal future slots
+Keep the current package card at the top, but make the next action more obvious and immediate
+Acceptance criteria
+The page feels like an on-demand service, not just a calendar
+“Now” is clearly the default primary path
+The user can still schedule later if they want
+The primary CTA is visually obvious and drives immediate booking
