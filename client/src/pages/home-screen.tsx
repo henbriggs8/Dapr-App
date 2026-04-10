@@ -211,7 +211,7 @@ export default function HomeScreen() {
           className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
-            <Droplets className="h-5 w-5" style={{ color: ACCENT }} />
+            <img src="/carwashers.png" alt="Car Wash" className="h-7 w-7 object-contain" />
           </div>
           <span className="text-[14px] font-semibold text-[#111]">Car Wash</span>
         </button>
