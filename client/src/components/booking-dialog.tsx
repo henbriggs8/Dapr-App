@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +55,7 @@ export default function BookingDialog({
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { getToken } = useClerkAuth();
   const [, navigate] = useLocation();
   
   // Get saved user data from onboarding
@@ -132,23 +134,36 @@ export default function BookingDialog({
     }
   }, [service]);
   
-  // Payment mutation to handle creating a payment for the booking
+  // Payment mutation — calls Square to generate a checkout link
   const paymentMutation = useMutation({
     mutationFn: async (bookingId: number) => {
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/create-payment`, {});
-      return await res.json();
+      // Include Clerk bearer token so the endpoint accepts Clerk-authenticated users
+      const token = await getToken().catch(() => null);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/bookings/${bookingId}/create-payment`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json() as Promise<{ paymentUrl: string }>;
     },
     onSuccess: (data, bookingId) => {
-      // Close dialog and navigate to confirmation page
       onClose();
-      navigate(`/booking-confirmation?booking=${bookingId}`);
+      // Redirect to Square hosted checkout
+      window.location.href = data.paymentUrl;
     },
     onError: (error) => {
+      // If payment link fails, still go to confirmation (booking was already created)
       toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to set up payment",
+        title: "Payment setup failed",
+        description: "Your booking is confirmed — you can pay from the bookings page.",
         variant: "destructive",
       });
+      onClose();
+      navigate(`/booking-confirmation?booking=${(error as any).bookingId}`);
     },
   });
   
@@ -252,31 +267,13 @@ export default function BookingDialog({
       return await res.json();
     },
     onSuccess: (data) => {
-      console.log("Booking created successfully:", data);
-      
-      // Invalidate multiple queries
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/timeslots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
-      
-      // Store booking data for confirmation page
       localStorage.setItem('latest-booking', JSON.stringify(data));
-      
-      // Clear add-on selections after successful booking
       clearSelectedAddOns();
-      
-      // Close dialog
-      onClose();
-      
-      toast({
-        title: "Booking Confirmed!",
-        description: `Your ${service?.name} service has been scheduled for ${timeSlot?.date} at ${timeSlot?.startTime}. Nearby detailers have been notified and will accept your job soon.`,
-      });
-      
-      // Navigate to confirmation page
-      setTimeout(() => {
-        window.location.href = `/booking-confirmation?bookingId=${data.id}`;
-      }, 1000);
+      // Immediately kick off payment — user will be redirected to Square checkout
+      paymentMutation.mutate(data.id);
     },
     onError: (error: Error) => {
       console.error("Booking creation failed:", error);
@@ -719,8 +716,8 @@ export default function BookingDialog({
 
             <Button
               type="button"
-              className="w-full"
-              disabled={bookingMutation.isPending}
+              className="w-full bg-[#8c52ff] hover:bg-[#7a3fe0] text-white"
+              disabled={bookingMutation.isPending || paymentMutation.isPending}
               onClick={(e) => {
                 e.preventDefault();
                 console.log("Direct button click - bypassing form validation");
@@ -756,13 +753,18 @@ export default function BookingDialog({
                 onSubmit(bookingData);
               }}
             >
-              {bookingMutation.isPending ? (
+              {paymentMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  Opening payment...
+                </>
+              ) : bookingMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Confirming booking...
                 </>
               ) : (
-                `Confirm Booking - $${totalPrice || (service?.price || 0)}`
+                `Book & Pay — $${totalPrice || (service?.price || 0)}`
               )}
             </Button>
           </form>

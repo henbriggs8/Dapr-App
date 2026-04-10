@@ -1134,6 +1134,24 @@ export function registerRoutes(app: Express): Server {
   
   // Payment endpoints
   app.post('/api/bookings/:id/create-payment', async (req, res) => {
+    // Support Clerk bearer token in addition to Passport session
+    if (!req.user) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        try {
+          const token = authHeader.substring(7);
+          const { clerkClient: cc } = await import("@clerk/clerk-sdk-node");
+          const verified = await cc.verifyToken(token);
+          if (verified?.sub) {
+            const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
+            if (localUser) (req as any).user = localUser;
+          }
+        } catch {
+          // fall through
+        }
+      }
+    }
+
     if (!req.user) {
       return res.sendStatus(401);
     }
