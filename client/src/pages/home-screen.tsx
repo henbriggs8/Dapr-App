@@ -32,7 +32,6 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"sameday" | "services">("sameday");
   const [addressOpen, setAddressOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
@@ -199,28 +198,9 @@ export default function HomeScreen() {
         )}
       </div>
 
-      {/* ── Top tabs ────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 pt-2 pb-3">
-        <button
-          onClick={() => setActiveTab("sameday")}
-          className={`px-5 py-2 rounded-full text-[13px] font-semibold transition ${
-            activeTab === "sameday"
-              ? "bg-[#111] text-white"
-              : "bg-transparent text-[#9a9a9a]"
-          }`}
-        >
-          Same Day
-        </button>
-        <button
-          onClick={() => { setActiveTab("services"); setLocation("/services"); }}
-          className={`px-5 py-2 rounded-full text-[13px] font-semibold transition ${
-            activeTab === "services"
-              ? "bg-[#111] text-white"
-              : "bg-transparent text-[#9a9a9a]"
-          }`}
-        >
-          Services
-        </button>
+      {/* ── Headline ────────────────────────────────────────────────── */}
+      <div className="px-4 pt-2 pb-3">
+        <h1 className="text-[28px] font-bold tracking-tight text-[#111]">Get Your Car Dapper</h1>
       </div>
 
       {/* ── Service type grid ────────────────────────────────────────── */}
