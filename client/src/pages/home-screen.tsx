@@ -1,10 +1,28 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Droplets, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, Truck, Sparkles, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
+
+function CarBubblesIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* Car body */}
+      <path d="M2 14h14v3H2z" />
+      {/* Car roof */}
+      <path d="M4 14l2.5-4h7l2.5 4" />
+      {/* Wheels */}
+      <circle cx="6" cy="17.5" r="1.5" />
+      <circle cx="12" cy="17.5" r="1.5" />
+      {/* Bubbles */}
+      <circle cx="19" cy="6" r="1.8" />
+      <circle cx="22.5" cy="11" r="1.2" />
+      <circle cx="20" cy="2.5" r="1" />
+    </svg>
+  );
+}
 
 function parseAddress(address: string | null | undefined) {
   if (!address) return { street: "Set location", full: null };
@@ -91,9 +109,9 @@ export default function HomeScreen() {
 
   const { street, full } = parseAddress(user?.address);
 
-  const categories = [
+  const categories: { icon: React.ElementType | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
     { icon: null, image: "/carseat.png", label: "Interior", route: "/interior-cleaning" },
-    { icon: Droplets, image: null, label: "Exterior", route: "/exterior-cleaning" },
+    { icon: null, image: null, label: "Exterior", route: "/exterior-cleaning", custom: <CarBubblesIcon color={ACCENT} /> },
     { icon: Sparkles, image: null, label: "Hand wax", route: "/booking" },
     { icon: MoreHorizontal, image: null, label: "More", route: "/services" },
   ];
@@ -230,14 +248,14 @@ export default function HomeScreen() {
 
       {/* ── Category icons ───────────────────────────────────────────── */}
       <div className="flex items-start justify-around px-6 pb-5">
-        {categories.map(({ icon: Icon, image, label, route }) => (
+        {categories.map(({ icon: Icon, image, custom, label, route }) => (
           <button
             key={label}
             onClick={() => setLocation(route)}
             className="flex flex-col items-center gap-2 active:opacity-70 transition"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
-              {image ? (
+              {custom ? custom : image ? (
                 <img src={image} alt={label} className="h-7 w-7 object-contain" />
               ) : Icon ? (
                 <Icon className="h-5 w-5" style={{ color: ACCENT }} />
