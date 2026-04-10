@@ -109,19 +109,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/tracking/:bookingId", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-    
-    try {
-      const bookingId = parseInt(req.params.bookingId);
-      const trackingInfo = await storage.getTrackingInfo(bookingId);
-      res.json(trackingInfo);
-    } catch (error) {
-      console.error("Get tracking info error:", error);
-      res.status(500).json({ error: "Failed to get tracking info" });
-    }
-  });
-
   app.get("/api/tracking/active", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
@@ -131,6 +118,20 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Get active tracking bookings error:", error);
       res.status(500).json({ error: "Failed to get active bookings" });
+    }
+  });
+
+  app.get("/api/tracking/:bookingId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    
+    try {
+      const bookingId = parseInt(req.params.bookingId);
+      if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      const trackingInfo = await storage.getTrackingInfo(bookingId);
+      res.json(trackingInfo);
+    } catch (error) {
+      console.error("Get tracking info error:", error);
+      res.status(500).json({ error: "Failed to get tracking info" });
     }
   });
 
