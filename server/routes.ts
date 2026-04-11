@@ -31,6 +31,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
     const filename = "apple-developer-merchantid-domain-association";
     const candidates = [
+      path.resolve(process.cwd(), "public/.well-known", filename),
       path.resolve(process.cwd(), "client/public/.well-known", filename),
       path.resolve(process.cwd(), "dist/public/.well-known", filename),
     ];

@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
@@ -6,6 +7,9 @@ import { storage } from "./storage";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve root-level public/ folder as static (includes .well-known for Apple Pay verification)
+app.use(express.static(path.resolve(process.cwd(), "public")));
 
 // Add CORS middleware
 app.use((req, res, next) => {
