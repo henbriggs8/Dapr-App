@@ -37,10 +37,15 @@ export function registerRoutes(app: Express): Server {
     const filePath = candidates.find(p => fs.existsSync(p));
     if (filePath) {
       const content = fs.readFileSync(filePath);
+      res.removeHeader("Transfer-Encoding");
       res.setHeader("Content-Type", "application/octet-stream");
       res.setHeader("Content-Length", content.length);
-      res.setHeader("Cache-Control", "no-cache");
-      res.end(content);
+      res.setHeader("Cache-Control", "no-store, no-cache");
+      res.setHeader("Connection", "close");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.status(200);
+      res.write(content);
+      res.end();
     } else {
       res.status(404).send("Not found");
     }
