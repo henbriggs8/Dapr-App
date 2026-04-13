@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, User, Booking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -23,7 +23,7 @@ export interface IStorage {
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
-  createBooking(booking: Omit<Booking, 'id'>): Promise<Booking>;
+  createBooking(booking: InsertBooking): Promise<Booking>;
   getBookingById(id: number): Promise<Booking | undefined>;
   getUserBookings(userId: number): Promise<Booking[]>;
   getActiveBookings(providerId: number): Promise<Booking[]>;
@@ -366,7 +366,8 @@ export class MemStorage implements IStorage {
       phone: insertUser.phone || null,
       address: insertUser.address || null,
       isProvider: insertUser.isProvider || false,
-      isAdmin: insertUser.isAdmin || false
+      isAdmin: insertUser.isAdmin || false,
+      birthday: (insertUser as any).birthday ?? null,
     };
     this.users.set(id, user);
     return user;
@@ -416,47 +417,58 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter((user) => user.isProvider);
   }
 
-  async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking> {
+  async createBooking(booking: InsertBooking): Promise<Booking> {
     const id = this.currentBookingId++;
     const newBooking: Booking = {
       id,
       userId: booking.userId,
-      providerId: booking.providerId || null,
+      providerId: booking.providerId ?? null,
       serviceId: booking.serviceId,
       timeSlotId: booking.timeSlotId,
-      vehicleId: booking.vehicleId || null,
+      vehicleId: booking.vehicleId ?? null,
       status: booking.status || 'pending',
-      currentStage: booking.currentStage || null,
-      rating: booking.rating || null,
-      ratingComment: booking.ratingComment || null,
+      currentStage: booking.currentStage ?? null,
+      rating: booking.rating ?? null,
+      ratingComment: booking.ratingComment ?? null,
       priceTier: booking.priceTier,
       timestamp: booking.timestamp,
       serviceLocation: booking.serviceLocation,
       serviceLocationType: booking.serviceLocationType,
-      serviceLatitude: booking.serviceLatitude || null,
-      serviceLongitude: booking.serviceLongitude || null,
-      notes: booking.notes || null,
-      date: booking.date || null,
-      time: booking.time || null,
-      amount: booking.amount || null,
-      providerEarnings: booking.providerEarnings || null,
-      startTime: booking.startTime || null,
-      endTime: booking.endTime || null,
-      serviceDuration: booking.serviceDuration || null,
-      assignedAt: booking.assignedAt || null,
-      acceptedAt: booking.acceptedAt || null,
-      rejectedAt: booking.rejectedAt || null,
-      assignmentExpiry: booking.assignmentExpiry || null,
-      previousProviders: booking.previousProviders || [],
-      addOns: booking.addOns || [],
-      addOnTotal: booking.addOnTotal || null,
-      totalPrice: booking.totalPrice || null,
-      isPaid: booking.isPaid || false,
-      paymentStatus: booking.paymentStatus || 'pending',
-      paymentId: booking.paymentId || null,
-      paymentDate: booking.paymentDate || null,
-      paymentUrl: booking.paymentUrl || null,
-      squareOrderId: booking.squareOrderId || null,
+      serviceLatitude: booking.serviceLatitude ?? null,
+      serviceLongitude: booking.serviceLongitude ?? null,
+      notes: booking.notes ?? null,
+      date: booking.date ?? null,
+      time: booking.time ?? null,
+      amount: booking.amount ?? null,
+      providerEarnings: booking.providerEarnings ?? null,
+      startTime: booking.startTime ?? null,
+      endTime: booking.endTime ?? null,
+      serviceDuration: booking.serviceDuration ?? null,
+      assignedAt: booking.assignedAt ?? null,
+      acceptedAt: booking.acceptedAt ?? null,
+      rejectedAt: booking.rejectedAt ?? null,
+      assignmentExpiry: booking.assignmentExpiry ?? null,
+      previousProviders: booking.previousProviders ?? [],
+      addOns: booking.addOns ?? [],
+      addOnTotal: booking.addOnTotal ?? null,
+      totalPrice: booking.totalPrice ?? null,
+      isPaid: booking.isPaid ?? false,
+      paymentStatus: booking.paymentStatus ?? 'pending',
+      paymentId: booking.paymentId ?? null,
+      paymentDate: booking.paymentDate ?? null,
+      paymentUrl: booking.paymentUrl ?? null,
+      squareOrderId: booking.squareOrderId ?? null,
+      providerLatitude: booking.providerLatitude ?? null,
+      providerLongitude: booking.providerLongitude ?? null,
+      estimatedArrival: booking.estimatedArrival ?? null,
+      lastLocationUpdate: booking.lastLocationUpdate ?? null,
+      distanceToCustomer: booking.distanceToCustomer ?? null,
+      trackingEnabled: booking.trackingEnabled ?? false,
+      arrivalTime: booking.arrivalTime ?? null,
+      extraTimeMinutes: booking.extraTimeMinutes ?? 0,
+      estimatedCompletionTime: booking.estimatedCompletionTime ?? null,
+      timeAdjustments: booking.timeAdjustments ?? [],
+      providerNotes: booking.providerNotes ?? null,
     };
     this.bookings.set(id, newBooking);
     return newBooking;
@@ -1327,8 +1339,17 @@ export class MemStorage implements IStorage {
   async getActiveTrackingBookings(userId: number): Promise<Booking[]> {
     return [];
   }
+  private memCalculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
   async calculateETA(providerLat: number, providerLng: number, customerLat: number, customerLng: number): Promise<{ eta: string; distance: number }> {
-    const distance = this.calculateDistance(providerLat, providerLng, customerLat, customerLng);
+    const distance = this.memCalculateDistance(providerLat, providerLng, customerLat, customerLng);
     const estimatedMinutes = Math.round((distance / 20) * 60);
     const eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
     return { eta, distance };
@@ -1427,10 +1448,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).where(eq(users.isProvider, true));
   }
 
-  async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking> {
+  async createBooking(booking: InsertBooking): Promise<Booking> {
     const [newBooking] = await db
       .insert(bookings)
-      .values(booking)
+      .values(booking as any)
       .returning();
     return newBooking;
   }

@@ -226,6 +226,7 @@ export type User = typeof users.$inferSelect;
 export type Service = typeof services.$inferSelect;
 export type TimeSlot = typeof timeSlots.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;

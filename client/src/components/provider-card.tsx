@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { User } from "@shared/schema";
+import { User, PricingConfig } from "@shared/schema";
 import { Button } from "./ui/button";
 import RatingDisplay from "./rating-display";
 import PriceTier from "./price-tier";
@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function ProviderCard({ provider }: { provider: User }) {
   const [bookingOpen, setBookingOpen] = useState(false);
-  const { data: pricing } = useQuery({ queryKey: ["/api/pricing"] });
+  const { data: pricing } = useQuery<PricingConfig>({ queryKey: ["/api/pricing"] });
 
   if (!pricing) return null;
 
@@ -49,7 +49,6 @@ export default function ProviderCard({ provider }: { provider: User }) {
       </Card>
       <BookingDialog
         provider={provider}
-        pricing={pricing}
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
       />

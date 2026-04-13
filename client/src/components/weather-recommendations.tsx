@@ -170,7 +170,7 @@ export default function WeatherRecommendations({
             <div className="mt-6 pt-4 border-t border-gray-200">
               <h4 className="font-medium text-gray-900 mb-3">5-Day Forecast</h4>
               <div className="grid grid-cols-5 gap-2">
-                {weather.forecast.map((day, index) => (
+                {weather.forecast.map((day: any, index: number) => (
                   <div key={index} className="text-center p-2 bg-white rounded border">
                     <div className="text-xs text-gray-500 mb-1">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}

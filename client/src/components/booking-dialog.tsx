@@ -49,8 +49,8 @@ export default function BookingDialog({
   provider: User;
   open: boolean;
   onClose: () => void;
-  serviceId: number;
-  timeSlotId: number;
+  serviceId?: number;
+  timeSlotId?: number;
   prefillData?: PrefillData;
 }) {
   const { toast } = useToast();
