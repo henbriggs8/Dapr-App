@@ -1516,7 +1516,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServices(): Promise<Service[]> {
-    return await db.select().from(services);
+    return await db.select().from(services).orderBy(asc(services.id));
   }
 
   async getServiceById(id: number): Promise<Service | undefined> {
