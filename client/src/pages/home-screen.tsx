@@ -93,10 +93,10 @@ export default function HomeScreen() {
   const { street, full } = parseAddress(user?.address);
 
   const categories: { icon: React.ElementType | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
-    { icon: null, image: "/carseat.png", label: "Interior", route: "/interior-cleaning" },
-    { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/exterior-cleaning" },
+    { icon: null, image: "/carseat.png", label: "Interior", route: "/booking" },
+    { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/booking" },
     { icon: null, image: "/sports-car.png", label: "Full Detail", route: "/booking" },
-    { icon: MoreHorizontal, image: null, label: "More", route: "/services" },
+    { icon: MoreHorizontal, image: null, label: "More", route: "/booking" },
   ];
 
   const serviceCards = [
