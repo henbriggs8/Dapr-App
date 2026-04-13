@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, SlidersHorizontal, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -153,9 +153,7 @@ export default function HomeScreen() {
               : <ChevronDown className="h-4 w-4 text-[#555]" />
             }
           </button>
-          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f3f3]">
-            <SlidersHorizontal className="h-4 w-4 text-[#111]" />
-          </button>
+          <img src="/dapper-d-logo.png" alt="Dapper" className="h-9 w-9 object-contain" />
         </div>
 
         {/* Expanded address dropdown */}
