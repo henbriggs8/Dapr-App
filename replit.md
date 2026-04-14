@@ -159,6 +159,7 @@ Dapper is a comprehensive mobile car wash and detailing service platform built w
 - June 17, 2025. Extended booking system to allow advance reservations up to 30 days with dynamic time slot generation
 - June 17, 2025. Implemented dynamic weather-based service suggestions with OpenWeatherMap integration, smart recommendations based on weather conditions, and 5-day forecast display
 - October 18, 2025. Integrated Clerk authentication with SMS OTP and email magic link support, including automatic user synchronization with local database, Clerk-Square customer mapping for payment processing, and backward-compatible integration with existing authentication system
+- April 13, 2026. Added Capacitor iOS configuration for App Store packaging. Includes capacitor.config.ts (appId: com.autodapper.app, server URL: autodapper.com), PWA manifest, iOS meta tags in index.html, and app icon placeholders. To complete: run `npx cap add ios` and `npx cap open ios` on a Mac with Xcode.
 
 ## User Preferences
 
