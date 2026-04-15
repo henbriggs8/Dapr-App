@@ -16,10 +16,16 @@ function generateIdempotencyKey(): string {
 
 export async function createPaymentLink(
   booking: Booking,
-  service: Service
+  service: Service,
+  siteUrl?: string
 ): Promise<{ url: string; orderId: string }> {
   try {
     const amountInCents = Math.round(service.price * 100);
+
+    // Determine the base URL: explicit param > env var > autodapper.com (never localhost)
+    const baseUrl = siteUrl ||
+      process.env.SITE_URL ||
+      'https://autodapper.com';
 
     const response = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: generateIdempotencyKey(),
@@ -32,7 +38,7 @@ export async function createPaymentLink(
         },
       },
       checkoutOptions: {
-        redirectUrl: `${process.env.SITE_URL || 'http://localhost:5000'}/payment-success?booking=${booking.id}`,
+        redirectUrl: `${baseUrl}/payment-success?booking=${booking.id}`,
       },
     });
 

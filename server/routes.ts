@@ -1246,7 +1246,9 @@ export function registerRoutes(app: Express): Server {
       
       try {
         const { createPaymentLink } = await import('./payment-service');
-        const { url, orderId } = await createPaymentLink(booking, service);
+        const siteUrl = process.env.SITE_URL ||
+          `${req.protocol}://${req.get('host')}`;
+        const { url, orderId } = await createPaymentLink(booking, service, siteUrl);
         
         // Update booking with payment link
         await storage.updateBookingPaymentInfo(booking.id, {
