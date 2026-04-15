@@ -33,6 +33,7 @@ export function AddressAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [locationError, setLocationError] = useState<string | null>(null);
   
   // Load Google Maps API with Places library
   const { isLoaded } = useJsApiLoader({
@@ -170,60 +171,83 @@ export function AddressAutocomplete({
     }
   };
 
+  const reverseGeocodeNominatim = async (lat: number, lng: number): Promise<string> => {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    if (!res.ok) throw new Error("Nominatim reverse geocode failed");
+    const data = await res.json();
+    const a = data.address || {};
+    const house = a.house_number || "";
+    const road = a.road || a.pedestrian || a.path || "";
+    const city = a.city || a.town || a.village || a.county || "";
+    const state = a.state || "";
+    const zip = a.postcode || "";
+    const street = [house, road].filter(Boolean).join(" ");
+    return [street, city, [state, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  };
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.');
+      setLocationError("Location services are not available on this device.");
       return;
     }
 
+    setLocationError(null);
     setIsLoading(true);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        
-        if (!window.google?.maps?.Geocoder) {
-          setIsLoading(false);
-          return;
-        }
 
-        const geocoder = new window.google.maps.Geocoder();
-        
         try {
-          geocoder.geocode(
-            { location: { lat: latitude, lng: longitude } },
-            (results, status) => {
-              setIsLoading(false);
-              
-              if (status === 'OK' && results && results[0]) {
-                const address = results[0].formatted_address;
-                onChange(address);
-                
-                if (onLocationSelect) {
-                  onLocationSelect({
-                    lat: latitude,
-                    lng: longitude,
-                    address,
-                  });
+          let address: string | null = null;
+
+          // Try Google Maps Geocoder first if available
+          if (window.google?.maps?.Geocoder) {
+            await new Promise<void>((resolve) => {
+              const geocoder = new window.google.maps.Geocoder();
+              geocoder.geocode(
+                { location: { lat: latitude, lng: longitude } },
+                (results, status) => {
+                  if (status === 'OK' && results && results[0]) {
+                    address = results[0].formatted_address;
+                  }
+                  resolve();
                 }
-              }
+              );
+            });
+          }
+
+          // Fall back to Nominatim (OpenStreetMap) — no API key needed
+          if (!address) {
+            address = await reverseGeocodeNominatim(latitude, longitude);
+          }
+
+          if (address) {
+            onChange(address);
+            if (onLocationSelect) {
+              onLocationSelect({ lat: latitude, lng: longitude, address });
             }
-          );
+          }
         } catch (error) {
-          console.error('Error reverse geocoding:', error);
+          console.error("Reverse geocoding failed:", error);
+          setLocationError("Got your location but could not look up the address. Please type it in.");
+        } finally {
           setIsLoading(false);
         }
       },
       (error) => {
         setIsLoading(false);
-        console.error('Error getting location:', error);
-        alert('Could not get your current location. Please enter your address manually.');
+        console.error("Geolocation error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError("Location access denied. On iPhone, go to Settings → Privacy & Security → Location Services and enable it for Safari (or Dapper).");
+        } else if (error.code === error.TIMEOUT) {
+          setLocationError("Location timed out. Make sure you have a GPS signal and try again.");
+        } else {
+          setLocationError("Could not get your location. Please enter your address manually.");
+        }
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // 5 minutes
-      }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
     );
   };
 
@@ -266,6 +290,12 @@ export function AddressAutocomplete({
         </div>
       </div>
       
+      {locationError && (
+        <div className="text-xs text-red-600 mt-1.5 leading-snug">
+          {locationError}
+        </div>
+      )}
+
       {!isLoaded && !import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
         <div className="text-xs text-amber-600 mt-1">
           Address autocomplete unavailable - manual entry only

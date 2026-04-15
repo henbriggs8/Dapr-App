@@ -81,7 +81,9 @@ export default function HomeScreen() {
       (err) => {
         setLocating(false);
         if (err.code === err.PERMISSION_DENIED) {
-          setLocateError("Location permission denied. Enable it in your device settings.");
+          setLocateError("Location access denied. On iPhone: Settings → Privacy & Security → Location Services → Safari (or Dapper) → While Using.");
+        } else if (err.code === err.TIMEOUT) {
+          setLocateError("Location timed out. Make sure GPS is on and try again.");
         } else {
           setLocateError("Could not get your location. Try again.");
         }
