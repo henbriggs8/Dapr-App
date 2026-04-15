@@ -439,7 +439,7 @@ export default function BookingDialog({
               <div className="font-medium">${service?.price || 0}</div>
               
               <div className="text-muted-foreground">Vehicle Size:</div>
-              <div className="font-medium">+${vehicles.reduce((sum, v) => sum + v.sizeMultiplier, 0)}</div>
+              <div className="font-medium">+${Math.round(vehicles.reduce((sum, v) => sum + (service?.price || 0) * v.sizeMultiplier, 0))}</div>
               
               <div className="text-muted-foreground font-semibold">Total Price:</div>
               <div className="font-bold text-[#8c52ff]">${totalPrice}</div>
@@ -590,27 +590,30 @@ export default function BookingDialog({
                   
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <div className="font-medium text-sm">Vehicle Size (Auto-detected)</div>
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <div>
-                            <div className="text-sm font-medium capitalize text-green-800">{vehicle.size}</div>
-                            <div className="text-xs text-green-600">
-                              {vehicle.size === 'small' && 'Sedan, Coupe, Sports Car'}
-                              {vehicle.size === 'medium' && 'Crossover, Small SUV, Pickup'}
-                              {vehicle.size === 'large' && 'Large SUV, Van, Full-size Truck'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium text-green-700">
-                          {vehicle.size === 'small' && '+$0'}
-                          {vehicle.size === 'medium' && '+$' + Math.round((service?.price || 0) * 0.15)}
-                          {vehicle.size === 'large' && '+$' + Math.round((service?.price || 0) * 0.3)}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Based on your {parsedVehicle?.make} {parsedVehicle?.model}
+                      <div className="font-medium text-sm">Vehicle Size</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['small', 'medium', 'large'] as VehicleSize[]).map((sz) => {
+                          const addon = sz === 'small' ? 0 : sz === 'medium' ? Math.round((service?.price || 0) * 0.15) : Math.round((service?.price || 0) * 0.3);
+                          const isSelected = vehicle.size === sz;
+                          return (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => selectVehicleSize(sz, vehicle.id)}
+                              className={`rounded-lg border p-2 text-center transition-all ${isSelected ? 'border-[#8c52ff] bg-[#8c52ff]/10 text-[#8c52ff]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                            >
+                              <div className="text-xs font-semibold capitalize">{sz}</div>
+                              <div className="text-[10px] mt-0.5 leading-tight text-gray-500">
+                                {sz === 'small' && 'Sedan / Coupe'}
+                                {sz === 'medium' && 'SUV / Pickup'}
+                                {sz === 'large' && 'Full-size SUV / Van'}
+                              </div>
+                              <div className={`text-xs font-bold mt-1 ${isSelected ? 'text-[#8c52ff]' : 'text-gray-600'}`}>
+                                {addon === 0 ? 'No extra' : `+$${addon}`}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                     

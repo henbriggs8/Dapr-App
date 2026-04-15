@@ -20,7 +20,12 @@ export async function createPaymentLink(
   siteUrl?: string
 ): Promise<{ url: string; orderId: string }> {
   try {
-    const amountInCents = Math.round(service.price * 100);
+    // Use booking.totalPrice (includes vehicle size & add-on markup) when available,
+    // otherwise fall back to the base service price.
+    const chargeAmount = (booking.totalPrice && booking.totalPrice > 0)
+      ? booking.totalPrice
+      : service.price;
+    const amountInCents = Math.round(chargeAmount * 100);
 
     // Determine the base URL: explicit param > env var > autodapper.com (never localhost)
     const baseUrl = siteUrl ||
@@ -30,7 +35,7 @@ export async function createPaymentLink(
     const response = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: generateIdempotencyKey(),
       quickPay: {
-        name: `Dapper - ${service.name}`,
+        name: `Dapper - ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
         locationId: process.env.SQUARE_LOCATION_ID!,
         priceMoney: {
           amount: BigInt(amountInCents),
