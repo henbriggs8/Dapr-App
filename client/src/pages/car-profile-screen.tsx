@@ -1,64 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i);
-
-const CAR_MAKES = [
-  "Acura","Alfa Romeo","Aston Martin","Audi","Bentley","BMW","Buick","Cadillac",
-  "Chevrolet","Chrysler","Dodge","Ferrari","Fiat","Ford","Genesis","GMC","Honda",
-  "Hyundai","Infiniti","Jaguar","Jeep","Kia","Lamborghini","Land Rover","Lexus",
-  "Lincoln","Maserati","Mazda","McLaren","Mercedes-Benz","Mini","Mitsubishi",
-  "Nissan","Polestar","Porsche","Ram","Rolls Royce","Subaru","Tesla","Toyota",
-  "Volkswagen","Volvo","Other",
-];
-
-const CAR_MODELS: { [key: string]: string[] } = {
-  "Acura": ["ILX","TLX","RLX","MDX","RDX","NSX"],
-  "Alfa Romeo": ["Giulia","Stelvio","4C","Tonale"],
-  "Aston Martin": ["DB11","Vantage","DBS","DBX"],
-  "Audi": ["A3","A4","A5","A6","A7","A8","Q3","Q5","Q7","Q8","e-tron","R8","TT"],
-  "Bentley": ["Continental","Flying Spur","Bentayga","Mulsanne"],
-  "BMW": ["1 Series","2 Series","3 Series","4 Series","5 Series","6 Series","7 Series","8 Series","X1","X2","X3","X4","X5","X6","X7","Z4","i3","i4","iX"],
-  "Buick": ["Encore","Envision","Enclave"],
-  "Cadillac": ["ATS","CTS","CT4","CT5","CT6","XT4","XT5","XT6","Escalade"],
-  "Chevrolet": ["Spark","Sonic","Malibu","Impala","Camaro","Corvette","Trax","Equinox","Traverse","Tahoe","Suburban","Silverado","Colorado"],
-  "Chrysler": ["300","Pacifica"],
-  "Dodge": ["Charger","Challenger","Durango","Journey"],
-  "Ferrari": ["488","F8","SF90","Roma","Portofino","812","LaFerrari"],
-  "Fiat": ["500","500X","124 Spider"],
-  "Ford": ["Fiesta","Focus","Fusion","Mustang","EcoSport","Escape","Edge","Explorer","Expedition","F-150","Ranger"],
-  "Genesis": ["G70","G80","G90","GV60","GV70","GV80"],
-  "GMC": ["Terrain","Acadia","Yukon","Sierra","Canyon"],
-  "Honda": ["Fit","Civic","Accord","Insight","CR-V","Passport","Pilot","Ridgeline"],
-  "Hyundai": ["Accent","Elantra","Sonata","Venue","Kona","Tucson","Santa Fe","Palisade"],
-  "Infiniti": ["Q50","Q60","Q70","QX30","QX50","QX60","QX80"],
-  "Jaguar": ["XE","XF","XJ","F-Type","E-Pace","F-Pace","I-Pace"],
-  "Jeep": ["Compass","Cherokee","Grand Cherokee","Wrangler","Gladiator"],
-  "Kia": ["Rio","Forte","Optima","Stinger","Soul","Seltos","Sportage","Sorento","Telluride"],
-  "Lamborghini": ["Huracan","Aventador","Urus"],
-  "Land Rover": ["Range Rover Evoque","Range Rover Velar","Range Rover Sport","Range Rover","Discovery Sport","Discovery","Defender"],
-  "Lexus": ["IS","ES","GS","LS","RC","LC","UX","NX","RX","GX","LX"],
-  "Lincoln": ["MKZ","Continental","Corsair","Nautilus","Aviator","Navigator"],
-  "Maserati": ["Ghibli","Quattroporte","Levante","MC20"],
-  "Mazda": ["Mazda3","Mazda6","CX-3","CX-30","CX-5","CX-9","MX-5 Miata"],
-  "McLaren": ["570S","720S","765LT","Artura"],
-  "Mercedes-Benz": ["A-Class","C-Class","E-Class","S-Class","CLA","CLS","GLA","GLB","GLC","GLE","GLS","G-Class","SL","AMG GT"],
-  "Mini": ["Cooper","Countryman","Clubman"],
-  "Mitsubishi": ["Mirage","Eclipse Cross","Outlander"],
-  "Nissan": ["Versa","Sentra","Altima","Maxima","370Z","GT-R","Kicks","Rogue","Murano","Pathfinder","Armada","Titan","Frontier"],
-  "Polestar": ["1","2","3"],
-  "Porsche": ["718","911","Panamera","Macan","Cayenne","Taycan"],
-  "Ram": ["1500","2500","3500","ProMaster"],
-  "Rolls Royce": ["Ghost","Wraith","Dawn","Phantom","Cullinan"],
-  "Subaru": ["Impreza","Legacy","Outback","Forester","Crosstrek","Ascent","WRX","BRZ"],
-  "Tesla": ["Model 3","Model S","Model X","Model Y","Cybertruck"],
-  "Toyota": ["Yaris","Corolla","Camry","Avalon","Prius","C-HR","RAV4","Venza","Highlander","4Runner","Sequoia","Sienna","Tacoma","Tundra"],
-  "Volkswagen": ["Jetta","Passat","Arteon","Golf","Tiguan","Atlas","ID.4"],
-  "Volvo": ["S60","S90","V60","V90","XC40","XC60","XC90"],
-  "Other": ["Custom","Kit Car","Classic","Modified"],
-};
+import { apiRequest } from "@/lib/queryClient";
+import { YEARS, CAR_MAKES, CAR_MODELS } from "@/utils/car-data";
 
 const primaryBtn =
   "flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#111] text-[13px] font-semibold text-white disabled:opacity-30 transition active:scale-[0.98]";
@@ -75,13 +19,27 @@ export default function CarProfileScreen() {
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const availableModels = make && CAR_MODELS[make] ? CAR_MODELS[make] : [];
   const handleMakeChange = (val: string) => { setMake(val); setModel(""); };
   const isValid = year && make && model;
 
-  const handleSave = () => {
-    localStorage.setItem("userVehicle", JSON.stringify({ year, make, model }));
+  const handleSave = async () => {
+    if (!isValid) return;
+    setSaving(true);
+
+    const vehicleData = { year: Number(year), make, model };
+
+    localStorage.setItem("userVehicle", JSON.stringify(vehicleData));
+
+    try {
+      await apiRequest("POST", "/api/vehicles", vehicleData);
+    } catch (err) {
+      console.warn("Could not save vehicle to database:", err);
+    }
+
+    setSaving(false);
     setLocation("/onboarding/first-wash-offer");
   };
 
@@ -91,7 +49,7 @@ export default function CarProfileScreen() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14" style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom, 2.5rem))' }}>
       <div className="flex items-center justify-between mb-10">
         <button
           onClick={() => setLocation("/onboarding/name")}
@@ -146,10 +104,10 @@ export default function CarProfileScreen() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!isValid}
+          disabled={!isValid || saving}
           className={primaryBtn}
         >
-          Save & Continue <ArrowRight className="h-4 w-4" />
+          {saving ? "Saving…" : <>Save & Continue <ArrowRight className="h-4 w-4" /></>}
         </button>
         <button
           type="button"

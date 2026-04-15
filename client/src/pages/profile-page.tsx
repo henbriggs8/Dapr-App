@@ -21,6 +21,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { YEARS, CAR_MAKES, CAR_MODELS } from "@/utils/car-data";
+
+const selectCls = "flex h-11 w-full border border-gray-200 bg-white px-3 text-sm text-black outline-none appearance-none rounded-none focus:border-black transition-colors";
 
 const profileSchema = insertUserSchema.extend({
   name: z.string().min(1, "Name is required"),
@@ -50,6 +53,7 @@ export default function ProfilePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "vehicles" | "bookings">("profile");
+  const [dialogMake, setDialogMake] = useState("");
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -109,8 +113,9 @@ export default function ProfilePage() {
       const res = await apiRequest("POST", "/api/vehicles", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newVehicle) => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      localStorage.setItem("userVehicle", JSON.stringify({ year: String(newVehicle.year), make: newVehicle.make, model: newVehicle.model }));
       toast({ title: "Vehicle added" });
       setDialogOpen(false);
       setSelectedVehicle(null);
@@ -122,8 +127,9 @@ export default function ProfilePage() {
       const res = await apiRequest("PATCH", `/api/vehicles/${data.id}`, data.updates);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      localStorage.setItem("userVehicle", JSON.stringify({ year: String(updated.year), make: updated.make, model: updated.model }));
       toast({ title: "Vehicle updated" });
       setDialogOpen(false);
       setSelectedVehicle(null);
@@ -132,11 +138,18 @@ export default function ProfilePage() {
 
   const deleteVehicleMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/vehicles/${id}`);
-      return await res.json();
+      await apiRequest("DELETE", `/api/vehicles/${id}`);
+      return id;
     },
-    onSuccess: () => {
+    onSuccess: (deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      const remaining = (vehicles as Vehicle[]).filter((v) => v.id !== deletedId);
+      if (remaining.length > 0) {
+        const first = remaining[0];
+        localStorage.setItem("userVehicle", JSON.stringify({ year: String(first.year), make: first.make, model: first.model }));
+      } else {
+        localStorage.removeItem("userVehicle");
+      }
       toast({ title: "Vehicle removed" });
     },
   });
@@ -151,6 +164,7 @@ export default function ProfilePage() {
 
   const openVehicleDialog = (vehicle?: Vehicle) => {
     setSelectedVehicle(vehicle || null);
+    setDialogMake(vehicle?.make || "");
     setDialogOpen(true);
   };
 
@@ -408,12 +422,83 @@ export default function ProfilePage() {
           </DialogHeader>
           <Form {...vehicleForm}>
             <form onSubmit={vehicleForm.handleSubmit(handleVehicleSubmit)} className="space-y-4">
+              {/* Year */}
+              <FormField
+                control={vehicleForm.control}
+                name="year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Year</FormLabel>
+                    <FormControl>
+                      <select
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                        className={selectCls}
+                      >
+                        <option value="">Select year</option>
+                        {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Make */}
+              <FormField
+                control={vehicleForm.control}
+                name="make"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Make</FormLabel>
+                    <FormControl>
+                      <select
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          setDialogMake(e.target.value);
+                          vehicleForm.setValue("model", "");
+                        }}
+                        className={selectCls}
+                      >
+                        <option value="">Select make</option>
+                        {CAR_MAKES.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Model */}
+              <FormField
+                control={vehicleForm.control}
+                name="model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Model</FormLabel>
+                    <FormControl>
+                      <select
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        disabled={!dialogMake}
+                        className={selectCls + (!dialogMake ? " opacity-40" : "")}
+                      >
+                        <option value="">{dialogMake ? "Select model" : "Select make first"}</option>
+                        {(dialogMake && CAR_MODELS[dialogMake] ? CAR_MODELS[dialogMake] : []).map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Color & Plate */}
               {[
-                { name: "year" as const, label: "Year", placeholder: "2023", type: "number" },
-                { name: "make" as const, label: "Make", placeholder: "Toyota", type: "text" },
-                { name: "model" as const, label: "Model", placeholder: "Camry", type: "text" },
-                { name: "color" as const, label: "Color (optional)", placeholder: "Blue", type: "text" },
-                { name: "licensePlate" as const, label: "License Plate (optional)", placeholder: "ABC123", type: "text" },
+                { name: "color" as const, label: "Color (optional)", placeholder: "Blue" },
+                { name: "licensePlate" as const, label: "License Plate (optional)", placeholder: "ABC123" },
               ].map((fc) => (
                 <FormField
                   key={fc.name}
@@ -423,17 +508,7 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">{fc.label}</FormLabel>
                       <FormControl>
-                        <Input
-                          type={fc.type}
-                          placeholder={fc.placeholder}
-                          {...field}
-                          onChange={(e) =>
-                            fc.type === "number"
-                              ? field.onChange(e.target.value ? Number(e.target.value) : undefined)
-                              : field.onChange(e.target.value)
-                          }
-                          className="rounded-none border-gray-200"
-                        />
+                        <Input placeholder={fc.placeholder} {...field} className="rounded-none border-gray-200" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
