@@ -110,7 +110,12 @@ function Router() {
     <>
       <Switch>
         {/* Public routes first */}
-        <Route path="/sso-callback" component={() => <AuthenticateWithRedirectCallback />} />
+        <Route path="/sso-callback" component={() => (
+          <AuthenticateWithRedirectCallback
+            afterSignUpUrl="/onboarding/name"
+            afterSignInUrl="/"
+          />
+        )} />
         <Route path="/auth" component={ClerkAuthPage} />
         <Route path="/auth/:rest*" component={ClerkAuthPage} />
         <Route path="/provider-auth" component={ProviderAuthPage} />

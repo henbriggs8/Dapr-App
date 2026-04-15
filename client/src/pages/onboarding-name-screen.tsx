@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 
 const primaryBtn =
   "flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#111] text-[13px] font-semibold text-white disabled:opacity-30 transition active:scale-[0.98]";
@@ -30,12 +31,33 @@ const selectCls =
 
 export default function OnboardingNameScreen() {
   const [, setLocation] = useLocation();
-  const [firstName, setFirstName] = useState(() => localStorage.getItem("onboardingFirstName") || "");
-  const [lastName, setLastName] = useState(() => localStorage.getItem("onboardingLastName") || "");
+  const { user: clerkUser } = useUser();
+
+  // Pre-fill from localStorage (phone sign-up flow) or from Clerk (Google/OAuth sign-up)
+  const [firstName, setFirstName] = useState(() =>
+    localStorage.getItem("onboardingFirstName") ||
+    clerkUser?.firstName || ""
+  );
+  const [lastName, setLastName] = useState(() =>
+    localStorage.getItem("onboardingLastName") ||
+    clerkUser?.lastName || ""
+  );
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
   const [birthYear, setBirthYear] = useState("");
-  const [email, setEmail] = useState(() => localStorage.getItem("pendingEmail") || "");
+  const [email, setEmail] = useState(() =>
+    localStorage.getItem("pendingEmail") ||
+    clerkUser?.primaryEmailAddress?.emailAddress || ""
+  );
+
+  // Once Clerk finishes loading (e.g. after Google OAuth), fill in any blank fields
+  useEffect(() => {
+    if (!clerkUser) return;
+    if (!firstName && clerkUser.firstName) setFirstName(clerkUser.firstName);
+    if (!lastName && clerkUser.lastName) setLastName(clerkUser.lastName);
+    if (!email && clerkUser.primaryEmailAddress?.emailAddress)
+      setEmail(clerkUser.primaryEmailAddress.emailAddress);
+  }, [clerkUser]);
 
   const isValid =
     firstName.trim().length > 0 &&
