@@ -11,10 +11,24 @@ app.use(express.urlencoded({ extended: false }));
 // Serve root-level public/ folder as static (includes .well-known for Apple Pay verification)
 app.use(express.static(path.resolve(process.cwd(), "public")));
 
-// Add CORS middleware
+// Add CORS middleware — restrict to known origins
+const ALLOWED_ORIGINS = [
+  'https://autodapper.com',
+  'https://www.autodapper.com',
+  'capacitor://localhost',   // iOS Capacitor app
+  'ionic://localhost',       // fallback for older Capacitor
+];
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin) {
+    // Same-origin or server-to-server requests — allow through
+  }
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
