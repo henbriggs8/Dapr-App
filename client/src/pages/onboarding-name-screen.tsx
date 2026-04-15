@@ -97,7 +97,7 @@ export default function OnboardingNameScreen() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+    <div className="flex flex-col min-h-screen bg-white px-6 pt-14" style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom, 2.5rem))' }}>
       <div className="flex items-center justify-between mb-10">
         <button
           onClick={() => setLocation("/")}

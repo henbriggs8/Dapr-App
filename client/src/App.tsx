@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -105,6 +105,7 @@ function ProviderRoute({
 
 function Router() {
   const { user } = useAuth();
+  const [location] = useLocation();
 
   return (
     <>
@@ -161,8 +162,8 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
       
-      {/* Show tab navigation for regular users only */}
-      {user && !user.isAdmin && !user.isProvider && <TabNavigation />}
+      {/* Show tab navigation for regular users only, not during onboarding */}
+      {user && !user.isAdmin && !user.isProvider && !location.startsWith('/onboarding') && <TabNavigation />}
     </>
   );
 }
