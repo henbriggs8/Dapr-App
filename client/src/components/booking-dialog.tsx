@@ -155,7 +155,7 @@ export default function BookingDialog({
       // Redirect to Square hosted checkout
       window.location.href = data.paymentUrl;
     },
-    onError: (error) => {
+    onError: (error, bookingId) => {
       // If payment link fails, still go to confirmation (booking was already created)
       toast({
         title: "Payment setup failed",
@@ -163,7 +163,7 @@ export default function BookingDialog({
         variant: "destructive",
       });
       onClose();
-      navigate(`/booking-confirmation?booking=${(error as any).bookingId}`);
+      navigate(`/booking-confirmation?booking=${bookingId}`);
     },
   });
   
