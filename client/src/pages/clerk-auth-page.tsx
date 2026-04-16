@@ -726,14 +726,26 @@ function AuthFlow() {
   const e164 = `+1${landingPhone.replace(/\D/g, '')}`;
 
   const clerkError = (err: any): string => {
+    // Log everything so the actual error is visible in the console
+    try {
+      console.error('Clerk error raw:', err);
+      console.error('Clerk error message:', err?.message);
+      console.error('Clerk error errors:', err?.errors);
+      console.error('Clerk error status:', err?.status);
+    } catch (_) {}
     const first = err?.errors?.[0];
-    if (!first) return 'Something went wrong. Please try again.';
+    if (!first) {
+      return err?.message ?? 'Something went wrong. Please try again.';
+    }
     const code = first.code ?? '';
     if (code === 'form_identifier_not_found') return '__new_user__';
     if (code === 'form_password_incorrect') return 'Incorrect password. Please try again.';
     if (code === 'form_code_incorrect') return 'Incorrect code. Please try again.';
     if (code === 'too_many_requests') return 'Too many attempts. Please wait a moment.';
-    return first.longMessage ?? first.message ?? 'Something went wrong.';
+    if (code === 'oauth_callback_invalid' || code === 'oauth_access_denied') return 'Google sign-in was cancelled or denied.';
+    if (code === 'external_account_not_found') return 'No account found for this Google account. Please sign up first.';
+    if (code === 'oauth_provider_not_enabled_for_environment') return 'Google sign-in is not enabled. Please configure it in the Clerk dashboard.';
+    return first.longMessage ?? first.message ?? `Error: ${code}`;
   };
 
   // ── Step handlers ──────────────────────────────────────────────────────────
