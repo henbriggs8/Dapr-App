@@ -68,8 +68,9 @@ export default function BookingScreen() {
   const { data: providers, isLoading: providersLoading } = useQuery<User[]>({
     queryKey: ["/api/providers"],
   });
-  const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
+  const { data: services, isLoading: servicesLoading, isError: servicesError, refetch: refetchServices } = useQuery<Service[]>({
     queryKey: ["/api/services"],
+    retry: 2,
   });
   const { data: timeSlots, isLoading: timeSlotsLoading } = useQuery<TimeSlot[]>({
     queryKey: [`/api/timeslots?date=${selectedDate}`, selectedDate],
@@ -200,14 +201,26 @@ export default function BookingScreen() {
       {/* Service Selection */}
       <div className="px-6 pt-6">
         <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Choose Service</h2>
-        <EnhancedServiceSelection
-          services={services || []}
-          selectedServiceId={selectedServiceId}
-          onServiceSelect={handleServiceSelect}
-          onBookNow={() => {
-            if (selectedServiceId) handleNowSelect();
-          }}
-        />
+        {servicesError ? (
+          <div className="py-10 text-center">
+            <p className="text-sm text-gray-500 mb-3">Couldn't load services. Check your connection.</p>
+            <button
+              onClick={() => refetchServices()}
+              className="text-sm font-semibold text-[#8c52ff] underline underline-offset-2"
+            >
+              Try again
+            </button>
+          </div>
+        ) : (
+          <EnhancedServiceSelection
+            services={services || []}
+            selectedServiceId={selectedServiceId}
+            onServiceSelect={handleServiceSelect}
+            onBookNow={() => {
+              if (selectedServiceId) handleNowSelect();
+            }}
+          />
+        )}
       </div>
 
       {/* Time Selection */}

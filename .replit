@@ -66,4 +66,4 @@ waitForPort = 5000
 [userenv]
 
 [userenv.shared]
-VITE_API_BASE_URL = "https://autodapper.com"
+VITE_API_BASE_URL = "https://a7eec9ce-0b5d-4409-9681-64f5c754e78f-00-30wf35ixkqm2a.janeway.replit.dev"
