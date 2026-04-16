@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, Car, HelpCircle } from "lucide-react";
+import { ArrowLeft, Car, HelpCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +61,12 @@ export default function VehicleSetupPage() {
 
     // Save vehicle info
     localStorage.setItem(`provider-onboarding-vehicle-${user?.id}`, JSON.stringify({ vin, year, make, model }));
+    localStorage.setItem(`provider-onboarding-vehicle-setup-${user?.id}`, 'true');
+    setLocation('/provider-onboarding/bank-info');
+  };
+
+  const handleDapperVehicle = () => {
+    localStorage.setItem(`provider-onboarding-vehicle-${user?.id}`, JSON.stringify({ dapperVehicle: true }));
     localStorage.setItem(`provider-onboarding-vehicle-setup-${user?.id}`, 'true');
     setLocation('/provider-onboarding/bank-info');
   };
@@ -216,6 +222,15 @@ export default function VehicleSetupPage() {
           >
             Continue
           </Button>
+
+          {/* Dapper Vehicle Option */}
+          <button
+            onClick={handleDapperVehicle}
+            className="w-full flex items-center justify-center gap-2 text-[#8c52ff] text-sm font-medium py-2 hover:opacity-75 transition-opacity"
+          >
+            <Truck className="w-4 h-4" />
+            I am using a Dapper vehicle instead
+          </button>
         </div>
       </div>
     </div>
