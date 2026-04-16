@@ -9,6 +9,7 @@ import BookingDialog from "@/components/booking-dialog";
 import { EnhancedServiceSelection } from "@/components/enhanced-service-selection";
 import { OnboardingButton } from "@/components/onboarding-button";
 import QuickRebook from "@/components/quick-rebook";
+import { useToast } from "@/hooks/use-toast";
 
 type BookingMode = "now" | "schedule";
 
@@ -54,6 +55,7 @@ function getArrivalWindows() {
 
 export default function BookingScreen() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split("T")[0];
   });
@@ -93,11 +95,17 @@ export default function BookingScreen() {
 
   const handleNowSelect = () => {
     const slots = getAvailableTimeSlots();
-    if (slots.length > 0) {
-      setSelectedTimeSlotId(slots[0].id);
-      if (selectedServiceId && providers && providers.length > 0) {
-        setBookingOpen(true);
-      }
+    if (slots.length === 0) {
+      toast({
+        title: "No slots available today",
+        description: "Try scheduling for a later date instead.",
+      });
+      setBookingMode("schedule");
+      return;
+    }
+    setSelectedTimeSlotId(slots[0].id);
+    if (selectedServiceId && providers && providers.length > 0) {
+      setBookingOpen(true);
     }
   };
 

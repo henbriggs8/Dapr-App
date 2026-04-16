@@ -6,6 +6,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -150,10 +152,13 @@ export default function BookingDialog({
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ paymentUrl: string }>;
     },
-    onSuccess: (data, bookingId) => {
+    onSuccess: async (data, bookingId) => {
       onClose();
-      // Redirect to Square hosted checkout
-      window.location.href = data.paymentUrl;
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: data.paymentUrl });
+      } else {
+        window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+      }
     },
     onError: (error, bookingId) => {
       // If payment link fails, still go to confirmation (booking was already created)
