@@ -4,10 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.autodapper.app',
   appName: 'Dapper',
   webDir: 'dist/public',
-  server: {
-    url: 'https://autodapper.com',
-    cleartext: false,
-  },
   ios: {
     contentInset: 'automatic',
     backgroundColor: '#ffffff',
