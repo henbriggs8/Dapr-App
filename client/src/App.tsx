@@ -70,7 +70,11 @@ function AdminRoute({
     );
   }
 
-  return <Component />;
+  return (
+    <Route path={path}>
+      <Component />
+    </Route>
+  );
 }
 
 function ProviderRoute({
@@ -100,7 +104,11 @@ function ProviderRoute({
     );
   }
 
-  return <Component />;
+  return (
+    <Route path={path}>
+      <Component />
+    </Route>
+  );
 }
 
 function Router() {
