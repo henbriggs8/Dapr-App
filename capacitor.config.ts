@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   // Load the web app from the deployed server so all API calls work on iOS
   // without needing a local bundle rebuild. Update this URL after each deployment.
   server: {
-    url: 'https://a7eec9ce-0b5d-4409-9681-64f5c754e78f-00-30wf35ixkqm2a.janeway.replit.dev',
+    url: 'https://19cde6be-ed4d-4f35-905b-81d26feea85d-00-2g9k2wyjq2ps0.janeway.replit.dev',
     cleartext: false,
   },
   ios: {
