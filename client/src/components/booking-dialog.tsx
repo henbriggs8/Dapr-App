@@ -48,7 +48,7 @@ export default function BookingDialog({
   timeSlotId,
   prefillData
 }: {
-  provider: User;
+  provider?: User;
   open: boolean;
   onClose: () => void;
   serviceId?: number;
@@ -254,7 +254,7 @@ export default function BookingDialog({
         `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}` : "",
       serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
-      providerId: provider.id,
+      providerId: provider?.id ?? null,
       serviceId: serviceId,
       timeSlotId: timeSlotId,
       timestamp: timeSlot ? `${timeSlot.date}T${timeSlot.startTime}:00` : new Date().toISOString(),
@@ -363,7 +363,7 @@ export default function BookingDialog({
     
     // Update form values with the latest service and time slot info
     data.priceTier = service.category || "basic";
-    data.providerId = provider.id;
+    data.providerId = provider?.id ?? null;
     data.serviceId = serviceId;
     data.timeSlotId = timeSlotId;
     data.timestamp = timeSlot ? `${timeSlot.date}T${timeSlot.startTime}:00` : new Date().toISOString();
@@ -427,7 +427,7 @@ export default function BookingDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Book with {provider.name}</DialogTitle>
+          <DialogTitle>{provider ? `Book with ${provider.name}` : "Book Your Service"}</DialogTitle>
           <DialogDescription>
             Please confirm your booking details and provide a service location
           </DialogDescription>
@@ -739,7 +739,7 @@ export default function BookingDialog({
                   serviceLocation: values.serviceLocation || user?.address || "",
                   serviceLocationType: values.serviceLocationType || "home",
                   priceTier: service?.category || "basic",
-                  providerId: provider.id,
+                  providerId: provider?.id ?? null,
                   serviceId: serviceId,
                   timeSlotId: timeSlotId,
                   timestamp: timeSlot ? `${timeSlot.date}T${timeSlot.startTime}:00` : new Date().toISOString(),

@@ -102,7 +102,7 @@ export default function BookingScreen() {
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
     setSelectedTimeSlotId(timeSlot.id);
-    if (selectedServiceId && providers && providers.length > 0) {
+    if (selectedServiceId) {
       setBookingOpen(true);
     }
   };
@@ -118,7 +118,7 @@ export default function BookingScreen() {
       return;
     }
     setSelectedTimeSlotId(slots[0].id);
-    if (selectedServiceId && providers && providers.length > 0) {
+    if (selectedServiceId) {
       setBookingOpen(true);
     }
   };
