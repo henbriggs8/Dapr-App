@@ -4,12 +4,13 @@ import { User, Service, TimeSlot, Booking } from "@shared/schema";
 import { useLocation } from "wouter";
 import { Calendar, Clock, ChevronRight, ArrowLeft, Zap, Users } from "lucide-react";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BookingDialog from "@/components/booking-dialog";
 import { EnhancedServiceSelection } from "@/components/enhanced-service-selection";
 import { OnboardingButton } from "@/components/onboarding-button";
 import QuickRebook from "@/components/quick-rebook";
 import { useToast } from "@/hooks/use-toast";
+import { Capacitor } from "@capacitor/core";
 
 type BookingMode = "now" | "schedule";
 
@@ -65,6 +66,8 @@ export default function BookingScreen() {
   const [bookingMode, setBookingMode] = useState<BookingMode>("now");
   const [, setLocation] = useLocation();
 
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+
   const { data: providers, isLoading: providersLoading } = useQuery<User[]>({
     queryKey: ["/api/providers"],
   });
@@ -82,6 +85,16 @@ export default function BookingScreen() {
   });
 
   const isLoading = providersLoading || servicesLoading || timeSlotsLoading || bookingsLoading;
+
+  useEffect(() => {
+    if (!servicesError) return;
+    const isNative = Capacitor.isNativePlatform();
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "(not set)";
+    const resolvedUrl = isNative ? `${apiBase}/api/services` : "/api/services";
+    fetch(resolvedUrl)
+      .then(r => setDebugInfo(`native=${isNative} | base=${apiBase} | url=${resolvedUrl} | status=${r.status}`))
+      .catch(e => setDebugInfo(`native=${isNative} | base=${apiBase} | url=${resolvedUrl} | err=${e.message}`));
+  }, [servicesError]);
 
   const handleServiceSelect = (service: Service) => {
     setSelectedServiceId(service.id);
@@ -202,7 +215,7 @@ export default function BookingScreen() {
       <div className="px-6 pt-6">
         <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Choose Service</h2>
         {servicesError ? (
-          <div className="py-10 text-center">
+          <div className="py-6 text-center">
             <p className="text-sm text-gray-500 mb-3">Couldn't load services. Check your connection.</p>
             <button
               onClick={() => refetchServices()}
@@ -210,6 +223,11 @@ export default function BookingScreen() {
             >
               Try again
             </button>
+            {debugInfo && (
+              <div className="mt-5 mx-2 p-3 bg-gray-100 rounded-xl text-left">
+                <p className="text-[10px] font-mono text-gray-700 break-all leading-relaxed">{debugInfo}</p>
+              </div>
+            )}
           </div>
         ) : (
           <EnhancedServiceSelection
