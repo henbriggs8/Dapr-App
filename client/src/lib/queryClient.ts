@@ -32,7 +32,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return {};
 }
 
-function resolveUrl(url: string): string {
+export function resolveUrl(url: string): string {
   if (!IS_NATIVE) return url;
   // Prepend API_BASE for absolute paths; leave full URLs alone
   return url.startsWith("/") ? `${API_BASE}${url}` : url;

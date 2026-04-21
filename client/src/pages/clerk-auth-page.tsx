@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react
 import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
+import { resolveUrl } from '@/lib/queryClient';
 
 // ─── Shared style tokens ────────────────────────────────────────────────────
 
@@ -812,7 +813,7 @@ function AuthFlow() {
 
       // Create the user via our backend admin API with phone + password + optional email.
       // This completely bypasses Clerk's sign-up flow.
-      const resp = await fetch('/api/auth/clerk/complete-signup', {
+      const resp = await fetch(resolveUrl('/api/auth/clerk/complete-signup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
