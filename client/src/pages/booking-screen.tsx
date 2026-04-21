@@ -424,7 +424,7 @@ export default function BookingScreen() {
         </div>
       )}
 
-      {bookingOpen && selectedServiceId && selectedTimeSlotId && provider && (
+      {bookingOpen && selectedServiceId && selectedTimeSlotId && (
         <BookingDialog
           open={bookingOpen}
           onClose={() => setBookingOpen(false)}
