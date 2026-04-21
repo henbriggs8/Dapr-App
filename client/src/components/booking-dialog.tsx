@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { User, bookingFormSchema, Service, TimeSlot } from "@shared/schema";
 import { Button } from "./ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, resolveUrl } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
@@ -121,7 +121,7 @@ export default function BookingDialog({
     queryKey: ["/api/services", serviceId],
     queryFn: async () => {
       if (!serviceId) throw new Error("No service ID provided");
-      const res = await fetch(`/api/services/${serviceId}`);
+      const res = await fetch(resolveUrl(`/api/services/${serviceId}`));
       if (!res.ok) throw new Error("Failed to fetch service");
       return res.json();
     },
@@ -143,7 +143,7 @@ export default function BookingDialog({
       const token = await getToken().catch(() => null);
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`/api/bookings/${bookingId}/create-payment`, {
+      const res = await fetch(resolveUrl(`/api/bookings/${bookingId}/create-payment`), {
         method: "POST",
         headers,
         credentials: "include",
@@ -250,8 +250,9 @@ export default function BookingDialog({
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      serviceLocation: user?.address || parsedAddress ? 
-        `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}` : "",
+      serviceLocation: parsedAddress
+        ? `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}`
+        : user?.address || "",
       serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
       providerId: provider?.id ?? null,
