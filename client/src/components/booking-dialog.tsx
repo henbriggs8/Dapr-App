@@ -238,7 +238,7 @@ export default function BookingDialog({
     queryKey: ["/api/timeslots", timeSlotId],
     queryFn: async () => {
       if (!timeSlotId) throw new Error("No time slot ID provided");
-      const res = await fetch(`/api/timeslots/${timeSlotId}`);
+      const res = await fetch(resolveUrl(`/api/timeslots/${timeSlotId}`));
       if (!res.ok) throw new Error("Failed to fetch time slot");
       return res.json();
     },
