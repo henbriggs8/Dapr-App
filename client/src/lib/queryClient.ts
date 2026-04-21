@@ -11,7 +11,7 @@ const IS_NATIVE = Capacitor.isNativePlatform();
 // for an iOS release build (e.g. https://yourapp.replit.app).
 // Falls back to autodapper.com which should be your production domain.
 const API_BASE = IS_NATIVE
-  ? (import.meta.env.VITE_API_BASE_URL || "https://autodapper.com")
+  ? (import.meta.env.VITE_API_BASE_URL || "https://dapper-pros.replit.app")
   : "";
 
 // ─── Clerk token store ─────────────────────────────────────────────────────

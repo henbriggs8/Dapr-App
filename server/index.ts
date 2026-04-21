@@ -15,6 +15,7 @@ app.use(express.static(path.resolve(process.cwd(), "public")));
 const ALLOWED_ORIGINS = [
   'https://autodapper.com',
   'https://www.autodapper.com',
+  'https://dapper-pros.replit.app',
   'capacitor://localhost',   // iOS Capacitor app
   'ionic://localhost',       // fallback for older Capacitor
 ];
