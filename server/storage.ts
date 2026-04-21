@@ -68,14 +68,8 @@ export interface IStorage {
   getProviderStatusSummary(): Promise<{
     totalProviders: number;
     onlineProviders: number;
-    onlineProvidersList: {
-      id: number;
-      name: string;
-      username: string;
-      latitude?: number;
-      longitude?: number;
-      lastLocationUpdate?: string;
-    }[];
+    onlineProvidersList: { id: number; name: string; username: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
+    allProviders: { id: number; name: string; username: string; status: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
   }>;
   
   // Booking timing methods
@@ -710,18 +704,11 @@ export class MemStorage implements IStorage {
   async getProviderStatusSummary(): Promise<{
     totalProviders: number;
     onlineProviders: number;
-    onlineProvidersList: {
-      id: number;
-      name: string;
-      username: string;
-      latitude?: number;
-      longitude?: number;
-      lastLocationUpdate?: string;
-    }[];
+    onlineProvidersList: { id: number; name: string; username: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
+    allProviders: { id: number; name: string; username: string; status: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
   }> {
     const providers = await this.getProviders();
     const onlineProviders = providers.filter(provider => provider.currentStatus === 'online');
-    
     const onlineProvidersList = onlineProviders.map(provider => ({
       id: provider.id,
       name: provider.name || '',
@@ -730,11 +717,19 @@ export class MemStorage implements IStorage {
       longitude: provider.longitude === null ? undefined : provider.longitude,
       lastLocationUpdate: provider.lastLocationUpdate === null ? undefined : provider.lastLocationUpdate
     }));
-    
     return {
       totalProviders: providers.length,
       onlineProviders: onlineProviders.length,
-      onlineProvidersList
+      onlineProvidersList,
+      allProviders: providers.map(p => ({
+        id: p.id,
+        name: p.name || p.username,
+        username: p.username,
+        status: p.currentStatus || 'offline',
+        latitude: p.latitude === null ? undefined : p.latitude,
+        longitude: p.longitude === null ? undefined : p.longitude,
+        lastLocationUpdate: p.lastLocationUpdate === null ? undefined : p.lastLocationUpdate
+      }))
     };
   }
   
@@ -1890,14 +1885,8 @@ export class DatabaseStorage implements IStorage {
   async getProviderStatusSummary(): Promise<{
     totalProviders: number;
     onlineProviders: number;
-    onlineProvidersList: {
-      id: number;
-      name: string;
-      username: string;
-      latitude?: number;
-      longitude?: number;
-      lastLocationUpdate?: string;
-    }[];
+    onlineProvidersList: { id: number; name: string; username: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
+    allProviders: { id: number; name: string; username: string; status: string; latitude?: number; longitude?: number; lastLocationUpdate?: string; }[];
   }> {
     const allProviders = await db
       .select()
@@ -1913,6 +1902,15 @@ export class DatabaseStorage implements IStorage {
         id: p.id,
         name: p.name || '',
         username: p.username,
+        latitude: p.latitude || undefined,
+        longitude: p.longitude || undefined,
+        lastLocationUpdate: p.lastLocationUpdate || undefined
+      })),
+      allProviders: allProviders.map(p => ({
+        id: p.id,
+        name: p.name || p.username,
+        username: p.username,
+        status: p.currentStatus || 'offline',
         latitude: p.latitude || undefined,
         longitude: p.longitude || undefined,
         lastLocationUpdate: p.lastLocationUpdate || undefined

@@ -122,7 +122,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch provider status (auto-refresh)
-  const { data: providerStatus = [] } = useQuery<any[]>({
+  const { data: providerStatus = { totalProviders: 0, onlineProviders: 0, onlineProvidersList: [], allProviders: [] } } = useQuery<any>({
     queryKey: ["/api/admin/provider-status"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/provider-status");
@@ -475,7 +475,7 @@ export default function AdminDashboard() {
             {(() => {
               const unassigned = bookings.filter(b => b.status === "pending" && !b.providerId);
               const active = bookings.filter(b => b.status === "in_progress" || b.status === "accepted");
-              const onlineProviders = providerStatus.filter((p: any) => p.status === "online");
+              const onlineProviders = providerStatus.onlineProvidersList ?? [];
               const todayCompleted = bookings.filter(b => {
                 const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
                 return b.status === "completed" && b.date === today;
@@ -650,10 +650,10 @@ export default function AdminDashboard() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                          {providerStatus.length === 0 ? (
+                          {(providerStatus.allProviders ?? []).length === 0 ? (
                             <p className="text-sm text-gray-400 text-center py-4">No providers found</p>
                           ) : (
-                            [...providerStatus]
+                            [...(providerStatus.allProviders ?? [])]
                               .sort((a: any, b: any) => (b.status === "online" ? 1 : 0) - (a.status === "online" ? 1 : 0))
                               .map((p: any) => {
                                 const currentJob = active.find(b => b.providerId === p.id);
