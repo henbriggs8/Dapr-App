@@ -182,24 +182,29 @@ export default function BookingDialog({
       return parsed;
     },
     onSuccess: async (data, bookingId) => {
-      console.log("[Payment] opening checkout URL:", data.paymentUrl, "for bookingId:", bookingId);
+      console.log("[Payment] checkout URL created:", data.paymentUrl, "for bookingId:", bookingId);
       try { sessionStorage.setItem("pendingPaymentBookingId", String(bookingId)); } catch {}
+      console.log("[Payment] booking modal closed");
       onClose();
-      try {
-        if (Capacitor.isNativePlatform()) {
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const finishedListener = await Browser.addListener("browserFinished", () => {
+            console.log("[Payment] browserFinished event fired (user dismissed or deep link closed it)");
+            finishedListener.remove();
+          });
+          console.log("[Payment] opening in-app browser (fullscreen)");
           await Browser.open({
             url: data.paymentUrl,
-            presentationStyle: "pagesheet",
-            windowName: "_self",
+            presentationStyle: "fullscreen",
           });
-          console.log("[Payment] browser opened in-app (Capacitor Browser)");
-        } else {
-          window.location.href = data.paymentUrl;
-          console.log("[Payment] browser opened via window.location (web)");
+          console.log("[Payment] Browser.open resolved");
+        } catch (e) {
+          console.log("[Payment] in-app browser failed:", e);
         }
-      } catch (e) {
-        console.log("[Payment] in-app browser failed, external fallback:", e);
-        window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+      } else {
+        console.log("[Payment] fallback window.location triggered (web)");
+        window.location.href = data.paymentUrl;
       }
     },
     onError: (error, bookingId) => {
@@ -445,6 +450,7 @@ export default function BookingDialog({
     data.vehicleId = vehicles.length > 0 ? vehicles[0].id : null;
     data.notes = `Service for ${vehicles.map(v => v.details).join(', ')}`;
     
+    console.log("[Payment] Book & Pay tapped");
     console.log("✅ Final booking data:", data);
     console.log("🚀 Calling bookingMutation.mutate");
     bookingMutation.mutate(data);
