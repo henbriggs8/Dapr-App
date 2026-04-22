@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
-import { clerkAuthMiddleware, ClerkRequest } from "./clerk-middleware";
+import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
@@ -272,7 +272,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Protected endpoints
-  app.post("/api/bookings", async (req, res) => {
+  app.post("/api/bookings", resolveUserFromBearer, async (req, res) => {
     if (!req.user) {
       console.log("Booking attempt without authentication");
       return res.status(401).json({ error: "Authentication required to create bookings. Please log in first." });
