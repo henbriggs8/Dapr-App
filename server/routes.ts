@@ -388,14 +388,14 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/bookings", async (req, res) => {
+  app.get("/api/bookings", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const bookings = await storage.getUserBookings(req.user.id);
     res.json(bookings);
   });
   
-  app.get("/api/bookings/:id", async (req, res) => {
+  app.get("/api/bookings/:id", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
     const id = parseInt(req.params.id);
