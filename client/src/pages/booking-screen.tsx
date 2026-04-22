@@ -101,14 +101,17 @@ export default function BookingScreen() {
   };
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
+    console.log("[BookingScreen] clicked slot:", timeSlot);
     setSelectedTimeSlotId(timeSlot.id);
     if (selectedServiceId) {
+      console.log("[BookingScreen] selectedSlot before modal opens:", timeSlot);
       setBookingOpen(true);
     }
   };
 
   const handleNowSelect = () => {
     const slots = getAvailableTimeSlots();
+    console.log("[BookingScreen] handleNowSelect — available slots:", slots);
     if (slots.length === 0) {
       toast({
         title: "No slots available today",
@@ -117,8 +120,11 @@ export default function BookingScreen() {
       setBookingMode("schedule");
       return;
     }
-    setSelectedTimeSlotId(slots[0].id);
+    const chosen = slots[0];
+    console.log("[BookingScreen] clicked slot (Book ASAP):", chosen);
+    setSelectedTimeSlotId(chosen.id);
     if (selectedServiceId) {
+      console.log("[BookingScreen] selectedSlot before modal opens:", chosen);
       setBookingOpen(true);
     }
   };
@@ -424,15 +430,20 @@ export default function BookingScreen() {
         </div>
       )}
 
-      {bookingOpen && selectedServiceId && selectedTimeSlotId && (
-        <BookingDialog
-          open={bookingOpen}
-          onClose={() => setBookingOpen(false)}
-          provider={provider}
-          serviceId={selectedServiceId}
-          timeSlotId={selectedTimeSlotId}
-        />
-      )}
+      {bookingOpen && selectedServiceId && selectedTimeSlotId && (() => {
+        const selectedSlot = timeSlots?.find((s) => s.id === selectedTimeSlotId);
+        console.log("[BookingScreen] modal rendering with selectedSlot:", selectedSlot, "selectedTimeSlotId:", selectedTimeSlotId);
+        return (
+          <BookingDialog
+            open={bookingOpen}
+            onClose={() => setBookingOpen(false)}
+            provider={provider}
+            serviceId={selectedServiceId}
+            timeSlotId={selectedTimeSlotId}
+            timeSlot={selectedSlot}
+          />
+        );
+      })()}
     </div>
   );
 }

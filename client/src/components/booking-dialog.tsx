@@ -46,6 +46,7 @@ export default function BookingDialog({
   onClose,
   serviceId,
   timeSlotId,
+  timeSlot: timeSlotProp,
   prefillData
 }: {
   provider?: User;
@@ -53,6 +54,7 @@ export default function BookingDialog({
   onClose: () => void;
   serviceId?: number;
   timeSlotId?: number;
+  timeSlot?: TimeSlot;
   prefillData?: PrefillData;
 }) {
   const { toast } = useToast();
@@ -234,7 +236,7 @@ export default function BookingDialog({
   }, [service, addOns, vehicles]);
   
   // Fetch the selected time slot
-  const { data: timeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
+  const { data: fetchedTimeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
     queryKey: ["/api/timeslots", timeSlotId],
     queryFn: async () => {
       if (!timeSlotId) throw new Error("No time slot ID provided");
@@ -242,10 +244,14 @@ export default function BookingDialog({
       if (!res.ok) throw new Error("Failed to fetch time slot");
       return res.json();
     },
-    enabled: !!timeSlotId,
+    enabled: !!timeSlotId && !timeSlotProp,
   });
 
-  const isLoading = serviceLoading || timeSlotLoading;
+  const timeSlot = timeSlotProp ?? fetchedTimeSlot;
+
+  console.log("[BookingDialog] render — timeSlot source:", timeSlotProp ? "prop" : "fetch", "value:", timeSlot, "timeSlotId:", timeSlotId);
+
+  const isLoading = serviceLoading || (!timeSlotProp && timeSlotLoading);
 
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
