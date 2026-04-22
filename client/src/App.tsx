@@ -249,12 +249,59 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function DeepLinkHandler() {
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (!Capacitor.isNativePlatform()) return;
+        const { App: CapApp } = await import("@capacitor/app");
+        const { Browser } = await import("@capacitor/browser");
+
+        const handle = await CapApp.addListener("appUrlOpen", async (event) => {
+          console.log("[Payment] appUrlOpen received:", event.url);
+          try {
+            const url = new URL(event.url);
+            const host = url.host || url.pathname.replace(/^\/+/, "").split("/")[0];
+            if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-success")) {
+              const bookingId =
+                url.searchParams.get("bookingId") ||
+                url.searchParams.get("booking") ||
+                (() => { try { return sessionStorage.getItem("pendingPaymentBookingId"); } catch { return null; } })();
+              console.log("[Payment] success redirect detected, resolved bookingId:", bookingId);
+              try { await Browser.close(); } catch (e) { console.log("[Payment] Browser.close error", e); }
+              try { sessionStorage.removeItem("pendingPaymentBookingId"); } catch {}
+              if (bookingId) {
+                console.log("[Payment] navigating to tracking page for booking", bookingId);
+                window.history.pushState({}, "", `/tracking?booking=${bookingId}`);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }
+            } else if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
+              console.log("[Payment] cancel redirect detected");
+              try { await Browser.close(); } catch {}
+            }
+          } catch (e) {
+            console.log("[Payment] failed to handle appUrlOpen", e);
+          }
+        });
+        cleanup = () => { handle.remove(); };
+      } catch (e) {
+        console.log("[Payment] DeepLinkHandler init error", e);
+      }
+    })();
+    return () => { if (cleanup) cleanup(); };
+  }, []);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ClerkSyncWrapper>
           <WebSocketProvider>
+            <DeepLinkHandler />
             <Router />
             <Toaster />
           </WebSocketProvider>

@@ -21,6 +21,20 @@ export default function PaymentSuccessPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const bookingId = urlParams.get("booking");
 
+  // When this hosted page loads inside the iOS in-app browser after a
+  // successful Square checkout, immediately deep-link back into the native
+  // app so the user is returned to tracking instead of staying in Safari.
+  useEffect(() => {
+    if (!bookingId) return;
+    try {
+      const deepLink = `com.autodapper.app://payment-success?bookingId=${bookingId}`;
+      console.log("[Payment] success redirect detected, attempting deep link:", deepLink);
+      window.location.href = deepLink;
+    } catch (e) {
+      console.log("[Payment] deep link attempt failed", e);
+    }
+  }, [bookingId]);
+
   useEffect(() => {
     const verifyPayment = async () => {
       if (!bookingId) {

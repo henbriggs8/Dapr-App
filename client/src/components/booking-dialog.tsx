@@ -182,18 +182,24 @@ export default function BookingDialog({
       return parsed;
     },
     onSuccess: async (data, bookingId) => {
-      console.log("[Payment] onSuccess, opening url:", data.paymentUrl);
+      console.log("[Payment] opening checkout URL:", data.paymentUrl, "for bookingId:", bookingId);
+      try { sessionStorage.setItem("pendingPaymentBookingId", String(bookingId)); } catch {}
       onClose();
       try {
         if (Capacitor.isNativePlatform()) {
-          await Browser.open({ url: data.paymentUrl });
+          await Browser.open({
+            url: data.paymentUrl,
+            presentationStyle: "pagesheet",
+            windowName: "_self",
+          });
+          console.log("[Payment] browser opened in-app (Capacitor Browser)");
         } else {
-          window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+          window.location.href = data.paymentUrl;
+          console.log("[Payment] browser opened via window.location (web)");
         }
-        console.log("[Payment] browser open succeeded");
       } catch (e) {
-        console.log("[Payment] browser open failed, falling back to window.location", e);
-        window.location.href = data.paymentUrl;
+        console.log("[Payment] in-app browser failed, external fallback:", e);
+        window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
       }
     },
     onError: (error, bookingId) => {

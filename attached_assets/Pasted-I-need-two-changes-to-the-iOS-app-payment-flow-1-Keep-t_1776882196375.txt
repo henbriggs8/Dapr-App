@@ -1,0 +1,45 @@
+I need two changes to the iOS app payment flow.
+
+1) Keep the Square payment page inside the app
+Right now, when the user taps Confirm Booking / Book & Pay, the Square payment page opens in the default external browser on iPhone. I do NOT want that.
+
+What I want instead:
+- Open the Square checkout URL inside the app using Capacitor’s in-app browser, not external Safari
+- Prefer Capacitor Browser.open() / SFSafariViewController-style in-app modal
+- Do not use window.open, window.location, or anything that kicks the user out to the default browser unless absolutely necessary as a last-resort fallback
+- If there is a fallback, log it clearly so we know it happened
+
+2) After payment is confirmed, send the user directly to the tracking page for that detail
+Right now, after payment succeeds, it routes to login. I want the user to stay in the app and go straight to the tracking page for the newly booked detail.
+
+What I want after successful payment:
+- Payment success should redirect back into the app via deep link / custom URL scheme
+- Close the in-app browser automatically when the success redirect is detected
+- Route the user directly to the Track page for that booking/job
+- Pass the booking/job ID through the payment flow so the app knows exactly which detail to open
+- If needed, use a success URL like:
+  com.autodapper.app://payment-success?bookingId=XXX
+  or a hosted success page that immediately deep-links into the app
+- Cancel should return them cleanly to the booking flow, not log them out
+
+Important requirements:
+- Preserve the logged-in Clerk session the entire time
+- Do not send the user to the login screen after payment success
+- If the booking record is only finalized after Square confirms payment, use the confirmed booking/job ID from the server response or webhook and then navigate to that job’s tracking screen
+- The Track page should open with the correct booking preloaded, not just the generic Track tab
+
+Please implement this specifically for the iOS Capacitor app flow:
+- use Capacitor Browser for checkout
+- deep link back into the app on success/cancel
+- navigate to tracking page on success
+- stay authenticated throughout
+
+Also add temporary console logs for:
+- [Payment] opening checkout URL
+- [Payment] browser opened in-app vs external fallback
+- [Payment] success redirect detected
+- [Payment] cancel redirect detected
+- [Payment] resolved bookingId/jobId after success
+- [Payment] navigating to tracking page
+
+If there are any Square restrictions that prevent true embedded payment inside a WebView, then use the best native in-app browser experience possible (Capacitor Browser / SFSafariViewController) while still keeping the user visually inside the app and returning them automatically to tracking on success.

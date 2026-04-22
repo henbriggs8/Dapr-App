@@ -8,10 +8,23 @@ import { Booking } from '@shared/schema';
 
 export default function TrackingPage() {
   const [, setLocation] = useLocation();
-  
+
+  // Optional ?booking=ID query param picks a specific booking to track
+  const requestedBookingId = (() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get('booking');
+      return id ? Number(id) : null;
+    } catch { return null; }
+  })();
+
   // Get active bookings that can be tracked
   const { data: activeBookings, isLoading } = useQuery<Booking[]>({
     queryKey: ['/api/tracking/active'],
+  });
+
+  const { data: requestedBooking } = useQuery<Booking>({
+    queryKey: ['/api/bookings', requestedBookingId],
+    enabled: !!requestedBookingId,
   });
 
   const handleBack = () => {
@@ -29,9 +42,14 @@ export default function TrackingPage() {
     );
   }
 
-  // If there are active trackable bookings, show the tracking interface
+  // Prefer the explicitly requested booking (deep link from payment success)
+  if (requestedBookingId) {
+    return <TrackingMap bookingId={requestedBookingId} onClose={handleBack} />;
+  }
+
+  // Otherwise fall back to the first active trackable booking
   if (activeBookings && activeBookings.length > 0) {
-    const bookingToTrack = activeBookings[0]; // Track the first active booking
+    const bookingToTrack = activeBookings[0];
     return <TrackingMap bookingId={bookingToTrack.id} onClose={handleBack} />;
   }
 
