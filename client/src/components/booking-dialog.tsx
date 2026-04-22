@@ -141,32 +141,66 @@ export default function BookingDialog({
   // Payment mutation — calls Square to generate a checkout link
   const paymentMutation = useMutation({
     mutationFn: async (bookingId: number) => {
-      // Include Clerk bearer token so the endpoint accepts Clerk-authenticated users
-      const token = await getToken().catch(() => null);
+      console.log("[Payment] mutationFn start, bookingId=", bookingId);
+      const token = await getToken().catch((e) => { console.log("[Payment] getToken error", e); return null; });
+      console.log("[Payment] token present?", !!token);
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(resolveUrl(`/api/bookings/${bookingId}/create-payment`), {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ paymentUrl: string }>;
+      const url = resolveUrl(`/api/bookings/${bookingId}/create-payment`);
+      console.log("[Payment] POST", url);
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: JSON.stringify({}),
+        });
+      } catch (e) {
+        console.log("[Payment] fetch threw", e);
+        throw new Error("Network error: " + (e as Error).message);
+      }
+      console.log("[Payment] response status", res.status);
+      if (!res.ok) {
+        const text = await res.text();
+        console.log("[Payment] response body (error)", text);
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+      const body = await res.text();
+      console.log("[Payment] response body (success)", body);
+      let parsed: { paymentUrl: string };
+      try {
+        parsed = JSON.parse(body);
+      } catch (e) {
+        console.log("[Payment] JSON parse failed", e);
+        throw new Error("Invalid JSON from server: " + body.slice(0, 200));
+      }
+      if (!parsed.paymentUrl) {
+        console.log("[Payment] missing paymentUrl in", parsed);
+        throw new Error("Server response missing paymentUrl");
+      }
+      return parsed;
     },
     onSuccess: async (data, bookingId) => {
+      console.log("[Payment] onSuccess, opening url:", data.paymentUrl);
       onClose();
-      if (Capacitor.isNativePlatform()) {
-        await Browser.open({ url: data.paymentUrl });
-      } else {
-        window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+      try {
+        if (Capacitor.isNativePlatform()) {
+          await Browser.open({ url: data.paymentUrl });
+        } else {
+          window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+        }
+        console.log("[Payment] browser open succeeded");
+      } catch (e) {
+        console.log("[Payment] browser open failed, falling back to window.location", e);
+        window.location.href = data.paymentUrl;
       }
     },
     onError: (error, bookingId) => {
-      // If payment link fails, still go to confirmation (booking was already created)
+      console.log("[Payment] onError:", error);
       toast({
         title: "Payment setup failed",
-        description: "Your booking is confirmed — you can pay from the bookings page.",
+        description: (error as Error)?.message || "Your booking is confirmed — you can pay from the bookings page.",
         variant: "destructive",
       });
       onClose();
