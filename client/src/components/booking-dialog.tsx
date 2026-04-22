@@ -188,19 +188,27 @@ export default function BookingDialog({
       onClose();
 
       if (Capacitor.isNativePlatform()) {
+        // Register browserFinished listener in a non-blocking way so a
+        // failure here can NEVER prevent Browser.open from being called.
         try {
-          const finishedListener = await Browser.addListener("browserFinished", () => {
-            console.log("[Payment] browserFinished event fired (user dismissed or deep link closed it)");
-            finishedListener.remove();
-          });
-          console.log("[Payment] opening in-app browser (fullscreen)");
-          await Browser.open({
-            url: data.paymentUrl,
-            presentationStyle: "fullscreen",
-          });
+          Browser.addListener("browserFinished", () => {
+            console.log("[Payment] browserFinished event fired");
+          }).catch((e) => console.log("[Payment] browserFinished listener add failed:", e));
+        } catch (e) {
+          console.log("[Payment] browserFinished listener threw sync:", e);
+        }
+
+        console.log("[Payment] opening in-app browser, url=", data.paymentUrl);
+        try {
+          await Browser.open({ url: data.paymentUrl });
           console.log("[Payment] Browser.open resolved");
         } catch (e) {
-          console.log("[Payment] in-app browser failed:", e);
+          console.log("[Payment] Browser.open threw:", e);
+          toast({
+            title: "Could not open payment page",
+            description: String((e as Error)?.message || e),
+            variant: "destructive",
+          });
         }
       } else {
         console.log("[Payment] fallback window.location triggered (web)");
