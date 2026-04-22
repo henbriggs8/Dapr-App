@@ -377,6 +377,7 @@ export default function QuickRebook({
           provider={provider}
           serviceId={selectedSuggestion.service.id}
           timeSlotId={selectedSuggestion.timeSlot?.id || 0}
+          timeSlot={selectedSuggestion.timeSlot as any}
           prefillData={{
             selectedVehicle: selectedSuggestion.vehicle,
             selectedLocation: {
