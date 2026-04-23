@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-const dapprLogo = "/dapr-logo.png";
+const dapprLogo = "/dapr-logo.svg";
 
 export default function HomeDesktop() {
   const [scrolled, setScrolled] = useState(false);
