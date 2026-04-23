@@ -268,16 +268,21 @@ function DeepLinkHandler() {
                 url.searchParams.get("bookingId") ||
                 url.searchParams.get("booking") ||
                 (() => { try { return sessionStorage.getItem("pendingPaymentBookingId"); } catch { return null; } })();
+              console.log("[Payment] success redirect detected, bookingId=", bookingId);
               try { await Browser.close(); } catch {}
               try { sessionStorage.removeItem("pendingPaymentBookingId"); } catch {}
               if (bookingId) {
+                console.log("[Payment] navigating to Track for bookingId=", bookingId);
                 window.history.pushState({}, "", `/tracking?booking=${bookingId}`);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
             } else if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
+              console.log("[Payment] cancel redirect detected, returning to booking");
               try { await Browser.close(); } catch {}
             }
-          } catch {}
+          } catch (e) {
+            console.log("[Payment] appUrlOpen handler error", e);
+          }
         });
         cleanup = () => { handle.remove(); };
       } catch {}

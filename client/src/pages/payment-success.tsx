@@ -69,8 +69,11 @@ export default function PaymentSuccessPage() {
           // in-app browser and route to the tracking page.
           try {
             const deepLink = `com.autodapper.app://payment-success?bookingId=${bookingId}`;
+            console.log("[Payment] payment verified, firing success deep link:", deepLink);
             setTimeout(() => { window.location.href = deepLink; }, 250);
-          } catch {}
+          } catch (e) {
+            console.log("[Payment] success deep link failed", e);
+          }
         } else {
           // Payment is still processing
           toast({
