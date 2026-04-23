@@ -141,69 +141,28 @@ export default function BookingDialog({
   // Payment mutation — calls Square to generate a checkout link
   const paymentMutation = useMutation({
     mutationFn: async (bookingId: number) => {
-      console.log("[Payment] mutationFn start, bookingId=", bookingId);
-      const token = await getToken().catch((e) => { console.log("[Payment] getToken error", e); return null; });
-      console.log("[Payment] token present?", !!token);
+      const token = await getToken().catch(() => null);
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const url = resolveUrl(`/api/bookings/${bookingId}/create-payment`);
-      console.log("[Payment] POST", url);
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify({}),
-        });
-      } catch (e) {
-        console.log("[Payment] fetch threw", e);
-        throw new Error("Network error: " + (e as Error).message);
-      }
-      console.log("[Payment] response status", res.status);
-      if (!res.ok) {
-        const text = await res.text();
-        console.log("[Payment] response body (error)", text);
-        throw new Error(`HTTP ${res.status}: ${text}`);
-      }
-      const body = await res.text();
-      console.log("[Payment] response body (success)", body);
-      let parsed: { paymentUrl: string };
-      try {
-        parsed = JSON.parse(body);
-      } catch (e) {
-        console.log("[Payment] JSON parse failed", e);
-        throw new Error("Invalid JSON from server: " + body.slice(0, 200));
-      }
-      if (!parsed.paymentUrl) {
-        console.log("[Payment] missing paymentUrl in", parsed);
-        throw new Error("Server response missing paymentUrl");
-      }
+      const res = await fetch(resolveUrl(`/api/bookings/${bookingId}/create-payment`), {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const parsed = await res.json() as { paymentUrl: string };
+      if (!parsed.paymentUrl) throw new Error("Server response missing paymentUrl");
       return parsed;
     },
     onSuccess: async (data, bookingId) => {
-      console.log("[Payment] checkout URL created:", data.paymentUrl, "for bookingId:", bookingId);
       try { sessionStorage.setItem("pendingPaymentBookingId", String(bookingId)); } catch {}
-      console.log("[Payment] booking modal closed");
       onClose();
 
       if (Capacitor.isNativePlatform()) {
-        // Register browserFinished listener in a non-blocking way so a
-        // failure here can NEVER prevent Browser.open from being called.
-        try {
-          Browser.addListener("browserFinished", () => {
-            console.log("[Payment] browserFinished event fired");
-          }).catch((e) => console.log("[Payment] browserFinished listener add failed:", e));
-        } catch (e) {
-          console.log("[Payment] browserFinished listener threw sync:", e);
-        }
-
-        console.log("[Payment] opening in-app browser, url=", data.paymentUrl);
         try {
           await Browser.open({ url: data.paymentUrl });
-          console.log("[Payment] Browser.open resolved");
         } catch (e) {
-          console.log("[Payment] Browser.open threw:", e);
           toast({
             title: "Could not open payment page",
             description: String((e as Error)?.message || e),
@@ -211,12 +170,10 @@ export default function BookingDialog({
           });
         }
       } else {
-        console.log("[Payment] fallback window.location triggered (web)");
         window.location.href = data.paymentUrl;
       }
     },
     onError: (error, bookingId) => {
-      console.log("[Payment] onError:", error);
       toast({
         title: "Payment setup failed",
         description: (error as Error)?.message || "Your booking is confirmed — you can pay from the bookings page.",

@@ -260,7 +260,6 @@ function DeepLinkHandler() {
         const { Browser } = await import("@capacitor/browser");
 
         const handle = await CapApp.addListener("appUrlOpen", async (event) => {
-          console.log("[Payment] appUrlOpen received:", event.url);
           try {
             const url = new URL(event.url);
             const host = url.host || url.pathname.replace(/^\/+/, "").split("/")[0];
@@ -269,26 +268,19 @@ function DeepLinkHandler() {
                 url.searchParams.get("bookingId") ||
                 url.searchParams.get("booking") ||
                 (() => { try { return sessionStorage.getItem("pendingPaymentBookingId"); } catch { return null; } })();
-              console.log("[Payment] success redirect detected, resolved bookingId:", bookingId);
-              try { await Browser.close(); } catch (e) { console.log("[Payment] Browser.close error", e); }
+              try { await Browser.close(); } catch {}
               try { sessionStorage.removeItem("pendingPaymentBookingId"); } catch {}
               if (bookingId) {
-                console.log("[Payment] navigating to tracking page for booking", bookingId);
                 window.history.pushState({}, "", `/tracking?booking=${bookingId}`);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
             } else if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
-              console.log("[Payment] cancel redirect detected");
               try { await Browser.close(); } catch {}
             }
-          } catch (e) {
-            console.log("[Payment] failed to handle appUrlOpen", e);
-          }
+          } catch {}
         });
         cleanup = () => { handle.remove(); };
-      } catch (e) {
-        console.log("[Payment] DeepLinkHandler init error", e);
-      }
+      } catch {}
     })();
     return () => { if (cleanup) cleanup(); };
   }, []);
