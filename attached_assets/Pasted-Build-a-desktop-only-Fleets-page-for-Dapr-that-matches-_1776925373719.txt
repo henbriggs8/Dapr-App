@@ -1,0 +1,81 @@
+Build a desktop-only Fleets page for Dapr that matches the same premium dark design language as the homepage, but with a stronger B2B / enterprise feel.
+
+Main goals:
+1. Show companies we already work with
+2. Add a fleet pricing estimator with a vehicle slider and service selector
+3. Add a quote form
+4. Make the page feel premium, trustworthy, and built for business clients
+
+Page structure:
+- Hero section with headline, subheadline, CTA, and pricing estimator card
+- “Trusted by” logo/company section
+- Pricing estimator section
+- Quote form
+- Benefits / why Dapr for fleets
+- Fleet use cases
+- Case study or proof section
+- FAQ
+- Final CTA
+
+Design direction:
+- Desktop only
+- Keep the premium dark look from the homepage
+- Purple accents
+- Strong spacing and clear hierarchy
+- More B2B trust than consumer app energy
+- Use max-width containers and a polished layout
+
+Pricing estimator requirements:
+- Slider for number of vehicles from 1 to 200+
+- Use labeled tiers like 1–5, 6–15, 16–40, 41–75, 76–120, 121–200, 200+
+- Service selector pills:
+  - Exterior Wash
+  - Wash + Interior Wipe Down
+  - Maintenance Detail
+  - Full Detail
+  - Custom Fleet Program
+- Display result as:
+  - Starting at $X / vehicle
+  - Estimated from $Y per service cycle
+- Add disclaimer:
+  - Calculator shows starting rates only. Final pricing depends on vehicle size, condition, service frequency, location, and site access after review.
+- CTA button under calculator:
+  - Get Exact Fleet Quote
+
+Use this pricing logic for now:
+Base prices:
+- Exterior Wash = 55
+- Wash + Interior Wipe Down = 79
+- Maintenance Detail = 109
+- Full Detail = 179
+- Custom Fleet Program = custom / contact sales
+
+Volume multipliers:
+- 1–5 = 1.00
+- 6–15 = 0.94
+- 16–40 = 0.88
+- 41–75 = 0.83
+- 76–120 = 0.78
+- 121–200 = 0.74
+- 200+ = custom / contact sales
+
+Behavior:
+- Update the displayed starting price live when slider or service changes
+- Auto-fill the quote form with the selected vehicle count and service
+- Smooth scroll from estimator CTA to the quote form
+
+Quote form fields:
+- Name
+- Company
+- Email
+- Phone
+- ZIP / service area
+- Number of vehicles
+- Service needed
+- Service frequency
+- Notes
+
+Content direction:
+- This page should feel like a fleet sales landing page, not a consumer booking page
+- Prioritize credibility, clarity, and conversion
+- Make it look intentionally designed for desktop
