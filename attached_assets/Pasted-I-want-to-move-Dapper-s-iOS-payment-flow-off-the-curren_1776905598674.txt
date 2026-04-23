@@ -1,0 +1,63 @@
+I want to move Dapper’s iOS payment flow off the current Square hosted checkout page and onto Square’s In-App Payments SDK so the checkout feels native and stays inside the app.
+
+Goal:
+- Keep Square as the payment processor
+- Replace the browser-based Square checkout flow with a true in-app payment experience
+- Keep the user inside Dapper the whole time
+- After successful payment, go directly to the tracking page for that booking
+- Preserve auth/session the whole time
+
+Current state:
+- We currently open a Square-hosted checkout URL in an in-app browser
+- It works, but it still feels webview/browser-like
+- I want a native-feeling payment form instead
+
+What I want you to do:
+1. Evaluate whether Square In-App Payments SDK is realistic in our current Capacitor iOS app
+2. If it is, implement the best architecture for it
+3. If a native bridge is required, build that bridge cleanly
+4. Replace the current Book & Pay flow with a native in-app card entry flow
+5. Keep the existing booking creation logic, but update payment handling to use the Square In-App Payments SDK tokenization flow
+
+Expected payment flow:
+1. User selects service/time/address
+2. User taps Book & Pay
+3. Native in-app payment UI opens inside Dapper
+4. User enters card / Apple Pay if available
+5. SDK returns secure single-use token / nonce
+6. App sends that token to our backend
+7. Backend creates the Square payment using the Payments API
+8. On success, app routes directly to the tracking page for that booking
+9. On failure, user stays in the booking flow and sees a clear error message
+
+Technical requirements:
+- Do not use Square-hosted checkout URLs for this new flow
+- Do not open Safari or an in-app browser for payment
+- Use native iOS UI as much as possible
+- Support Apple Pay too if feasible
+- Keep this secure and PCI-safe by following Square’s recommended flow
+- Do not ever send raw card data through our backend
+- Backend should only receive the secure token / nonce and then call Square Payments API
+
+Please give me:
+A. A recommended implementation plan for our current stack
+B. Whether this requires a custom Capacitor plugin / iOS native bridge
+C. Exactly what backend endpoints need to change
+D. What frontend screens/components need to change
+E. Any limitations or blockers with Square In-App Payments SDK in a Capacitor app
+F. Whether this is better done as a phased rollout:
+   - Phase 1: native card entry
+   - Phase 2: Apple Pay
+   - Phase 3: polish + better tracking handoff
+
+If there are major constraints with Square In-App Payments SDK inside Capacitor, then propose the cleanest fallback architecture while still making checkout feel as native as possible.
+
+Also include temporary logs for:
+- payment UI opened
+- tokenization success/failure
+- backend payment request started
+- backend payment success/failure
+- booking finalized
+- navigation to tracking page
+
+I want you to think like a senior mobile engineer here and choose the cleanest long-term architecture, not just the quickest hack.
