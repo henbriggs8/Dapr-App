@@ -125,7 +125,7 @@ export default function HomeDesktop() {
           {/* Hero Visual */}
           <div className="relative w-full aspect-square lg:aspect-auto lg:h-[700px] rounded-3xl border border-white/10 bg-[#0a0a0a] overflow-hidden shadow-2xl">
             <img
-              src="/desktop/hero-car.png"
+              src="/desktop/hero-car.jpg"
               alt="Dapper Wash"
               className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity"
             />
