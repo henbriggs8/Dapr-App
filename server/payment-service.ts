@@ -51,8 +51,13 @@ export async function createPaymentLink(
       throw new Error('Failed to create payment link in Square');
     }
 
+    // Prefer longUrl (direct checkout page) over url (square.link short
+    // redirector) — the short redirector causes a blank screen in iOS
+    // SFSafariViewController during the 302 redirect chain.
+    const checkoutUrl = (response.paymentLink as any).longUrl || response.paymentLink.url;
+
     return {
-      url: response.paymentLink.url,
+      url: checkoutUrl,
       orderId: response.paymentLink.orderId || '',
     };
   } catch (error: any) {
