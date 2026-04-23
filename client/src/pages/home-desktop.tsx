@@ -177,7 +177,7 @@ export default function HomeDesktop() {
             Trusted by fleets &amp; professionals at
           </p>
           <div className="flex flex-wrap justify-center gap-12 lg:gap-24 opacity-40 grayscale">
-            {["Acme Corp", "Global Tech", "Pinnacle", "Nexus", "Stark Ind"].map((name, i) => (
+            {["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid", "Podium"].map((name, i) => (
               <div key={i} className="text-xl font-bold tracking-tighter">
                 {name}
               </div>
