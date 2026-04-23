@@ -33,7 +33,7 @@ export default function HomeDesktop() {
         <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
             <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
-              <img src={dapprLogo} alt="Dapper" className="h-9 w-auto" />
+              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button onClick={goServices} className="hover:text-white transition-colors" data-testid="link-services">Services</button>
@@ -449,7 +449,7 @@ export default function HomeDesktop() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1280px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-7 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq">FAQ</button>
             <button onClick={goCorporate} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
