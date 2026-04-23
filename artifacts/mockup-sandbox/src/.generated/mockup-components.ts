@@ -6,5 +6,7 @@ export const modules: ModuleMap = {
   "./components/mockups/home-desktop-showroom/Showroom.tsx": () => import("../components/mockups/home-desktop-showroom/Showroom.tsx"),
   "./components/mockups/services-page/CarGuy.tsx": () => import("../components/mockups/services-page/CarGuy.tsx"),
   "./components/mockups/services-page/Modern.tsx": () => import("../components/mockups/services-page/Modern.tsx"),
+  "./components/mockups/services-page/RefinedA.tsx": () => import("../components/mockups/services-page/RefinedA.tsx"),
+  "./components/mockups/services-page/RefinedB.tsx": () => import("../components/mockups/services-page/RefinedB.tsx"),
   "./components/mockups/services-page/UberMinimal.tsx": () => import("../components/mockups/services-page/UberMinimal.tsx")
 };
