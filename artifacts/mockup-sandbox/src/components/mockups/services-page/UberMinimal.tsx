@@ -60,8 +60,8 @@ export function UberMinimal() {
             const Icon = service.Icon;
             return (
               <div key={index} className="flex gap-4 py-6 border-b border-gray-200 cursor-pointer group">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
-                  <Icon className="w-4 h-4" strokeWidth={1.75} />
+                <div className="shrink-0 w-10 h-10 rounded-full bg-[#8c52ff]/8 ring-1 ring-[#8c52ff]/15 flex items-center justify-center group-hover:bg-[#8c52ff]/15 group-hover:ring-[#8c52ff]/30 transition-colors">
+                  <Icon className="w-4 h-4 text-[#8c52ff]" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
@@ -119,8 +119,8 @@ export function UberMinimal() {
             const Icon = addon.Icon;
             return (
               <div key={index} className="flex items-center gap-4 py-5 border-b border-gray-200 cursor-pointer group">
-                <div className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
-                  <Icon className="w-4 h-4" strokeWidth={1.75} />
+                <div className="shrink-0 w-9 h-9 rounded-full bg-[#8c52ff]/8 ring-1 ring-[#8c52ff]/15 flex items-center justify-center group-hover:bg-[#8c52ff]/15 group-hover:ring-[#8c52ff]/30 transition-colors">
+                  <Icon className="w-4 h-4 text-[#8c52ff]" strokeWidth={1.75} />
                 </div>
                 <span className="flex-1 text-base">{addon.name}</span>
                 <div className="flex items-center gap-3">
