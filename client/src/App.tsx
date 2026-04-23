@@ -41,6 +41,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
 import { HomeWithOnboarding } from "@/components/home-with-onboarding";
 import TabNavigation from "@/components/tab-navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthGate } from "./components/auth-gate";
 
 function AdminRoute({
@@ -163,17 +164,26 @@ function Router() {
         {user?.isProvider ? (
           <ProviderRoute path="/" component={ProviderDashboard} />
         ) : (
-          <ProtectedRoute path="/" component={HomeWithOnboarding} />
+          <Route path="/" component={HomeWithOnboarding} />
         )}
         
         {/* Catch-all route for 404 */}
         <Route component={NotFound} />
       </Switch>
       
-      {/* Show tab navigation for regular users only, not during onboarding */}
-      {user && !user.isAdmin && !user.isProvider && !location.startsWith('/onboarding') && <TabNavigation />}
+      {/* Show tab navigation for regular users on mobile only, not during onboarding */}
+      <MobileTabNavigation location={location} />
     </>
   );
+}
+
+function MobileTabNavigation({ location }: { location: string }) {
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
+  if (!isMobile) return null;
+  if (!user || user.isAdmin || user.isProvider) return null;
+  if (location.startsWith('/onboarding')) return null;
+  return <TabNavigation />;
 }
 
 function ClerkSyncWrapper({ children }: { children: ReactNode }) {
