@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
+const dapprLogo = "/dapr-logo.png";
+
 export default function HomeDesktop() {
   const [scrolled, setScrolled] = useState(false);
   const [, setLocation] = useLocation();
@@ -30,11 +32,8 @@ export default function HomeDesktop() {
       >
         <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center gap-2" data-testid="link-home">
-              <div className="w-8 h-8 rounded-lg bg-[#8c52ff] flex items-center justify-center">
-                <span className="font-bold text-lg text-white">D</span>
-              </div>
-              <span className="text-xl font-bold tracking-tight">Dapper</span>
+            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
+              <img src={dapprLogo} alt="Dapper" className="h-9 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button onClick={goServices} className="hover:text-white transition-colors" data-testid="link-services">Services</button>
@@ -450,12 +449,7 @@ export default function HomeDesktop() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1280px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-[#8c52ff] flex items-center justify-center">
-              <span className="font-bold text-xs text-white">D</span>
-            </div>
-            <span className="font-bold tracking-tight text-white/80">Dapper</span>
-          </div>
+          <img src={dapprLogo} alt="Dapper" className="h-7 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq">FAQ</button>
             <button onClick={goCorporate} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
