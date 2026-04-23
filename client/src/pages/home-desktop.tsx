@@ -176,12 +176,13 @@ export default function HomeDesktop() {
           <p className="text-center text-sm font-medium text-white/40 mb-8 uppercase tracking-widest">
             Trusted by fleets &amp; professionals at
           </p>
-          <div className="flex flex-wrap justify-center gap-12 lg:gap-24 opacity-40 grayscale">
-            {["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid", "Podium"].map((name, i) => (
+          <div className="flex flex-wrap items-center justify-center gap-12 lg:gap-24 opacity-40 grayscale">
+            {["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid"].map((name, i) => (
               <div key={i} className="text-xl font-bold tracking-tighter">
                 {name}
               </div>
             ))}
+            <img src="/podium-logo.png" alt="Podium" className="h-6 w-auto invert" />
           </div>
         </div>
       </section>
