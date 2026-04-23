@@ -1,0 +1,36 @@
+The mobile/iPhone version of autodapper.com looks good, but the desktop/web version feels stretched because it’s basically the mobile layout scaled up. I want you to make the site fully responsive for desktop, tablet, and mobile without hurting the current mobile design.
+
+Goals:
+1. Keep the mobile version mostly the same.
+2. Redesign the desktop layout so it feels intentional, not like a blown-up phone screen.
+3. Use responsive breakpoints and proper max-width containers.
+4. Improve spacing, typography scaling, image sizing, and section layout for larger screens.
+5. Make the site feel premium and clean, similar to a modern service marketplace.
+
+Please make these specific changes:
+- Add a centered max-width container for desktop content (something around 1200–1440px max width).
+- Prevent text, buttons, cards, and images from stretching too wide on large screens.
+- Use responsive breakpoints for mobile, tablet, laptop, and desktop.
+- Convert stacked mobile sections into better desktop layouts where appropriate:
+  - hero section should have better text width and image balance
+  - cards/services can become 2-column, 3-column, or split layouts on desktop
+  - booking CTA sections should feel more structured and centered
+- Adjust font sizes, line heights, padding, and margins for desktop so everything has more breathing room.
+- Make buttons and CTAs stay prominent without becoming oversized.
+- Fix any full-width sections that look awkward or too tall on desktop.
+- Make sure images keep good aspect ratios and don’t appear stretched.
+- Audit the navbar and footer so they look native to desktop.
+- Keep the brand feeling premium, dark, clean, and simple.
+
+Important:
+- Do not just scale the mobile version up.
+- Do not break the current iPhone/mobile experience.
+- Use Tailwind responsive classes cleanly.
+- Prioritize visual hierarchy and good desktop UX over preserving every mobile layout exactly.
+- If a section works better with a different desktop arrangement, update it.
+
+Please go page by page and clean up any section that feels like a stretched mobile screen.
+After making the changes, give me:
+1. a summary of what was changed
+2. the main responsive breakpoints used
+3. any sections that were restructured for desktop

@@ -1,0 +1,74 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "n7WB4pFFr695ZVdoWbjkw"
+uri = "file://artifacts/mockup-sandbox/public/images/showroom-hero.png"
+type = "image"
+title = "Cinematic black sports car hero"
+
+[[generated]]
+id = "U-TOIP3bIChm33jv5yy2n"
+uri = "file://artifacts/mockup-sandbox/public/images/showroom-wheel.png"
+type = "image"
+title = "Polished wheel close up"
+
+[[generated]]
+id = "fPB404IosW21iUUqUOw-m"
+uri = "file://artifacts/mockup-sandbox/public/images/showroom-interior.png"
+type = "image"
+title = "Moody luxury car interior"
+
+[[generated]]
+id = "eZYtQOa_iPZeotL_zrZA5"
+uri = "file://artifacts/mockup-sandbox/public/images/showroom-process.png"
+type = "image"
+title = "Detailer applying ceramic coating"
+
+[[generated]]
+id = "fbPNiV1ywuFjI_ZHcYBcC"
+uri = "file://artifacts/mockup-sandbox/public/images/hero-concierge.png"
+type = "image"
+title = "hero luxury car driveway"
+
+[[generated]]
+id = "QAQ6r8TSQwGTpHEJMuHUT"
+uri = "file://artifacts/mockup-sandbox/public/images/detailer-1.png"
+type = "image"
+title = "detailer portrait one"
+
+[[generated]]
+id = "l0aQAoUuilsnI0nZe63Ab"
+uri = "file://artifacts/mockup-sandbox/public/images/detailer-2.png"
+type = "image"
+title = "detailer portrait two"
+
+[[generated]]
+id = "p_whhQf5iUkcT28inRuWh"
+uri = "file://artifacts/mockup-sandbox/public/images/detail-macro.png"
+type = "image"
+title = "car detail macro shot"
+
+[[generated]]
+id = "yUtInQ6BN_zfv611mM39K"
+uri = "file://artifacts/mockup-sandbox/public/images/hero-car.png"
+type = "image"
+title = "Hero sports car detail"
+
+[[generated]]
+id = "-eJUgg_a2eHnvVGm3GUaC"
+uri = "file://artifacts/mockup-sandbox/public/images/dark-map.png"
+type = "image"
+title = "Dark mode city map"
+
+[[generated]]
+id = "0H8uwpyDySRnqtzeqpg6F"
+uri = "file://artifacts/mockup-sandbox/public/images/interior-detail.png"
+type = "image"
+title = "Interior car detailing"
+
+[[generated]]
+id = "ziupjY4hC_G_hfS_fwc7x"
+uri = "file://artifacts/mockup-sandbox/public/images/sparkling-car.png"
+type = "image"
+title = "Sparkling clean car"
