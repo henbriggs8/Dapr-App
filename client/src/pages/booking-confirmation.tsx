@@ -167,6 +167,32 @@ export default function BookingConfirmation() {
           </div>
         </div>
 
+        {/* Add-ons selected */}
+        {Array.isArray(booking.addOns) && booking.addOns.length > 0 && (
+          <div
+            className="w-full max-w-sm mt-4 border border-gray-200 rounded-2xl px-4 py-4"
+            data-testid="confirmation-addons"
+          >
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Add-ons</p>
+            <ul className="space-y-1.5">
+              {(booking.addOns as Array<{ id?: string; name?: string; price?: number }>).map((addon, idx) => (
+                <li key={addon?.id ?? idx} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-900 truncate pr-2">{addon?.name ?? "Add-on"}</span>
+                  <span className="text-gray-500 shrink-0">
+                    {typeof addon?.price === "number" ? `+$${addon.price}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {typeof booking.totalPrice === "number" && (
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                <span className="font-semibold text-gray-900">Total</span>
+                <span className="font-semibold text-gray-900">${booking.totalPrice}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Booking ID */}
         <p className="mt-4 text-xs text-gray-400">Booking #{booking.id}</p>
       </div>

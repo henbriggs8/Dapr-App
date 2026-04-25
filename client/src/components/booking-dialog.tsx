@@ -26,7 +26,7 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
 import { ADD_ONS, getSelectedAddOnIds, clearSelectedAddOns } from "@/utils/add-ons";
 import { useLocation } from "wouter";
@@ -70,17 +70,26 @@ export default function BookingDialog({
   const parsedAddress = savedAddress ? JSON.parse(savedAddress) : null;
   const parsedVehicle = savedVehicle ? JSON.parse(savedVehicle) : null;
   
-  // Define add-ons — initialized from booking page selections in localStorage
-  const [addOns, setAddOns] = useState<{
-    id: string;
-    name: string;
-    price: number;
-    selected: boolean;
-  }[]>(() => {
+  // Track which add-ons are selected by id. Initialised from any selections
+  // remembered in localStorage when the customer arrived from /services.
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(() => {
     const preSelected = getSelectedAddOnIds();
-    return ADD_ONS.map((a) => ({ ...a, selected: preSelected.includes(a.id) }));
+    return new Set(preSelected);
   });
-  
+
+  const selectedAddOns = useMemo(
+    () => ADD_ONS.filter((a) => selectedAddOnIds.has(a.id)),
+    [selectedAddOnIds],
+  );
+  const addOnTotal = useMemo(
+    () => selectedAddOns.reduce((sum, a) => sum + a.price, 0),
+    [selectedAddOns],
+  );
+  const addOnExtraMinutes = useMemo(
+    () => selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0),
+    [selectedAddOns],
+  );
+
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
   
@@ -187,11 +196,12 @@ export default function BookingDialog({
   
   // Toggle add-on selection
   const toggleAddOn = (id: string) => {
-    setAddOns(
-      addOns.map((addon) =>
-        addon.id === id ? { ...addon, selected: !addon.selected } : addon
-      )
-    );
+    setSelectedAddOnIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
   
   // Vehicle size selection handler (kept for backward compatibility but not used)
@@ -235,16 +245,13 @@ export default function BookingDialog({
   useEffect(() => {
     if (service && service.price) {
       const basePrice = service.price || 0;
-      const addOnTotal = addOns
-        .filter((addon) => addon.selected)
-        .reduce((sum, addon) => sum + addon.price, 0);
-      
+
       // Calculate vehicle size adjustments using percentage multipliers
       const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + (basePrice * vehicle.sizeMultiplier), 0);
-      
+
       setTotalPrice(basePrice + addOnTotal + vehicleSizeTotal);
     }
-  }, [service, addOns, vehicles]);
+  }, [service, addOnTotal, vehicles]);
   
   // Fetch the selected time slot
   const { data: fetchedTimeSlot, isLoading: timeSlotLoading } = useQuery<TimeSlot>({
@@ -398,14 +405,11 @@ export default function BookingDialog({
       data.serviceLongitude = serviceCoordinates.longitude;
     }
     
-    // Calculate add-ons total if any are selected
-    const selectedAddOns = addOns.filter(addon => addon.selected);
-    const addOnTotal = selectedAddOns.reduce((sum, addon) => sum + addon.price, 0);
+    // Send add-on IDs only — the server validates against the shared catalogue
+    // and recomputes addOnTotal, totalPrice, and the reserved extra time.
     const vehicleSizeTotal = vehicles.reduce((sum, vehicle) => sum + vehicle.sizeMultiplier, 0);
-    
-    // Include comprehensive booking information
-    data.addOns = selectedAddOns;
-    data.addOnTotal = addOnTotal;
+
+    data.addOnIds = Array.from(selectedAddOnIds);
     data.vehicleSizeTotal = vehicleSizeTotal;
     data.vehicles = vehicles;
     data.totalPrice = Math.round(totalPrice); // Round to integer for database
@@ -687,52 +691,77 @@ export default function BookingDialog({
             </div>
             
             {/* Add-ons section */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium">Service Add-ons</h3>
+            <div className="border rounded-lg p-4" data-testid="addons-step">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-medium">Add-ons</h3>
                 <div className="flex items-center">
                   <Icon icon={Tag} size="sm" className="mr-1 text-[#8c52ff]" />
-                  <span className="text-sm text-muted-foreground">Select to customize your service</span>
+                  <span className="text-sm text-muted-foreground">Optional extras</span>
                 </div>
               </div>
-              
+              <p className="text-xs text-muted-foreground mb-3">
+                Toggle any combination — extra time will be reserved automatically.
+              </p>
+
               <div className="grid gap-2">
-                {addOns.map((addon) => (
-                  <div key={addon.id} className="flex items-center justify-between border rounded-md p-3 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id={addon.id}
-                        checked={addon.selected}
-                        onCheckedChange={() => toggleAddOn(addon.id)}
-                        className="mr-3"
-                      />
-                      <div>
-                        <Label htmlFor={addon.id} className="font-medium cursor-pointer">
-                          {addon.name}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">+${addon.price}</p>
+                {ADD_ONS.map((addon) => {
+                  const selected = selectedAddOnIds.has(addon.id);
+                  return (
+                    <label
+                      key={addon.id}
+                      htmlFor={`addon-${addon.id}`}
+                      className={`flex items-start justify-between gap-3 border rounded-md p-3 cursor-pointer transition-colors ${
+                        selected ? "border-[#8c52ff] bg-[#8c52ff]/5" : "hover:bg-muted/30"
+                      }`}
+                      data-testid={`addon-option-${addon.id}`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <Checkbox
+                          id={`addon-${addon.id}`}
+                          checked={selected}
+                          onCheckedChange={() => toggleAddOn(addon.id)}
+                          className="mt-1"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm leading-snug">{addon.name}</p>
+                          <p className="text-xs text-muted-foreground leading-snug mt-0.5">
+                            {addon.description}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                            <Icon icon={Clock} size="xs" />+{addon.durationMinutes} min reserved
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${addon.selected ? 'bg-[#8c52ff] text-white' : 'bg-muted'}`}>
-                      {addon.selected && <Icon icon={Plus} size="xs" />}
-                    </div>
-                  </div>
-                ))}
+                      <p className="text-sm font-bold text-[#8c52ff] shrink-0">+${addon.price}</p>
+                    </label>
+                  );
+                })}
               </div>
-              
-              {/* Show total when add-ons are selected */}
-              {addOns.some(addon => addon.selected) && (
-                <div className="mt-4 p-3 bg-muted/30 rounded-md">
+
+              {/* Running total when add-ons are selected */}
+              {selectedAddOns.length > 0 && (
+                <div
+                  className="mt-4 p-3 bg-muted/30 rounded-md"
+                  data-testid="addons-summary"
+                >
                   <div className="flex justify-between text-sm mb-2">
                     <span>Base service price:</span>
                     <span>${service?.price}</span>
                   </div>
-                  {addOns.filter(a => a.selected).map(addon => (
+                  {selectedAddOns.map((addon) => (
                     <div key={addon.id} className="flex justify-between text-sm">
                       <span>{addon.name}:</span>
                       <span>+${addon.price}</span>
                     </div>
                   ))}
+                  <div className="flex justify-between text-sm mt-1 text-muted-foreground">
+                    <span>Add-ons subtotal:</span>
+                    <span>+${addOnTotal}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+                    <span>Extra time reserved:</span>
+                    <span>+{addOnExtraMinutes} min</span>
+                  </div>
                   <div className="flex justify-between font-bold mt-2 pt-2 border-t">
                     <span>Total price:</span>
                     <span>${totalPrice}</span>
@@ -753,7 +782,8 @@ export default function BookingDialog({
                 const values = form.getValues();
                 console.log("Form values:", values);
                 
-                // Create booking data directly — use what the user entered in the address field
+                // Create booking data directly — use what the user entered in the address field.
+                // Send add-on IDs; the server validates and recomputes pricing.
                 const bookingData = {
                   serviceLocation: values.serviceLocation || user?.address || "",
                   serviceLocationType: values.serviceLocationType || "home",
@@ -762,8 +792,7 @@ export default function BookingDialog({
                   serviceId: serviceId,
                   timeSlotId: timeSlotId,
                   timestamp: timeSlot ? `${timeSlot.date}T${timeSlot.startTime}:00` : new Date().toISOString(),
-                  addOns: addOns,
-                  addOnTotal: addOns.filter(a => a.selected).reduce((sum, addon) => sum + addon.price, 0),
+                  addOnIds: Array.from(selectedAddOnIds),
                   vehicleSizeTotal: vehicles.reduce((sum, vehicle) => sum + vehicle.sizeMultiplier, 0),
                   vehicles: vehicles,
                   totalPrice: totalPrice,

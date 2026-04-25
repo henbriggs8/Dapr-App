@@ -470,13 +470,42 @@ export default function ProviderDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Icon icon={Clock} size="xs" className="text-gray-400 flex-shrink-0" />
-                      <p className="text-sm text-gray-500">{booking.date} at {booking.time}</p>
+                      <p className="text-sm text-gray-500">
+                        {booking.date} at {booking.time}
+                        {booking.serviceDuration ? ` · ${booking.serviceDuration} min` : ""}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Icon icon={DollarSign} size="xs" className="text-gray-400 flex-shrink-0" />
                       <p className="text-sm font-semibold text-black">{formatPrice(booking.totalPrice || 0)}</p>
                     </div>
                   </div>
+
+                  {/* Add-ons selected by the customer (job-sheet line items) */}
+                  {Array.isArray(booking.addOns) && booking.addOns.length > 0 && (
+                    <div
+                      className="mb-4 rounded-lg bg-[#faf7ff] border border-[#ece1ff] px-3 py-2"
+                      data-testid={`booking-addons-${booking.id}`}
+                    >
+                      <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-1.5">
+                        Add-ons
+                      </p>
+                      <ul className="space-y-1">
+                        {(booking.addOns as Array<{ id?: string; name?: string; price?: number; durationMinutes?: number }>).map((addon, idx) => (
+                          <li
+                            key={addon?.id ?? idx}
+                            className="flex items-center justify-between text-xs text-[#333]"
+                          >
+                            <span className="truncate pr-2">{addon?.name ?? "Add-on"}</span>
+                            <span className="text-[#666] shrink-0">
+                              {typeof addon?.durationMinutes === "number" ? `+${addon.durationMinutes} min · ` : ""}
+                              {typeof addon?.price === "number" ? `+$${addon.price}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Action buttons */}
                   {booking.status === 'pending_assignment' && (

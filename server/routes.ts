@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
+import { ADD_ONS, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
@@ -286,7 +287,35 @@ export function registerRoutes(app: Express): Server {
         serviceLatitude: req.body.serviceLatitude || null,
         serviceLongitude: req.body.serviceLongitude || null
       });
-  
+
+      // Resolve add-ons against the shared catalogue. Accept either an
+      // `addOnIds: string[]` or a legacy `addOns: [{id}]` payload from older
+      // clients. Pricing and duration are always recomputed server-side.
+      const incomingAddOnIds: unknown = Array.isArray(req.body.addOnIds)
+        ? req.body.addOnIds
+        : Array.isArray(req.body.addOns)
+          ? req.body.addOns
+              .map((a: any) => (a && typeof a === "object" ? a.id : a))
+              .filter((v: unknown): v is string => typeof v === "string")
+          : [];
+      const { addOns: resolvedAddOns, addOnTotal, addOnDurationMinutes } =
+        resolveBookingAddOns(incomingAddOnIds);
+
+      // Authoritative total = base service price + add-on subtotal. Anything
+      // beyond that (e.g. vehicle-size markup) is layered in by the client and
+      // sent as `totalPrice`; we never trust it to be lower than base+add-ons.
+      const service = await storage.getServiceById(bookingData.serviceId);
+      const basePrice = service?.price ?? 0;
+      const clientTotal = Number(req.body.totalPrice);
+      const minimumTotal = basePrice + addOnTotal;
+      const finalTotal = Number.isFinite(clientTotal) && clientTotal >= minimumTotal
+        ? Math.round(clientTotal)
+        : minimumTotal;
+
+      // Reserve extra time on the booking so detailers can plan accordingly.
+      const baseDuration = service?.duration ?? 0;
+      const totalDuration = baseDuration + addOnDurationMinutes;
+
       // Remove id from booking data since it's auto-generated
       const { id, ...bookingWithoutId } = bookingData;
       // Create a properly typed booking object with all required fields
@@ -317,7 +346,7 @@ export function registerRoutes(app: Express): Server {
         providerEarnings: null,
         startTime: null,
         endTime: null,
-        serviceDuration: null,
+        serviceDuration: totalDuration,
         
         // Assignment system fields
         assignedAt: null,
@@ -325,10 +354,14 @@ export function registerRoutes(app: Express): Server {
         rejectedAt: null,
         assignmentExpiry: null,
         previousProviders: [],
-        addOns: req.body.addOns || [],
-        addOnTotal: req.body.addOnTotal || 0,
-        totalPrice: req.body.totalPrice || null,
-        
+        addOns: resolvedAddOns,
+        addOnTotal,
+        totalPrice: finalTotal,
+
+        // Track the extra minutes contributed by add-ons so the assigned
+        // detailer's job sheet shows the reserved time bump.
+        extraTimeMinutes: addOnDurationMinutes,
+
         // Payment fields
         isPaid: false,
         paymentStatus: 'pending',
@@ -531,6 +564,11 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/services", async (req, res) => {
     const services = await storage.getServices();
     res.json(services);
+  });
+
+  // Add-ons catalogue (single source of truth shared with the frontend)
+  app.get("/api/add-ons", (_req, res) => {
+    res.json(ADD_ONS);
   });
 
   app.get("/api/services/:id", async (req, res) => {

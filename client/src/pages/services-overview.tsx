@@ -21,6 +21,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ADD_ONS } from "@shared/add-ons";
 
 const dapprLogo = "/dapr-logo.svg";
 
@@ -145,17 +146,6 @@ const TIERS: Tier[] = [
       "Heavily soiled vehicles may need additional time at our discretion",
     ],
   },
-];
-
-type AddOn = { name: string; price: number; desc: string };
-const ADD_ONS: AddOn[] = [
-  { name: "Leather Revive", price: 30, desc: "Conditioning treatment to soften, protect, and restore leather seats." },
-  { name: "Clay Bar Decontamination", price: 70, desc: "Removes embedded contaminants for a glass-smooth paint surface." },
-  { name: "Engine Bay Detail", price: 50, desc: "Degrease and dress the engine bay for a like-new look under the hood." },
-  { name: "Excessive Pet Hair Removal", price: 25, desc: "Heavy-duty extraction for stubborn embedded fur on seats and carpets." },
-  { name: "Extra Sanitization", price: 20, desc: "Antibacterial treatment across high-touch interior surfaces." },
-  { name: "Steam Extraction", price: 40, desc: "Deep extraction on carpets and upholstery for tough stains and odors." },
-  { name: "Child Car Seat Clean", price: 30, desc: "Crumbs, spills, and grime cleaned out of every nook of the seat." },
 ];
 
 type Differentiator = { icon: LucideIcon; title: string; body: string };
@@ -428,7 +418,7 @@ function DesktopServices() {
                   </div>
                   <p className="text-base font-bold text-[#8c52ff] shrink-0">${a.price}</p>
                 </div>
-                <p className="text-sm text-white/55 leading-relaxed pl-12">{a.desc}</p>
+                <p className="text-sm text-white/55 leading-relaxed pl-12">{a.description}</p>
               </div>
             ))}
           </div>
@@ -739,7 +729,7 @@ function MobileServices() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-[#111] mb-0.5">{a.name}</p>
-                      <p className="text-[12px] text-[#888] leading-snug">{a.desc}</p>
+                      <p className="text-[12px] text-[#888] leading-snug">{a.description}</p>
                     </div>
                     <p className="text-[14px] font-bold text-[#8c52ff] shrink-0">${a.price}</p>
                   </div>

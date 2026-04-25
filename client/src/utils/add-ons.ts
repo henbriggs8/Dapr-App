@@ -1,27 +1,38 @@
-export const ADD_ONS = [
-  { id: "leather", name: "Leather Treatment", price: 35 },
-  { id: "clay", name: "Clay Bar Treatment", price: 45 },
-  { id: "sanitize", name: "Interior Sanitization", price: 25 },
-  { id: "wax", name: "Premium Wax", price: 30 },
-  { id: "dog-hair", name: "Dog Hair Removal", price: 20 },
-  { id: "odor", name: "Odor Eliminator", price: 50 },
-];
+// Re-exports the shared add-on catalogue plus a tiny client-only helper for
+// remembering selections across navigations (e.g. tier selection -> dialog).
+
+import { ADD_ONS, type AddOn } from "@shared/add-ons";
+
+export { ADD_ONS };
+export type { AddOn };
 
 const STORAGE_KEY = "selectedAddOns";
 
 export function getSelectedAddOnIds(): string[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    const valid = new Set(ADD_ONS.map((a) => a.id));
+    return parsed.filter((id): id is string => typeof id === "string" && valid.has(id));
   } catch {
     return [];
   }
 }
 
 export function saveSelectedAddOnIds(ids: string[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore quota/availability errors — selection is best-effort
+  }
 }
 
 export function clearSelectedAddOns(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
