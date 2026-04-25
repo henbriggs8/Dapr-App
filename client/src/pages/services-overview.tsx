@@ -275,39 +275,46 @@ function DesktopServices() {
           <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6 max-w-4xl mx-auto">
             Every detail of every detail.
           </h1>
-          <p className="text-lg lg:text-xl text-white/60 mb-10 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg lg:text-xl text-white/60 leading-relaxed max-w-2xl mx-auto">
             From a quick weekly hand wash to a full showroom restoration — every Dapper service is performed at your home, office, or curb by a vetted professional with their own water and power.
           </p>
+        </div>
+      </section>
 
-          {/* In-page anchor nav */}
-          <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
-            {TIERS.map((t) => (
-              <a
-                key={t.slug}
-                href={`#${t.slug}`}
-                className="px-4 py-2 rounded-full text-sm font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
-                data-testid={`anchor-${t.slug}`}
-              >
-                {t.name}
-              </a>
-            ))}
+      {/* Sticky in-page anchor nav (sits below the fixed top nav) */}
+      <div
+        className={`sticky z-40 border-b border-white/5 bg-[#050505]/85 backdrop-blur-md transition-all duration-300 ${
+          scrolled ? "top-[68px]" : "top-[88px]"
+        }`}
+        data-testid="services-anchor-nav"
+      >
+        <div className="max-w-[1120px] mx-auto px-8 py-3 flex flex-wrap items-center justify-center gap-2">
+          {TIERS.map((t) => (
             <a
-              href="#compare"
-              className="px-4 py-2 rounded-full text-sm font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
-              data-testid="anchor-compare"
+              key={t.slug}
+              href={`#${t.slug}`}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+              data-testid={`anchor-${t.slug}`}
             >
-              Compare
+              {t.name}
             </a>
-            <a
-              href="#add-ons"
-              className="px-4 py-2 rounded-full text-sm font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
-              data-testid="anchor-add-ons"
+          ))}
+          <a
+            href="#compare"
+            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+            data-testid="anchor-compare"
+          >
+            Compare
+          </a>
+          <a
+            href="#add-ons"
+            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+            data-testid="anchor-add-ons"
             >
               Add-ons
             </a>
-          </div>
         </div>
-      </section>
+      </div>
 
       {/* Why Dapper */}
       <section className="py-16 border-t border-white/5">
