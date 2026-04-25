@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const TIME_OPTIONS = [
@@ -24,6 +24,10 @@ export default function HomeDesktop() {
   }, []);
 
   const goBook = () => setLocation(user ? "/booking" : "/auth");
+  const goBookWith = (slug: string) => {
+    const dest = `/booking?service=${slug}`;
+    setLocation(user ? dest : `/auth?redirect=${encodeURIComponent(dest)}`);
+  };
   const goServices = () => setLocation("/services");
   const goLogin = () => setLocation("/auth");
   const goHowItWorks = () => setLocation("/how-it-works");
@@ -534,15 +538,22 @@ export default function HomeDesktop() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Basic */}
+            {/* Essential Wash */}
             <div className="flex flex-col p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
-              <h3 className="text-xl font-bold mb-2">Basic</h3>
-              <p className="text-white/60 text-sm mb-6">Essential maintenance wash for a clean exterior.</p>
-              <div className="mb-8">
+              <h3 className="text-xl font-bold mb-2">Essential Wash</h3>
+              <p className="text-white/60 text-sm mb-6">A fast, gentle hand wash to keep your car looking sharp between deeper details.</p>
+              <div className="mb-2 flex items-baseline gap-3">
                 <span className="text-4xl font-bold">$39</span>
+                <span className="text-xs text-white/40 uppercase tracking-wider">30 min</span>
               </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                {["Exterior hand wash", "Wheel & tire cleaning", "Window cleaning (outside)", "Tire shine dressing"].map((feature, i) => (
+              <ul className="space-y-4 mt-6 mb-8 flex-1">
+                {[
+                  "Gentle hand wash with pH-balanced soap",
+                  "Quick spray wax for added shine",
+                  "Wheel face rinse & tire wipe",
+                  "Interior vacuum",
+                  "Streak-free windows",
+                ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-white/80">
                     <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
                     {feature}
@@ -550,26 +561,33 @@ export default function HomeDesktop() {
                 ))}
               </ul>
               <button
-                onClick={goBook}
+                onClick={() => goBookWith("essential-wash")}
                 className="w-full py-3 rounded-full border border-white/10 font-bold hover:bg-white hover:text-black transition-colors"
-                data-testid="button-tier-basic"
+                data-testid="button-tier-essential-wash"
               >
-                Select Basic
+                Select Essential Wash
               </button>
             </div>
 
-            {/* Standard (Highlighted) */}
+            {/* Interior Detail (Highlighted) */}
             <div className="flex flex-col p-8 rounded-3xl bg-gradient-to-b from-[#1a1033] to-[#0a0a0a] border border-[#8c52ff]/30 relative transform md:-translate-y-4 shadow-[0_0_40px_-15px_#8c52ff]">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#8c52ff] text-white text-xs font-bold px-3 py-1 rounded-full tracking-wider uppercase">
                 Most Popular
               </div>
-              <h3 className="text-xl font-bold mb-2">Standard</h3>
-              <p className="text-white/60 text-sm mb-6">The perfect inside-out clean for regular upkeep.</p>
-              <div className="mb-8">
+              <h3 className="text-xl font-bold mb-2">Interior Detail</h3>
+              <p className="text-white/60 text-sm mb-6">A focused interior reset for built-up dust, crumbs, spills, and everyday mess.</p>
+              <div className="mb-2 flex items-baseline gap-3">
                 <span className="text-4xl font-bold">$89</span>
+                <span className="text-xs text-white/40 uppercase tracking-wider">60 min</span>
               </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                {["Everything in Basic", "Interior vacuuming", "Wipe down surfaces", "Window cleaning (inside)", "Door jambs cleaning"].map((feature, i) => (
+              <ul className="space-y-4 mt-6 mb-8 flex-1">
+                {[
+                  "Full interior vacuum",
+                  "Dash, console, door panels & cup holders",
+                  "Seat cleaning",
+                  "Light stain treatment",
+                  "Interior windows cleaned",
+                ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-white/80">
                     <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
                     {feature}
@@ -577,37 +595,73 @@ export default function HomeDesktop() {
                 ))}
               </ul>
               <button
-                onClick={goBook}
+                onClick={() => goBookWith("interior-detail")}
                 className="w-full py-3 rounded-full bg-[#8c52ff] font-bold hover:bg-[#7a42e5] transition-colors"
-                data-testid="button-tier-standard"
+                data-testid="button-tier-interior-detail"
               >
-                Select Standard
+                Select Interior Detail
               </button>
             </div>
 
-            {/* Premium */}
+            {/* Refresh Detail */}
             <div className="flex flex-col p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
-              <h3 className="text-xl font-bold mb-2">Premium</h3>
-              <p className="text-white/60 text-sm mb-6">Comprehensive detailing for a showroom finish.</p>
-              <div className="mb-8">
+              <h3 className="text-xl font-bold mb-2">Refresh Detail</h3>
+              <p className="text-white/60 text-sm mb-6">A complete inside-and-out refresh — Essential Wash plus Interior Detail with upgraded wheel work.</p>
+              <div className="mb-2 flex items-baseline gap-3">
                 <span className="text-4xl font-bold">$149</span>
+                <span className="text-xs text-white/40 uppercase tracking-wider">90 min</span>
               </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                {["Everything in Standard", "Spray wax application", "Leather cleaning & conditioning", "Floor mat shampooing", "Deep crevice cleaning"].map(
-                  (feature, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                      <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
-                      {feature}
-                    </li>
-                  ),
-                )}
+              <ul className="space-y-4 mt-6 mb-8 flex-1">
+                {[
+                  "Everything in Essential Wash",
+                  "Everything in Interior Detail",
+                  "More thorough wheel cleaning",
+                  "Tire shine",
+                  "Full inside-and-out refresh",
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-white/80">
+                    <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                    {feature}
+                  </li>
+                ))}
               </ul>
               <button
-                onClick={goBook}
+                onClick={() => goBookWith("refresh-detail")}
                 className="w-full py-3 rounded-full border border-white/10 font-bold hover:bg-white hover:text-black transition-colors"
-                data-testid="button-tier-premium"
+                data-testid="button-tier-refresh-detail"
               >
-                Select Premium
+                Select Refresh Detail
+              </button>
+            </div>
+          </div>
+
+          {/* Black Label upsell strip */}
+          <div className="mt-8 rounded-3xl border border-white/10 bg-[#0a0a0a] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-start md:items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center shrink-0">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h4 className="text-lg font-bold">Dapper Black Label Detail</h4>
+                  <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider">Flagship</span>
+                </div>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Showroom-finish results from a senior detailer — paint decontamination, steam extraction, leather conditioning, and engine bay work.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6 md:shrink-0">
+              <div className="text-right">
+                <div className="text-3xl font-bold leading-none">$299</div>
+                <div className="text-xs text-white/40 uppercase tracking-wider mt-1">3 hrs</div>
+              </div>
+              <button
+                onClick={() => goBookWith("black-label")}
+                className="py-3 px-6 rounded-full bg-white text-black font-bold hover:bg-white/90 transition-colors whitespace-nowrap"
+                data-testid="button-tier-black-label"
+              >
+                Book Black Label
               </button>
             </div>
           </div>
