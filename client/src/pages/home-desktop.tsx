@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import FluidHeroBackground from "@/components/fluid-hero-background";
 
 const TIME_OPTIONS = [
   { id: "now", label: "Arrive now" },
@@ -167,7 +168,11 @@ export default function HomeDesktop() {
 
       {/* Hero Section */}
       <section className="relative pt-40 pb-20 lg:pt-52 lg:pb-32 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8c52ff]/20 rounded-full blur-[120px] pointer-events-none opacity-50" />
+        {/* Premium WebGL fluid background */}
+        <FluidHeroBackground />
+        {/* Dark overlay so headline + UI keep AAA contrast on top of the shader */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050506]/55 via-[#050506]/35 to-[#050506] pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#050505] pointer-events-none" />
 
         <div className="max-w-[1280px] mx-auto px-8 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
           <div className="max-w-2xl">
