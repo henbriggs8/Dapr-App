@@ -24,7 +24,7 @@ export default function HomeDesktop() {
   }, []);
 
   const goBook = () => setLocation(user ? "/booking" : "/auth");
-  const goServices = () => setLocation(user ? "/services" : "/auth");
+  const goServices = () => setLocation(user ? "/booking" : "/auth");
   const goLogin = () => setLocation("/auth");
   const goHowItWorks = () => setLocation("/how-it-works");
   const goCorporate = () => setLocation("/corporate");

@@ -17,7 +17,6 @@ import CarProfileScreen from "@/pages/car-profile-screen";
 import FirstWashOffer from "@/pages/first-wash-offer";
 import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
-import ServicesPage from "@/pages/services-page";
 import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
 import BookingConfirmation from "@/pages/booking-confirmation";
@@ -148,7 +147,9 @@ function Router() {
         
         {/* Protected routes */}
         <ProtectedRoute path="/booking" component={BookingScreen} />
-        <ProtectedRoute path="/services" component={ServicesPage} />
+        <Route path="/services">
+          <Redirect to="/booking" />
+        </Route>
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />

@@ -169,7 +169,7 @@ export default function CorporateDesktop() {
               <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-              <button onClick={() => setLocation("/services")} className="hover:text-white transition-colors">Services</button>
+              <button onClick={() => setLocation("/booking")} className="hover:text-white transition-colors">Services</button>
               <button onClick={() => setLocation("/how-it-works")} className="hover:text-white transition-colors">How it Works</button>
               <button className="text-white">For Fleets</button>
             </div>

@@ -69,7 +69,7 @@ export default function BookingDialog({
   const parsedAddress = savedAddress ? JSON.parse(savedAddress) : null;
   const parsedVehicle = savedVehicle ? JSON.parse(savedVehicle) : null;
   
-  // Define add-ons — initialized from services-page selections in localStorage
+  // Define add-ons — initialized from booking page selections in localStorage
   const [addOns, setAddOns] = useState<{
     id: string;
     name: string;
