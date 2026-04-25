@@ -546,7 +546,7 @@ export default function CorporateDesktop() {
                     data-testid={`faq-${i}`}
                   >
                     <span className="font-bold text-base">{f.q}</span>
-                    <ChevronDown className={`w-5 h-5 text-white/50 transition-transform ${open ? "rotate-180" : ""}`} />
+                    <Icon icon={ChevronDown} size="md" className={`text-white/50 transition-transform ${open ? "rotate-180" : ""}`} />
                   </button>
                   {open && <div className="px-6 pb-6 text-sm text-white/60 leading-relaxed">{f.a}</div>}
                 </div>

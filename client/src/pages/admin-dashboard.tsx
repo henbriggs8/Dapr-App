@@ -706,7 +706,7 @@ export default function AdminDashboard() {
                 {/* Filters and Search */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Icon icon={Search} size="sm" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <Input
                       placeholder="Search by name, username, or email..."
                       value={searchTerm}
