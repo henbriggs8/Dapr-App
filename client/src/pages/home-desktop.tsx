@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+
+const TIME_OPTIONS = [
+  { id: "now", label: "Arrive now" },
+  { id: "today", label: "Later today" },
+  { id: "tomorrow", label: "Tomorrow" },
+  { id: "schedule", label: "Pick a date & time" },
+] as const;
 
 const dapprLogo = "/dapr-logo.svg";
 
@@ -21,6 +28,22 @@ export default function HomeDesktop() {
   const goLogin = () => setLocation("/auth");
   const goHowItWorks = () => setLocation("/how-it-works");
   const goCorporate = () => setLocation("/corporate");
+
+  const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const timePopRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!timeOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (timePopRef.current && !timePopRef.current.contains(e.target as Node)) {
+        setTimeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [timeOpen]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
@@ -79,16 +102,79 @@ export default function HomeDesktop() {
               The premium car wash that{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8c52ff] to-[#b28cff]">comes to you.</span>
             </h1>
-            <p className="text-lg lg:text-xl text-white/60 mb-10 leading-relaxed max-w-xl">
+            <p className="text-lg lg:text-xl text-white/60 mb-8 leading-relaxed max-w-xl">
               Book in seconds. Track your detailer live. Return to a showroom-finish car without ever leaving your home or office.
             </p>
+
+            {/* Time selector pill */}
+            <div className="relative inline-block mb-4" ref={timePopRef}>
+              <button
+                onClick={() => setTimeOpen((o) => !o)}
+                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white rounded-full pl-3 pr-4 py-2.5 text-sm font-semibold border border-white/10 transition-colors"
+                data-testid="button-time-picker"
+                aria-haspopup="listbox"
+                aria-expanded={timeOpen}
+              >
+                <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </span>
+                {timeOpt.label}
+                <ChevronDown className={`w-4 h-4 transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+              </button>
+              {timeOpen && (
+                <div
+                  className="absolute top-full mt-2 left-0 z-30 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden py-1"
+                  role="listbox"
+                >
+                  {TIME_OPTIONS.map((opt) => {
+                    const active = timeOpt.id === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setTimeOpt(opt);
+                          setTimeOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-white/5 flex items-center justify-between transition-colors ${
+                          active ? "text-[#8c52ff] font-semibold" : "text-white"
+                        }`}
+                        role="option"
+                        aria-selected={active}
+                        data-testid={`time-option-${opt.id}`}
+                      >
+                        {opt.label}
+                        {active && <CheckCircle2 className="w-4 h-4" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Vehicle location input */}
+            <div className="bg-white/10 hover:bg-white/15 focus-within:bg-white/15 focus-within:border-[#8c52ff] transition-colors rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 border border-white/10 max-w-xl">
+              <div className="w-2.5 h-2.5 rounded-full bg-white shrink-0" />
+              <input
+                type="text"
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                placeholder="Vehicle location"
+                className="flex-1 bg-transparent outline-none text-base placeholder:text-white/50"
+                data-testid="input-vehicle-location"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") goBook();
+                }}
+              />
+              <Navigation className="w-5 h-5 text-white/60 shrink-0" />
+            </div>
+
             <div className="flex items-center gap-4">
               <button
                 onClick={goBook}
                 className="bg-[#8c52ff] text-white px-8 py-4 rounded-full text-base font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
                 data-testid="button-book-hero"
               >
-                Book Now <ArrowRight className="w-4 h-4" />
+                See Prices <ArrowRight className="w-4 h-4" />
               </button>
               <button
                 onClick={goServices}

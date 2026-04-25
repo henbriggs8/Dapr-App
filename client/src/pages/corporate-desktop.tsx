@@ -13,7 +13,6 @@ import {
   ReceiptText,
   MapPin,
   ChevronDown,
-  Navigation,
 } from "lucide-react";
 
 const dapprLogo = "/dapr-logo.svg";
@@ -37,13 +36,6 @@ const SERVICES: Service[] = [
   { id: "full", name: "Full Detail", base: 179, desc: "Showroom finish, top to bottom." },
   { id: "custom", name: "Custom Fleet Program", base: null, desc: "Built to spec for your fleet." },
 ];
-
-const TIME_OPTIONS = [
-  { id: "now", label: "Arrive now" },
-  { id: "today", label: "Later today" },
-  { id: "tomorrow", label: "Tomorrow" },
-  { id: "schedule", label: "Pick a date & time" },
-] as const;
 
 const CASES = [
   {
@@ -114,13 +106,6 @@ export default function CorporateDesktop() {
   const [serviceId, setServiceId] = useState<string>("maintenance");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const formRef = useRef<HTMLDivElement | null>(null);
-  const estimatorRef = useRef<HTMLDivElement | null>(null);
-
-  // Hero high-intent state
-  const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
-  const [timeOpen, setTimeOpen] = useState(false);
-  const [locationInput, setLocationInput] = useState("");
-  const timePopRef = useRef<HTMLDivElement | null>(null);
 
   const tier = TIERS[tierIdx];
   const service = useMemo(() => SERVICES.find((s) => s.id === serviceId)!, [serviceId]);
@@ -133,18 +118,6 @@ export default function CorporateDesktop() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Close time picker on outside click
-  useEffect(() => {
-    if (!timeOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (timePopRef.current && !timePopRef.current.contains(e.target as Node)) {
-        setTimeOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [timeOpen]);
 
   // Quote form state
   const [form, setForm] = useState({
@@ -165,16 +138,8 @@ export default function CorporateDesktop() {
       ...f,
       vehicles: f.vehicles || String(tier.min),
       service: f.service || service.name,
-      zip: f.zip || locationInput,
     }));
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const goToEstimator = () => {
-    if (locationInput.trim()) {
-      setForm((f) => ({ ...f, zip: f.zip || locationInput }));
-    }
-    estimatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const onChange = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -217,127 +182,137 @@ export default function CorporateDesktop() {
         </div>
       </nav>
 
-      {/* Hero — high intent */}
-      <section className="relative pt-40 pb-24 lg:pt-48 lg:pb-32 overflow-hidden">
+      {/* Hero */}
+      <section className="relative pt-40 pb-20 lg:pt-52 lg:pb-28 overflow-hidden">
         <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#8c52ff]/15 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="max-w-[1280px] mx-auto px-8 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left: location + time + CTA */}
+        <div className="max-w-[1280px] mx-auto px-8 relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 text-sm text-white/70 mb-7">
-              <MapPin className="w-4 h-4 text-white" />
-              <span className="font-medium text-white">Salt Lake City, UT</span>
-              <button
-                onClick={() => alert("Coming to more cities soon — tell us where you need us in the form below.")}
-                className="ml-1 underline decoration-white/40 underline-offset-4 hover:text-white"
-                data-testid="link-change-city"
-              >
-                Change city
-              </button>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
+              <ShieldCheck className="w-4 h-4" /> Dapper for Fleets
             </div>
-
-            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.02] mb-10">
-              Detail your fleet,<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8c52ff] to-[#b28cff]">anywhere.</span>
+            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] mb-6">
+              Keep every vehicle in your fleet{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8c52ff] to-[#b28cff]">client-ready.</span>
             </h1>
-
-            {/* Time selector pill */}
-            <div className="relative inline-block mb-4" ref={timePopRef}>
+            <p className="text-lg text-white/60 mb-10 leading-relaxed max-w-xl">
+              On-site, on a schedule, on one invoice. Dapper professionals come to your depot, dealer lot, or property and detail your vehicles without disrupting operations.
+            </p>
+            <div className="flex items-center gap-4">
               <button
-                onClick={() => setTimeOpen((o) => !o)}
-                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white rounded-full pl-3 pr-4 py-2.5 text-sm font-semibold border border-white/10 transition-colors"
-                data-testid="button-time-picker"
-                aria-haspopup="listbox"
-                aria-expanded={timeOpen}
+                onClick={goToForm}
+                className="bg-[#8c52ff] text-white px-8 py-4 rounded-full text-base font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
+                data-testid="button-get-quote-hero"
               >
-                <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5" />
-                </span>
-                {timeOpt.label}
-                <ChevronDown className={`w-4 h-4 transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+                Get a Fleet Quote <ArrowRight className="w-4 h-4" />
               </button>
-              {timeOpen && (
-                <div
-                  className="absolute top-full mt-2 left-0 z-30 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden py-1"
-                  role="listbox"
-                >
-                  {TIME_OPTIONS.map((opt) => {
-                    const active = timeOpt.id === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => {
-                          setTimeOpt(opt);
-                          setTimeOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm hover:bg-white/5 flex items-center justify-between transition-colors ${
-                          active ? "text-[#8c52ff] font-semibold" : "text-white"
-                        }`}
-                        role="option"
-                        aria-selected={active}
-                        data-testid={`time-option-${opt.id}`}
-                      >
-                        {opt.label}
-                        {active && <CheckCircle2 className="w-4 h-4" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <a
+                href="#estimator"
+                className="bg-white/5 text-white border border-white/10 px-8 py-4 rounded-full text-base font-bold hover:bg-white/10 transition-all"
+              >
+                Estimate Pricing
+              </a>
             </div>
 
-            {/* Location input */}
-            <div className="bg-white/10 hover:bg-white/15 focus-within:bg-white/15 focus-within:border-[#8c52ff] transition-colors rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 border border-white/10">
-              <div className="w-2.5 h-2.5 rounded-full bg-white shrink-0" />
-              <input
-                type="text"
-                value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                placeholder="Vehicle locations"
-                className="flex-1 bg-transparent outline-none text-base placeholder:text-white/50"
-                data-testid="input-vehicle-locations"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") goToEstimator();
-                }}
-              />
-              <Navigation className="w-5 h-5 text-white/60 shrink-0" />
-            </div>
-
-            <div className="flex items-center gap-6 flex-wrap">
-              <button
-                onClick={goToEstimator}
-                className="bg-white text-black px-8 py-4 rounded-full text-base font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_-10px_rgba(255,255,255,0.4)]"
-                data-testid="button-see-prices"
-              >
-                See prices
-              </button>
-              <button
-                onClick={() => setLocation("/auth")}
-                className="text-sm font-medium text-white/70 hover:text-white underline-offset-4 underline decoration-white/30"
-                data-testid="link-login-fleet"
-              >
-                Log in to see your fleet activity
-              </button>
+            <div className="mt-12 grid grid-cols-3 gap-8 border-t border-white/10 pt-8 max-w-md">
+              <Stat value="100+" label="Fleet partners" />
+              <Stat value="50k+" label="Vehicles serviced" />
+              <Stat value="4.9★" label="Avg. partner rating" />
             </div>
           </div>
 
-          {/* Right: visual with bottom overlay */}
-          <div className="relative w-full aspect-[5/4] lg:aspect-auto lg:h-[540px] rounded-3xl overflow-hidden border border-white/10 bg-[#0a0a0a] shadow-[0_40px_120px_-40px_#8c52ff]">
-            <img
-              src="/desktop/hero-car.jpg"
-              alt="Dapper van on-site"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/60 via-transparent to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 bg-black/40 backdrop-blur-xl border border-white/15 rounded-full pl-6 pr-2 py-2 flex items-center justify-between">
-              <p className="text-sm font-semibold text-white">Ready for fleet service?</p>
+          {/* Hero estimator card */}
+          <div id="estimator" className="relative">
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 shadow-[0_30px_120px_-30px_#8c52ff]">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-1">Live Estimate</p>
+                  <h3 className="text-xl font-bold">Fleet Pricing Calculator</h3>
+                </div>
+                <ReceiptText className="w-6 h-6 text-white/30" />
+              </div>
+
+              {/* Slider */}
+              <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Number of vehicles</label>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-2xl font-bold tracking-tight">{tier.label}</div>
+                <div className="text-xs text-white/40">vehicles per site</div>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={TIERS.length - 1}
+                step={1}
+                value={tierIdx}
+                onChange={(e) => setTierIdx(parseInt(e.target.value))}
+                className="w-full accent-[#8c52ff] mb-2"
+                data-testid="slider-vehicles"
+              />
+              <div className="flex justify-between text-[10px] text-white/30 font-medium mb-8">
+                {TIERS.map((t, i) => (
+                  <button
+                    key={t.label}
+                    onClick={() => setTierIdx(i)}
+                    className={`transition-colors ${i === tierIdx ? "text-[#8c52ff]" : "hover:text-white/60"}`}
+                    data-testid={`tier-${i}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Service selector */}
+              <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Service</label>
+              <div className="flex flex-wrap gap-2 mb-8">
+                {SERVICES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setServiceId(s.id)}
+                    className={`px-3.5 py-2 rounded-full text-xs font-bold border transition-all ${
+                      serviceId === s.id
+                        ? "bg-[#8c52ff] border-[#8c52ff] text-white"
+                        : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
+                    }`}
+                    data-testid={`service-${s.id}`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Result */}
+              <div className="rounded-2xl bg-gradient-to-br from-[#1a1033] to-[#0a0a0a] border border-[#8c52ff]/30 p-6 mb-5">
+                {isCustom ? (
+                  <>
+                    <p className="text-xs text-white/60 uppercase tracking-wider font-semibold mb-2">Custom program</p>
+                    <p className="text-3xl font-bold mb-1">Let's build it together</p>
+                    <p className="text-sm text-white/60">200+ vehicles or custom scope — we'll design a bespoke program for your fleet.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-white/60 uppercase tracking-wider font-semibold mb-2">Starting at</p>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-4xl font-bold">{formatMoney(perVehicle!)}</span>
+                      <span className="text-white/60 text-sm">/ vehicle</span>
+                    </div>
+                    <p className="text-sm text-white/60">
+                      Estimated from <span className="text-white font-semibold">{formatMoney(cycleFrom!)}</span> per service cycle ({tier.label} vehicles)
+                    </p>
+                  </>
+                )}
+              </div>
+
               <button
                 onClick={goToForm}
-                className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95"
-                data-testid="button-schedule-ahead"
+                className="w-full py-4 rounded-full bg-white text-black font-bold hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                data-testid="button-estimator-cta"
               >
-                Schedule ahead
+                Get Exact Fleet Quote <ArrowRight className="w-4 h-4" />
               </button>
+
+              <p className="text-[11px] text-white/40 mt-4 leading-relaxed">
+                Calculator shows starting rates only. Final pricing depends on vehicle size, condition, service frequency, location, and site access after review.
+              </p>
             </div>
           </div>
         </div>
@@ -358,122 +333,8 @@ export default function CorporateDesktop() {
         </div>
       </section>
 
-      {/* Estimator section */}
-      <section ref={estimatorRef} id="estimator" className="py-32 scroll-mt-24">
-        <div className="max-w-[1280px] mx-auto px-8 grid lg:grid-cols-[1fr_1.1fr] gap-16 items-center">
-          <div className="max-w-xl">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Live Pricing Estimator</p>
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">See fleet pricing in seconds.</h2>
-            <p className="text-lg text-white/60 mb-8 leading-relaxed">
-              Pick your fleet size and a service tier — we'll show you our starting per-vehicle rate. The bigger the fleet, the lower the per-vehicle cost.
-            </p>
-            <ul className="space-y-3 text-sm text-white/70">
-              {[
-                "Volume pricing across 7 fleet sizes",
-                "5 service tiers from quick wash to full detail",
-                "Custom programs available for 200+ vehicles",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#8c52ff] mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 shadow-[0_30px_120px_-30px_#8c52ff]">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-1">Live Estimate</p>
-                <h3 className="text-xl font-bold">Fleet Pricing Calculator</h3>
-              </div>
-              <ReceiptText className="w-6 h-6 text-white/30" />
-            </div>
-
-            <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Number of vehicles</label>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-2xl font-bold tracking-tight">{tier.label}</div>
-              <div className="text-xs text-white/40">vehicles per site</div>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={TIERS.length - 1}
-              step={1}
-              value={tierIdx}
-              onChange={(e) => setTierIdx(parseInt(e.target.value))}
-              className="w-full accent-[#8c52ff] mb-2"
-              data-testid="slider-vehicles"
-            />
-            <div className="flex justify-between text-[10px] text-white/30 font-medium mb-8">
-              {TIERS.map((t, i) => (
-                <button
-                  key={t.label}
-                  onClick={() => setTierIdx(i)}
-                  className={`transition-colors ${i === tierIdx ? "text-[#8c52ff]" : "hover:text-white/60"}`}
-                  data-testid={`tier-${i}`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Service</label>
-            <div className="flex flex-wrap gap-2 mb-8">
-              {SERVICES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setServiceId(s.id)}
-                  className={`px-3.5 py-2 rounded-full text-xs font-bold border transition-all ${
-                    serviceId === s.id
-                      ? "bg-[#8c52ff] border-[#8c52ff] text-white"
-                      : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
-                  }`}
-                  data-testid={`service-${s.id}`}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-2xl bg-gradient-to-br from-[#1a1033] to-[#0a0a0a] border border-[#8c52ff]/30 p-6 mb-5">
-              {isCustom ? (
-                <>
-                  <p className="text-xs text-white/60 uppercase tracking-wider font-semibold mb-2">Custom program</p>
-                  <p className="text-3xl font-bold mb-1">Let's build it together</p>
-                  <p className="text-sm text-white/60">200+ vehicles or custom scope — we'll design a bespoke program for your fleet.</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-white/60 uppercase tracking-wider font-semibold mb-2">Starting at</p>
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-4xl font-bold">{formatMoney(perVehicle!)}</span>
-                    <span className="text-white/60 text-sm">/ vehicle</span>
-                  </div>
-                  <p className="text-sm text-white/60">
-                    Estimated from <span className="text-white font-semibold">{formatMoney(cycleFrom!)}</span> per service cycle ({tier.label} vehicles)
-                  </p>
-                </>
-              )}
-            </div>
-
-            <button
-              onClick={goToForm}
-              className="w-full py-4 rounded-full bg-white text-black font-bold hover:bg-white/90 transition-all flex items-center justify-center gap-2"
-              data-testid="button-estimator-cta"
-            >
-              Get Exact Fleet Quote <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <p className="text-[11px] text-white/40 mt-4 leading-relaxed">
-              Calculator shows starting rates only. Final pricing depends on vehicle size, condition, service frequency, location, and site access after review.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Why Dapper for Fleets */}
-      <section className="py-32 bg-[#020202] border-y border-white/5">
+      <section className="py-32">
         <div className="max-w-[1280px] mx-auto px-8">
           <div className="max-w-3xl mb-16">
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Why Dapper for Fleets</p>
@@ -495,7 +356,7 @@ export default function CorporateDesktop() {
       </section>
 
       {/* Use cases */}
-      <section className="py-32">
+      <section className="py-32 bg-[#020202] border-y border-white/5">
         <div className="max-w-[1280px] mx-auto px-8">
           <div className="max-w-3xl mb-16">
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Fleet use cases</p>
@@ -518,12 +379,12 @@ export default function CorporateDesktop() {
       </section>
 
       {/* Case study / proof */}
-      <section className="py-32 bg-[#020202] border-y border-white/5">
+      <section className="py-32">
         <div className="max-w-[1280px] mx-auto px-8">
           <div className="grid lg:grid-cols-[1fr_1.1fr] gap-16 items-center">
             <div className="relative rounded-3xl overflow-hidden border border-white/10 aspect-[4/5] lg:aspect-auto lg:h-[520px]">
               <img src="/desktop/hero-car.jpg" alt="Dapper van on-site" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-[#8c52ff]/20 flex items-center justify-center">
@@ -558,7 +419,7 @@ export default function CorporateDesktop() {
       </section>
 
       {/* Quote form */}
-      <section ref={formRef} id="quote-form" className="py-32 scroll-mt-24">
+      <section ref={formRef} id="quote-form" className="py-32 bg-[#020202] border-y border-white/5 scroll-mt-24">
         <div className="max-w-[1100px] mx-auto px-8 grid lg:grid-cols-[1fr_1.4fr] gap-16">
           <div>
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Get a fleet quote</p>
@@ -651,7 +512,7 @@ export default function CorporateDesktop() {
       </section>
 
       {/* FAQ */}
-      <section className="py-32 bg-[#020202] border-t border-white/5">
+      <section className="py-32">
         <div className="max-w-[900px] mx-auto px-8">
           <div className="text-center mb-16">
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Frequently asked</p>
