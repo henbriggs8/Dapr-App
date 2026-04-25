@@ -1,0 +1,90 @@
+I like the current simple booking UI and want to keep the clean minimal feel, but I want each service card to have an expandable dropdown/accordion so customers can tap to learn more before booking.
+
+Please update the service selection cards so that:
+- Each service row can expand/collapse
+- Use a smooth accordion animation
+- Keep the page visually clean and premium
+- Preserve the fast, simple booking feel
+- Rotate the chevron icon when expanded
+- Only one service should be expanded at a time unless that becomes awkward on mobile
+
+For each expanded service, show these sections:
+1. Included
+2. Best for
+3. Good to know
+
+Use this content:
+
+Essential Wash
+Short description on card:
+Hand wash, spray wax, vacuum, quick interior wipe-down
+
+Expanded content:
+Included:
+- Gentle hand wash
+- Quick spray wax for added shine
+- Wheel face rinse
+- Tire wipe
+- Interior vacuum
+- Light wipe-down of main interior surfaces
+- Windows cleaned
+
+Best for:
+- Weekly or bi-weekly maintenance
+- Vehicles already in fairly good shape
+- Keeping your car clean between deeper details
+
+Good to know:
+- Does not include deep stain removal, seat shampooing, or heavy interior restoration
+- Best suited for lightly soiled vehicles
+
+Interior Detail
+Short description on card:
+Full vacuum, surface cleaning, seat cleaning, light stain treatment
+
+Expanded content:
+Included:
+- Full interior vacuum
+- Dash, console, door panels, and cup holder cleaning
+- Seat cleaning
+- Chemical treatment on interior surfaces
+- Light stain treatment
+- Crevice and touchpoint cleaning
+- Interior windows cleaned
+
+Best for:
+- Vehicles with built-up dust, crumbs, spills, or everyday mess
+- Families, commuters, and work vehicles needing an interior reset
+
+Good to know:
+- Light stain treatment is included, but severe staining, pet hair, or bio messes may require additional time or add-ons
+- Exterior wash is not the main focus of this package unless otherwise noted
+
+Refresh Detail
+Short description on card:
+Complete interior/exterior refresh with upgraded wheels and tire shine
+
+Expanded content:
+Included:
+- Everything in Essential Wash
+- Everything in Interior Detail
+- More thorough wheel cleaning
+- Tire shine
+- Full inside-and-out refresh
+
+Best for:
+- Customers wanting a full reset without stepping into a premium signature package
+- Great for monthly upkeep or preparing a vehicle for sale
+
+Good to know:
+- Designed as a strong all-around maintenance detail
+- Deep correction services, extraction, or heavy restoration may require a higher-tier package
+
+Also add a small note below the service list:
+Final service time and results may vary based on vehicle size and condition. Heavy stains, excessive pet hair, or unusually dirty vehicles may require additional time or service upgrades.
+
+Design notes:
+- Keep the current minimal Apple/Uber-like feel
+- Make the expanded state feel polished, not cluttered
+- Use subtle dividers and lighter text hierarchy
+- Do not make the expanded copy too large or overwhelming
