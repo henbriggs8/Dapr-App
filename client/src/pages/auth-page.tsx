@@ -45,9 +45,19 @@ export default function AuthPage() {
     if (user.isAdmin) {
       return <Redirect to="/admin" />;
     }
-    // Redirect providers to the provider dashboard (which is already handled by the Router in App.tsx)
-    // Otherwise, redirect regular users to the home page
-    return <Redirect to="/" />;
+    // Honor `?redirect=` (set by ProtectedRoute) for deep-link returns,
+    // restricted to same-origin in-app paths.
+    const raw =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("redirect") || ""
+        : "";
+    const safe =
+      raw.startsWith("/") &&
+      !raw.startsWith("//") &&
+      !raw.startsWith("/auth")
+        ? raw
+        : "/";
+    return <Redirect to={safe} />;
   }
 
   return (

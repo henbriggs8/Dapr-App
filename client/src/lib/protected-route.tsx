@@ -22,9 +22,17 @@ export function ProtectedRoute({
   }
 
   if (!user) {
+    const dest =
+      typeof window !== "undefined"
+        ? window.location.pathname + window.location.search
+        : "/";
+    const redirectTo =
+      dest && dest !== "/auth" && !dest.startsWith("/auth")
+        ? `/auth?redirect=${encodeURIComponent(dest)}`
+        : "/auth";
     return (
       <Route path={path}>
-        <Redirect to="/auth" />
+        <Redirect to={redirectTo} />
       </Route>
     );
   }

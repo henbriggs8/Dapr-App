@@ -160,12 +160,23 @@ function getArrivalWindows() {
   ];
 }
 
-const SLUG_TO_CATEGORY: Record<string, string> = {
-  "essential-wash": "basic",
-  "interior-detail": "standard",
-  "refresh-detail": "standard",
-  "black-label": "premium",
+// Marketing tier slugs from /services. Each maps to a preferred display name
+// (matched case-insensitively against the API's service.name) and a category
+// fallback used when no name match exists in the seed data.
+const SLUG_PRESELECT: Record<string, { name: string; category: string }> = {
+  "essential-wash": { name: "essential wash", category: "basic" },
+  "interior-detail": { name: "interior detail", category: "standard" },
+  "refresh-detail": { name: "refresh detail", category: "standard" },
+  "black-label": { name: "black label", category: "premium" },
 };
+
+function resolvePreselectService(slug: string, services: Service[]): Service | undefined {
+  const target = SLUG_PRESELECT[slug];
+  if (!target) return undefined;
+  const byName = services.find((s) => s.name.toLowerCase().includes(target.name));
+  if (byName) return byName;
+  return services.find((s) => s.category === target.category);
+}
 
 export default function BookingScreen() {
   const { user } = useAuth();
@@ -207,9 +218,7 @@ export default function BookingScreen() {
     const params = new URLSearchParams(search);
     const slug = params.get("service");
     if (!slug) return;
-    const category = SLUG_TO_CATEGORY[slug];
-    if (!category) return;
-    const match = services.find((s) => s.category === category);
+    const match = resolvePreselectService(slug, services);
     if (!match) return;
     preselectAppliedRef.current = true;
     setSelectedServiceId(match.id);

@@ -678,7 +678,15 @@ function AuthFlow() {
   const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
 
   // Demo mode: ?demo=1 in URL lets you preview sign-up screens without Clerk
-  const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
+  const params = new URLSearchParams(window.location.search);
+  const isDemo = params.get('demo') === '1';
+  const rawRedirect = params.get('redirect') || '';
+  // Only allow same-origin in-app paths to avoid open-redirect; keep query string.
+  const safeRedirect =
+    rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.startsWith('/auth')
+      ? rawRedirect
+      : '';
+  const postAuthDest = safeRedirect || '/';
 
   const [step, setStep] = useState<Step>(isDemo ? 'profileInfo' : 'landing');
   // Landing: phone identifier
@@ -701,9 +709,10 @@ function AuthFlow() {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
 
-  // Navigate home once local user is synced (must be in effect, not render)
+  // Navigate to redirect destination (or home) once local user is synced.
+  // Must be in effect, not render.
   useEffect(() => {
-    if (localUser) navigate('/');
+    if (localUser) navigate(postAuthDest);
   }, [localUser]);
 
   if (isSignedIn && !localUser) {

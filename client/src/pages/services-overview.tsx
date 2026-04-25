@@ -222,10 +222,6 @@ function DesktopServices() {
   }, []);
 
   const goBookWith = (slug?: string) => {
-    if (!user) {
-      setLocation("/auth");
-      return;
-    }
     setLocation(slug ? `/booking?service=${slug}` : "/booking");
   };
 
@@ -538,10 +534,6 @@ function MobileServices() {
   const [openAddOns, setOpenAddOns] = useState(false);
 
   const goBookWith = (slug?: string) => {
-    if (!user) {
-      setLocation("/auth");
-      return;
-    }
     setLocation(slug ? `/booking?service=${slug}` : "/booking");
   };
 
@@ -655,6 +647,58 @@ function MobileServices() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Compare — horizontally scrollable */}
+        <div className="pt-8" data-testid="mobile-compare-section">
+          <div className="px-5 mb-3 flex items-center justify-between">
+            <p className="text-[10px] font-semibold tracking-widest text-[#999] uppercase">Compare</p>
+            <p className="text-[10px] text-[#bbb]">Swipe →</p>
+          </div>
+          <div className="overflow-x-auto -mx-0 pl-5 pr-5 pb-2" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="inline-block min-w-full align-top">
+              <table className="border-separate border-spacing-0 text-left">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-white pr-3 pb-3 text-[10px] font-semibold uppercase tracking-widest text-[#999] align-bottom">
+                      Feature
+                    </th>
+                    {TIERS.map((t) => (
+                      <th
+                        key={t.slug}
+                        className="px-3 pb-3 align-bottom min-w-[110px]"
+                        data-testid={`mobile-compare-col-${t.slug}`}
+                      >
+                        <p className="text-[12px] font-semibold text-[#111] leading-tight whitespace-nowrap">{t.name}</p>
+                        <p className="text-[11px] font-bold text-[#8c52ff] mt-0.5">${t.price}</p>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARE.map((row, i) => (
+                    <tr key={i}>
+                      <td className="sticky left-0 z-10 bg-white pr-3 py-2.5 border-t border-[#f0f0f0] text-[12px] text-[#444] leading-snug">
+                        {row.feature}
+                      </td>
+                      {row.values.map((v, j) => (
+                        <td
+                          key={j}
+                          className="px-3 py-2.5 border-t border-[#f0f0f0] text-center"
+                        >
+                          {v ? (
+                            <Check className="h-3.5 w-3.5 text-[#8c52ff] inline-block" />
+                          ) : (
+                            <span className="text-[#ddd] text-[14px] leading-none">–</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
