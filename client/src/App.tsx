@@ -31,6 +31,7 @@ import ExteriorCleaning from "@/pages/exterior-cleaning";
 import CarSeatCleaning from "@/pages/car-seat-cleaning";
 import FAQ from "@/pages/faq";
 import Corporate from "@/pages/corporate";
+import ServicesOverview from "@/pages/services-overview";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
@@ -147,9 +148,7 @@ function Router() {
         
         {/* Protected routes */}
         <ProtectedRoute path="/booking" component={BookingScreen} />
-        <Route path="/services">
-          <Redirect to="/booking" />
-        </Route>
+        <Route path="/services" component={ServicesOverview} />
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />

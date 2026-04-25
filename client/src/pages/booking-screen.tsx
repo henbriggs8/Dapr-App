@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { User, Service, TimeSlot, Booking } from "@shared/schema";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import {
   Calendar,
   Clock,
@@ -160,13 +160,22 @@ function getArrivalWindows() {
   ];
 }
 
+const SLUG_TO_CATEGORY: Record<string, string> = {
+  "essential-wash": "basic",
+  "interior-detail": "standard",
+  "refresh-detail": "standard",
+  "black-label": "premium",
+};
+
 export default function BookingScreen() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const preselectAppliedRef = useRef(false);
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>("now");
@@ -190,6 +199,25 @@ export default function BookingScreen() {
   });
 
   const isLoading = providersLoading || servicesLoading || timeSlotsLoading || bookingsLoading;
+
+  // Preselect a tier when arriving with ?service=<slug> from /services
+  useEffect(() => {
+    if (preselectAppliedRef.current) return;
+    if (!services || services.length === 0) return;
+    const params = new URLSearchParams(search);
+    const slug = params.get("service");
+    if (!slug) return;
+    const category = SLUG_TO_CATEGORY[slug];
+    if (!category) return;
+    const match = services.find((s) => s.category === category);
+    if (!match) return;
+    preselectAppliedRef.current = true;
+    setSelectedServiceId(match.id);
+    setExpandedId(match.id);
+    setTimeout(() => {
+      whenSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+  }, [services, search]);
 
   useEffect(() => {
     if (!servicesError) return;
