@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronDown, Car } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -49,7 +50,7 @@ export default function ProviderAuthPage() {
             <div className="absolute inset-0 border-4 border-[#8c52ff] border-t-transparent rounded-full animate-spin"></div>
             {/* Car icon in center */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <Car className="w-6 h-6 text-[#8c52ff]" />
+              <Icon icon={Car} size="lg" className="text-[#8c52ff]" />
             </div>
           </div>
           <p className="text-gray-600 text-lg">Redirecting...</p>
@@ -100,7 +101,7 @@ export default function ProviderAuthPage() {
           onClick={handleBack}
           className="flex items-center text-[#8c52ff] hover:text-[#8c52ff]/80 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <Icon icon={ArrowLeft} size="md" className="mr-2" />
           <span className="text-base font-medium">Back</span>
         </button>
       </div>
@@ -177,7 +178,7 @@ export default function ProviderAuthPage() {
                   <div className="relative">
                     <button className="flex items-center justify-center w-20 h-14 border border-gray-300 rounded-lg bg-white">
                       <span className="text-sm font-medium">{countryCode}</span>
-                      <ChevronDown className="w-4 h-4 ml-1 text-gray-400" />
+                      <Icon icon={ChevronDown} size="sm" className="ml-1 text-gray-400" />
                     </button>
                   </div>
                   <Input

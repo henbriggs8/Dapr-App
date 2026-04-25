@@ -1,4 +1,5 @@
 import { Clock, ChevronRight, Check } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Service } from "@shared/schema";
 
 interface EnhancedServiceSelectionProps {
@@ -36,16 +37,16 @@ export function EnhancedServiceSelection({
                 <div className="text-right">
                   <p className="text-base font-medium text-black">${service.price}</p>
                   <p className="text-xs text-gray-400 flex items-center justify-end gap-0.5 mt-0.5">
-                    <Clock className="w-3 h-3" />
+                    <Icon icon={Clock} size="xs" />
                     {service.duration} min
                   </p>
                 </div>
                 {isSelected ? (
                   <div className="w-5 h-5 rounded-full bg-[#8c52ff] flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-white" />
+                    <Icon icon={Check} size="xs" className="text-white" />
                   </div>
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-[#8c52ff] flex-shrink-0" />
+                  <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] flex-shrink-0" />
                 )}
               </div>
             </button>
@@ -71,10 +72,10 @@ export function EnhancedServiceSelection({
                 <p className="text-base font-medium text-white">${signature.price}</p>
                 {selectedServiceId === signature.id ? (
                   <div className="w-5 h-5 rounded-full bg-[#8c52ff] flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-white" />
+                    <Icon icon={Check} size="xs" className="text-white" />
                   </div>
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-[#8c52ff] flex-shrink-0" />
+                  <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] flex-shrink-0" />
                 )}
               </div>
             </div>

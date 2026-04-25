@@ -6,6 +6,7 @@ import { Booking } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckIcon, LucideAlertTriangle, ArrowLeft } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Loader2 } from "lucide-react";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 
@@ -119,7 +120,7 @@ export default function PaymentSuccessPage() {
           ) : error ? (
             <div className="my-8 flex flex-col items-center">
               <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                <LucideAlertTriangle className="h-8 w-8 text-red-600" />
+                <Icon icon={LucideAlertTriangle} size="xl" className="text-red-600" />
               </div>
               <h3 className="text-lg font-medium mb-2">Payment Verification Failed</h3>
               <p className="text-center text-muted-foreground mb-4">{error}</p>
@@ -128,7 +129,7 @@ export default function PaymentSuccessPage() {
           ) : (
             <div className="my-8 flex flex-col items-center">
               <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                <CheckIcon className="h-8 w-8 text-green-600" />
+                <Icon icon={CheckIcon} size="xl" className="text-green-600" />
               </div>
               <h3 className="text-lg font-medium mb-2">Thank You for Your Payment!</h3>
               <p className="text-center text-muted-foreground mb-6">
@@ -157,7 +158,7 @@ export default function PaymentSuccessPage() {
               
               <div className="flex gap-4">
                 <Button variant="outline" onClick={() => navigate("/")}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <Icon icon={ArrowLeft} size="sm" className="mr-2" />
                   Return to Home
                 </Button>
                 <Button onClick={() => navigate("/activity")}>

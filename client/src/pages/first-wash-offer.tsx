@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function FirstWashOffer() {
   const [, setLocation] = useLocation();
@@ -24,14 +25,14 @@ export default function FirstWashOffer() {
           onClick={() => setLocation("/onboarding/car-profile")}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <span className="text-[12px] text-[#aaa]">Step 3 of 3</span>
       </div>
 
       {/* Icon */}
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3eeff] mb-8">
-        <Sparkles className="h-8 w-8 text-[#8c52ff]" />
+        <Icon icon={Sparkles} size="xl" className="text-[#8c52ff]" />
       </div>
 
       {/* Heading */}
@@ -68,7 +69,7 @@ export default function FirstWashOffer() {
           onClick={handleBook}
           className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#8c52ff] text-[13px] font-semibold text-white transition active:scale-[0.98]"
         >
-          Book my free wash <ArrowRight className="h-4 w-4" />
+          Book my free wash <Icon icon={ArrowRight} size="sm" />
         </button>
         <button
           type="button"

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Timer
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWebSocket } from "@/hooks/use-websocket";
 
@@ -133,10 +134,10 @@ export function ServiceTracker({
             </div>
             <div className="flex space-x-2">
               <Button size="sm" variant="outline">
-                <Phone className="w-4 h-4" />
+                <Icon icon={Phone} size="sm" />
               </Button>
               <Button size="sm" variant="outline">
-                <MessageCircle className="w-4 h-4" />
+                <Icon icon={MessageCircle} size="sm" />
               </Button>
             </div>
           </div>
@@ -148,11 +149,11 @@ export function ServiceTracker({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
-              <currentStageData.icon className="w-5 h-5 text-purple-600" />
+              <Icon icon={currentStageData.icon} size="md" className="text-purple-600" />
               <span>{currentStageData.label}</span>
             </CardTitle>
             <Badge variant="secondary" className="flex items-center space-x-1">
-              <Timer className="w-3 h-3" />
+              <Icon icon={Timer} size="xs" />
               <span>{formatElapsedTime(elapsedTime)}</span>
             </Badge>
           </div>
@@ -196,9 +197,9 @@ export function ServiceTracker({
                         : 'bg-gray-100 text-gray-400'
                     }`}>
                       {isCompleted ? (
-                        <CheckCircle className="w-4 h-4" />
+                        <Icon icon={CheckCircle} size="sm" />
                       ) : (
-                        <StageIcon className="w-4 h-4" />
+                        <Icon icon={StageIcon} size="sm" />
                       )}
                     </div>
                     <div className="flex-1">
@@ -275,7 +276,7 @@ export function ServiceTracker({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Clock className="w-5 h-5 text-blue-600" />
+                <Icon icon={Clock} size="md" className="text-blue-600" />
                 <div>
                   <div className="font-medium text-blue-900">Estimated completion</div>
                   <div className="text-sm text-blue-700">

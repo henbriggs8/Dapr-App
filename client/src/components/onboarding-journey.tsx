@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronRight, Car, Calendar, MapPin, Star, Sparkles } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -232,7 +233,7 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
                   animate="visible"
                   className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center z-10 absolute bottom-0 right-6 translate-y-1/2"
                 >
-                  {currentStep.icon && <currentStep.icon className="h-8 w-8 text-white" />}
+                  {currentStep.icon && <Icon icon={currentStep.icon} size="xl" className="text-white" />}
                 </motion.div>
               </div>
             
@@ -244,7 +245,7 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
               <CardContent className="p-6">
                 <div className="flex items-center text-sm text-muted-foreground mb-6 p-3 bg-muted/50 rounded-md">
                   <div className="h-8 w-8 rounded-full bg-[#8c52ff]/10 flex items-center justify-center mr-3">
-                    <Sparkles className="h-4 w-4 text-[#8c52ff]" />
+                    <Icon icon={Sparkles} size="sm" className="text-[#8c52ff]" />
                   </div>
                   <p>{currentStep.tip}</p>
                 </div>
@@ -275,7 +276,7 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
                       {step < totalSteps - 1 ? (
                         <>
                           Next
-                          <ChevronRight className="ml-1 h-4 w-4" />
+                          <Icon icon={ChevronRight} size="sm" className="ml-1" />
                         </>
                       ) : 'Get Started'}
                     </Button>

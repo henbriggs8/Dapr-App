@@ -11,6 +11,7 @@ import { ServiceProgress } from "@/components/service-progress";
 import { Booking, Service, TimeSlot, Vehicle } from "@shared/schema";
 import { format } from "date-fns";
 import { ChevronLeft, Calendar, Clock, Car, MapPin } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function BookingDetails() {
   const [, setLocation] = useLocation();
@@ -81,7 +82,7 @@ export default function BookingDetails() {
           </CardContent>
           <CardFooter>
             <Button variant="outline" onClick={() => setLocation("/")}>
-              <ChevronLeft className="mr-2 h-4 w-4" /> Back to Home
+              <Icon icon={ChevronLeft} size="sm" className="mr-2" /> Back to Home
             </Button>
           </CardFooter>
         </Card>
@@ -96,7 +97,7 @@ export default function BookingDetails() {
     <div className="container max-w-screen-md mx-auto px-4 py-8">
       <div className="mb-6 flex items-center">
         <Button variant="outline" onClick={() => setLocation("/")} className="mr-3">
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          <Icon icon={ChevronLeft} size="sm" className="mr-2" /> Back
         </Button>
         <h1 className="text-2xl font-bold">Booking Details</h1>
       </div>
@@ -111,23 +112,23 @@ export default function BookingDetails() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-muted-foreground" />
+            <Icon icon={Calendar} size="md" className="mr-2 text-muted-foreground" />
             <span>{bookingDate}</span>
           </div>
           
           <div className="flex items-center">
-            <Clock className="h-5 w-5 mr-2 text-muted-foreground" />
+            <Icon icon={Clock} size="md" className="mr-2 text-muted-foreground" />
             <span>{timeSlot.startTime} - {timeSlot.endTime}</span>
           </div>
           
           <div className="flex items-center">
-            <MapPin className="h-5 w-5 mr-2 text-muted-foreground" />
+            <Icon icon={MapPin} size="md" className="mr-2 text-muted-foreground" />
             <span>{booking.serviceLocation} ({booking.serviceLocationType})</span>
           </div>
           
           {vehicle && (
             <div className="flex items-center">
-              <Car className="h-5 w-5 mr-2 text-muted-foreground" />
+              <Icon icon={Car} size="md" className="mr-2 text-muted-foreground" />
               <span>{vehicle.year} {vehicle.make} {vehicle.model} {vehicle.color && `(${vehicle.color})`}</span>
             </div>
           )}

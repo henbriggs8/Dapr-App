@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 import { Button } from '@/components/ui/button';
 import TrackingMap from '@/components/tracking-map';
 import { Booking } from '@shared/schema';
@@ -63,7 +64,7 @@ export default function TrackingPage() {
             onClick={handleBack}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
+            <Icon icon={ArrowLeft} size="lg" className="text-gray-700" />
           </button>
           <h1 className="text-xl font-semibold text-gray-900">Track Service</h1>
           <div className="w-10" />

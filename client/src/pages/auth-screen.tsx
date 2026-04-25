@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronDown } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { SiApple, SiGoogle } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,7 @@ export default function AuthScreen() {
           onClick={handleBack}
           className="p-2 hover:bg-white/90 bg-white/80 backdrop-blur-sm rounded-full transition-colors shadow-sm"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-700" />
+          <Icon icon={ArrowLeft} size="lg" className="text-gray-700" />
         </button>
         <h1 className="text-xl font-semibold text-gray-900 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
           {isLoginMode ? "Log in" : "Sign up"}

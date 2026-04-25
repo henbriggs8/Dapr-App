@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useUser } from "@clerk/clerk-react";
 
 const primaryBtn =
@@ -103,7 +104,7 @@ export default function OnboardingNameScreen() {
           onClick={() => setLocation("/")}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <span className="text-[12px] text-[#aaa]">Step 1 of 3</span>
       </div>
@@ -193,7 +194,7 @@ export default function OnboardingNameScreen() {
           disabled={!isValid}
           className={primaryBtn}
         >
-          Continue <ArrowRight className="h-4 w-4" />
+          Continue <Icon icon={ArrowRight} size="sm" />
         </button>
       </div>
     </div>

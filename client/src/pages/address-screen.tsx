@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 const US_STATES = [
@@ -44,7 +45,7 @@ export default function AddressScreen() {
           onClick={() => setLocation("/onboarding/name")}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <span className="text-[12px] text-[#aaa]">Step 2 of 4</span>
       </div>
@@ -147,7 +148,7 @@ export default function AddressScreen() {
           disabled={!isValid}
           className={primaryBtn}
         >
-          Continue <ArrowRight className="h-4 w-4" />
+          Continue <Icon icon={ArrowRight} size="sm" />
         </button>
       </div>
     </div>

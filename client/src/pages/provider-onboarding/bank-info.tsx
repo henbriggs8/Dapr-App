@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, CreditCard, Building, CheckCircle } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,7 @@ export default function BankInfoPage() {
           onClick={handleBack}
           className="flex items-center text-[#8c52ff] hover:text-[#8c52ff]/80 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <Icon icon={ArrowLeft} size="md" className="mr-2" />
           <span className="text-base font-medium">Back</span>
         </button>
       </div>
@@ -115,14 +116,14 @@ export default function BankInfoPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-[#8c52ff] rounded-lg flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-white" />
+                    <Icon icon={CreditCard} size="lg" className="text-white" />
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">Connect your bank</h3>
                     <p className="text-sm text-gray-600">Secure, instant setup</p>
                   </div>
                 </div>
-                {useStripeConnect && <CheckCircle className="w-6 h-6 text-green-500" />}
+                {useStripeConnect && <Icon icon={CheckCircle} size="lg" className="text-green-500" />}
               </div>
             </motion.div>
 
@@ -139,7 +140,7 @@ export default function BankInfoPage() {
             {/* Manual Bank Entry */}
             <div className="space-y-4">
               <div className="flex items-center space-x-2 text-gray-700">
-                <Building className="w-5 h-5" />
+                <Icon icon={Building} size="md" />
                 <span className="font-medium">Enter bank details manually</span>
               </div>
 

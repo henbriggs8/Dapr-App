@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { apiRequest } from "@/lib/queryClient";
 import { YEARS, CAR_MAKES, CAR_MODELS } from "@/utils/car-data";
 
@@ -55,7 +56,7 @@ export default function CarProfileScreen() {
           onClick={() => setLocation("/onboarding/name")}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <span className="text-[12px] text-[#aaa]">Step 2 of 3</span>
       </div>
@@ -107,7 +108,7 @@ export default function CarProfileScreen() {
           disabled={!isValid || saving}
           className={primaryBtn}
         >
-          {saving ? "Saving…" : <>Save & Continue <ArrowRight className="h-4 w-4" /></>}
+          {saving ? "Saving…" : <>Save & Continue <Icon icon={ArrowRight} size="sm" /></>}
         </button>
         <button
           type="button"

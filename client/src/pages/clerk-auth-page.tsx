@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
@@ -29,7 +30,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
       onClick={onBack}
       className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f1f1] text-[#111] transition hover:bg-[#e9e9e9] mb-8"
     >
-      <ArrowLeft className="h-4 w-4" />
+      <Icon icon={ArrowLeft} size="sm" />
     </button>
   );
 }
@@ -165,8 +166,8 @@ function LandingScreen({
             disabled={!canSubmit || loading}
             className={primaryBtn}
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-              <>Next <ArrowRight className="h-4 w-4" /></>
+            {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
+              <>Next <Icon icon={ArrowRight} size="sm" /></>
             )}
           </button>
 
@@ -251,7 +252,7 @@ function PasswordScreen({
           onClick={() => setShow((v) => !v)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]"
         >
-          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {show ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
         </button>
       </div>
 
@@ -273,7 +274,7 @@ function PasswordScreen({
           onClick={onBack}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <button
           type="button"
@@ -281,8 +282,8 @@ function PasswordScreen({
           disabled={!password.trim() || loading}
           className={`${mutedBtn} min-w-[100px]`}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            <>Next <ArrowRight className="h-4 w-4" /></>
+          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
+            <>Next <Icon icon={ArrowRight} size="sm" /></>
           )}
         </button>
       </div>
@@ -344,7 +345,7 @@ function OtpScreen({
           onClick={onBack}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon icon={ArrowLeft} size="sm" />
         </button>
         <button
           type="button"
@@ -352,8 +353,8 @@ function OtpScreen({
           disabled={code.length < 6 || loading}
           className={`${mutedBtn} min-w-[100px]`}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            <>Verify <ArrowRight className="h-4 w-4" /></>
+          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
+            <>Verify <Icon icon={ArrowRight} size="sm" /></>
           )}
         </button>
       </div>
@@ -407,7 +408,7 @@ function EmailCollectScreen({
         onClick={() => onSubmit(email.trim())}
         className={`${primaryBtn} mt-6`}
       >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : required ? 'Send code' : 'Save email'}
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : required ? 'Send code' : 'Save email'}
       </button>
 
       {!required && (
@@ -474,7 +475,7 @@ function SetPasswordScreen({
             onClick={() => setShowPw(v => !v)}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b9b9b]"
           >
-            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPw ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
           </button>
         </div>
         <input
@@ -493,7 +494,7 @@ function SetPasswordScreen({
         onClick={handleSubmit}
         className={`${primaryBtn} mt-6`}
       >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set password'}
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Set password'}
       </button>
     </div>
   );
@@ -503,7 +504,7 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-24 pb-10">
       <div className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-[#8c52ff]">
-        <Check className="h-7 w-7 text-[#8c52ff]" strokeWidth={3} />
+        <Icon icon={Check} size="lg" className="text-[#8c52ff]" />
       </div>
 
       <h1 className="mt-7 text-[30px] font-semibold tracking-[-0.04em] text-[#111]">All set.</h1>
@@ -512,7 +513,7 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
       </p>
 
       <button type="button" onClick={onContinue} className={`${mutedBtn} mt-8 w-fit`}>
-        Continue <ArrowRight className="h-4 w-4" />
+        Continue <Icon icon={ArrowRight} size="sm" />
       </button>
     </div>
   );
@@ -616,7 +617,7 @@ function ProfileInfoScreen({
             onClick={() => setShowPw(v => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]"
           >
-            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPw ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
           </button>
         </div>
         <input
@@ -639,8 +640,8 @@ function ProfileInfoScreen({
           disabled={!canSubmit || loading}
           className={primaryBtn}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            <>Create account <ArrowRight className="h-4 w-4" /></>
+          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
+            <>Create account <Icon icon={ArrowRight} size="sm" /></>
           )}
         </button>
         <p className="text-center text-[11px] leading-4 text-[#a0a0a0] px-4">

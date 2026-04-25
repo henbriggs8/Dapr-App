@@ -3,6 +3,7 @@ import { useJsApiLoader } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, Loader2 } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -275,7 +276,7 @@ export function AddressAutocomplete({
         
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
           {isLoading && (
-            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+            <Icon icon={Loader2} size="sm" className="animate-spin text-gray-400" />
           )}
           
           <button
@@ -285,7 +286,7 @@ export function AddressAutocomplete({
             title={isLoaded ? "Use current location" : "Geolocation available"}
             disabled={isLoading}
           >
-            <MapPin className="h-4 w-4" />
+            <Icon icon={MapPin} size="sm" />
           </button>
         </div>
       </div>

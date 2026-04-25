@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Cloud, Sun, CloudRain, Thermometer, Droplets, Wind, AlertTriangle } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,10 +54,10 @@ export default function WeatherRecommendations({
 
   const getWeatherIcon = (condition: string) => {
     const lower = condition.toLowerCase();
-    if (lower.includes('rain') || lower.includes('drizzle')) return <CloudRain className="h-5 w-5" />;
-    if (lower.includes('cloud')) return <Cloud className="h-5 w-5" />;
-    if (lower.includes('clear') || lower.includes('sun')) return <Sun className="h-5 w-5" />;
-    return <Cloud className="h-5 w-5" />;
+    if (lower.includes('rain') || lower.includes('drizzle')) return <Icon icon={CloudRain} size="md" />;
+    if (lower.includes('cloud')) return <Icon icon={Cloud} size="md" />;
+    if (lower.includes('clear') || lower.includes('sun')) return <Icon icon={Sun} size="md" />;
+    return <Icon icon={Cloud} size="md" />;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -70,7 +71,7 @@ export default function WeatherRecommendations({
 
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
-      case 'high': return <AlertTriangle className="h-4 w-4" />;
+      case 'high': return <Icon icon={AlertTriangle} size="sm" />;
       default: return null;
     }
   };
@@ -80,7 +81,7 @@ export default function WeatherRecommendations({
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cloud className="h-5 w-5 animate-pulse" />
+            <Icon icon={Cloud} size="md" className="animate-pulse" />
             Weather Insights
           </CardTitle>
         </CardHeader>
@@ -112,15 +113,15 @@ export default function WeatherRecommendations({
           {weather && (
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-1">
-                <Thermometer className="h-4 w-4" />
+                <Icon icon={Thermometer} size="sm" />
                 {weather.current.temp}°F
               </div>
               <div className="flex items-center gap-1">
-                <Droplets className="h-4 w-4" />
+                <Icon icon={Droplets} size="sm" />
                 {weather.current.humidity}%
               </div>
               <div className="flex items-center gap-1">
-                <Wind className="h-4 w-4" />
+                <Icon icon={Wind} size="sm" />
                 {Math.round(weather.current.windSpeed)} mph
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function FAQ() {
   const [, setLocation] = useLocation();
@@ -15,7 +16,7 @@ export default function FAQ() {
             onClick={() => setLocation("/")}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon icon={ArrowLeft} size="sm" />
             Back
           </Button>
         </div>

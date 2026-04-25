@@ -17,6 +17,7 @@ import {
   Navigation,
   ChevronRight,
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
 import { ProviderProfileTab } from "@/components/provider-profile-tab";
 import { TimeAdjustmentPanel } from "@/components/time-adjustment-panel";
@@ -375,7 +376,7 @@ export default function ProviderDashboard() {
             disabled={updateLocationMutation.isPending}
             className="flex items-center gap-1.5 text-sm text-[#8c52ff] font-medium"
           >
-            <Navigation className="w-4 h-4" />
+            <Icon icon={Navigation} size="sm" />
             {updateLocationMutation.isPending ? "Locating..." : "Update location"}
           </button>
         </div>
@@ -439,7 +440,7 @@ export default function ProviderDashboard() {
             </div>
           ) : activeBookings.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <Car className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+              <Icon icon={Car} size="xl" className="text-gray-300 mx-auto mb-3" />
               <p className="text-gray-400 text-sm">No active bookings</p>
             </div>
           ) : (
@@ -464,15 +465,15 @@ export default function ProviderDashboard() {
                   {/* Details */}
                   <div className="space-y-1 mb-4">
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <Icon icon={MapPin} size="xs" className="text-gray-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-black leading-snug">{booking.serviceLocation}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <Icon icon={Clock} size="xs" className="text-gray-400 flex-shrink-0" />
                       <p className="text-sm text-gray-500">{booking.date} at {booking.time}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <Icon icon={DollarSign} size="xs" className="text-gray-400 flex-shrink-0" />
                       <p className="text-sm font-semibold text-black">{formatPrice(booking.totalPrice || 0)}</p>
                     </div>
                   </div>
@@ -485,7 +486,7 @@ export default function ProviderDashboard() {
                         disabled={acceptBookingMutation.isPending}
                         className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
                       >
-                        <CheckCircle className="w-4 h-4 inline mr-1.5" />
+                        <Icon icon={CheckCircle} size="sm" className="inline mr-1.5" />
                         Accept
                       </button>
                       <button
@@ -493,7 +494,7 @@ export default function ProviderDashboard() {
                         disabled={rejectBookingMutation.isPending}
                         className="flex-1 py-2.5 rounded-xl border border-gray-200 text-black text-sm font-medium"
                       >
-                        <XCircle className="w-4 h-4 inline mr-1.5 text-gray-400" />
+                        <Icon icon={XCircle} size="sm" className="inline mr-1.5 text-gray-400" />
                         Decline
                       </button>
                     </div>
@@ -507,7 +508,7 @@ export default function ProviderDashboard() {
                           disabled={markArrivedMutation.isPending}
                           className="flex-1 py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
                         >
-                          <MapPin className="w-4 h-4 inline mr-1.5" />
+                          <Icon icon={MapPin} size="sm" className="inline mr-1.5" />
                           {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
                         </button>
                       )}
@@ -516,7 +517,7 @@ export default function ProviderDashboard() {
                         disabled={startServiceMutation.isPending}
                         className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
                       >
-                        <Play className="w-4 h-4 inline mr-1.5" />
+                        <Icon icon={Play} size="sm" className="inline mr-1.5" />
                         Start Service
                       </button>
                     </div>
@@ -528,7 +529,7 @@ export default function ProviderDashboard() {
                       disabled={completeServiceMutation.isPending}
                       className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
                     >
-                      <StopIcon className="w-4 h-4 inline mr-1.5" />
+                      <Icon icon={StopIcon} size="sm" className="inline mr-1.5" />
                       Mark Complete
                     </button>
                   )}
@@ -571,7 +572,7 @@ export default function ProviderDashboard() {
             </div>
           ) : availableJobs.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+              <Icon icon={MapPin} size="xl" className="text-gray-300 mx-auto mb-3" />
               <p className="text-gray-400 text-sm">No jobs available right now</p>
               <p className="text-gray-300 text-xs mt-1">Check back soon or tap Refresh</p>
             </div>
@@ -586,7 +587,7 @@ export default function ProviderDashboard() {
                     </span>
                     {job.distance != null && (
                       <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Navigation className="w-3 h-3" />
+                        <Icon icon={Navigation} size="xs" />
                         {job.distance} mi away
                       </span>
                     )}
@@ -595,17 +596,17 @@ export default function ProviderDashboard() {
                   {/* Details */}
                   <div className="space-y-1 mb-4">
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <Icon icon={MapPin} size="xs" className="text-gray-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-black leading-snug">{job.serviceLocation}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <Icon icon={Clock} size="xs" className="text-gray-400 flex-shrink-0" />
                       <p className="text-sm text-gray-500">
                         {job.date && job.time ? `${new Date(job.date).toLocaleDateString()} at ${job.time}` : 'Time TBD'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <Icon icon={DollarSign} size="xs" className="text-gray-400 flex-shrink-0" />
                       <p className="text-sm font-semibold text-black">{job.totalPrice ? formatPrice(job.totalPrice) : '$0.00'}</p>
                     </div>
                     {job.notes && <p className="text-sm text-gray-500 pl-5">{job.notes}</p>}
@@ -707,7 +708,7 @@ export default function ProviderDashboard() {
                   <div key={category} className={`px-6 py-4 flex items-center justify-between ${i < arr.length - 1 ? "border-b border-gray-200" : ""}`}>
                     <span className="text-sm text-black">{formatCategory(category)}</span>
                     <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      <Icon icon={Clock} size="xs" className="text-gray-400" />
                       {formatDuration(duration)}
                     </span>
                   </div>

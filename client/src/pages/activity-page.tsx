@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
 import { Calendar, Clock, Bell, Gift, MessageSquare, ChevronRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
 
 const notifications = [
@@ -133,12 +134,12 @@ export default function ActivityPage() {
                       <div>
                         <h3 className="text-base font-medium text-black">{service?.name || "Service"}</h3>
                         <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <Icon icon={Calendar} size="xs" />
                           {timeSlot ? formatDate(timeSlot.date) : "—"}
                           {timeSlot && (
                             <>
                               <span className="mx-0.5">·</span>
-                              <Clock className="h-3 w-3" />
+                              <Icon icon={Clock} size="xs" />
                               {timeSlot.startTime}
                             </>
                           )}
@@ -148,7 +149,7 @@ export default function ActivityPage() {
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                    <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] shrink-0" />
                   </div>
                 );
               })}

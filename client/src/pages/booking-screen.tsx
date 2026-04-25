@@ -17,6 +17,7 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 import { useState, useEffect, useRef } from "react";
 import BookingDialog from "@/components/booking-dialog";
@@ -112,7 +113,7 @@ function ExpandedSection({ title, items }: { title: string; items: string[] }) {
       <ul className="space-y-1.5">
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-2 text-[13px] text-[#444] leading-snug">
-            <Check className="h-3.5 w-3.5 text-[#8c52ff] mt-[3px] shrink-0" />
+            <Icon icon={Check} size="xs" className="text-[#8c52ff] mt-[3px] shrink-0" />
             <span>{item}</span>
           </li>
         ))}
@@ -333,7 +334,7 @@ export default function BookingScreen() {
             className="flex items-center gap-2 text-[11px] font-semibold tracking-widest text-[#888] uppercase mb-4 hover:text-[#111] transition-colors"
             data-testid="link-back"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon icon={ArrowLeft} size="sm" />
             Dapper
           </button>
           <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#111]">
@@ -387,7 +388,7 @@ export default function BookingScreen() {
             ) : (
               <div className="border-t border-[#ededed] mt-3">
                 {packages.map((service) => {
-                  const Icon = iconForService(service.name);
+                  const IconComp = iconForService(service.name);
                   const expanded = expandedId === service.id;
                   const selected = selectedServiceId === service.id;
                   const content = SERVICE_CONTENT[service.name.toLowerCase()];
@@ -412,7 +413,7 @@ export default function BookingScreen() {
                             selected ? "bg-[#8c52ff] text-white" : "bg-[#f4f0ff] text-[#8c52ff]"
                           }`}
                         >
-                          <Icon className="h-4 w-4" />
+                          <Icon icon={IconComp} size="sm" />
                         </div>
                         <div className="flex-1 pr-4 min-w-0">
                           <p className="text-[15px] font-semibold text-[#111] mb-0.5">{service.name}</p>
@@ -422,15 +423,11 @@ export default function BookingScreen() {
                           <div className="text-right">
                             <p className="text-[15px] font-bold text-[#111]">${service.price}</p>
                             <div className="flex items-center gap-1 justify-end">
-                              <Clock className="h-3 w-3 text-[#aaa]" />
+                              <Icon icon={Clock} size="xs" className="text-[#aaa]" />
                               <p className="text-[11px] text-[#aaa]">{service.duration} min</p>
                             </div>
                           </div>
-                          <ChevronDown
-                            className={`h-4 w-4 text-[#bbb] transition-transform duration-300 ${
-                              expanded ? "rotate-180" : ""
-                            }`}
-                          />
+                          <Icon icon={ChevronDown} size="sm" className={` text-[#bbb] transition-transform duration-300 ${ expanded ? "rotate-180" : "" }`} />
                         </div>
                       </button>
 
@@ -456,7 +453,7 @@ export default function BookingScreen() {
                                   data-testid={`book-${service.id}`}
                                 >
                                   {selected ? "Selected — choose a time" : `Choose ${service.name}`}
-                                  <ChevronRight className="h-3.5 w-3.5" />
+                                  <Icon icon={ChevronRight} size="xs" />
                                 </button>
                               </div>
                             </div>
@@ -494,7 +491,7 @@ export default function BookingScreen() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-white/10 text-[#8c52ff] flex items-center justify-center shrink-0">
-                      <Crown className="h-4 w-4" />
+                      <Icon icon={Crown} size="sm" />
                     </div>
                     <div>
                       <p className="text-[16px] font-bold text-white mb-0.5">{signature.name}</p>
@@ -505,7 +502,7 @@ export default function BookingScreen() {
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-[16px] font-bold text-white">${signature.price}</p>
-                    <ChevronRight className="h-4 w-4 text-[#8c52ff]" />
+                    <Icon icon={ChevronRight} size="sm" className="text-[#8c52ff]" />
                   </div>
                 </div>
                 <p className="text-[13px] text-[#999] leading-5">{signature.description}</p>
@@ -548,11 +545,11 @@ export default function BookingScreen() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <Users className="h-3.5 w-3.5 text-[#8c52ff]" />
+                      <Icon icon={Users} size="xs" className="text-[#8c52ff]" />
                       <span>2 Detail Pros nearby</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <Zap className="h-3.5 w-3.5 text-[#8c52ff]" />
+                      <Icon icon={Zap} size="xs" className="text-[#8c52ff]" />
                       <span>Live availability</span>
                     </div>
                   </div>
@@ -568,7 +565,7 @@ export default function BookingScreen() {
                         <div className="flex items-start justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <Zap className="h-4 w-4 text-white" fill="white" />
+                              <Icon icon={Zap} size="sm" className="text-white" fill="white" />
                               <span className="text-base font-bold text-white">{window.label}</span>
                             </div>
                             <p className="text-sm text-purple-200">{window.subtitle}</p>
@@ -591,7 +588,7 @@ export default function BookingScreen() {
                           <p className="text-sm font-semibold text-black">{window.label}</p>
                           <p className="text-xs text-gray-500 mt-0.5">{window.subtitle}</p>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-[#8c52ff] flex-shrink-0" />
+                        <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] flex-shrink-0" />
                       </button>
                     )
                   )}
@@ -622,7 +619,7 @@ export default function BookingScreen() {
                   <div className="border-t border-gray-200">
                     {getAvailableTimeSlots().length === 0 ? (
                       <div className="py-12 text-center">
-                        <Calendar className="h-8 w-8 mx-auto mb-3 text-gray-300" />
+                        <Icon icon={Calendar} size="xl" className="mx-auto mb-3 text-gray-300" />
                         <p className="text-gray-500 text-sm">No slots available for this date</p>
                       </div>
                     ) : (
@@ -641,14 +638,14 @@ export default function BookingScreen() {
                             data-testid={`slot-${timeSlot.id}`}
                           >
                             <div className="flex items-center gap-3">
-                              <Clock className="h-4 w-4 text-gray-400" />
+                              <Icon icon={Clock} size="sm" className="text-gray-400" />
                               <span className="text-base font-medium text-black">{formatTime(timeSlot.startTime)}</span>
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-sm text-gray-400">
                                 {timeSlot.maxBookings - timeSlot.currentBookings} spots left
                               </span>
-                              <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+                              <Icon icon={ChevronRight} size="md" className="text-[#8c52ff]" />
                             </div>
                           </button>
                         ))
@@ -684,7 +681,7 @@ export default function BookingScreen() {
                     data-testid="link-all-bookings"
                   >
                     <span className="text-sm text-gray-500">View all bookings</span>
-                    <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+                    <Icon icon={ChevronRight} size="md" className="text-[#8c52ff]" />
                   </button>
                 )}
               </div>

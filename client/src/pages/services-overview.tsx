@@ -18,6 +18,7 @@ import {
   Star,
   type LucideIcon,
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -270,7 +271,7 @@ function DesktopServices() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8c52ff]/15 rounded-full blur-[140px] pointer-events-none" />
         <div className="max-w-[1120px] mx-auto px-8 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Our Services
+            <Icon icon={Sparkles} size="sm" /> Our Services
           </div>
           <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6 max-w-4xl mx-auto">
             Every detail of every detail.
@@ -331,7 +332,7 @@ function DesktopServices() {
                 data-testid={`diff-${d.title.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-4">
-                  <d.icon className="w-5 h-5" />
+                  <Icon icon={d.icon} size="md" />
                 </div>
                 <h3 className="text-base font-bold mb-2 leading-tight">{d.title}</h3>
                 <p className="text-sm text-white/55 leading-relaxed">{d.body}</p>
@@ -367,7 +368,7 @@ function DesktopServices() {
                     {TIERS.map((t) => (
                       <th key={t.slug} className="text-center font-semibold text-white px-4 py-5 min-w-[140px]">
                         <div className="flex flex-col items-center gap-1">
-                          <t.icon className="w-4 h-4 text-[#8c52ff]" />
+                          <Icon icon={t.icon} size="sm" className="text-[#8c52ff]" />
                           <span className="text-[13px] leading-tight">{t.name}</span>
                           <span className="text-[11px] text-white/40 font-normal">${t.price}</span>
                         </div>
@@ -382,7 +383,7 @@ function DesktopServices() {
                       {row.values.map((v, idx) => (
                         <td key={idx} className="px-4 py-4 text-center">
                           {v ? (
-                            <Check className="w-4 h-4 text-[#8c52ff] mx-auto" />
+                            <Icon icon={Check} size="sm" className="text-[#8c52ff] mx-auto" />
                           ) : (
                             <span className="text-white/20">—</span>
                           )}
@@ -421,7 +422,7 @@ function DesktopServices() {
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center shrink-0">
-                      <Plus className="w-4 h-4" />
+                      <Icon icon={Plus} size="sm" />
                     </div>
                     <h3 className="text-base font-bold leading-tight">{a.name}</h3>
                   </div>
@@ -447,7 +448,7 @@ function DesktopServices() {
             className="bg-white text-black px-10 py-5 rounded-full text-lg font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)] inline-flex items-center gap-3"
             data-testid="button-final-cta"
           >
-            Book a Wash <ArrowRight className="w-5 h-5" />
+            Book a Wash <Icon icon={ArrowRight} size="md" />
           </button>
         </div>
       </section>
@@ -469,7 +470,7 @@ function DesktopServices() {
 }
 
 function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook: () => void }) {
-  const Icon = tier.icon;
+  const TierIcon = tier.icon;
   const reverse = index % 2 === 1;
   return (
     <div id={tier.slug} className="scroll-mt-32">
@@ -478,7 +479,7 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
         <div className="lg:[direction:ltr]">
           <div className="inline-flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center">
-              <Icon className="w-6 h-6" />
+              <Icon icon={TierIcon} size="lg" />
             </div>
             <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider">
               Tier {String(index + 1).padStart(2, "0")}
@@ -490,7 +491,7 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
             <p className="text-sm text-white/40 font-medium">starting price</p>
             <span className="w-1 h-1 rounded-full bg-white/20" />
             <p className="text-sm text-white/60 font-medium flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> {tier.duration}
+              <Icon icon={Clock} size="xs" /> {tier.duration}
             </p>
           </div>
           <p className="text-lg text-white/70 leading-relaxed mb-8 max-w-lg">{tier.tagline}</p>
@@ -499,7 +500,7 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
             className="bg-[#8c52ff] text-white px-7 py-3.5 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 shadow-[0_0_30px_-10px_#8c52ff]"
             data-testid={`button-book-${tier.slug}`}
           >
-            Book {tier.name} <ArrowRight className="w-4 h-4" />
+            Book {tier.name} <Icon icon={ArrowRight} size="sm" />
           </button>
         </div>
 
@@ -523,7 +524,7 @@ function DetailList({ title, items, muted }: { title: string; items: string[]; m
       <ul className="space-y-2">
         {items.map((item, i) => (
           <li key={i} className={`flex items-start gap-2.5 leading-snug ${muted ? "text-sm text-white/60" : "text-sm text-white/85"}`}>
-            <Check className="w-4 h-4 text-[#8c52ff] mt-0.5 shrink-0" />
+            <Icon icon={Check} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
             <span>{item}</span>
           </li>
         ))}
@@ -557,7 +558,7 @@ function MobileServices() {
             className="flex items-center gap-2 text-[11px] font-semibold tracking-widest text-[#888] uppercase mb-4 hover:text-[#111] transition-colors"
             data-testid="link-back"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon icon={ArrowLeft} size="sm" />
             Dapper
           </button>
           <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-2">Our Services</p>
@@ -576,7 +577,7 @@ function MobileServices() {
             {DIFFERENTIATORS.slice(0, 4).map((d) => (
               <div key={d.title} className="rounded-xl border border-[#ededed] p-3" data-testid={`mobile-diff-${d.title.toLowerCase().replace(/\s+/g, "-")}`}>
                 <div className="w-7 h-7 rounded-lg bg-[#f4f0ff] text-[#8c52ff] flex items-center justify-center mb-2">
-                  <d.icon className="w-3.5 h-3.5" />
+                  <Icon icon={d.icon} size="xs" />
                 </div>
                 <p className="text-[12px] font-semibold text-[#111] leading-tight mb-1">{d.title}</p>
                 <p className="text-[11px] text-[#888] leading-snug">{d.body}</p>
@@ -584,7 +585,7 @@ function MobileServices() {
             ))}
           </div>
           <div className="flex items-center gap-2 mt-3 px-3 py-2.5 rounded-xl bg-[#faf7ff] border border-[#ece2ff]">
-            <Star className="w-4 h-4 text-[#8c52ff] shrink-0" />
+            <Icon icon={Star} size="sm" className="text-[#8c52ff] shrink-0" />
             <p className="text-[12px] text-[#444] leading-snug">
               <span className="font-semibold text-[#111]">Satisfaction guarantee.</span> Not happy? We'll come back and make it right.
             </p>
@@ -596,7 +597,7 @@ function MobileServices() {
           <p className="px-5 text-[10px] font-semibold tracking-widest text-[#999] uppercase mb-1">Services</p>
           <div className="border-t border-[#ededed] mt-3">
             {TIERS.map((tier) => {
-              const Icon = tier.icon;
+              const TierIcon = tier.icon;
               const expanded = openTier === tier.slug;
               return (
                 <div key={tier.slug} className="border-b border-[#ededed] last:border-0" data-testid={`mobile-tier-${tier.slug}`}>
@@ -607,7 +608,7 @@ function MobileServices() {
                     data-testid={`mobile-tier-toggle-${tier.slug}`}
                   >
                     <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 bg-[#f4f0ff] text-[#8c52ff]">
-                      <Icon className="h-4 w-4" />
+                      <Icon icon={TierIcon} size="sm" />
                     </div>
                     <div className="flex-1 pr-4 min-w-0">
                       <p className="text-[15px] font-semibold text-[#111] mb-0.5">{tier.name}</p>
@@ -617,11 +618,11 @@ function MobileServices() {
                       <div className="text-right">
                         <p className="text-[15px] font-bold text-[#111]">${tier.price}</p>
                         <div className="flex items-center gap-1 justify-end">
-                          <Clock className="h-3 w-3 text-[#aaa]" />
+                          <Icon icon={Clock} size="xs" className="text-[#aaa]" />
                           <p className="text-[11px] text-[#aaa]">{tier.duration}</p>
                         </div>
                       </div>
-                      <ChevronDown className={`h-4 w-4 text-[#bbb] transition-transform duration-300 ${expanded ? "rotate-180" : ""}`} />
+                      <Icon icon={ChevronDown} size="sm" className={` text-[#bbb] transition-transform duration-300 ${expanded ? "rotate-180" : ""}`} />
                     </div>
                   </button>
 
@@ -645,7 +646,7 @@ function MobileServices() {
                             data-testid={`mobile-book-${tier.slug}`}
                           >
                             Book {tier.name}
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            <Icon icon={ChevronRight} size="xs" />
                           </button>
                         </div>
                       </div>
@@ -695,7 +696,7 @@ function MobileServices() {
                           className="px-3 py-2.5 border-t border-[#f0f0f0] text-center"
                         >
                           {v ? (
-                            <Check className="h-3.5 w-3.5 text-[#8c52ff] inline-block" />
+                            <Icon icon={Check} size="xs" className="text-[#8c52ff] inline-block" />
                           ) : (
                             <span className="text-[#ddd] text-[14px] leading-none">–</span>
                           )}
@@ -719,7 +720,7 @@ function MobileServices() {
             data-testid="mobile-toggle-add-ons"
           >
             <span className="text-[14px] font-semibold text-[#111]">{ADD_ONS.length} optional extras</span>
-            <ChevronDown className={`h-4 w-4 text-[#bbb] transition-transform duration-300 ${openAddOns ? "rotate-180" : ""}`} />
+            <Icon icon={ChevronDown} size="sm" className={` text-[#bbb] transition-transform duration-300 ${openAddOns ? "rotate-180" : ""}`} />
           </button>
 
           <div
@@ -763,7 +764,7 @@ function MobileServices() {
               className="bg-[#8c52ff] text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-colors inline-flex items-center gap-2"
               data-testid="mobile-button-final-cta"
             >
-              Book a Wash <ArrowRight className="w-4 h-4" />
+              Book a Wash <Icon icon={ArrowRight} size="sm" />
             </button>
           </div>
         </div>
@@ -779,7 +780,7 @@ function MobileSection({ title, items }: { title: string; items: string[] }) {
       <ul className="space-y-1.5">
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-2 text-[13px] text-[#444] leading-snug">
-            <Check className="h-3.5 w-3.5 text-[#8c52ff] mt-[3px] shrink-0" />
+            <Icon icon={Check} size="xs" className="text-[#8c52ff] mt-[3px] shrink-0" />
             <span>{item}</span>
           </li>
         ))}

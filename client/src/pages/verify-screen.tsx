@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -144,7 +145,7 @@ export default function VerifyScreen() {
           onClick={handleBack}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-700" />
+          <Icon icon={ArrowLeft} size="lg" className="text-gray-700" />
         </button>
         <h1 className="text-xl font-semibold text-gray-900">Verify your phone</h1>
         <div className="w-10" /> {/* Spacer for centering */}

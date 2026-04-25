@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { GoogleMap, useJsApiLoader } from "@react-google-maps/api";
 import { User } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 const containerStyle = {
   width: '100%',
@@ -67,7 +68,7 @@ export default function MapComponent({
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Icon icon={Loader2} size="xl" className="animate-spin" />
       </div>
     );
   }

@@ -22,6 +22,7 @@ import {
   Camera,
   ArrowLeft
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 
@@ -188,7 +189,7 @@ export default function ServiceProgress() {
             onClick={() => setLocation("/")}
             className="p-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <Icon icon={ArrowLeft} size="sm" />
           </Button>
           <h1 className="text-xl font-bold">Service in Progress</h1>
           <div className="w-8"></div>
@@ -215,10 +216,10 @@ export default function ServiceProgress() {
               </div>
               <div className="flex space-x-2">
                 <Button size="sm" variant="outline">
-                  <Phone className="w-4 h-4" />
+                  <Icon icon={Phone} size="sm" />
                 </Button>
                 <Button size="sm" variant="outline">
-                  <MessageCircle className="w-4 h-4" />
+                  <Icon icon={MessageCircle} size="sm" />
                 </Button>
               </div>
             </div>
@@ -231,12 +232,12 @@ export default function ServiceProgress() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-2">
                 <div className={`p-2 rounded-lg ${currentStageData.color}`}>
-                  <currentStageData.icon className="w-5 h-5" />
+                  <Icon icon={currentStageData.icon} size="md" />
                 </div>
                 <span>{currentStageData.label}</span>
               </CardTitle>
               <Badge variant="secondary" className="flex items-center space-x-1">
-                <Timer className="w-3 h-3" />
+                <Icon icon={Timer} size="xs" />
                 <span>{formatElapsedTime(elapsedTime)}</span>
               </Badge>
             </div>
@@ -257,7 +258,7 @@ export default function ServiceProgress() {
               {currentStage !== "completed" && (
                 <div className="flex items-center justify-between text-sm bg-white rounded-lg p-3">
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-blue-600" />
+                    <Icon icon={Clock} size="sm" className="text-blue-600" />
                     <span className="font-medium">ETA:</span>
                   </div>
                   <span className="text-blue-600 font-medium">
@@ -311,16 +312,16 @@ export default function ServiceProgress() {
                         : 'bg-gray-100 border-gray-200 text-gray-400'
                     }`}>
                       {isCompleted ? (
-                        <CheckCircle className="w-4 h-4" />
+                        <Icon icon={CheckCircle} size="sm" />
                       ) : isCurrent ? (
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                         >
-                          <StageIcon className="w-4 h-4" />
+                          <Icon icon={StageIcon} size="sm" />
                         </motion.div>
                       ) : (
-                        <StageIcon className="w-4 h-4" />
+                        <Icon icon={StageIcon} size="sm" />
                       )}
                       
                       {/* Pulse animation for current stage */}
@@ -412,18 +413,18 @@ export default function ServiceProgress() {
           >
             <Card className="bg-green-50 border-green-200">
               <CardContent className="p-4 text-center">
-                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <Icon icon={CheckCircle} size="xl" className="text-green-600 mx-auto mb-3" />
                 <h3 className="font-bold text-green-900 mb-2">Service Complete!</h3>
                 <p className="text-green-700 text-sm mb-4">
                   Your vehicle is sparkling clean and ready to go.
                 </p>
                 <div className="space-y-2">
                   <Button className="w-full bg-green-600 hover:bg-green-700">
-                    <Star className="w-4 h-4 mr-2" />
+                    <Icon icon={Star} size="sm" className="mr-2" />
                     Rate Your Service
                   </Button>
                   <Button variant="outline" className="w-full">
-                    <Camera className="w-4 h-4 mr-2" />
+                    <Icon icon={Camera} size="sm" className="mr-2" />
                     View Photos
                   </Button>
                 </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation, Crown } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
 import FluidHeroBackground from "@/components/fluid-hero-background";
 
@@ -198,10 +199,10 @@ export default function HomeDesktop() {
                 aria-expanded={timeOpen}
               >
                 <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5" />
+                  <Icon icon={Clock} size="xs" />
                 </span>
                 {timeOpt.label}
-                <ChevronDown className={`w-4 h-4 transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+                <Icon icon={ChevronDown} size="sm" className={` transition-transform ${timeOpen ? "rotate-180" : ""}`} />
               </button>
               {timeOpen && (
                 <div
@@ -225,7 +226,7 @@ export default function HomeDesktop() {
                         data-testid={`time-option-${opt.id}`}
                       >
                         {opt.label}
-                        {active && <CheckCircle2 className="w-4 h-4" />}
+                        {active && <Icon icon={CheckCircle2} size="sm" />}
                       </button>
                     );
                   })}
@@ -313,7 +314,7 @@ export default function HomeDesktop() {
                           }`}
                           data-testid={`suggestion-${idx}`}
                         >
-                          <MapPin className="w-4 h-4 text-[#8c52ff] mt-0.5 shrink-0" />
+                          <Icon icon={MapPin} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
                           <div className="min-w-0">
                             <div className="text-sm text-white truncate">{s.label}</div>
                             {s.sub && (
@@ -334,7 +335,7 @@ export default function HomeDesktop() {
                 className="bg-[#8c52ff] text-white px-8 py-4 rounded-full text-base font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
                 data-testid="button-book-hero"
               >
-                See Prices <ArrowRight className="w-4 h-4" />
+                See Prices <Icon icon={ArrowRight} size="sm" />
               </button>
               <button
                 onClick={goServices}
@@ -360,7 +361,7 @@ export default function HomeDesktop() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className="w-4 h-4 fill-[#8c52ff] text-[#8c52ff]" />
+                    <Icon icon={Star} size="sm" className="fill-[#8c52ff] text-[#8c52ff]" key={i} />
                   ))}
                 </div>
                 <span className="text-sm text-white/60 font-medium">4.9/5 from 10,000+ washes</span>
@@ -383,7 +384,7 @@ export default function HomeDesktop() {
               <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 w-64 shadow-2xl">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-[#8c52ff]/20 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#8c52ff]" />
+                    <Icon icon={Clock} size="md" className="text-[#8c52ff]" />
                   </div>
                   <div>
                     <p className="text-xs text-white/60 font-medium">Arriving in</p>
@@ -406,7 +407,7 @@ export default function HomeDesktop() {
                   />
                 </div>
                 <div className="absolute -bottom-1 -right-1 bg-[#8c52ff] w-4 h-4 rounded-full border-2 border-black flex items-center justify-center">
-                  <CheckCircle2 className="w-2 h-2 text-white" />
+                  <Icon icon={CheckCircle2} className="text-white" />
                 </div>
               </div>
               <div>
@@ -449,7 +450,7 @@ export default function HomeDesktop() {
             {/* Step 1 */}
             <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
               <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Smartphone className="w-6 h-6" />
+                <Icon icon={Smartphone} size="lg" />
               </div>
               <h3 className="text-xl font-bold mb-3">1. Book in seconds</h3>
               <p className="text-white/60 leading-relaxed mb-8">
@@ -478,7 +479,7 @@ export default function HomeDesktop() {
             {/* Step 2 */}
             <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
               <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <MapPin className="w-6 h-6" />
+                <Icon icon={MapPin} size="lg" />
               </div>
               <h3 className="text-xl font-bold mb-3">2. Track live</h3>
               <p className="text-white/60 leading-relaxed mb-8">
@@ -505,7 +506,7 @@ export default function HomeDesktop() {
             {/* Step 3 */}
             <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
               <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Star className="w-6 h-6" />
+                <Icon icon={Star} size="lg" />
               </div>
               <h3 className="text-xl font-bold mb-3">3. Enjoy the shine</h3>
               <p className="text-white/60 leading-relaxed mb-8">
@@ -520,7 +521,7 @@ export default function HomeDesktop() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="bg-[#8c52ff] text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transform translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                    <CheckCircle2 className="w-4 h-4" /> Wash Complete
+                    <Icon icon={CheckCircle2} size="sm" /> Wash Complete
                   </div>
                 </div>
               </div>
@@ -559,7 +560,7 @@ export default function HomeDesktop() {
                   "Streak-free windows",
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -593,7 +594,7 @@ export default function HomeDesktop() {
                   "Interior windows cleaned",
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -624,7 +625,7 @@ export default function HomeDesktop() {
                   "Full inside-and-out refresh",
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <CheckCircle2 className="w-5 h-5 text-[#8c52ff] shrink-0" />
+                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -643,7 +644,7 @@ export default function HomeDesktop() {
           <div className="mt-8 rounded-3xl border border-white/10 bg-[#0a0a0a] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-start md:items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center shrink-0">
-                <Crown className="w-6 h-6" />
+                <Icon icon={Crown} size="lg" />
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
@@ -682,7 +683,7 @@ export default function HomeDesktop() {
 
               <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-4 mb-4">
-                  <Shield className="w-8 h-8 text-[#8c52ff]" />
+                  <Icon icon={Shield} size="xl" className="text-[#8c52ff]" />
                   <h4 className="text-xl font-bold">Vetted Professionals</h4>
                 </div>
                 <p className="text-white/70 text-sm leading-relaxed">
@@ -705,7 +706,7 @@ export default function HomeDesktop() {
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4">
                     <div className="mt-1 w-6 h-6 rounded-full bg-[#8c52ff]/20 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-[#8c52ff]" />
+                      <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff]" />
                     </div>
                     <div>
                       <h4 className="font-bold text-white mb-1">{item.title}</h4>
@@ -720,7 +721,7 @@ export default function HomeDesktop() {
                 className="mt-10 flex items-center gap-2 text-[#8c52ff] font-bold hover:text-white transition-colors"
                 data-testid="button-learn-process"
               >
-                Learn about our process <ChevronRight className="w-4 h-4" />
+                Learn about our process <Icon icon={ChevronRight} size="sm" />
               </button>
             </div>
           </div>

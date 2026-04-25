@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, CheckCircle2 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 interface TimeAdjustment {
   key: string;
@@ -117,7 +118,7 @@ export function TimeAdjustmentPanel({
         ))}
         <div className="flex justify-between font-semibold text-white border-t border-gray-700 pt-2 mt-1">
           <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> Updated completion
+            <Icon icon={Clock} size="xs" /> Updated completion
           </span>
           <span>{calcETA()}</span>
         </div>
@@ -141,7 +142,7 @@ export function TimeAdjustmentPanel({
         disabled={updateMutation.isPending}
         className="w-full py-3 rounded-xl bg-[#8c52ff] text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
       >
-        <CheckCircle2 className="w-4 h-4" />
+        <Icon icon={CheckCircle2} size="sm" />
         {updateMutation.isPending ? "Updating..." : "Update Customer ETA"}
       </button>
     </div>

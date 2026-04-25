@@ -34,6 +34,7 @@ import {
   RefreshCw,
   Car
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu, 
@@ -243,7 +244,7 @@ export default function AdminDashboard() {
           className="h-auto p-0 font-medium"
         >
           Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <Icon icon={ArrowUpDown} size="sm" className="ml-2" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -288,12 +289,12 @@ export default function AdminDashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
+                <Icon icon={MoreHorizontal} size="sm" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
+                <Icon icon={Eye} size="sm" className="mr-2" />
                 View Profile
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -304,12 +305,12 @@ export default function AdminDashboard() {
               >
                 {isActive ? (
                   <>
-                    <UserX className="mr-2 h-4 w-4" />
+                    <Icon icon={UserX} size="sm" className="mr-2" />
                     Deactivate
                   </>
                 ) : (
                   <>
-                    <UserCheck className="mr-2 h-4 w-4" />
+                    <Icon icon={UserCheck} size="sm" className="mr-2" />
                     Reactivate
                   </>
                 )}
@@ -381,12 +382,12 @@ export default function AdminDashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
+                <Icon icon={MoreHorizontal} size="sm" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
+                <Icon icon={Eye} size="sm" className="mr-2" />
                 View Details
               </DropdownMenuItem>
               {booking.status === "pending" && (
@@ -399,7 +400,7 @@ export default function AdminDashboard() {
                     });
                   }}
                 >
-                  <Users className="mr-2 h-4 w-4" />
+                  <Icon icon={Users} size="sm" className="mr-2" />
                   Reassign
                 </DropdownMenuItem>
               )}
@@ -408,7 +409,7 @@ export default function AdminDashboard() {
                   onClick={() => cancelBookingMutation.mutate(booking.id)}
                   className="text-red-600"
                 >
-                  <UserX className="mr-2 h-4 w-4" />
+                  <Icon icon={UserX} size="sm" className="mr-2" />
                   Cancel
                 </DropdownMenuItem>
               )}
@@ -438,7 +439,7 @@ export default function AdminDashboard() {
               <p className="text-gray-600 mt-1">Manage users, bookings, and analytics</p>
             </div>
             <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
+              <Icon icon={LogOut} size="sm" />
               Logout
             </Button>
           </div>
@@ -448,23 +449,23 @@ export default function AdminDashboard() {
         <Tabs defaultValue="dispatch" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="dispatch" className="flex items-center gap-2">
-              <Radio className="h-4 w-4" />
+              <Icon icon={Radio} size="sm" />
               Dispatch
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
+              <Icon icon={Users} size="sm" />
               Users
             </TabsTrigger>
             <TabsTrigger value="bookings" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+              <Icon icon={Calendar} size="sm" />
               Bookings
             </TabsTrigger>
             <TabsTrigger value="earnings" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <Icon icon={DollarSign} size="sm" />
               Earnings
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
+              <Icon icon={BarChart3} size="sm" />
               Analytics
             </TabsTrigger>
           </TabsList>
@@ -491,7 +492,7 @@ export default function AdminDashboard() {
                             <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Unassigned</p>
                             <p className="text-3xl font-bold text-red-700">{unassigned.length}</p>
                           </div>
-                          <AlertCircle className="h-8 w-8 text-red-400" />
+                          <Icon icon={AlertCircle} size="xl" className="text-red-400" />
                         </div>
                       </CardContent>
                     </Card>
@@ -502,7 +503,7 @@ export default function AdminDashboard() {
                             <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Active Jobs</p>
                             <p className="text-3xl font-bold text-blue-700">{active.length}</p>
                           </div>
-                          <Zap className="h-8 w-8 text-blue-400" />
+                          <Icon icon={Zap} size="xl" className="text-blue-400" />
                         </div>
                       </CardContent>
                     </Card>
@@ -513,7 +514,7 @@ export default function AdminDashboard() {
                             <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Pros Online</p>
                             <p className="text-3xl font-bold text-green-700">{onlineProviders.length}</p>
                           </div>
-                          <Car className="h-8 w-8 text-green-400" />
+                          <Icon icon={Car} size="xl" className="text-green-400" />
                         </div>
                       </CardContent>
                     </Card>
@@ -524,7 +525,7 @@ export default function AdminDashboard() {
                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Done Today</p>
                             <p className="text-3xl font-bold text-gray-800">{todayCompleted.length}</p>
                           </div>
-                          <CheckCircle2 className="h-8 w-8 text-gray-400" />
+                          <Icon icon={CheckCircle2} size="xl" className="text-gray-400" />
                         </div>
                       </CardContent>
                     </Card>
@@ -532,7 +533,7 @@ export default function AdminDashboard() {
 
                   {/* Auto-refresh indicator */}
                   <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <RefreshCw className="h-3 w-3" />
+                    <Icon icon={RefreshCw} size="xs" />
                     Auto-refreshing every 15s · Last updated {new Date(bookingsUpdatedAt).toLocaleTimeString()}
                   </div>
 
@@ -544,7 +545,7 @@ export default function AdminDashboard() {
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            <Icon icon={AlertCircle} size="sm" className="text-red-500" />
                             Needs Assignment
                             {unassigned.length > 0 && (
                               <Badge variant="destructive" className="ml-1">{unassigned.length}</Badge>
@@ -562,10 +563,10 @@ export default function AdminDashboard() {
                                   <Badge variant="outline" className="text-xs">${job.totalPrice}</Badge>
                                 </div>
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {job.serviceLocation || "Address not set"}
+                                  <Icon icon={MapPin} size="xs" /> {job.serviceLocation || "Address not set"}
                                 </p>
                                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {job.date ? `${job.date} ${job.time ?? ""}`.trim() : "ASAP"}
+                                  <Icon icon={Clock} size="xs" /> {job.date ? `${job.date} ${job.time ?? ""}`.trim() : "ASAP"}
                                 </p>
                                 <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
                               </div>
@@ -599,7 +600,7 @@ export default function AdminDashboard() {
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <Zap className="h-4 w-4 text-blue-500" />
+                            <Icon icon={Zap} size="sm" className="text-blue-500" />
                             In Progress
                             {active.length > 0 && (
                               <Badge className="ml-1 bg-blue-500">{active.length}</Badge>
@@ -619,7 +620,7 @@ export default function AdminDashboard() {
                                   </Badge>
                                 </div>
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {job.serviceLocation || "Address not set"}
+                                  <Icon icon={MapPin} size="xs" /> {job.serviceLocation || "Address not set"}
                                 </p>
                                 <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
                                 <p className="text-xs text-gray-500">Pro: {job.providerName || `Provider #${job.providerId}`}</p>
@@ -645,7 +646,7 @@ export default function AdminDashboard() {
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <Car className="h-4 w-4" />
+                            <Icon icon={Car} size="sm" />
                             Detail Pros
                           </CardTitle>
                         </CardHeader>
@@ -666,7 +667,7 @@ export default function AdminDashboard() {
                                     </div>
                                     {currentJob ? (
                                       <p className="text-xs text-blue-600 flex items-center gap-1">
-                                        <Zap className="h-3 w-3" /> Job #{currentJob.id} · {currentJob.serviceName || currentJob.priceTier}
+                                        <Icon icon={Zap} size="xs" /> Job #{currentJob.id} · {currentJob.serviceName || currentJob.priceTier}
                                       </p>
                                     ) : isOnline ? (
                                       <p className="text-xs text-green-600">Available</p>
@@ -675,7 +676,7 @@ export default function AdminDashboard() {
                                     )}
                                     {p.lastLocation && (
                                       <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
-                                        <MapPin className="h-3 w-3 shrink-0" />
+                                        <Icon icon={MapPin} size="xs" className="shrink-0" />
                                         {p.lastLocation}
                                       </p>
                                     )}
@@ -769,7 +770,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <Icon icon={DollarSign} size="sm" className="text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -784,7 +785,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <Icon icon={TrendingUp} size="sm" className="text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -799,7 +800,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Average Booking Value</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <Icon icon={BarChart3} size="sm" className="text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -814,7 +815,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Icon icon={Calendar} size="sm" className="text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">

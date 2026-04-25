@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { CalendarCheck, MapPin, Activity, User } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function TabNavigation() {
   const [location, setLocation] = useLocation();
@@ -25,8 +26,10 @@ export default function TabNavigation() {
               className="flex flex-col items-center justify-center py-2 gap-1"
               onClick={() => setLocation(tab.route)}
             >
-              <tab.icon
-                className={`h-5 w-5 ${active ? "text-[#8c52ff]" : "text-gray-400"}`}
+              <Icon
+                icon={tab.icon}
+                size="md"
+                className={active ? "text-[#8c52ff]" : "text-gray-400"}
               />
               <span
                 className={`text-xs font-medium ${active ? "text-[#8c52ff]" : "text-gray-400"}`}

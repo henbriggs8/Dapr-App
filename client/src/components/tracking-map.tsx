@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Clock, Navigation, Car, Phone } from 'lucide-react';
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -191,7 +192,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
                 >
                   <div className="flex flex-col items-center">
                     <div className="bg-blue-500 text-white p-2 rounded-full shadow-lg">
-                      <Car className="h-5 w-5" />
+                      <Icon icon={Car} size="md" />
                     </div>
                     <div className="text-xs font-medium text-gray-700 mt-1">Provider</div>
                   </div>
@@ -203,7 +204,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
                 <div className="absolute bottom-1/3 right-1/3 transform translate-x-1/2">
                   <div className="flex flex-col items-center">
                     <div className="bg-green-500 text-white p-2 rounded-full shadow-lg">
-                      <MapPin className="h-5 w-5" />
+                      <Icon icon={MapPin} size="md" />
                     </div>
                     <div className="text-xs font-medium text-gray-700 mt-1">You</div>
                   </div>
@@ -229,7 +230,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
               {/* No Data State */}
               {!currentTracking?.providerLocation && (
                 <div className="text-center text-gray-500">
-                  <Navigation className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <Icon icon={Navigation} size="xl" className="mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Waiting for provider location...</p>
                 </div>
               )}
@@ -273,7 +274,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
+                  <Icon icon={Clock} size="sm" />
                   Estimated Arrival
                 </CardTitle>
               </CardHeader>
@@ -287,7 +288,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Navigation className="h-4 w-4" />
+                  <Icon icon={Navigation} size="sm" />
                   Distance Away
                 </CardTitle>
               </CardHeader>
@@ -321,7 +322,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             </div>
 
             <Button className="w-full" variant="outline">
-              <Phone className="h-4 w-4 mr-2" />
+              <Icon icon={Phone} size="sm" className="mr-2" />
               Contact Provider
             </Button>
           </CardContent>

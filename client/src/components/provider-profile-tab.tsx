@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Edit3, Save, X, LogOut, Mail, Phone, MapPin, FileText, Star, Camera, User } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
 
 export function ProviderProfileTab() {
@@ -113,12 +114,12 @@ export function ProviderProfileTab() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <User className="w-10 h-10 text-gray-300" />
+              <Icon icon={User} size="xl" className="text-gray-300" />
             )}
 
             {/* Overlay */}
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <Camera className="w-6 h-6 text-white" />
+              <Icon icon={Camera} size="lg" className="text-white" />
             </div>
 
             {/* Loading overlay */}
@@ -134,7 +135,7 @@ export function ProviderProfileTab() {
             onClick={() => fileInputRef.current?.click()}
             className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#8c52ff] flex items-center justify-center shadow-sm"
           >
-            <Camera className="w-3.5 h-3.5 text-white" />
+            <Icon icon={Camera} size="xs" className="text-white" />
           </button>
         </div>
 
@@ -194,14 +195,14 @@ export function ProviderProfileTab() {
               disabled={updateProfileMutation.isPending}
               className="flex-1 py-3 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <Save className="w-4 h-4" />
+              <Icon icon={Save} size="sm" />
               {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
             </button>
             <button
               onClick={handleCancel}
               className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium flex items-center gap-1"
             >
-              <X className="w-4 h-4" />
+              <Icon icon={X} size="sm" />
               Cancel
             </button>
           </div>
@@ -210,10 +211,10 @@ export function ProviderProfileTab() {
         <div>
           {/* View rows */}
           {[
-            { icon: <Mail className="w-4 h-4 text-gray-400" />, label: "Email", value: user.email },
-            { icon: <Phone className="w-4 h-4 text-gray-400" />, label: "Phone", value: user.phone },
-            { icon: <MapPin className="w-4 h-4 text-gray-400" />, label: "Address", value: user.address },
-            { icon: <FileText className="w-4 h-4 text-gray-400" />, label: "Bio", value: user.description },
+            { icon: <Icon icon={Mail} size="sm" className="text-gray-400" />, label: "Email", value: user.email },
+            { icon: <Icon icon={Phone} size="sm" className="text-gray-400" />, label: "Phone", value: user.phone },
+            { icon: <Icon icon={MapPin} size="sm" className="text-gray-400" />, label: "Address", value: user.address },
+            { icon: <Icon icon={FileText} size="sm" className="text-gray-400" />, label: "Bio", value: user.description },
           ].map((row, i, arr) => (
             <div key={row.label} className={`px-6 py-4 flex items-start gap-3 ${i < arr.length - 1 ? "border-b border-gray-200" : ""}`}>
               <span className="mt-0.5 flex-shrink-0">{row.icon}</span>
@@ -230,7 +231,7 @@ export function ProviderProfileTab() {
               onClick={() => setIsEditing(true)}
               className="flex items-center gap-2 text-sm font-medium text-[#8c52ff]"
             >
-              <Edit3 className="w-4 h-4" />
+              <Icon icon={Edit3} size="sm" />
               Edit profile
             </button>
           </div>
@@ -243,7 +244,7 @@ export function ProviderProfileTab() {
           <p className="text-xs text-gray-400 mb-1">Rating</p>
           <p className="text-2xl font-semibold flex items-center gap-1">
             {user.rating?.toFixed(1) || "—"}
-            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+            <Icon icon={Star} size="sm" className="text-yellow-400 fill-yellow-400" />
           </p>
         </div>
         <div className="pl-4">
@@ -259,7 +260,7 @@ export function ProviderProfileTab() {
           disabled={logoutMutation.isPending}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors"
         >
-          <LogOut className="w-4 h-4" />
+          <Icon icon={LogOut} size="sm" />
           {logoutMutation.isPending ? "Signing out..." : "Sign out"}
         </button>
       </div>

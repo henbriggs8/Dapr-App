@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
@@ -151,8 +152,8 @@ export default function HomeScreen() {
           >
             Now&nbsp;•&nbsp;{street}
             {addressOpen
-              ? <ChevronUp className="h-4 w-4 text-[#555]" />
-              : <ChevronDown className="h-4 w-4 text-[#555]" />
+              ? <Icon icon={ChevronUp} size="sm" className="text-[#555]" />
+              : <Icon icon={ChevronDown} size="sm" className="text-[#555]" />
             }
           </button>
           <img src="/dapper-d-logo.png" alt="Dapper" className="h-9 w-9 object-contain" />
@@ -163,7 +164,7 @@ export default function HomeScreen() {
           <div className="mt-2 mb-1 rounded-2xl bg-[#f8f8f8] px-4 py-3 flex flex-col gap-2">
             {/* Current saved address */}
             <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+              <Icon icon={MapPin} size="sm" className="mt-0.5 shrink-0 text-gray-400" />
               <div>
                 <p className="text-[13px] font-semibold text-[#111]">
                   {full || "No address saved yet"}
@@ -182,9 +183,9 @@ export default function HomeScreen() {
               className="flex items-center gap-2 active:opacity-70 transition"
             >
               {locating ? (
-                <Loader2 className="h-4 w-4 animate-spin shrink-0" style={{ color: ACCENT }} />
+                <Icon icon={Loader2} size="sm" className="animate-spin shrink-0" style={{ color: ACCENT }} />
               ) : (
-                <MapPin className="h-4 w-4 shrink-0" style={{ color: ACCENT }} />
+                <Icon icon={MapPin} size="sm" className="shrink-0" style={{ color: ACCENT }} />
               )}
               <span className="text-[13px] font-semibold" style={{ color: ACCENT }}>
                 {locating ? "Detecting location…" : "Use current location"}
@@ -291,7 +292,7 @@ export default function HomeScreen() {
                 onClick={(e) => e.stopPropagation()}
                 className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm cursor-pointer"
               >
-                <Heart className="h-4 w-4 text-[#555]" />
+                <Icon icon={Heart} size="sm" className="text-[#555]" />
               </div>
               <img
                 src={card.image}
@@ -305,7 +306,7 @@ export default function HomeScreen() {
               <div>
                 <p className="text-[15px] font-semibold text-[#111]">{card.title}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <Clock className="h-3.5 w-3.5 text-[#aaa]" />
+                  <Icon icon={Clock} size="xs" className="text-[#aaa]" />
                   <p className="text-[12px] text-[#888]">{card.duration}</p>
                 </div>
               </div>

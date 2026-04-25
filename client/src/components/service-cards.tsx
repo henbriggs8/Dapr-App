@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
 import { Loader2, Check } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { formatPrice } from "@shared/pricing";
 
 export default function ServiceCards({
@@ -33,7 +34,7 @@ export default function ServiceCards({
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Icon icon={Loader2} size="xl" className="animate-spin text-primary" />
       </div>
     );
   }
@@ -193,7 +194,7 @@ export default function ServiceCards({
                     Select this package →
                   </div>
                   {selectedServiceId === service.id && (
-                    <Check className="h-5 w-5 text-[#8c52ff]" />
+                    <Icon icon={Check} size="md" className="text-[#8c52ff]" />
                   )}
                 </div>
               </CardContent>

@@ -11,6 +11,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
 import {
   Dialog,
@@ -171,7 +172,7 @@ export default function ProfilePage() {
   if (bookingsLoading || vehiclesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen pb-32">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
+        <Icon icon={Loader2} size="xl" className="animate-spin text-gray-300" />
       </div>
     );
   }
@@ -210,7 +211,7 @@ export default function ProfilePage() {
             disabled={logoutMutation.isPending}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-black transition-colors mt-1"
           >
-            <LogOut className="h-4 w-4" />
+            <Icon icon={LogOut} size="sm" />
             Sign out
           </button>
         </div>
@@ -222,10 +223,10 @@ export default function ProfilePage() {
         className="w-full flex items-center justify-between px-6 py-5 border-b border-gray-200"
       >
         <div className="flex items-center gap-3">
-          <Car className="h-4 w-4 text-gray-400" />
+          <Icon icon={Car} size="sm" className="text-gray-400" />
           <span className="text-base text-black">Book a service</span>
         </div>
-        <ChevronRight className="w-5 h-5 text-[#8c52ff]" />
+        <Icon icon={ChevronRight} size="md" className="text-[#8c52ff]" />
       </button>
 
       {/* Tab Switcher */}
@@ -307,7 +308,7 @@ export default function ProfilePage() {
                   disabled={updateProfileMutation.isPending}
                   className="bg-black text-white text-sm font-medium px-8 py-3 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {updateProfileMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {updateProfileMutation.isPending && <Icon icon={Loader2} size="sm" className="animate-spin" />}
                   Save Changes
                 </button>
               </div>
@@ -325,7 +326,7 @@ export default function ProfilePage() {
               onClick={() => openVehicleDialog()}
               className="flex items-center gap-1 text-sm font-medium text-[#8c52ff]"
             >
-              <Plus className="h-4 w-4" /> Add
+              <Icon icon={Plus} size="sm" /> Add
             </button>
           </div>
 
@@ -359,7 +360,7 @@ export default function ProfilePage() {
                       onClick={() => openVehicleDialog(vehicle)}
                       className="p-2 text-gray-400 hover:text-black transition-colors"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Icon icon={Pencil} size="sm" />
                     </button>
                     <button
                       onClick={() => {
@@ -367,7 +368,7 @@ export default function ProfilePage() {
                       }}
                       className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Icon icon={Trash2} size="sm" />
                     </button>
                   </div>
                 </div>
@@ -535,7 +536,7 @@ export default function ProfilePage() {
                   className="bg-black text-white text-sm font-medium px-6 py-2.5 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {(createVehicleMutation.isPending || updateVehicleMutation.isPending) && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Icon icon={Loader2} size="sm" className="animate-spin" />
                   )}
                   {selectedVehicle ? "Update Vehicle" : "Add Vehicle"}
                 </button>

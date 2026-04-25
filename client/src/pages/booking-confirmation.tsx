@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { CheckCircle, Calendar, Clock, MapPin, Car } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
@@ -106,7 +107,7 @@ export default function BookingConfirmation() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-8">
         {/* Check icon */}
         <div className="w-16 h-16 rounded-full bg-[#8c52ff]/10 flex items-center justify-center mb-6">
-          <CheckCircle className="h-8 w-8 text-[#8c52ff]" />
+          <Icon icon={CheckCircle} size="xl" className="text-[#8c52ff]" />
         </div>
 
         {/* Headline */}
@@ -131,7 +132,7 @@ export default function BookingConfirmation() {
         {/* Booking detail rows */}
         <div className="w-full max-w-sm space-y-0 border border-gray-200 rounded-2xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
-            <Car className="h-4 w-4 text-gray-400 shrink-0" />
+            <Icon icon={Car} size="sm" className="text-gray-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Service</p>
               <p className="text-sm font-medium text-gray-900 truncate">{service.name}</p>
@@ -142,7 +143,7 @@ export default function BookingConfirmation() {
           </div>
 
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
-            <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
+            <Icon icon={Calendar} size="sm" className="text-gray-400 shrink-0" />
             <div className="flex-1">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Date</p>
               <p className="text-sm font-medium text-gray-900">{formatDate(timeSlot.date)}</p>
@@ -150,7 +151,7 @@ export default function BookingConfirmation() {
           </div>
 
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
-            <Clock className="h-4 w-4 text-gray-400 shrink-0" />
+            <Icon icon={Clock} size="sm" className="text-gray-400 shrink-0" />
             <div className="flex-1">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Time</p>
               <p className="text-sm font-medium text-gray-900">{formatTime(timeSlot.startTime)}</p>
@@ -158,7 +159,7 @@ export default function BookingConfirmation() {
           </div>
 
           <div className="flex items-start gap-3 px-4 py-4">
-            <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+            <Icon icon={MapPin} size="sm" className="text-gray-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Location</p>
               <p className="text-sm font-medium text-gray-900 leading-snug">{booking.serviceLocation}</p>

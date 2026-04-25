@@ -25,6 +25,7 @@ import { AddressAutocomplete } from "./address-autocomplete";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Loader2, Clock, Calendar, Plus, Tag } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { useState, useEffect } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
 import { ADD_ONS, getSelectedAddOnIds, clearSelectedAddOns } from "@/utils/add-ons";
@@ -434,7 +435,7 @@ export default function BookingDialog({
             <DialogTitle className="sr-only">Loading</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Icon icon={Loader2} size="xl" className="animate-spin" />
           </div>
         </DialogContent>
       </Dialog>
@@ -469,7 +470,7 @@ export default function BookingDialog({
               
               <div className="text-muted-foreground">Duration:</div>
               <div className="font-medium flex items-center">
-                <Clock className="h-4 w-4 mr-1" /> {service?.duration} minutes
+                <Icon icon={Clock} size="sm" className="mr-1" /> {service?.duration} minutes
               </div>
             </div>
             
@@ -506,7 +507,7 @@ export default function BookingDialog({
             <div className="grid grid-cols-2 gap-2">
               <div className="text-muted-foreground">Date:</div>
               <div className="font-medium flex items-center">
-                <Calendar className="h-4 w-4 mr-1" /> {timeSlot && formatDate(timeSlot.date)}
+                <Icon icon={Calendar} size="sm" className="mr-1" /> {timeSlot && formatDate(timeSlot.date)}
               </div>
               
               <div className="text-muted-foreground">Time:</div>
@@ -665,7 +666,7 @@ export default function BookingDialog({
                 className="w-full flex items-center justify-center gap-2 border-dashed"
                 onClick={addVehicle}
               >
-                <Plus className="h-4 w-4" />
+                <Icon icon={Plus} size="sm" />
                 <span className="text-sm">Add Another Vehicle</span>
               </Button>
             </div>
@@ -690,7 +691,7 @@ export default function BookingDialog({
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium">Service Add-ons</h3>
                 <div className="flex items-center">
-                  <Tag className="h-4 w-4 mr-1 text-[#8c52ff]" />
+                  <Icon icon={Tag} size="sm" className="mr-1 text-[#8c52ff]" />
                   <span className="text-sm text-muted-foreground">Select to customize your service</span>
                 </div>
               </div>
@@ -713,7 +714,7 @@ export default function BookingDialog({
                       </div>
                     </div>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${addon.selected ? 'bg-[#8c52ff] text-white' : 'bg-muted'}`}>
-                      {addon.selected && <Plus className="h-3 w-3" />}
+                      {addon.selected && <Icon icon={Plus} size="xs" />}
                     </div>
                   </div>
                 ))}
@@ -781,12 +782,12 @@ export default function BookingDialog({
             >
               {paymentMutation.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Icon icon={Loader2} size="sm" className="mr-2 animate-spin" />
                   Opening payment...
                 </>
               ) : bookingMutation.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Icon icon={Loader2} size="sm" className="mr-2 animate-spin" />
                   Confirming booking...
                 </>
               ) : (

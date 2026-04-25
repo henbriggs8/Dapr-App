@@ -16,6 +16,7 @@ import {
   Star,
   TrendingUp
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 import BookingDialog from "@/components/booking-dialog";
 
@@ -282,7 +283,7 @@ export default function QuickRebook({
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-[#8c52ff]" />
+            <Icon icon={Zap} size="md" className="text-[#8c52ff]" />
             Quick Rebook
           </CardTitle>
           <CardDescription>
@@ -322,23 +323,23 @@ export default function QuickRebook({
 
                 <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                   <div className="flex items-center gap-2 text-gray-600">
-                    <Calendar className="h-4 w-4" />
+                    <Icon icon={Calendar} size="sm" />
                     <span>{formatDate(suggestion.suggestedDate)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-600">
-                    <Clock className="h-4 w-4" />
+                    <Icon icon={Clock} size="sm" />
                     <span>{formatTime(suggestion.suggestedTime)}</span>
                   </div>
                   {suggestion.vehicle && (
                     <div className="flex items-center gap-2 text-gray-600 col-span-2">
-                      <Car className="h-4 w-4" />
+                      <Icon icon={Car} size="sm" />
                       <span>
                         {suggestion.vehicle.year} {suggestion.vehicle.make} {suggestion.vehicle.model}
                       </span>
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-gray-600 col-span-2">
-                    <MapPin className="h-4 w-4" />
+                    <Icon icon={MapPin} size="sm" />
                     <span className="truncate">{suggestion.booking.serviceLocation}</span>
                   </div>
                 </div>
@@ -355,7 +356,7 @@ export default function QuickRebook({
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
+                      <Icon icon={RefreshCw} size="sm" className="mr-2" />
                       Book Again
                     </>
                   )}

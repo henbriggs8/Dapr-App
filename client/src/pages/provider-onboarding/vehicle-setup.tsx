@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, Car, HelpCircle, Truck } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -83,7 +84,7 @@ export default function VehicleSetupPage() {
           onClick={handleBack}
           className="flex items-center text-[#8c52ff] hover:text-[#8c52ff]/80 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <Icon icon={ArrowLeft} size="md" className="mr-2" />
           <span className="text-base font-medium">Back</span>
         </button>
       </div>
@@ -133,7 +134,7 @@ export default function VehicleSetupPage() {
                   disabled={vin.length !== 17}
                   className="w-full h-12 bg-[#8c52ff] hover:bg-[#8c52ff]/90 text-white text-base font-medium rounded-lg disabled:bg-gray-300"
                 >
-                  <Car className="w-4 h-4 mr-2" />
+                  <Icon icon={Car} size="sm" className="mr-2" />
                   Verify VIN
                 </Button>
 
@@ -142,7 +143,7 @@ export default function VehicleSetupPage() {
                     onClick={() => setShowManualEntry(true)}
                     className="flex items-center justify-center text-[#8c52ff] text-sm font-medium hover:underline mx-auto"
                   >
-                    <HelpCircle className="w-4 h-4 mr-1" />
+                    <Icon icon={HelpCircle} size="sm" className="mr-1" />
                     Don't know my VIN?
                   </button>
                 </div>
@@ -228,7 +229,7 @@ export default function VehicleSetupPage() {
             onClick={handleDapperVehicle}
             className="w-full flex items-center justify-center gap-2 text-[#8c52ff] text-sm font-medium py-2 hover:opacity-75 transition-opacity"
           >
-            <Truck className="w-4 h-4" />
+            <Icon icon={Truck} size="sm" />
             I am using a Dapper vehicle instead
           </button>
         </div>

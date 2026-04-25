@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Camera, CheckCircle } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,7 +47,7 @@ export default function IdVerificationPage() {
           onClick={() => setLocation('/provider-auth')}
           className="flex items-center text-[#8c52ff] hover:text-[#8c52ff]/80 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <Icon icon={ArrowLeft} size="md" className="mr-2" />
           <span className="text-base font-medium">Back</span>
         </button>
       </div>
@@ -90,12 +91,12 @@ export default function IdVerificationPage() {
                 >
                   {frontIdUploaded ? (
                     <div className="space-y-2">
-                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto" />
+                      <Icon icon={CheckCircle} size="xl" className="text-green-500 mx-auto" />
                       <p className="text-sm font-medium text-green-700">Front Uploaded</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Upload className="w-8 h-8 text-gray-400 mx-auto" />
+                      <Icon icon={Upload} size="xl" className="text-gray-400 mx-auto" />
                       <p className="text-sm font-medium text-gray-600">Front</p>
                     </div>
                   )}
@@ -113,12 +114,12 @@ export default function IdVerificationPage() {
                 >
                   {backIdUploaded ? (
                     <div className="space-y-2">
-                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto" />
+                      <Icon icon={CheckCircle} size="xl" className="text-green-500 mx-auto" />
                       <p className="text-sm font-medium text-green-700">Back Uploaded</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Upload className="w-8 h-8 text-gray-400 mx-auto" />
+                      <Icon icon={Upload} size="xl" className="text-gray-400 mx-auto" />
                       <p className="text-sm font-medium text-gray-600">Back</p>
                     </div>
                   )}
@@ -141,13 +142,13 @@ export default function IdVerificationPage() {
               >
                 {selfieUploaded ? (
                   <div className="space-y-2">
-                    <CheckCircle className="w-10 h-10 text-green-500 mx-auto" />
+                    <Icon icon={CheckCircle} size="xl" className="text-green-500 mx-auto" />
                     <p className="text-sm font-medium text-green-700">Selfie Uploaded</p>
                     <p className="text-xs text-green-600">For future face match verification</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Camera className="w-10 h-10 text-gray-400 mx-auto" />
+                    <Icon icon={Camera} size="xl" className="text-gray-400 mx-auto" />
                     <p className="text-sm font-medium text-gray-600">Take or Upload Selfie</p>
                     <p className="text-xs text-gray-500">For future face match verification</p>
                   </div>

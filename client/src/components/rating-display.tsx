@@ -1,4 +1,5 @@
 import { Star, StarHalf } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function RatingDisplay({
   rating,
@@ -14,9 +15,9 @@ export default function RatingDisplay({
     <div className="flex items-center gap-1">
       <div className="flex text-yellow-500">
         {[...Array(fullStars)].map((_, i) => (
-          <Star key={i} className="h-4 w-4 fill-current" />
+          <Icon icon={Star} size="sm" className="fill-current" key={i} />
         ))}
-        {hasHalfStar && <StarHalf className="h-4 w-4 fill-current" />}
+        {hasHalfStar && <Icon icon={StarHalf} size="sm" className="fill-current" />}
       </div>
       <span className="text-sm text-muted-foreground">({count})</span>
     </div>

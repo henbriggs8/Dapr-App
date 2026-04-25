@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CarFront } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 interface CarWashSpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: "sm" | "md" | "lg";
@@ -55,7 +56,7 @@ export function CarWashSpinner({
         </div>
 
         {/* Car icon — centered via flexbox, no competing transforms */}
-        <CarFront className={cn("relative z-10 text-[#8c52ff]", iconSize)} />
+        <Icon icon={CarFront} className={cn("relative z-10 text-[#8c52ff]", iconSize)} />
       </div>
 
       {showText && (

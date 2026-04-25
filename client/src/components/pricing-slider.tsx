@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Service } from "@shared/schema";
 import { Loader2, Sparkles, Clock, CarFront, SprayCan, Brush } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 type CostBreakdownItem = {
   name: string;
@@ -126,7 +127,7 @@ export default function PricingSlider({
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Icon icon={Loader2} size="xl" className="animate-spin text-primary" />
       </div>
     );
   }
@@ -215,7 +216,7 @@ export default function PricingSlider({
 
           <div className="space-y-4">
             <h3 className="text-lg font-medium flex items-center">
-              <Sparkles className="h-5 w-5 mr-2 text-primary" />
+              <Icon icon={Sparkles} size="md" className="mr-2 text-primary" />
               Service Breakdown
             </h3>
             
@@ -228,15 +229,15 @@ export default function PricingSlider({
                 className="space-y-4"
               >
                 {costBreakdown.map((item, index) => {
-                  let Icon = Clock;
+                  let IconComp = Clock;
                   
                   // Choose icon based on item name
                   if (item.name.includes("Exterior") || item.name.includes("Hand Wash")) {
-                    Icon = CarFront;
+                    IconComp = CarFront;
                   } else if (item.name.includes("Quick Detail") || item.name.includes("Wipe Down")) {
-                    Icon = SprayCan;
+                    IconComp = SprayCan;
                   } else if (item.name.includes("Vacuum") || item.name.includes("Carpet") || item.name.includes("Interior")) {
-                    Icon = Brush;
+                    IconComp = Brush;
                   }
                   
                   return (
@@ -249,7 +250,7 @@ export default function PricingSlider({
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-1 bg-muted rounded-md p-2">
-                          <Icon className="h-4 w-4" />
+                          <Icon icon={IconComp} size="sm" />
                         </div>
                         <div>
                           <div className="font-medium">{item.name}</div>
@@ -268,7 +269,7 @@ export default function PricingSlider({
                           ${item.price.toFixed(2)}
                         </motion.div>
                         <div className="text-sm text-muted-foreground flex items-center justify-end">
-                          <Clock className="h-3 w-3 mr-1" />
+                          <Icon icon={Clock} size="xs" className="mr-1" />
                           {Math.round(item.duration)} min
                         </div>
                       </div>

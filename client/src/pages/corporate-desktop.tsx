@@ -19,6 +19,7 @@ import {
   Settings2,
   type LucideIcon,
 } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 const dapprLogo = "/dapr-logo.svg";
 
@@ -194,7 +195,7 @@ export default function CorporateDesktop() {
         <div className="max-w-[1120px] mx-auto px-8 relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4" /> Dapper for Fleets
+              <Icon icon={ShieldCheck} size="sm" /> Dapper for Fleets
             </div>
             <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] mb-6">
               Keep every vehicle in your fleet{" "}
@@ -209,7 +210,7 @@ export default function CorporateDesktop() {
                 className="bg-[#8c52ff] text-white px-8 py-4 rounded-full text-base font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
                 data-testid="button-get-quote-hero"
               >
-                Get a Fleet Quote <ArrowRight className="w-4 h-4" />
+                Get a Fleet Quote <Icon icon={ArrowRight} size="sm" />
               </button>
               <a
                 href="#estimator"
@@ -270,7 +271,7 @@ export default function CorporateDesktop() {
               <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Service</label>
               <div className="flex flex-wrap gap-2 mb-8">
                 {SERVICES.map((s) => {
-                  const Icon = s.icon;
+                  const IconComp = s.icon;
                   const active = serviceId === s.id;
                   return (
                     <button
@@ -288,7 +289,7 @@ export default function CorporateDesktop() {
                           active ? "bg-white/20" : "bg-white/10 text-white"
                         }`}
                       >
-                        <Icon className="w-3 h-3" />
+                        <Icon icon={IconComp} size="xs" />
                       </span>
                       {s.name}
                     </button>
@@ -323,7 +324,7 @@ export default function CorporateDesktop() {
                 className="w-full py-4 rounded-full bg-white text-black font-bold hover:bg-white/90 transition-all flex items-center justify-center gap-2"
                 data-testid="button-estimator-cta"
               >
-                Get Exact Fleet Quote <ArrowRight className="w-4 h-4" />
+                Get Exact Fleet Quote <Icon icon={ArrowRight} size="sm" />
               </button>
 
               <p className="text-[11px] text-white/40 mt-4 leading-relaxed">
@@ -381,10 +382,10 @@ export default function CorporateDesktop() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CASES.map(({ icon: Icon, title, body }) => (
+            {CASES.map(({ icon: IconComp, title, body }) => (
               <div key={title} className="rounded-3xl border border-white/5 bg-[#0a0a0a] p-8 hover:border-white/10 transition-colors">
                 <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6">
-                  <Icon className="w-6 h-6" />
+                  <Icon icon={IconComp} size="lg" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">{title}</h3>
                 <p className="text-white/60 leading-relaxed">{body}</p>
@@ -404,7 +405,7 @@ export default function CorporateDesktop() {
               <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-[#8c52ff]/20 flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-[#8c52ff]" />
+                    <Icon icon={Building2} size="md" className="text-[#8c52ff]" />
                   </div>
                   <div>
                     <p className="font-bold">Multi-site service partner</p>
@@ -446,7 +447,7 @@ export default function CorporateDesktop() {
             <ul className="space-y-3 text-sm text-white/70">
               {["Free site walkthrough", "Locked monthly pricing", "Single point of contact", "No long-term contract required"].map((item) => (
                 <li key={item} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#8c52ff] mt-0.5 shrink-0" />
+                  <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
                   {item}
                 </li>
               ))}
@@ -457,7 +458,7 @@ export default function CorporateDesktop() {
             {submitted ? (
               <div className="py-12 text-center">
                 <div className="w-16 h-16 rounded-full bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-8 h-8" />
+                  <Icon icon={CheckCircle2} size="xl" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3">Quote request received.</h3>
                 <p className="text-white/60 max-w-sm mx-auto">
@@ -518,7 +519,7 @@ export default function CorporateDesktop() {
                     className="w-full py-4 rounded-full bg-[#8c52ff] text-white font-bold hover:bg-[#7a42e5] transition-all flex items-center justify-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
                     data-testid="button-submit-quote"
                   >
-                    Request Fleet Quote <ArrowRight className="w-4 h-4" />
+                    Request Fleet Quote <Icon icon={ArrowRight} size="sm" />
                   </button>
                 </div>
               </form>
@@ -613,11 +614,11 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function Benefit({ icon: Icon, title, body }: { icon: typeof Clock; title: string; body: string }) {
+function Benefit({ icon: IconComp, title, body }: { icon: typeof Clock; title: string; body: string }) {
   return (
     <div className="rounded-3xl border border-white/5 bg-[#0a0a0a] p-8 hover:border-white/10 transition-colors">
       <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6">
-        <Icon className="w-6 h-6" />
+        <Icon icon={IconComp} size="lg" />
       </div>
       <h3 className="text-xl font-bold mb-3">{title}</h3>
       <p className="text-white/60 leading-relaxed">{body}</p>
