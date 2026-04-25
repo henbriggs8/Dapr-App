@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,7 +95,7 @@ export default function HomeScreen() {
 
   const { street, full } = parseAddress(user?.address);
 
-  const categories: { icon: React.ElementType | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
+  const categories: { icon: LucideIcon | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
     { icon: null, image: "/carseat.png", label: "Interior", route: "/booking" },
     { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/booking" },
     { icon: null, image: "/sports-car.png", label: "Full Detail", route: "/booking" },
@@ -232,7 +232,7 @@ export default function HomeScreen() {
 
       {/* ── Category icons ───────────────────────────────────────────── */}
       <div className="flex items-start justify-around px-6 pb-5">
-        {categories.map(({ icon: Icon, image, custom, label, route }) => (
+        {categories.map(({ icon: IconComp, image, custom, label, route }) => (
           <button
             key={label}
             onClick={() => setLocation(route)}
@@ -241,8 +241,8 @@ export default function HomeScreen() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
               {custom ? custom : image ? (
                 <img src={image} alt={label} className="h-10 w-10 object-contain" />
-              ) : Icon ? (
-                <Icon className="h-5 w-5" style={{ color: ACCENT }} />
+              ) : IconComp ? (
+                <Icon icon={IconComp} size="md" style={{ color: ACCENT }} />
               ) : null}
             </div>
             <span className="text-[11px] font-medium text-[#555]">{label}</span>

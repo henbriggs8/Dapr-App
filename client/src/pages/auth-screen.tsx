@@ -132,7 +132,7 @@ export default function AuthScreen() {
                       <option value="+49">🇩🇪 +49</option>
                       <option value="+81">🇯🇵 +81</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Icon icon={ChevronDown} size="sm" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                   
                   {/* Phone Number Input */}

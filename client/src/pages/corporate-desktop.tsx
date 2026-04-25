@@ -235,7 +235,7 @@ export default function CorporateDesktop() {
                   <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-1">Live Estimate</p>
                   <h3 className="text-xl font-bold">Fleet Pricing Calculator</h3>
                 </div>
-                <ReceiptText className="w-6 h-6 text-white/30" />
+                <Icon icon={ReceiptText} size="lg" className="text-white/30" />
               </div>
 
               {/* Slider */}

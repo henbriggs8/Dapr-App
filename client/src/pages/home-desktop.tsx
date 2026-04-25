@@ -284,7 +284,7 @@ export default function HomeDesktop() {
                     if (e.key === "Enter") goBook();
                   }}
                 />
-                <Navigation className="w-5 h-5 text-white/60 shrink-0" />
+                <Icon icon={Navigation} size="md" className="text-white/60" />
               </div>
 
               {suggestOpen && (suggestions.length > 0 || loadingSuggest) && (
