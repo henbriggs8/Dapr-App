@@ -369,8 +369,8 @@ export default function HomeDesktop() {
           {/* Hero Visual */}
           <div className="relative w-full aspect-square lg:aspect-auto lg:h-[700px] rounded-3xl border border-white/10 bg-[#0a0a0a] overflow-hidden shadow-2xl">
             <img
-              src="/desktop/hero-car.jpg"
-              alt="Dapper Wash"
+              src="/desktop/lambo.jpg"
+              alt="Dapper detailers working on a black Lamborghini"
               className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
@@ -509,8 +509,8 @@ export default function HomeDesktop() {
               </p>
               <div className="aspect-[4/3] rounded-2xl bg-[#111] border border-white/5 relative overflow-hidden">
                 <img
-                  src="/desktop/sparkling-car.png"
-                  alt="Clean Car"
+                  src="/desktop/jeep-desert.jpg"
+                  alt="Dapper detailer washing a Jeep Gladiator in the desert"
                   className="absolute inset-0 w-full h-full object-cover mix-blend-luminosity opacity-70 group-hover:scale-105 group-hover:mix-blend-normal transition-all duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
@@ -673,7 +673,7 @@ export default function HomeDesktop() {
         <div className="max-w-[1280px] mx-auto px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative rounded-3xl overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[600px] border border-white/10">
-              <img src="/desktop/interior-detail.png" alt="Interior Detailing" className="w-full h-full object-cover opacity-80" />
+              <img src="/desktop/interior-car.jpg" alt="Detailed luxury car interior" className="w-full h-full object-cover opacity-80" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
 
               <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
