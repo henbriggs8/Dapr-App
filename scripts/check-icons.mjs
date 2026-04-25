@@ -42,11 +42,17 @@ function isExempt(relPath) {
 
 // Pull the names imported from "lucide-react" in a file. Type-only imports and
 // the `LucideIcon` type are excluded — only runtime component imports count.
-function lucideImportNames(source) {
+// Also returns any namespace import (`import * as X from "lucide-react"`)
+// detected, so callers can flag it as a hard violation: namespace imports
+// bypass the wrapper by construction (you'd write `<X.Camera ...>`).
+function lucideImportInfo(source) {
   const names = new Set();
-  const re = /import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+["']lucide-react["']/g;
+  let namespaceLocal = null;
+
+  // Named imports
+  const reNamed = /import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+["']lucide-react["']/g;
   let m;
-  while ((m = re.exec(source)) !== null) {
+  while ((m = reNamed.exec(source)) !== null) {
     const isTypeOnlyImport = /import\s+type\s+\{/.test(m[0]);
     for (const raw of m[1].split(",")) {
       let part = raw.trim();
@@ -62,7 +68,13 @@ function lucideImportNames(source) {
       names.add(localName);
     }
   }
-  return names;
+
+  // Namespace import: `import * as X from "lucide-react"`
+  const reNs = /import\s+\*\s+as\s+(\w+)\s+from\s+["']lucide-react["']/;
+  const ns = source.match(reNs);
+  if (ns) namespaceLocal = ns[1];
+
+  return { names, namespaceLocal };
 }
 
 // Find <X ...> JSX opening tags (self-closing or not) for a given component name.
@@ -117,6 +129,7 @@ function lineOf(source, index) {
 const SIZE_CLASS_RE = /\b[wh]-(?:\d+(?:\.\d+)?|\[[^\]]+\])\b/;
 
 const directLucideViolations = [];
+const namespaceViolations = [];
 const sizeClassViolations = [];
 
 for (const abs of walk(SRC)) {
@@ -126,7 +139,7 @@ for (const abs of walk(SRC)) {
   const source = readFileSync(abs, "utf8");
 
   // Rule 1: no direct lucide JSX outside the wrapper.
-  const lucideNames = lucideImportNames(source);
+  const { names: lucideNames, namespaceLocal } = lucideImportInfo(source);
   for (const name of lucideNames) {
     for (const idx of findJsxOpenings(source, name)) {
       directLucideViolations.push({
@@ -135,6 +148,18 @@ for (const abs of walk(SRC)) {
         name,
       });
     }
+  }
+  // Rule 1b: namespace imports of lucide-react are always a violation —
+  // they bypass the wrapper by construction (`<Lucide.Camera ... />`).
+  if (namespaceLocal) {
+    const idx = source.search(
+      new RegExp(`import\\s+\\*\\s+as\\s+${namespaceLocal}\\s+from\\s+["']lucide-react["']`),
+    );
+    namespaceViolations.push({
+      file: rel,
+      line: lineOf(source, Math.max(idx, 0)),
+      local: namespaceLocal,
+    });
   }
 
   // Rule 2: <Icon ...> may not carry w-N / h-N sizing in className.
@@ -151,7 +176,10 @@ for (const abs of walk(SRC)) {
   }
 }
 
-const total = directLucideViolations.length + sizeClassViolations.length;
+const total =
+  directLucideViolations.length +
+  namespaceViolations.length +
+  sizeClassViolations.length;
 
 if (total === 0) {
   console.log("✓ icons OK — no direct lucide JSX, no size-class bypasses");
@@ -170,6 +198,21 @@ if (directLucideViolations.length) {
   console.error("@/components/ui/icon instead.\n");
   for (const v of directLucideViolations) {
     console.error(`  ${v.file}:${v.line}  <${v.name} ... />`);
+  }
+  console.error("");
+}
+
+if (namespaceViolations.length) {
+  console.error(
+    "Namespace imports of lucide-react are not allowed — they bypass the",
+  );
+  console.error(
+    "wrapper by construction. Use named imports + <Icon icon={...} /> instead.\n",
+  );
+  for (const v of namespaceViolations) {
+    console.error(
+      `  ${v.file}:${v.line}  import * as ${v.local} from "lucide-react"`,
+    );
   }
   console.error("");
 }
