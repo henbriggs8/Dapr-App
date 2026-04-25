@@ -16,6 +16,9 @@ precision highp float;
 varying vec2 vUv;
 uniform float uTime;
 uniform vec2 uResolution;
+uniform float uIntensity;   // 0..1 — overall color punch
+uniform float uSpeed;       // time multiplier
+uniform float uDetail;      // 0..1 — texture detail (drives octave count blend)
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -46,11 +49,11 @@ float snoise(vec2 v) {
   return 130.0 * dot(m, g);
 }
 
-// Fractal Brownian motion for layered fluid
+// Lower-octave fbm — softer, less busy than the original 5-octave version
 float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 3; i++) {
     v += a * snoise(p);
     p *= 2.0;
     a *= 0.5;
@@ -59,56 +62,60 @@ float fbm(vec2 p) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution.xy;
   vec2 p = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
 
-  float t = uTime * 0.06;
+  float t = uTime * uSpeed;
 
-  // Domain warping for fluid distortion
+  // Domain warping for fluid distortion (single-pass, less detail)
   vec2 q = vec2(fbm(p + vec2(0.0, 0.0) + t),
                 fbm(p + vec2(5.2, 1.3) - t * 0.5));
 
-  vec2 r = vec2(fbm(p + 4.0 * q + vec2(1.7, 9.2) + t * 0.4),
-                fbm(p + 4.0 * q + vec2(8.3, 2.8) - t * 0.3));
+  vec2 r = vec2(fbm(p + 2.0 * q + vec2(1.7, 9.2) + t * 0.4),
+                fbm(p + 2.0 * q + vec2(8.3, 2.8) - t * 0.3));
 
-  float n = fbm(p + 4.0 * r);
+  float n = fbm(p + 2.5 * r);
   n = n * 0.5 + 0.5;
 
   // Brand palette
-  vec3 black     = vec3(0.020, 0.020, 0.024);   // #050506
-  vec3 purple    = vec3(0.549, 0.322, 1.000);   // #8c52ff
-  vec3 deepBlue  = vec3(0.067, 0.110, 0.290);   // #11204a
-  vec3 coolBlue  = vec3(0.227, 0.525, 1.000);   // #3a86ff
-  vec3 aqua      = vec3(0.133, 0.882, 1.000);   // #22e1ff
-  vec3 silver    = vec3(0.910, 0.933, 0.961);   // #e8eef5
+  vec3 black     = vec3(0.020, 0.020, 0.024);
+  vec3 purple    = vec3(0.549, 0.322, 1.000);
+  vec3 deepBlue  = vec3(0.067, 0.110, 0.290);
+  vec3 coolBlue  = vec3(0.227, 0.525, 1.000);
+  vec3 aqua      = vec3(0.133, 0.882, 1.000);
+  vec3 silver    = vec3(0.910, 0.933, 0.961);
 
-  // Layered color mix - mostly black, brand colors emerge in flow
+  // Calmer color stack — narrower bands, less aqua/silver pop
   vec3 col = black;
-  col = mix(col, deepBlue,  smoothstep(0.30, 0.70, n));
-  col = mix(col, purple,    smoothstep(0.55, 0.85, n) * 0.9);
-  col = mix(col, coolBlue,  smoothstep(0.45, 0.65, length(q)) * 0.35);
-  col = mix(col, aqua,      smoothstep(0.70, 0.95, length(r)) * 0.25);
+  col = mix(col, deepBlue,  smoothstep(0.35, 0.75, n) * uIntensity);
+  col = mix(col, purple,    smoothstep(0.55, 0.85, n) * 0.65 * uIntensity);
+  col = mix(col, coolBlue,  smoothstep(0.50, 0.70, length(q)) * 0.20 * uIntensity);
+  col = mix(col, aqua,      smoothstep(0.78, 0.96, length(r)) * 0.12 * uIntensity);
 
-  // Silver-white gloss highlights on noise crests
-  float gloss = pow(smoothstep(0.78, 0.96, n), 3.0);
-  col = mix(col, silver, gloss * 0.45);
+  // Subtle gloss highlight — pulled back from 0.45 → 0.20
+  float gloss = pow(smoothstep(0.82, 0.97, n), 3.0);
+  col = mix(col, silver, gloss * 0.20 * uIntensity);
 
-  // Subtle vignette to keep edges dark / hero text contrast safe
-  float vig = smoothstep(1.25, 0.35, length(p));
-  col *= 0.55 + 0.45 * vig;
+  // Soft radial fade so the effect bleeds toward dark at the edges
+  float vig = smoothstep(1.30, 0.30, length(p));
+  col *= 0.45 + 0.55 * vig;
 
   // Slight grain to avoid banding on dark areas
-  float grain = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.012;
+  float grain = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.010;
   col += grain;
 
-  // Floor to brand black so it never gets muddy
   col = max(col, black * 0.85);
 
   gl_FragColor = vec4(col, 1.0);
 }
 `;
 
-export default function FluidHeroBackground({ className = "" }: { className?: string }) {
+interface FluidHeroBackgroundProps {
+  className?: string;
+  /** When true, renders a calmer, softer version intended for use inside a contained card */
+  subtle?: boolean;
+}
+
+export default function FluidHeroBackground({ className = "", subtle = false }: FluidHeroBackgroundProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -125,7 +132,7 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
     let rafId = 0;
     let running = true;
     let visible = true;
-    let startTime = performance.now();
+    const startTime = performance.now();
     let pausedTime = 0;
     let pauseStart = 0;
 
@@ -136,7 +143,6 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
         dpr: Math.min(window.devicePixelRatio || 1, 1.5),
       });
     } catch (e) {
-      // WebGL unavailable — leave container empty so CSS fallback shows
       return;
     }
 
@@ -156,6 +162,9 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
       uniforms: {
         uTime: { value: 0 },
         uResolution: { value: [container.clientWidth, container.clientHeight] },
+        uIntensity: { value: subtle ? 0.85 : 1.0 },
+        uSpeed: { value: subtle ? 0.022 : 0.06 },
+        uDetail: { value: subtle ? 0.6 : 1.0 },
       },
     });
     mesh = new Mesh(gl, { geometry, program });
@@ -183,14 +192,12 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
     };
 
     if (reduced) {
-      // Render a single frame at t=0 then stop — looks like a static abstract gradient
       program.uniforms.uTime.value = 4.2;
       renderer.render({ scene: mesh });
     } else {
       rafId = requestAnimationFrame(render);
     }
 
-    // Pause when off-screen
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -209,7 +216,6 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
     );
     io.observe(container);
 
-    // Pause when tab hidden
     const onVis = () => {
       if (document.hidden) {
         if (running) pauseStart = performance.now();
@@ -234,7 +240,18 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
         container.removeChild(gl.canvas);
       }
     };
-  }, []);
+  }, [subtle]);
+
+  // Soft radial mask so the canvas feathers into the surrounding dark background
+  // instead of ending in a hard rectangle inside the card
+  const maskStyle = subtle
+    ? {
+        WebkitMaskImage:
+          "radial-gradient(ellipse 75% 75% at 50% 45%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0) 100%)",
+        maskImage:
+          "radial-gradient(ellipse 75% 75% at 50% 45%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0) 100%)",
+      }
+    : {};
 
   return (
     <div
@@ -242,9 +259,9 @@ export default function FluidHeroBackground({ className = "" }: { className?: st
       aria-hidden="true"
       className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}
       style={{
-        // CSS fallback that matches the shader's mood if WebGL fails
         background:
-          "radial-gradient(60% 80% at 30% 30%, rgba(140,82,255,0.18) 0%, transparent 60%), radial-gradient(50% 70% at 75% 70%, rgba(58,134,255,0.12) 0%, transparent 65%), #050506",
+          "radial-gradient(60% 80% at 30% 30%, rgba(140,82,255,0.14) 0%, transparent 60%), radial-gradient(50% 70% at 75% 70%, rgba(58,134,255,0.10) 0%, transparent 65%), #050506",
+        ...maskStyle,
       }}
       data-testid="fluid-hero-background"
     />
