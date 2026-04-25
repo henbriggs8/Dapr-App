@@ -34,6 +34,14 @@ export default function HomeDesktop() {
   const [locationInput, setLocationInput] = useState("");
   const timePopRef = useRef<HTMLDivElement | null>(null);
 
+  type AddrSuggestion = { label: string; sub: string };
+  const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const locationBoxRef = useRef<HTMLDivElement | null>(null);
+  const suppressNextFetchRef = useRef(false);
+
   useEffect(() => {
     if (!timeOpen) return;
     const onClick = (e: MouseEvent) => {
@@ -44,6 +52,74 @@ export default function HomeDesktop() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [timeOpen]);
+
+  useEffect(() => {
+    if (!suggestOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (locationBoxRef.current && !locationBoxRef.current.contains(e.target as Node)) {
+        setSuggestOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [suggestOpen]);
+
+  useEffect(() => {
+    if (suppressNextFetchRef.current) {
+      suppressNextFetchRef.current = false;
+      return;
+    }
+    const q = locationInput.trim();
+    if (q.length < 3) {
+      setSuggestions([]);
+      setLoadingSuggest(false);
+      return;
+    }
+    setLoadingSuggest(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=en`,
+          { signal: ctrl.signal },
+        );
+        if (!res.ok) throw new Error("geocode failed");
+        const data: { features?: Array<{ properties: Record<string, string> }> } = await res.json();
+        const items: AddrSuggestion[] =
+          data.features?.map((f) => {
+            const p = f.properties || {};
+            const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+            const cityLine = [p.city || p.town || p.village, p.state, p.country].filter(Boolean).join(", ");
+            const primary = street || p.name || cityLine;
+            const secondary = street ? cityLine : (p.name && cityLine !== p.name ? cityLine : "");
+            return { label: primary, sub: secondary };
+          }).filter((s) => s.label) ?? [];
+        setSuggestions(items);
+        setSuggestOpen(items.length > 0);
+        setActiveIdx(-1);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setSuggestions([]);
+          setSuggestOpen(false);
+        }
+      } finally {
+        setLoadingSuggest(false);
+      }
+    }, 250);
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  }, [locationInput]);
+
+  const pickSuggestion = (s: AddrSuggestion) => {
+    suppressNextFetchRef.current = true;
+    const full = s.sub ? `${s.label}, ${s.sub}` : s.label;
+    setLocationInput(full);
+    setSuggestOpen(false);
+    setSuggestions([]);
+    setActiveIdx(-1);
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
@@ -152,20 +228,98 @@ export default function HomeDesktop() {
             </div>
 
             {/* Vehicle location input */}
-            <div className="bg-white/10 hover:bg-white/15 focus-within:bg-white/15 focus-within:border-[#8c52ff] transition-colors rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 border border-white/10 max-w-xl">
-              <div className="w-2.5 h-2.5 rounded-full bg-white shrink-0" />
-              <input
-                type="text"
-                value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                placeholder="Vehicle location"
-                className="flex-1 bg-transparent outline-none text-base placeholder:text-white/50"
-                data-testid="input-vehicle-location"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") goBook();
-                }}
-              />
-              <Navigation className="w-5 h-5 text-white/60 shrink-0" />
+            <div className="relative max-w-xl mb-6" ref={locationBoxRef}>
+              <div className="bg-white/10 hover:bg-white/15 focus-within:bg-white/15 focus-within:border-[#8c52ff] transition-colors rounded-2xl px-5 py-4 flex items-center gap-4 border border-white/10">
+                <div className="w-2.5 h-2.5 rounded-full bg-white shrink-0" />
+                <input
+                  type="text"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setSuggestOpen(true);
+                  }}
+                  placeholder="Vehicle location"
+                  className="flex-1 bg-transparent outline-none text-base placeholder:text-white/50"
+                  data-testid="input-vehicle-location"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={suggestOpen}
+                  aria-controls="vehicle-location-suggestions"
+                  aria-activedescendant={
+                    activeIdx >= 0 ? `vehicle-location-suggestion-${activeIdx}` : undefined
+                  }
+                  onKeyDown={(e) => {
+                    if (suggestOpen && suggestions.length > 0) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setActiveIdx((i) => (i + 1) % suggestions.length);
+                        return;
+                      }
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveIdx((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+                        return;
+                      }
+                      if (e.key === "Enter") {
+                        if (activeIdx >= 0 && activeIdx < suggestions.length) {
+                          e.preventDefault();
+                          pickSuggestion(suggestions[activeIdx]);
+                          return;
+                        }
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setSuggestOpen(false);
+                        return;
+                      }
+                    }
+                    if (e.key === "Enter") goBook();
+                  }}
+                />
+                <Navigation className="w-5 h-5 text-white/60 shrink-0" />
+              </div>
+
+              {suggestOpen && (suggestions.length > 0 || loadingSuggest) && (
+                <div
+                  id="vehicle-location-suggestions"
+                  role="listbox"
+                  className="absolute top-full mt-2 left-0 right-0 z-30 bg-[#111] border border-white/10 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden py-1"
+                >
+                  {loadingSuggest && suggestions.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-white/50">Searching addresses…</div>
+                  ) : (
+                    suggestions.map((s, idx) => {
+                      const active = idx === activeIdx;
+                      return (
+                        <button
+                          key={`${s.label}-${idx}`}
+                          id={`vehicle-location-suggestion-${idx}`}
+                          role="option"
+                          aria-selected={active}
+                          onMouseEnter={() => setActiveIdx(idx)}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            pickSuggestion(s);
+                          }}
+                          className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
+                            active ? "bg-white/10" : "hover:bg-white/5"
+                          }`}
+                          data-testid={`suggestion-${idx}`}
+                        >
+                          <MapPin className="w-4 h-4 text-[#8c52ff] mt-0.5 shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-sm text-white truncate">{s.label}</div>
+                            {s.sub && (
+                              <div className="text-xs text-white/50 truncate">{s.sub}</div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
