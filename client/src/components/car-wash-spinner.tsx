@@ -24,8 +24,8 @@ export function CarWashSpinner({
   }[size];
 
   const iconSize: IconSize = {
-    sm: "md",
-    md: "lg",
+    sm: "lg",
+    md: "xl",
     lg: "xl",
   }[size] as IconSize;
 
