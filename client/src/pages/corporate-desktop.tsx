@@ -13,6 +13,11 @@ import {
   ReceiptText,
   MapPin,
   ChevronDown,
+  Droplets,
+  Sparkles,
+  Star,
+  Settings2,
+  type LucideIcon,
 } from "lucide-react";
 
 const dapprLogo = "/dapr-logo.svg";
@@ -28,13 +33,13 @@ const TIERS: Tier[] = [
   { label: "200+", min: 201, max: 9999, mult: null },
 ];
 
-type Service = { id: string; name: string; base: number | null; desc: string };
+type Service = { id: string; name: string; base: number | null; desc: string; icon: LucideIcon };
 const SERVICES: Service[] = [
-  { id: "exterior", name: "Exterior Wash", base: 55, desc: "Hand wash, wheels, tires, exterior windows." },
-  { id: "wash-wipe", name: "Wash + Interior Wipe Down", base: 79, desc: "Exterior + cabin vacuum and wipe down." },
-  { id: "maintenance", name: "Maintenance Detail", base: 109, desc: "Recurring program clean, inside and out." },
-  { id: "full", name: "Full Detail", base: 179, desc: "Showroom finish, top to bottom." },
-  { id: "custom", name: "Custom Fleet Program", base: null, desc: "Built to spec for your fleet." },
+  { id: "exterior", name: "Exterior Wash", base: 55, desc: "Hand wash, wheels, tires, exterior windows.", icon: Droplets },
+  { id: "wash-wipe", name: "Wash + Interior Wipe Down", base: 79, desc: "Exterior + cabin vacuum and wipe down.", icon: Sparkles },
+  { id: "maintenance", name: "Maintenance Detail", base: 109, desc: "Recurring program clean, inside and out.", icon: Wrench },
+  { id: "full", name: "Full Detail", base: 179, desc: "Showroom finish, top to bottom.", icon: Star },
+  { id: "custom", name: "Custom Fleet Program", base: null, desc: "Built to spec for your fleet.", icon: Settings2 },
 ];
 
 const CASES = [
@@ -158,7 +163,7 @@ export default function CorporateDesktop() {
           scrolled ? "bg-[#050505]/80 backdrop-blur-md py-4" : "bg-transparent py-6"
         }`}
       >
-        <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between">
+        <div className="max-w-[1120px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
             <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
               <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
@@ -186,7 +191,7 @@ export default function CorporateDesktop() {
       <section className="relative pt-40 pb-20 lg:pt-52 lg:pb-28 overflow-hidden">
         <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#8c52ff]/15 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="max-w-[1280px] mx-auto px-8 relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
+        <div className="max-w-[1120px] mx-auto px-8 relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4" /> Dapper for Fleets
@@ -264,20 +269,31 @@ export default function CorporateDesktop() {
               {/* Service selector */}
               <label className="block text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Service</label>
               <div className="flex flex-wrap gap-2 mb-8">
-                {SERVICES.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setServiceId(s.id)}
-                    className={`px-3.5 py-2 rounded-full text-xs font-bold border transition-all ${
-                      serviceId === s.id
-                        ? "bg-[#8c52ff] border-[#8c52ff] text-white"
-                        : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
-                    }`}
-                    data-testid={`service-${s.id}`}
-                  >
-                    {s.name}
-                  </button>
-                ))}
+                {SERVICES.map((s) => {
+                  const Icon = s.icon;
+                  const active = serviceId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setServiceId(s.id)}
+                      className={`inline-flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full text-xs font-bold border transition-all ${
+                        active
+                          ? "bg-[#8c52ff] border-[#8c52ff] text-white"
+                          : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
+                      }`}
+                      data-testid={`service-${s.id}`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          active ? "bg-white/20" : "bg-white/10 text-white"
+                        }`}
+                      >
+                        <Icon className="w-3 h-3" />
+                      </span>
+                      {s.name}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Result */}
@@ -320,7 +336,7 @@ export default function CorporateDesktop() {
 
       {/* Trusted by */}
       <section className="py-12 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-[1280px] mx-auto px-8">
+        <div className="max-w-[1120px] mx-auto px-8">
           <p className="text-center text-sm font-medium text-white/40 mb-8 uppercase tracking-widest">Trusted by fleets &amp; operators at</p>
           <div className="flex flex-wrap items-center justify-center gap-12 lg:gap-24 opacity-40 grayscale">
             {PARTNER_LOGOS.map((name) => (
@@ -335,7 +351,7 @@ export default function CorporateDesktop() {
 
       {/* Why Dapper for Fleets */}
       <section className="py-32">
-        <div className="max-w-[1280px] mx-auto px-8">
+        <div className="max-w-[1120px] mx-auto px-8">
           <div className="max-w-3xl mb-16">
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Why Dapper for Fleets</p>
             <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Built for operators, not weekenders.</h2>
@@ -357,7 +373,7 @@ export default function CorporateDesktop() {
 
       {/* Use cases */}
       <section className="py-32 bg-[#020202] border-y border-white/5">
-        <div className="max-w-[1280px] mx-auto px-8">
+        <div className="max-w-[1120px] mx-auto px-8">
           <div className="max-w-3xl mb-16">
             <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Fleet use cases</p>
             <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">A program for every kind of fleet.</h2>
@@ -380,7 +396,7 @@ export default function CorporateDesktop() {
 
       {/* Case study / proof */}
       <section className="py-32">
-        <div className="max-w-[1280px] mx-auto px-8">
+        <div className="max-w-[1120px] mx-auto px-8">
           <div className="grid lg:grid-cols-[1fr_1.1fr] gap-16 items-center">
             <div className="relative rounded-3xl overflow-hidden border border-white/10 aspect-[4/5] lg:aspect-auto lg:h-[520px]">
               <img src="/desktop/hero-car.jpg" alt="Dapper van on-site" className="w-full h-full object-cover" />
@@ -559,7 +575,7 @@ export default function CorporateDesktop() {
 
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
-        <div className="max-w-[1280px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors">FAQ</button>
