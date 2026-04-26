@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Armchair, CarFront, Sparkles, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -96,7 +96,7 @@ export default function HomeScreen() {
   const { street, full } = parseAddress(user?.address);
 
   const categories: { icon: LucideIcon; label: string; route: string }[] = [
-    { icon: Armchair, label: "Interior", route: "/booking" },
+    { icon: Gauge, label: "Interior", route: "/booking" },
     { icon: CarFront, label: "Exterior", route: "/booking" },
     { icon: Sparkles, label: "Full Detail", route: "/booking" },
     { icon: MoreHorizontal, label: "More", route: "/booking" },
