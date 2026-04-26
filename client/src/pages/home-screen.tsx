@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, Search, Home, Navigation, type LucideIcon } from "lucide-react";
+import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -209,6 +209,12 @@ export default function HomeScreen() {
             )}
           </button>
         </div>
+      </div>
+
+      {/* ── For You header ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pt-5 pb-2">
+        <h2 className="text-[20px] font-bold text-[#111] tracking-tight">For you</h2>
+        <Icon icon={ChevronRight} size="sm" className="text-[#aaa]" />
       </div>
 
       {/* ── Service type grid ────────────────────────────────────────── */}
