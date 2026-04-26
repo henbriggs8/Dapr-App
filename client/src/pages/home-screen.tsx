@@ -127,7 +127,7 @@ export default function HomeScreen() {
   const serviceCards = [
     {
       id: 1,
-      image: "/interior-detail.jpg",
+      image: "/exterior-wash.jpg",
       reward: "5 washes until $50 reward",
       title: "Essential Wash",
       price: "$39",
@@ -135,7 +135,7 @@ export default function HomeScreen() {
     },
     {
       id: 2,
-      image: "/exterior-wash.jpg",
+      image: "/interior-detail.jpg",
       title: "Interior Detail",
       price: "$89",
       duration: "45–90 min",
