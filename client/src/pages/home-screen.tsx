@@ -423,6 +423,17 @@ export default function HomeScreen() {
           </button>
         ))}
       </div>
+
+      {/* ── See all services ─────────────────────────────────────────── */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => setLocation("/services")}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-[#ececec] bg-white py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)] active:bg-[#fafafa] transition"
+        >
+          <span className="text-[14px] font-semibold text-[#111]">See all Services</span>
+          <Icon icon={ChevronRight} size="sm" className="text-[#aaa]" />
+        </button>
+      </div>
     </div>
   );
 }
