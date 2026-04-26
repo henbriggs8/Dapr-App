@@ -117,11 +117,11 @@ export default function HomeScreen() {
   const lastServiceLocation = bookings && bookings.length > 0 ? bookings[0].serviceLocation : null;
   const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
 
-  const categories: { icon: LucideIcon; label: string }[] = [
-    { icon: Gauge,         label: "Interior"    },
-    { icon: CarFront,      label: "Exterior"    },
-    { icon: Sparkles,      label: "Full Detail" },
-    { icon: MoreHorizontal,label: "More"        },
+  const categories: { icon: LucideIcon; label: string; route: string }[] = [
+    { icon: Gauge,         label: "Interior",    route: "/booking" },
+    { icon: CarFront,      label: "Exterior",    route: "/booking" },
+    { icon: Sparkles,      label: "Full Detail", route: "/booking" },
+    { icon: MoreHorizontal,label: "More",        route: "/services" },
   ];
 
   const serviceCards = [
@@ -342,10 +342,10 @@ export default function HomeScreen() {
 
       {/* ── Category icon chips ───────────────────────────────────────── */}
       <div className="flex items-start justify-around px-4 pb-5">
-        {categories.map(({ icon: IconComp, label }) => (
+        {categories.map(({ icon: IconComp, label, route }) => (
           <button
             key={label}
-            onClick={() => setLocation("/booking")}
+            onClick={() => setLocation(route)}
             className="flex flex-col items-center gap-1.5 active:opacity-70 transition"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: ACCENT_BG }}>
