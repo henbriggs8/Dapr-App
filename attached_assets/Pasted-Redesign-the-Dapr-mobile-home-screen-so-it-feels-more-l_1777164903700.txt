@@ -1,0 +1,105 @@
+Redesign the Dapr mobile home screen so it feels more like Uber / Instacart / DoorDash: utility-first, tighter, more intentional, and less like stacked marketing cards with too much empty space.
+
+Main goal:
+Make the home screen feel like a real on-demand product app, not a brochure for a detailing company.
+
+Important design direction:
+- Do NOT use “Welcome, [Name]” as the main header
+- Do NOT use top tabs like “Dapr | Fleet | Services”
+- The top of the screen should prioritize action and context:
+  1. where the user is
+  2. when they want service
+  3. whether they are booking personal or fleet
+- Keep the interface minimal, premium, and Apple/Uber-like
+- Reduce awkward whitespace and tighten the top section
+- Keep the app feeling like a technology platform that deploys detailing services
+
+Please restructure the top of the home screen like this:
+
+1. Header row
+- Left: current service location / address dropdown
+- Right: notification bell or profile icon
+- If branding is needed, keep the Dapr mark very small and subtle, not the main focus
+
+Example:
+East Williams Field Road ▼                      🔔
+
+2. Search row
+- One prominent rounded search/address input directly below header
+- Placeholder text should be something like:
+  - Search address
+  - Vehicle location
+  - Where should we come?
+
+3. Utility / mode row
+- Add a compact row below the search bar with:
+  - “Arrive now” dropdown chip
+  - segmented control for “Personal” and “Fleet”
+- This should feel like a mode switch, not navigation tabs
+- Default to Personal
+
+Example:
+[ Arrive now ▼ ]   [ Personal ] [ Fleet ]
+
+4. Quick access cards
+- Replace the current large Home / Last service stacked card with 2 smaller compact cards or tiles
+- These should be lighter and less visually heavy
+- Example:
+  - Home
+  - Last service
+- Keep them tappable and useful, but reduce their vertical footprint
+
+5. “For you” section
+- Keep this section, but make the hierarchy cleaner
+- Use one large primary service card first:
+  - Car Wash
+- Then keep the smaller category icons below:
+  - Interior
+  - Exterior
+  - Full Detail
+  - More
+
+6. Promo card
+- Keep one promo / membership card, but make sure it looks like a useful offer, not a banner ad
+- It should fit naturally into the card system
+
+7. Service cards / feed
+- Use tighter, more product-like service cards below
+- Cards should feel like actionable service options, not random marketing blocks
+- Prioritize clean spacing and rhythm
+
+Photo direction:
+- Use tighter, premium result-focused photos
+- Prefer clean outcome shots: glossy paint, clean interior, wheel/detail shots
+- Avoid making branded van / house photos the main visual focus near the top
+- The app should feel like a tool first, service proof second
+
+Icon direction:
+- Keep icon style consistent
+- Icons should feel simple, clean, modern, and product-like
+- Avoid cute or mismatched illustration styles
+- Use same size, same padding, same container treatment
+
+Layout goals:
+- Compress the top section so it feels more functional and less floaty
+- Reduce excessive vertical whitespace
+- Create stronger alignment between sections
+- Make the page feel more structured and repeatable like Uber / Instacart
+- The first screen should quickly answer:
+  - where
+  - when
+  - what kind of service
+
+Visual goals:
+- very clean white background
+- subtle purple accents
+- strong typography hierarchy
+- rounded cards
+- minimal noise
+- premium but not sterile
+- feels like a modern mobile product, not a local service flyer
+
+Please output:
+1. the updated mobile home screen layout
+2. a short explanation of what changed and why
+3. any UI changes that improved hierarchy and reduced awkward whitespace

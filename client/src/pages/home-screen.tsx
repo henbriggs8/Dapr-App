@@ -1,15 +1,20 @@
 import { useLocation } from "wouter";
-import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, ChevronDown, CheckCircle2, type LucideIcon } from "lucide-react";
+import {
+  Bell, MoreHorizontal, Clock, Heart, Loader2, Droplets,
+  Gauge, CarFront, Sparkles, Search, Home, Navigation,
+  ChevronRight, ChevronDown, CheckCircle2, type LucideIcon,
+} from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
+const ACCENT_BG = "#f3eeff";
 
 const TIME_OPTIONS = [
-  { id: "now", label: "Arrive now", sub: "Get a pro in ~10 min" },
-  { id: "later", label: "Arrive later", sub: "Later today" },
+  { id: "now",      label: "Arrive now",        sub: "Get a pro in ~10 min" },
+  { id: "later",    label: "Arrive later",       sub: "Later today" },
   { id: "schedule", label: "Schedule for later", sub: "Pick a date & time" },
 ] as const;
 
@@ -42,6 +47,7 @@ export default function HomeScreen() {
   const [locating, setLocating] = useState(false);
   const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
   const [timeOpen, setTimeOpen] = useState(false);
+  const [mode, setMode] = useState<"personal" | "fleet">("personal");
   const timePopRef = useRef<HTMLDivElement | null>(null);
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
@@ -103,7 +109,7 @@ export default function HomeScreen() {
         }
       },
       () => { setLocating(false); },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
@@ -111,46 +117,42 @@ export default function HomeScreen() {
   const lastServiceLocation = bookings && bookings.length > 0 ? bookings[0].serviceLocation : null;
   const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
 
-  const categories: { icon: LucideIcon; label: string; route: string }[] = [
-    { icon: Gauge, label: "Interior", route: "/booking" },
-    { icon: CarFront, label: "Exterior", route: "/booking" },
-    { icon: Sparkles, label: "Full Detail", route: "/booking" },
-    { icon: MoreHorizontal, label: "More", route: "/booking" },
+  const categories: { icon: LucideIcon; label: string }[] = [
+    { icon: Gauge,         label: "Interior"    },
+    { icon: CarFront,      label: "Exterior"    },
+    { icon: Sparkles,      label: "Full Detail" },
+    { icon: MoreHorizontal,label: "More"        },
   ];
 
   const serviceCards = [
     {
       id: 1,
-      image: "/dapper-van-house.jpg",
+      image: "/interior-detail.jpg",
       reward: "5 washes until $50 reward",
       title: "Essential Wash",
       price: "$39",
       duration: "15–30 min",
-      route: "/booking",
     },
     {
       id: 2,
-      image: "/interior-detail.jpg",
+      image: "/exterior-wash.jpg",
       title: "Interior Detail",
       price: "$89",
       duration: "45–90 min",
-      route: "/booking",
     },
     {
       id: 3,
-      image: "/exterior-wash.jpg",
+      image: "/dapper-lambo.jpg",
       title: "Refresh Detail",
       price: "$149",
       duration: "30–45 min",
-      route: "/booking",
     },
     {
       id: 4,
-      image: "/dapper-lambo.jpg",
+      image: "/dapper-van-house.jpg",
       title: "Reserve Ahead",
       price: "From $39",
       duration: "Schedule anytime",
-      route: "/booking",
     },
   ];
 
@@ -159,218 +161,264 @@ export default function HomeScreen() {
       className="min-h-screen bg-white"
       style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
     >
-      {/* ── Location search bar ─────────────────────────────────────── */}
-      <div className="px-4 pt-12 pb-1">
-        {/* Logo row */}
-        <div className="flex items-center justify-end mb-4">
-          <img src="/dapper-d-logo.png" alt="Dapper" className="h-9 w-9 object-contain" />
-        </div>
-
-        {/* Full-width pill search bar */}
-        <button
-          onClick={() => setLocation("/booking")}
-          className="w-full flex items-center gap-3 rounded-full border border-[#e0e0e0] bg-white px-4 py-3.5 shadow-sm active:scale-[0.99] transition"
-        >
-          <Icon icon={Search} size="sm" className="text-[#999] shrink-0" />
-          <span className="flex-1 text-left text-[15px] text-[#888]">
-            {full ? street : "Where are we washing?"}
-          </span>
-        </button>
-
-        {/* Time selector pill */}
-        <div className="relative mt-2" ref={timePopRef}>
-          <button
-            onClick={() => setTimeOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-full border border-[#e0e0e0] bg-white px-3.5 py-2.5 shadow-sm active:scale-[0.98] transition"
-            aria-haspopup="listbox"
-            aria-expanded={timeOpen}
-          >
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f3eeff] shrink-0">
-              <Icon icon={Clock} size="xs" style={{ color: ACCENT }} />
-            </div>
-            <span className="text-[13px] font-semibold text-[#111]">{timeOpt.label}</span>
-            <Icon icon={ChevronDown} size="xs" className={`text-[#999] transition-transform ${timeOpen ? "rotate-180" : ""}`} />
-          </button>
-
-          {timeOpen && (
-            <div
-              className="absolute top-full mt-2 left-0 z-30 w-64 bg-white border border-[#efefef] rounded-2xl shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] overflow-hidden py-1"
-              role="listbox"
-            >
-              {TIME_OPTIONS.map((opt) => {
-                const active = timeOpt.id === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => { setTimeOpt(opt); setTimeOpen(false); }}
-                    className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left transition ${active ? "bg-[#f3eeff]" : "active:bg-[#fafafa]"}`}
-                    role="option"
-                    aria-selected={active}
-                  >
-                    <div>
-                      <p className={`text-[13px] font-semibold ${active ? "text-[#8c52ff]" : "text-[#111]"}`}>{opt.label}</p>
-                      <p className="text-[11px] text-[#999] mt-0.5">{opt.sub}</p>
-                    </div>
-                    {active && <Icon icon={CheckCircle2} size="sm" style={{ color: ACCENT }} />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Quick-select rows */}
-        <div className="mt-2 rounded-2xl bg-white border border-[#efefef] overflow-hidden shadow-sm">
-          {/* Home row */}
+      {/* ── Header: location + bell ─────────────────────────────────── */}
+      <div className="px-4 pt-12 pb-0">
+        <div className="flex items-center justify-between mb-3">
+          {/* Address dropdown trigger */}
           <button
             onClick={() => setLocation("/booking")}
-            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-[#fafafa] transition text-left"
+            className="flex items-center gap-1.5 active:opacity-70 transition max-w-[75%]"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f3eeff]">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-[#999] uppercase tracking-wide leading-none mb-0.5">Vehicle location</p>
+              <div className="flex items-center gap-1">
+                <p className="text-[15px] font-bold text-[#111] truncate leading-tight">{street}</p>
+                <Icon icon={ChevronDown} size="xs" className="text-[#555] shrink-0 mt-px" />
+              </div>
+            </div>
+          </button>
+
+          {/* Bell */}
+          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f5f5f5] active:bg-[#ebebeb] transition shrink-0">
+            <Icon icon={Bell} size="sm" className="text-[#333]" />
+          </button>
+        </div>
+
+        {/* ── Search bar ──────────────────────────────────────────────── */}
+        <button
+          onClick={() => setLocation("/booking")}
+          className="w-full flex items-center gap-3 rounded-2xl bg-[#f7f7f7] border border-[#efefef] px-4 py-3.5 active:bg-[#f0f0f0] transition"
+        >
+          <Icon icon={Search} size="sm" className="text-[#aaa] shrink-0" />
+          <span className="flex-1 text-left text-[14px] text-[#aaa]">Search address or vehicle location</span>
+        </button>
+
+        {/* ── Mode row: time chip + Personal/Fleet toggle ──────────────── */}
+        <div className="flex items-center gap-2 mt-2.5">
+          {/* Time chip */}
+          <div className="relative" ref={timePopRef}>
+            <button
+              onClick={() => setTimeOpen((o) => !o)}
+              className="flex items-center gap-1.5 rounded-full border border-[#e2e2e2] bg-white px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] active:scale-[0.98] transition"
+              aria-haspopup="listbox"
+              aria-expanded={timeOpen}
+            >
+              <Icon icon={Clock} size="xs" style={{ color: ACCENT }} />
+              <span className="text-[12px] font-semibold text-[#111]">{timeOpt.label}</span>
+              <Icon icon={ChevronDown} size="xs" className={`text-[#999] transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {timeOpen && (
+              <div
+                className="absolute top-full mt-1.5 left-0 z-40 w-60 bg-white border border-[#efefef] rounded-2xl shadow-[0_8px_30px_-4px_rgba(0,0,0,0.14)] overflow-hidden py-1"
+                role="listbox"
+              >
+                {TIME_OPTIONS.map((opt) => {
+                  const active = timeOpt.id === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => { setTimeOpt(opt); setTimeOpen(false); }}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition ${active ? "bg-[#f3eeff]" : "active:bg-[#fafafa]"}`}
+                      role="option"
+                      aria-selected={active}
+                    >
+                      <div>
+                        <p className={`text-[13px] font-semibold ${active ? "text-[#8c52ff]" : "text-[#111]"}`}>{opt.label}</p>
+                        <p className="text-[11px] text-[#999] mt-0.5">{opt.sub}</p>
+                      </div>
+                      {active && <Icon icon={CheckCircle2} size="sm" style={{ color: ACCENT }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Personal / Fleet segmented control */}
+          <div className="flex items-center rounded-full bg-[#f0f0f0] p-0.5">
+            <button
+              onClick={() => setMode("personal")}
+              className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition ${
+                mode === "personal"
+                  ? "bg-white text-[#111] shadow-sm"
+                  : "text-[#888]"
+              }`}
+            >
+              Personal
+            </button>
+            <button
+              onClick={() => setMode("fleet")}
+              className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition ${
+                mode === "fleet"
+                  ? "bg-white text-[#111] shadow-sm"
+                  : "text-[#888]"
+              }`}
+            >
+              Fleet
+            </button>
+          </div>
+        </div>
+
+        {/* ── Quick-access tiles: Home + Last service ──────────────────── */}
+        <div className="flex gap-2.5 mt-3 mb-1">
+          {/* Home tile */}
+          <button
+            onClick={() => setLocation("/booking")}
+            className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f3eeff]">
               <Icon icon={Home} size="sm" style={{ color: ACCENT }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-[#111]">Home</p>
-              <p className="text-[12px] text-[#999] truncate">
-                {full || "Add your home address"}
+            <div className="min-w-0">
+              <p className="text-[12px] font-semibold text-[#111] leading-tight">Home</p>
+              <p className="text-[11px] text-[#aaa] truncate mt-0.5 leading-tight">
+                {full ? street : "Add address"}
               </p>
             </div>
           </button>
 
-          {/* Divider */}
-          <div className="ml-16 h-px bg-[#f0f0f0]" />
-
-          {/* Last service row */}
+          {/* Last service tile */}
           <button
             onClick={() => setLocation("/booking")}
-            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-[#fafafa] transition text-left"
+            className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5f5]">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f5]">
               {locating ? (
-                <Icon icon={Loader2} size="sm" className="animate-spin text-[#999]" />
+                <Icon icon={Loader2} size="sm" className="animate-spin text-[#bbb]" />
               ) : (
-                <Icon icon={Clock} size="sm" className="text-[#999]" />
+                <Icon icon={Clock} size="sm" className="text-[#bbb]" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-[#111]">Last service</p>
-              <p className="text-[12px] text-[#999] truncate">
-                {lastServiceStreet || "No recent services yet"}
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold text-[#111] leading-tight">Last service</p>
+              <p className="text-[11px] text-[#aaa] truncate mt-0.5 leading-tight">
+                {lastServiceStreet || "No recent services"}
               </p>
             </div>
             {!lastServiceLocation && (
               <button
                 onClick={(e) => { e.stopPropagation(); detectLocation(); }}
-                className="shrink-0 flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border border-[#e5e5e5]"
-                style={{ color: ACCENT }}
+                className="shrink-0 p-1"
+                aria-label="Detect location"
               >
                 <Icon icon={Navigation} size="xs" style={{ color: ACCENT }} />
-                Detect
               </button>
             )}
           </button>
         </div>
       </div>
 
-      {/* ── For You header ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-2">
-        <h2 className="text-[20px] font-bold text-[#111] tracking-tight">For you</h2>
-        <Icon icon={ChevronRight} size="sm" className="text-[#aaa]" />
+      {/* ── For you ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pt-5 pb-3">
+        <h2 className="text-[18px] font-bold text-[#111] tracking-tight">For you</h2>
+        <button className="flex items-center gap-0.5 text-[12px] font-semibold" style={{ color: ACCENT }}>
+          See all
+          <Icon icon={ChevronRight} size="xs" style={{ color: ACCENT }} />
+        </button>
       </div>
 
-      {/* ── Service type ─────────────────────────────────────────────── */}
+      {/* ── Primary: Car Wash CTA ─────────────────────────────────────── */}
       <div className="px-4 pb-4">
         <button
           onClick={() => setLocation("/booking")}
-          className="w-full flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
+          className="w-full flex items-center gap-3.5 rounded-2xl border border-[#ececec] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] active:scale-[0.99] transition"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: ACCENT_BG }}>
             <Icon icon={Droplets} size="lg" style={{ color: ACCENT }} />
           </div>
-          <div className="text-left">
+          <div className="flex-1 text-left">
             <p className="text-[16px] font-bold text-[#111]">Car Wash</p>
-            <p className="text-[12px] font-normal text-[#999] mt-0.5">Get a pro in as little as 10 minutes</p>
+            <p className="text-[12px] text-[#999] mt-0.5">Pro at your vehicle in ~10 min</p>
+          </div>
+          <div
+            className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold text-white"
+            style={{ background: ACCENT }}
+          >
+            Book
           </div>
         </button>
       </div>
 
-      {/* ── Category icons ───────────────────────────────────────────── */}
-      <div className="flex items-start justify-around px-6 pb-5">
-        {categories.map(({ icon: IconComp, label, route }) => (
+      {/* ── Category icon chips ───────────────────────────────────────── */}
+      <div className="flex items-start justify-around px-4 pb-5">
+        {categories.map(({ icon: IconComp, label }) => (
           <button
             key={label}
-            onClick={() => setLocation(route)}
-            className="flex flex-col items-center gap-2 active:opacity-70 transition"
+            onClick={() => setLocation("/booking")}
+            className="flex flex-col items-center gap-1.5 active:opacity-70 transition"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
-              <Icon icon={IconComp} size="lg" style={{ color: ACCENT }} />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: ACCENT_BG }}>
+              <Icon icon={IconComp} size="md" style={{ color: ACCENT }} />
             </div>
-            <span className="text-[11px] font-medium text-[#555]">{label}</span>
+            <span className="text-[11px] font-medium text-[#666]">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* ── Promo banner ─────────────────────────────────────────────── */}
-      <div className="mx-4 mb-4 rounded-2xl overflow-hidden flex items-center bg-[#f3eeff] px-4 py-4 gap-4">
-        <div className="flex-1">
-          <p className="text-[13px] font-bold text-[#111] leading-tight">
-            Save big on any<br />Dapper Maintenance<br />Plan
+      {/* ── Promo card ───────────────────────────────────────────────── */}
+      <div className="mx-4 mb-5 rounded-2xl overflow-hidden flex items-center px-4 py-3.5 gap-3.5 border border-[#e8dcff]" style={{ background: ACCENT_BG }}>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: ACCENT }}>Member offer</p>
+          <p className="text-[14px] font-bold text-[#111] leading-snug">
+            Save on every wash with a Dapper Plan
           </p>
           <button
             onClick={() => setLocation("/booking")}
-            className="mt-3 flex items-center gap-1 text-[12px] font-semibold text-[#111] border border-[#ccc] rounded-full px-3 py-1.5 bg-white"
+            className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-[#111] border border-[#ccc] rounded-full px-3 py-1.5 bg-white"
           >
-            Browse offer →
+            Browse plans →
           </button>
         </div>
-        <div className="w-28 h-20 rounded-xl overflow-hidden shrink-0">
-          <img src="/dapper-van-house.jpg" className="w-full h-full object-cover" alt="Dapper van" />
+        <div className="w-24 h-20 rounded-xl overflow-hidden shrink-0">
+          <img src="/dapper-van-house.jpg" className="w-full h-full object-cover" alt="Dapper service" />
         </div>
       </div>
 
-      {/* ── Service photo cards ──────────────────────────────────────── */}
-      <div className="px-4 flex flex-col gap-5">
+      {/* ── Services section header ───────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pb-3">
+        <h2 className="text-[18px] font-bold text-[#111] tracking-tight">Services</h2>
+      </div>
+
+      {/* ── Service cards ─────────────────────────────────────────────── */}
+      <div className="px-4 flex flex-col gap-3 pb-4">
         {serviceCards.map((card) => (
           <button
             key={card.id}
-            onClick={() => setLocation(card.route)}
-            className="w-full text-left active:opacity-90 transition"
+            onClick={() => setLocation("/booking")}
+            className="w-full flex items-center gap-3.5 text-left active:opacity-90 transition rounded-2xl border border-[#f0f0f0] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
           >
-            {/* Photo */}
-            <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-2.5">
+            {/* Thumbnail */}
+            <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
               {card.reward && (
                 <div
-                  className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-white"
-                  style={{ background: ACCENT }}
+                  className="absolute inset-x-0 bottom-0 z-10 px-1.5 py-1 text-[9px] font-bold text-white text-center leading-tight"
+                  style={{ background: "linear-gradient(to top, rgba(140,82,255,0.95), transparent)" }}
                 >
-                  🎁 {card.reward}
+                  🎁 Reward
                 </div>
               )}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm cursor-pointer"
-              >
-                <Icon icon={Heart} size="sm" className="text-[#555]" />
-              </div>
-              <img
-                src={card.image}
-                alt={card.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={card.image} alt={card.title} className="w-full h-full object-cover" />
             </div>
 
-            {/* Info row */}
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[15px] font-semibold text-[#111]">{card.title}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Icon icon={Clock} size="xs" className="text-[#aaa]" />
-                  <p className="text-[12px] text-[#888]">{card.duration}</p>
-                </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-[#111]">{card.title}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <Icon icon={Clock} size="xs" className="text-[#bbb]" />
+                <p className="text-[12px] text-[#999]">{card.duration}</p>
               </div>
-              <p className="text-[15px] font-bold text-[#111] mt-0.5">{card.price}</p>
+            </div>
+
+            {/* Price */}
+            <div className="shrink-0 text-right">
+              <p className="text-[14px] font-bold text-[#111]">{card.price}</p>
+              <div
+                className="mt-1 flex items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold text-white"
+                style={{ background: ACCENT }}
+              >
+                Book
+              </div>
             </div>
           </button>
         ))}
