@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, type LucideIcon } from "lucide-react";
+import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, Search, Home, Navigation, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,9 +34,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
-  const [addressOpen, setAddressOpen] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [locateError, setLocateError] = useState<string | null>(null);
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
@@ -52,12 +50,20 @@ export default function HomeScreen() {
     },
   });
 
+  const { data: bookings } = useQuery<{ serviceLocation: string; scheduledDate: string }[]>({
+    queryKey: ["/api/bookings"],
+    queryFn: async () => {
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/bookings", { headers, credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   async function detectLocation() {
-    setLocateError(null);
-    if (!navigator.geolocation) {
-      setLocateError("Location not supported on this device.");
-      return;
-    }
+    if (!navigator.geolocation) return;
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -73,27 +79,18 @@ export default function HomeScreen() {
             body: JSON.stringify({ address }),
           });
           queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        } catch {
-          setLocateError("Could not look up address. Try again.");
         } finally {
           setLocating(false);
         }
       },
-      (err) => {
-        setLocating(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocateError("Location access denied. On iPhone: Settings → Privacy & Security → Location Services → Safari (or Dapper) → While Using.");
-        } else if (err.code === err.TIMEOUT) {
-          setLocateError("Location timed out. Make sure GPS is on and try again.");
-        } else {
-          setLocateError("Could not get your location. Try again.");
-        }
-      },
+      () => { setLocating(false); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
   const { street, full } = parseAddress(user?.address);
+  const lastServiceLocation = bookings && bookings.length > 0 ? bookings[0].serviceLocation : null;
+  const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
 
   const categories: { icon: LucideIcon; label: string; route: string }[] = [
     { icon: Gauge, label: "Interior", route: "/booking" },
@@ -143,66 +140,75 @@ export default function HomeScreen() {
       className="min-h-screen bg-white"
       style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
     >
-      {/* ── Location bar ────────────────────────────────────────────── */}
-      <div className="px-4 pt-12 pb-2">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setAddressOpen((o) => !o)}
-            className="flex items-center gap-1.5 text-[14px] font-medium text-[#111]"
-          >
-            Now&nbsp;•&nbsp;{street}
-            {addressOpen
-              ? <Icon icon={ChevronUp} size="sm" className="text-[#555]" />
-              : <Icon icon={ChevronDown} size="sm" className="text-[#555]" />
-            }
-          </button>
+      {/* ── Location search bar ─────────────────────────────────────── */}
+      <div className="px-4 pt-12 pb-1">
+        {/* Logo row */}
+        <div className="flex items-center justify-end mb-4">
           <img src="/dapper-d-logo.png" alt="Dapper" className="h-9 w-9 object-contain" />
         </div>
 
-        {/* Expanded address dropdown */}
-        {addressOpen && (
-          <div className="mt-2 mb-1 rounded-2xl bg-[#f8f8f8] px-4 py-3 flex flex-col gap-2">
-            {/* Current saved address */}
-            <div className="flex items-start gap-2">
-              <Icon icon={MapPin} size="sm" className="mt-0.5 shrink-0 text-gray-400" />
-              <div>
-                <p className="text-[13px] font-semibold text-[#111]">
-                  {full || "No address saved yet"}
-                </p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Service location from your profile</p>
-              </div>
+        {/* Full-width pill search bar */}
+        <button
+          onClick={() => setLocation("/booking")}
+          className="w-full flex items-center gap-3 rounded-full border border-[#e0e0e0] bg-white px-4 py-3.5 shadow-sm active:scale-[0.99] transition"
+        >
+          <Icon icon={Search} size="sm" className="text-[#999] shrink-0" />
+          <span className="flex-1 text-left text-[15px] text-[#888]">
+            {full ? street : "Where are we washing?"}
+          </span>
+        </button>
+
+        {/* Quick-select rows */}
+        <div className="mt-2 rounded-2xl bg-white border border-[#efefef] overflow-hidden shadow-sm">
+          {/* Home row */}
+          <button
+            onClick={() => setLocation("/booking")}
+            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-[#fafafa] transition text-left"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f3eeff]">
+              <Icon icon={Home} size="sm" style={{ color: ACCENT }} />
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#111]">Home</p>
+              <p className="text-[12px] text-[#999] truncate">
+                {full || "Add your home address"}
+              </p>
+            </div>
+          </button>
 
-            {/* Divider */}
-            <div className="h-px bg-gray-200" />
+          {/* Divider */}
+          <div className="ml-16 h-px bg-[#f0f0f0]" />
 
-            {/* Use current location button */}
-            <button
-              onClick={detectLocation}
-              disabled={locating}
-              className="flex items-center gap-2 active:opacity-70 transition"
-            >
+          {/* Last service row */}
+          <button
+            onClick={() => setLocation("/booking")}
+            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-[#fafafa] transition text-left"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5f5]">
               {locating ? (
-                <Icon icon={Loader2} size="sm" className="animate-spin shrink-0" style={{ color: ACCENT }} />
+                <Icon icon={Loader2} size="sm" className="animate-spin text-[#999]" />
               ) : (
-                <Icon icon={MapPin} size="sm" className="shrink-0" style={{ color: ACCENT }} />
+                <Icon icon={Clock} size="sm" className="text-[#999]" />
               )}
-              <span className="text-[13px] font-semibold" style={{ color: ACCENT }}>
-                {locating ? "Detecting location…" : "Use current location"}
-              </span>
-            </button>
-
-            {/* Error message */}
-            {locateError && (
-              <p className="text-[11px] text-red-500">{locateError}</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#111]">Last service</p>
+              <p className="text-[12px] text-[#999] truncate">
+                {lastServiceStreet || "No recent services yet"}
+              </p>
+            </div>
+            {!lastServiceLocation && (
+              <button
+                onClick={(e) => { e.stopPropagation(); detectLocation(); }}
+                className="shrink-0 flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border border-[#e5e5e5]"
+                style={{ color: ACCENT }}
+              >
+                <Icon icon={Navigation} size="xs" style={{ color: ACCENT }} />
+                Detect
+              </button>
             )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Headline ────────────────────────────────────────────────── */}
-      <div className="px-4 pt-2 pb-3">
-        <h1 className="text-[28px] font-bold tracking-tight text-[#111]">Get Your Car Dapper</h1>
+          </button>
+        </div>
       </div>
 
       {/* ── Service type grid ────────────────────────────────────────── */}
