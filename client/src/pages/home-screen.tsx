@@ -167,10 +167,10 @@ export default function HomeScreen() {
           {/* Address dropdown trigger */}
           <button
             onClick={() => setLocation("/booking")}
-            className="flex items-center gap-1.5 active:opacity-70 transition max-w-[75%]"
+            className="flex items-start gap-1.5 active:opacity-70 transition max-w-[75%] text-left"
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-[#999] uppercase tracking-wide leading-none mb-0.5">Vehicle location</p>
+              <p className="text-[11px] font-medium text-[#999] uppercase tracking-wide leading-none mb-0.5 text-left">Vehicle location</p>
               <div className="flex items-center gap-1">
                 <p className="text-[15px] font-bold text-[#111] truncate leading-tight">{street}</p>
                 <Icon icon={ChevronDown} size="xs" className="text-[#555] shrink-0 mt-px" />
