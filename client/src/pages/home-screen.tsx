@@ -1,12 +1,17 @@
 import { useLocation } from "wouter";
-import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, type LucideIcon } from "lucide-react";
+import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, ChevronDown, CheckCircle2, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
 
+const TIME_OPTIONS = [
+  { id: "now", label: "Arrive now", sub: "Get a pro in ~10 min" },
+  { id: "later", label: "Arrive later", sub: "Later today" },
+  { id: "schedule", label: "Schedule for later", sub: "Pick a date & time" },
+] as const;
 
 function parseAddress(address: string | null | undefined) {
   if (!address) return { street: "Set location", full: null };
@@ -35,8 +40,22 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 export default function HomeScreen() {
   const [, setLocation] = useLocation();
   const [locating, setLocating] = useState(false);
+  const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const timePopRef = useRef<HTMLDivElement | null>(null);
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!timeOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (timePopRef.current && !timePopRef.current.contains(e.target as Node)) {
+        setTimeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [timeOpen]);
 
   const { data: user } = useQuery<{ address?: string | null }>({
     queryKey: ["/api/user"],
@@ -157,6 +176,48 @@ export default function HomeScreen() {
             {full ? street : "Where are we washing?"}
           </span>
         </button>
+
+        {/* Time selector pill */}
+        <div className="relative mt-2" ref={timePopRef}>
+          <button
+            onClick={() => setTimeOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-full border border-[#e0e0e0] bg-white px-3.5 py-2.5 shadow-sm active:scale-[0.98] transition"
+            aria-haspopup="listbox"
+            aria-expanded={timeOpen}
+          >
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f3eeff] shrink-0">
+              <Icon icon={Clock} size="xs" style={{ color: ACCENT }} />
+            </div>
+            <span className="text-[13px] font-semibold text-[#111]">{timeOpt.label}</span>
+            <Icon icon={ChevronDown} size="xs" className={`text-[#999] transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {timeOpen && (
+            <div
+              className="absolute top-full mt-2 left-0 z-30 w-64 bg-white border border-[#efefef] rounded-2xl shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] overflow-hidden py-1"
+              role="listbox"
+            >
+              {TIME_OPTIONS.map((opt) => {
+                const active = timeOpt.id === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setTimeOpt(opt); setTimeOpen(false); }}
+                    className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left transition ${active ? "bg-[#f3eeff]" : "active:bg-[#fafafa]"}`}
+                    role="option"
+                    aria-selected={active}
+                  >
+                    <div>
+                      <p className={`text-[13px] font-semibold ${active ? "text-[#8c52ff]" : "text-[#111]"}`}>{opt.label}</p>
+                      <p className="text-[11px] text-[#999] mt-0.5">{opt.sub}</p>
+                    </div>
+                    {active && <Icon icon={CheckCircle2} size="sm" style={{ color: ACCENT }} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Quick-select rows */}
         <div className="mt-2 rounded-2xl bg-white border border-[#efefef] overflow-hidden shadow-sm">
