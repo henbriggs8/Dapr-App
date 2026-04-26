@@ -242,6 +242,13 @@ export default function BookingScreen() {
   const packages = services?.filter((s) => s.category !== "premium") ?? [];
   const signature = services?.find((s) => s.category === "premium");
 
+  const handleSelectService = (service: Service) => {
+    setSelectedServiceId(service.id);
+    setTimeout(() => {
+      whenSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
   const handlePickService = (service: Service) => {
     setSelectedServiceId(service.id);
     setExpandedId(service.id);
@@ -401,35 +408,44 @@ export default function BookingScreen() {
                       }`}
                       data-testid={`service-${service.id}`}
                     >
-                      <button
-                        onClick={() => setExpandedId(expanded ? null : service.id)}
-                        aria-expanded={expanded}
-                        aria-controls={`service-panel-${service.id}`}
-                        className="w-full text-left flex items-center px-5 py-4 active:bg-[#fafafa] hover:bg-[#fafafa] transition-colors"
-                        data-testid={`service-toggle-${service.id}`}
-                      >
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 transition-colors ${
-                            selected ? "bg-[#8c52ff] text-white" : "bg-[#f4f0ff] text-[#8c52ff]"
-                          }`}
+                      <div className="flex items-center w-full">
+                        {/* Main row — selects the service */}
+                        <button
+                          onClick={() => handleSelectService(service)}
+                          className="flex-1 min-w-0 text-left flex items-center px-5 py-4 active:bg-[#fafafa] hover:bg-[#fafafa] transition-colors"
+                          data-testid={`service-toggle-${service.id}`}
                         >
-                          <Icon icon={IconComp} size="sm" />
-                        </div>
-                        <div className="flex-1 pr-4 min-w-0">
-                          <p className="text-[15px] font-semibold text-[#111] mb-0.5">{service.name}</p>
-                          <p className="text-[12px] text-[#888] leading-snug">{shortDesc}</p>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 transition-colors ${
+                              selected ? "bg-[#8c52ff] text-white" : "bg-[#f4f0ff] text-[#8c52ff]"
+                            }`}
+                          >
+                            <Icon icon={IconComp} size="sm" />
+                          </div>
+                          <div className="flex-1 pr-4 min-w-0">
+                            <p className="text-[15px] font-semibold text-[#111] mb-0.5">{service.name}</p>
+                            <p className="text-[12px] text-[#888] leading-snug">{shortDesc}</p>
+                          </div>
+                          <div className="text-right shrink-0">
                             <p className="text-[15px] font-bold text-[#111]">${service.price}</p>
                             <div className="flex items-center gap-1 justify-end">
                               <Icon icon={Clock} size="xs" className="text-[#aaa]" />
                               <p className="text-[11px] text-[#aaa]">{service.duration} min</p>
                             </div>
                           </div>
-                          <Icon icon={ChevronDown} size="sm" className={` text-[#bbb] transition-transform duration-300 ${ expanded ? "rotate-180" : "" }`} />
-                        </div>
-                      </button>
+                        </button>
+
+                        {/* Chevron — only toggles the detail panel */}
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : service.id)}
+                          aria-expanded={expanded}
+                          aria-controls={`service-panel-${service.id}`}
+                          className="shrink-0 flex items-center justify-center pr-5 pl-3 self-stretch active:opacity-60 transition-opacity"
+                          aria-label={expanded ? "Collapse details" : "Expand details"}
+                        >
+                          <Icon icon={ChevronDown} size="sm" className={`text-[#bbb] transition-transform duration-300 ${expanded ? "rotate-180" : ""}`} />
+                        </button>
+                      </div>
 
                       <div
                         id={`service-panel-${service.id}`}
