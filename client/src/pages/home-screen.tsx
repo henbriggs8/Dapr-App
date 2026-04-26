@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, type LucideIcon } from "lucide-react";
+import { MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Gauge, CarFront, Sparkles, Search, Home, Navigation, ChevronRight, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -217,28 +217,16 @@ export default function HomeScreen() {
         <Icon icon={ChevronRight} size="sm" className="text-[#aaa]" />
       </div>
 
-      {/* ── Service type grid ────────────────────────────────────────── */}
-      <div className="px-4 pb-4 grid grid-cols-2 gap-3">
-        {/* Car Wash */}
+      {/* ── Service type ─────────────────────────────────────────────── */}
+      <div className="px-4 pb-4">
         <button
           onClick={() => setLocation("/booking")}
-          className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
+          className="w-full flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
             <Icon icon={Droplets} size="lg" style={{ color: ACCENT }} />
           </div>
           <span className="text-[14px] font-semibold text-[#111]">Car Wash</span>
-        </button>
-
-        {/* Fleet */}
-        <button
-          onClick={() => setLocation("/corporate")}
-          className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
-        >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
-            <Icon icon={Truck} size="lg" style={{ color: ACCENT }} />
-          </div>
-          <span className="text-[14px] font-semibold text-[#111]">Fleet Wash</span>
         </button>
       </div>
 
