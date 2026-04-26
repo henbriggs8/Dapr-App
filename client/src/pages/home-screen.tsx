@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Clock, Heart, MapPin, Loader2, Droplets, Truck, Armchair, CarFront, Sparkles, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,11 +95,11 @@ export default function HomeScreen() {
 
   const { street, full } = parseAddress(user?.address);
 
-  const categories: { icon: LucideIcon | null; image: string | null; label: string; route: string; custom?: React.ReactNode }[] = [
-    { icon: null, image: "/carseat.png", label: "Interior", route: "/booking" },
-    { icon: null, image: "/car-exterior.png", label: "Exterior", route: "/booking" },
-    { icon: null, image: "/sports-car.png", label: "Full Detail", route: "/booking" },
-    { icon: MoreHorizontal, image: null, label: "More", route: "/booking" },
+  const categories: { icon: LucideIcon; label: string; route: string }[] = [
+    { icon: Armchair, label: "Interior", route: "/booking" },
+    { icon: CarFront, label: "Exterior", route: "/booking" },
+    { icon: Sparkles, label: "Full Detail", route: "/booking" },
+    { icon: MoreHorizontal, label: "More", route: "/booking" },
   ];
 
   const serviceCards = [
@@ -213,7 +213,7 @@ export default function HomeScreen() {
           className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
-            <img src="/carwashers.png" alt="Car Wash" className="h-7 w-7 object-contain" />
+            <Icon icon={Droplets} size="lg" style={{ color: ACCENT }} />
           </div>
           <span className="text-[14px] font-semibold text-[#111]">Car Wash</span>
         </button>
@@ -224,7 +224,7 @@ export default function HomeScreen() {
           className="relative flex items-center gap-3 rounded-2xl border border-[#ededed] bg-white px-4 py-4 shadow-sm active:scale-[0.98] transition"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
-            <img src="/fleet-truck.png" alt="Fleet Wash" className="h-9 w-9 object-contain" />
+            <Icon icon={Truck} size="lg" style={{ color: ACCENT }} />
           </div>
           <span className="text-[14px] font-semibold text-[#111]">Fleet Wash</span>
         </button>
@@ -232,18 +232,14 @@ export default function HomeScreen() {
 
       {/* ── Category icons ───────────────────────────────────────────── */}
       <div className="flex items-start justify-around px-6 pb-5">
-        {categories.map(({ icon: IconComp, image, custom, label, route }) => (
+        {categories.map(({ icon: IconComp, label, route }) => (
           <button
             key={label}
             onClick={() => setLocation(route)}
             className="flex flex-col items-center gap-2 active:opacity-70 transition"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3eeff]">
-              {custom ? custom : image ? (
-                <img src={image} alt={label} className="h-10 w-10 object-contain" />
-              ) : IconComp ? (
-                <Icon icon={IconComp} size="md" style={{ color: ACCENT }} />
-              ) : null}
+              <Icon icon={IconComp} size="lg" style={{ color: ACCENT }} />
             </div>
             <span className="text-[11px] font-medium text-[#555]">{label}</span>
           </button>
