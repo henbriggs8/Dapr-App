@@ -226,7 +226,7 @@ export default function HomeScreen() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3eeff]">
             <Icon icon={Droplets} size="lg" style={{ color: ACCENT }} />
           </div>
-          <div>
+          <div className="text-left">
             <p className="text-[16px] font-bold text-[#111]">Car Wash</p>
             <p className="text-[12px] font-normal text-[#999] mt-0.5">Get a pro in as little as 10 minutes</p>
           </div>
