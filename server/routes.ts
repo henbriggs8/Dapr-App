@@ -1459,12 +1459,9 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Server-side store of pending tip checkout references (bookingId → Square order info).
-  // Keyed by bookingId so the confirm endpoint can verify against Square without
-  // trusting any client-supplied amount.
-  const pendingTips = new Map<number, { orderId: string; tipAmountCents: number }>();
-
-  // Tip endpoint — creates a Square checkout for the tip amount
+  // Tip endpoint — creates a Square checkout for the tip amount.
+  // Persists the pending tip reference (orderId + expectedCents) to the DB so it
+  // survives server restarts and horizontal scaling.
   app.post('/api/bookings/:id/tip', async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -1488,8 +1485,8 @@ export function registerRoutes(app: Express): Server {
       const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
       const { url, orderId } = await createTipPaymentLink(id, tipAmountCents, siteUrl);
 
-      // Store the server-side reference so confirm can verify against Square
-      pendingTips.set(id, { orderId, tipAmountCents });
+      // Store the pending tip reference in the DB (durable — survives restarts)
+      await storage.updatePendingTipReference(id, orderId, tipAmountCents);
 
       // tipAmount is NOT persisted here — only after Square confirms payment
       res.json({ url });
@@ -1500,7 +1497,8 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Called by the frontend when Square redirects back with tip_paid=1.
-  // Verifies the Square order is actually COMPLETED before persisting tipAmount.
+  // Reads the pending reference from the DB (no client-supplied values trusted),
+  // verifies against Square Orders API, then persists tipAmount.
   app.post('/api/bookings/:id/tip/confirm', async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -1515,23 +1513,25 @@ export function registerRoutes(app: Express): Server {
       if (booking.status !== 'completed') {
         return res.status(400).send('Tips can only be confirmed on completed bookings');
       }
+      // Already confirmed — idempotent success
+      if (booking.tipAmount !== null && booking.tipAmount !== undefined) {
+        return res.json(booking);
+      }
 
-      // Look up the pending tip reference created when the payment link was generated
-      const pending = pendingTips.get(id);
-      if (!pending) {
+      // Read the pending reference from the DB
+      if (!booking.pendingTipOrderId || !booking.pendingTipCents) {
         return res.status(400).send('No pending tip found for this booking');
       }
 
       // Verify the Square order is actually COMPLETED
       const { verifyTipOrderPaid } = await import('./payment-service');
-      const paid = await verifyTipOrderPaid(pending.orderId, pending.tipAmountCents);
+      const paid = await verifyTipOrderPaid(booking.pendingTipOrderId, booking.pendingTipCents);
       if (!paid) {
         return res.status(402).send('Tip payment not yet confirmed by Square');
       }
 
-      // Payment verified — persist and clean up pending reference
-      pendingTips.delete(id);
-      const updated = await storage.updateBookingTip(id, pending.tipAmountCents);
+      // Payment verified — persist tipAmount and clear pending reference
+      const updated = await storage.updateBookingTip(id, booking.pendingTipCents);
       res.json(updated);
     } catch (error) {
       console.error('Tip confirm error:', error);

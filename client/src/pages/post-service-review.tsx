@@ -30,15 +30,17 @@ export default function PostServiceReview() {
   const [comment, setComment] = useState("");
   const [tipChoice, setTipChoice] = useState<"none" | "custom" | number>("none");
   const [customTip, setCustomTip] = useState("");
-  const [done, setDone] = useState(tipPaid);
+  const [done, setDone] = useState(false);
+  const [tipConfirmed, setTipConfirmed] = useState(false);
+  const [confirmingTip, setConfirmingTip] = useState(tipPaid);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When Square redirects back with tip_paid=1, ask the server to verify via Square
-  // and persist the tip. The server uses its own pending reference — no client-supplied
-  // amount is trusted.
+  // When Square redirects back with tip_paid=1, ask the server to verify the order
+  // via Square and persist the tip. Success state is gated on a 200 response.
   useEffect(() => {
     if (tipPaid && bookingId > 0) {
+      setConfirmingTip(true);
       getToken().then((token) => {
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -47,7 +49,21 @@ export default function PostServiceReview() {
           headers,
           credentials: "include",
           body: JSON.stringify({}),
-        }).catch((err) => console.error("Tip confirm error:", err));
+        })
+          .then((res) => {
+            setConfirmingTip(false);
+            if (res.ok) {
+              setTipConfirmed(true);
+              setDone(true);
+            } else {
+              setError("We couldn't confirm your tip yet — Square may still be processing. Please try again shortly.");
+            }
+          })
+          .catch((err) => {
+            console.error("Tip confirm error:", err);
+            setConfirmingTip(false);
+            setError("Network error confirming tip. Please try again.");
+          });
       });
     }
   }, [tipPaid, bookingId]);
@@ -128,6 +144,15 @@ export default function PostServiceReview() {
     }
   }
 
+  if (confirmingTip) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
+        <Icon icon={Loader2} size="xl" style={{ color: ACCENT }} className="animate-spin mb-4" />
+        <p className="text-[15px] text-[#888]">Confirming your tip with Square…</p>
+      </div>
+    );
+  }
+
   if (done) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
@@ -139,7 +164,7 @@ export default function PostServiceReview() {
         </div>
         <h1 className="text-[24px] font-bold text-[#111] mb-2">Thank you!</h1>
         <p className="text-[15px] text-[#888] leading-relaxed max-w-xs">
-          {tipPaid
+          {tipConfirmed
             ? "Your tip has been processed and your rating has been saved."
             : "Your feedback helps us keep our providers accountable and our service excellent."}
         </p>

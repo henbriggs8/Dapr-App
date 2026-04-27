@@ -79,6 +79,7 @@ export interface IStorage {
   // Rating methods
   addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking>;
   updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking>;
+  updatePendingTipReference(bookingId: number, orderId: string, tipCents: number): Promise<Booking>;
   
   // Vehicle methods
   getUserVehicles(userId: number): Promise<Vehicle[]>;
@@ -454,6 +455,8 @@ export class MemStorage implements IStorage {
       paymentUrl: booking.paymentUrl ?? null,
       squareOrderId: booking.squareOrderId ?? null,
       tipAmount: booking.tipAmount ?? null,
+      pendingTipOrderId: booking.pendingTipOrderId ?? null,
+      pendingTipCents: booking.pendingTipCents ?? null,
       providerLatitude: booking.providerLatitude ?? null,
       providerLongitude: booking.providerLongitude ?? null,
       estimatedArrival: booking.estimatedArrival ?? null,
@@ -829,7 +832,15 @@ export class MemStorage implements IStorage {
   async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
     if (!booking) throw new Error('Booking not found');
-    const updatedBooking = { ...booking, tipAmount };
+    const updatedBooking = { ...booking, tipAmount, pendingTipOrderId: null, pendingTipCents: null };
+    this.bookings.set(bookingId, updatedBooking);
+    return updatedBooking;
+  }
+
+  async updatePendingTipReference(bookingId: number, orderId: string, tipCents: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+    const updatedBooking = { ...booking, pendingTipOrderId: orderId, pendingTipCents: tipCents };
     this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
   }
@@ -1996,7 +2007,16 @@ export class DatabaseStorage implements IStorage {
   async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
     const [booking] = await db
       .update(bookings)
-      .set({ tipAmount })
+      .set({ tipAmount, pendingTipOrderId: null, pendingTipCents: null })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async updatePendingTipReference(bookingId: number, orderId: string, tipCents: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({ pendingTipOrderId: orderId, pendingTipCents: tipCents })
       .where(eq(bookings.id, bookingId))
       .returning();
     return booking;
