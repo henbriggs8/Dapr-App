@@ -161,22 +161,20 @@ function getArrivalWindows() {
   ];
 }
 
-// Marketing tier slugs from /services. Each maps to a preferred display name
-// (matched case-insensitively against the API's service.name) and a category
-// fallback used when no name match exists in the seed data.
-const SLUG_PRESELECT: Record<string, { name: string; category: string }> = {
-  "essential-wash": { name: "essential wash", category: "basic" },
-  "interior-detail": { name: "interior detail", category: "standard" },
-  "refresh-detail": { name: "refresh detail", category: "standard" },
-  "black-label": { name: "black label", category: "premium" },
+// Marketing tier slugs from /services map directly to a service.name
+// substring (case-insensitive). The seed in server/storage.ts guarantees a
+// row exists for each tier, so no category fallback is needed.
+const SLUG_TO_NAME: Record<string, string> = {
+  "essential-wash": "essential wash",
+  "interior-detail": "interior detail",
+  "refresh-detail": "refresh detail",
+  "black-label": "black label",
 };
 
 function resolvePreselectService(slug: string, services: Service[]): Service | undefined {
-  const target = SLUG_PRESELECT[slug];
+  const target = SLUG_TO_NAME[slug];
   if (!target) return undefined;
-  const byName = services.find((s) => s.name.toLowerCase().includes(target.name));
-  if (byName) return byName;
-  return services.find((s) => s.category === target.category);
+  return services.find((s) => s.name.toLowerCase().includes(target));
 }
 
 export default function BookingScreen() {
@@ -239,7 +237,11 @@ export default function BookingScreen() {
       .catch(e => setDebugInfo(`native=${isNative} | base=${apiBase} | url=${resolvedUrl} | err=${e.message}`));
   }, [servicesError]);
 
-  const packages = services?.filter((s) => s.category !== "premium") ?? [];
+  const packages =
+    services
+      ?.filter((s) => s.category !== "premium")
+      .slice()
+      .sort((a, b) => a.price - b.price) ?? [];
   const signature = services?.find((s) => s.category === "premium");
 
   const handleSelectService = (service: Service) => {

@@ -15,6 +15,39 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
+// Canonical four marketing tiers shown on /services. Categories map 1:1
+// so the booking screen, predictive logic, and seed all stay in sync.
+export const TIER_SEEDS: InsertService[] = [
+  {
+    name: "Essential Wash",
+    description: "Hand wash, spray wax, vacuum, quick interior wipe-down",
+    price: 39,
+    duration: 30,
+    category: "basic",
+  },
+  {
+    name: "Interior Detail",
+    description: "Full vacuum, surface cleaning, seat cleaning, light stain treatment",
+    price: 89,
+    duration: 60,
+    category: "interior",
+  },
+  {
+    name: "Refresh Detail",
+    description: "Complete interior/exterior refresh with upgraded wheels and tire shine",
+    price: 149,
+    duration: 90,
+    category: "standard",
+  },
+  {
+    name: "Dapper Black Label Detail",
+    description: "Showroom-finish results from a senior detailer with our most thorough interior and exterior work",
+    price: 299,
+    duration: 180,
+    category: "premium",
+  },
+];
+
 export interface IStorage {
   initialize(): Promise<void>;
   getUser(id: number): Promise<User | undefined>;
@@ -210,30 +243,10 @@ export class MemStorage implements IStorage {
     // Create admin user - password will be hashed during creation
     this.initializeAdminUser().catch(console.error);
     
-    // Create services with centralized pricing
-    this.createService({
-      name: "Basic",
-      description: "Exterior hand wash, Streak free windows",
-      price: 39,
-      duration: 30,
-      category: "basic"
-    });
-    
-    this.createService({
-      name: "The OG",
-      description: "Hand wash, Tires degreased, Vacuum and interior wipe down",
-      price: 58,
-      duration: 45,
-      category: "standard"
-    });
-    
-    this.createService({
-      name: "Black Label",
-      description: "Everything in O.G. plus premium services including carpet shampoo and steam extraction",
-      price: 167,
-      duration: 90,
-      category: "premium"
-    });
+    // Create the four customer-facing service tiers (mirrors /services marketing copy)
+    for (const tier of TIER_SEEDS) {
+      this.createService(tier);
+    }
     
     // Create some time slots for the next 7 days
     const today = new Date();
@@ -1258,6 +1271,16 @@ export class MemStorage implements IStorage {
         } else if (daysSinceLastService >= 7) {
           suggestedDaysFromNow = 3;
           reason = "Maintain that fresh look";
+          confidence = 75;
+        }
+      } else if (recentService.category === 'interior') {
+        if (daysSinceLastService >= 30) {
+          suggestedDaysFromNow = 1;
+          reason = "Time to reset your interior";
+          confidence = 90;
+        } else if (daysSinceLastService >= 21) {
+          suggestedDaysFromNow = 7;
+          reason = "Keep your cabin feeling new";
           confidence = 75;
         }
       } else if (recentService.category === 'standard') {
@@ -2291,6 +2314,48 @@ export class DatabaseStorage implements IStorage {
         name: "Dapper Admin",
       });
       console.log("[storage] Default admin user created (dapperadmin)");
+    }
+
+    // Sync the four customer-facing service tiers. We match by category so
+    // legacy rows (Basic / The OG / Black Label) get their name, price, and
+    // duration rewritten in place — preserving the existing `services.id`
+    // values that historical bookings reference. The new "interior" tier is
+    // inserted on first run. Any duplicate rows in the same category are
+    // collapsed: their bookings are repointed at the primary row before the
+    // duplicate is removed, so we end up with exactly one row per tier.
+    for (const tier of TIER_SEEDS) {
+      const matches = await db
+        .select()
+        .from(services)
+        .where(eq(services.category, tier.category))
+        .orderBy(asc(services.id));
+      if (matches.length === 0) {
+        await db.insert(services).values(tier);
+        console.log(`[storage] Seeded service tier: ${tier.name}`);
+        continue;
+      }
+
+      const [primary, ...duplicates] = matches;
+      if (
+        primary.name !== tier.name ||
+        primary.description !== tier.description ||
+        primary.price !== tier.price ||
+        primary.duration !== tier.duration
+      ) {
+        await db.update(services).set(tier).where(eq(services.id, primary.id));
+        console.log(`[storage] Updated service tier ${primary.id} → ${tier.name}`);
+      }
+
+      for (const dup of duplicates) {
+        await db
+          .update(bookings)
+          .set({ serviceId: primary.id })
+          .where(eq(bookings.serviceId, dup.id));
+        await db.delete(services).where(eq(services.id, dup.id));
+        console.log(
+          `[storage] Removed duplicate service tier ${dup.id} (${dup.name}); bookings repointed to ${primary.id}`,
+        );
+      }
     }
   }
 }
