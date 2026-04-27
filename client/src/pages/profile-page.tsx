@@ -631,22 +631,28 @@ export default function ProfilePage() {
           <div>
             <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Privacy & Legal</p>
             <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
-              <div className="flex items-center gap-3 px-4 py-4 opacity-60">
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Icon icon={Shield} size="sm" className="text-gray-500" />
+              <button
+                onClick={() => setLocation("/privacy")}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Icon icon={Shield} size="sm" className="text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Privacy policy</p>
+                    <p className="text-xs text-gray-500">How we use your data</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-black">Privacy policy</p>
-                  <p className="text-xs text-gray-500">How we use your data</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-4 py-4 opacity-60">
+                <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+              </button>
+              <div className="flex items-center gap-3 px-4 py-4 opacity-50 cursor-not-allowed">
                 <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
                   <Icon icon={Hash} size="sm" className="text-gray-500" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-black">Terms of service</p>
-                  <p className="text-xs text-gray-500">User agreement</p>
+                  <p className="text-xs text-gray-500">Coming soon</p>
                 </div>
               </div>
             </div>

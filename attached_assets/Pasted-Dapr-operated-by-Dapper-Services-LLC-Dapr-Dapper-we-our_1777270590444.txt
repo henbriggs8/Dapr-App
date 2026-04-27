@@ -1,0 +1,269 @@
+Dapr, operated by Dapper Services LLC (“Dapr,” “Dapper,” “we,” “our,” or “us”), respects your privacy. This Privacy Policy explains how we collect, use, share, and protect your information when you use our website, mobile application, booking platform, payment checkout, or related services.
+
+By using Dapr, you agree to the practices described in this Privacy Policy.
+
+1. Information We Collect
+
+We collect information you provide directly, information collected automatically, and information from third-party services that help us operate Dapr.
+
+Information You Provide
+
+When you create an account, book a service, contact support, or use Dapr, we may collect:
+
+* Name
+* Phone number
+* Email address
+* Vehicle information, such as year, make, model, color, license plate, or photos if provided
+* Service address or appointment location
+* Booking details, including selected service, add-ons, appointment time, and special instructions
+* Payment-related information
+* Customer support messages
+* Reviews, ratings, notes, or feedback
+* Promo code, referral, or membership information
+
+Location and Service Address Information
+
+Dapr uses location information to provide mobile car care services, match customers with available service providers, show service availability, estimate arrival times, and complete bookings.
+
+We may collect:
+
+* The address you enter for a service
+* Approximate location based on your device or browser, if you allow it
+* Service provider location while they are actively completing or traveling to a job
+* Appointment-related location history, such as pickup, arrival, and completion status
+
+You may disable device location permissions in your device settings, but some features may not work properly without location access.
+
+Payment Information
+
+Payments may be processed by third-party payment providers, including Square. We do not store full credit card numbers on our own systems. Payment processors may collect and process payment information, billing details, fraud-prevention information, and transaction history according to their own privacy policies.
+
+Information Collected Automatically
+
+When you use Dapr, we may automatically collect:
+
+* Device type
+* Browser type
+* IP address
+* App usage activity
+* Pages or screens viewed
+* Booking flow activity
+* Error logs
+* Analytics data
+* Referral source
+* Approximate location derived from IP address
+* Cookies or similar tracking technologies
+
+This information helps us improve the app, prevent fraud, troubleshoot issues, and understand how customers use Dapr.
+
+Information From Service Providers
+
+If you are a detailer, contractor, employee, franchise partner, or service provider using Dapr, we may collect additional information, including:
+
+* Name
+* Phone number
+* Email address
+* Profile photo
+* Vehicle or equipment information
+* Work availability
+* Service history
+* Ratings and customer feedback
+* Job location while actively using the service provider side of the platform
+* Payout or tax-related information, if applicable
+* Background, insurance, certification, or eligibility information, if required
+
+2. How We Use Your Information
+
+We use your information to:
+
+* Create and manage user accounts
+* Book and manage mobile detailing or car care services
+* Process payments, deposits, refunds, tips, and invoices
+* Match customers with available service providers
+* Send booking confirmations, reminders, updates, receipts, and support messages
+* Show estimated arrival and completion times
+* Improve app performance and customer experience
+* Personalize offers, promotions, and service recommendations
+* Prevent fraud, abuse, unauthorized access, or unsafe activity
+* Resolve disputes, support requests, and service issues
+* Analyze business performance and service demand
+* Comply with legal, tax, insurance, and regulatory obligations
+* Enforce our Terms of Service and other agreements
+
+3. How We Share Information
+
+We do not sell your personal information. We may share information in the following limited situations:
+
+With Service Providers and Detailers
+
+We may share customer booking information with the detailer or service provider assigned to your job, including your name, service address, phone number, vehicle information, selected service, appointment details, and special instructions.
+
+With Payment Processors
+
+We share payment-related information with payment processors such as Square to process payments, deposits, tips, refunds, invoices, and receipts.
+
+With Technology Providers
+
+We may share information with companies that help us operate Dapr, including providers for:
+
+* Authentication and login
+* Payment processing
+* Hosting and cloud storage
+* SMS, email, and push notifications
+* Analytics
+* Customer support
+* Fraud prevention
+* Scheduling and booking
+* Maps and location services
+
+With Franchisees, Affiliates, or Business Partners
+
+If your service is fulfilled by a Dapper location, franchise, affiliate, or approved partner, we may share the information needed to complete the service and support your customer experience.
+
+For Legal or Safety Reasons
+
+We may disclose information if required to do so by law, court order, subpoena, legal process, or government request. We may also disclose information when we believe it is necessary to protect our rights, property, users, service providers, or the public.
+
+Business Transfers
+
+If Dapr or Dapper is involved in a merger, acquisition, financing, sale of assets, restructuring, or similar transaction, user information may be transferred as part of that transaction.
+
+4. Third-Party Services
+
+Dapr may use third-party services such as:
+
+* Square for payments
+* Clerk for authentication and account management
+* Google Maps, Apple Maps, or similar tools for location and routing
+* Email, SMS, or notification providers
+* Analytics and performance tools
+* Hosting and database providers
+
+These third parties may collect and process information according to their own privacy policies. We encourage you to review their privacy policies to understand how they handle your information.
+
+5. Cookies and Tracking Technologies
+
+We may use cookies, pixels, software development kits, local storage, and similar technologies to:
+
+* Keep you signed in
+* Remember preferences
+* Improve app functionality
+* Analyze traffic and usage
+* Measure marketing performance
+* Prevent fraud and abuse
+
+You may be able to disable cookies through your browser settings, but some parts of Dapr may not work correctly.
+
+6. Marketing Communications
+
+We may send you promotional messages, special offers, referral updates, or service reminders by email, SMS, push notification, or other channels.
+
+You can opt out of marketing messages at any time by following the unsubscribe instructions in the message or contacting us. Even if you opt out of marketing messages, we may still send transactional messages related to your account, bookings, payments, or support requests.
+
+7. Data Retention
+
+We keep your information for as long as needed to provide our services, operate our business, comply with legal obligations, resolve disputes, prevent fraud, enforce agreements, and maintain business records.
+
+When information is no longer needed, we may delete, anonymize, or securely retain it as required by law or legitimate business needs.
+
+8. Data Security
+
+We use reasonable administrative, technical, and physical safeguards to protect your information. However, no system is completely secure, and we cannot guarantee that unauthorized access, hacking, data loss, or misuse will never occur.
+
+You are responsible for keeping your login credentials secure and for notifying us if you believe your account has been compromised.
+
+9. Children’s Privacy
+
+Dapr is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If we learn that we have collected information from a child under 13, we will take reasonable steps to delete it.
+
+10. Your Privacy Rights
+
+Depending on where you live, you may have rights regarding your personal information, including the right to:
+
+* Access the personal information we have about you
+* Request correction of inaccurate information
+* Request deletion of your information
+* Opt out of certain marketing communications
+* Request a copy of your information
+* Restrict or object to certain processing
+* Withdraw consent where processing is based on consent
+
+To make a privacy request, contact us at:
+
+Email: [Insert Privacy Email]
+Mailing Address: [Insert Business Address]
+
+We may need to verify your identity before completing your request.
+
+11. California Privacy Notice
+
+If you are a California resident, you may have additional rights under California privacy laws.
+
+In the past 12 months, we may have collected the following categories of personal information:
+
+* Identifiers, such as name, phone number, email address, IP address, and account ID
+* Customer records, such as billing or transaction information
+* Commercial information, such as bookings, services purchased, and payment history
+* Internet or app activity, such as pages viewed, clicks, and usage data
+* Geolocation information, such as service address or approximate location
+* Audio, electronic, or visual information, such as customer support messages or uploaded vehicle photos
+* Inferences, such as service preferences or likely booking interests
+
+We use this information for the business and commercial purposes described in this Privacy Policy.
+
+We do not sell personal information. If we use advertising or analytics tools that are considered “sharing” under California law, you may have the right to opt out of that sharing.
+
+California residents may contact us at [Insert Privacy Email] to exercise their rights.
+
+12. App Store Privacy Disclosures
+
+If you download Dapr through the Apple App Store, Apple may require us to disclose the types of data we collect and how that data is used. These disclosures are intended to help users understand our privacy practices. Apple’s developer guidance says app developers must identify the data they and their third-party partners collect.  
+
+Our App Store privacy disclosures should be consistent with this Privacy Policy.
+
+13. Service Provider Privacy
+
+If you use Dapr as a detailer, contractor, or service provider, we may collect and use your information to:
+
+* Verify your identity and eligibility
+* Assign and manage jobs
+* Track active service status
+* Communicate with customers
+* Process payouts
+* Monitor service quality
+* Manage ratings, reviews, and disputes
+* Improve marketplace performance and safety
+
+We may share limited information with customers, such as your first name, arrival status, profile photo, and job-related updates.
+
+14. Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time. If we make material changes, we may notify you by updating the date at the top of this policy, sending a notice, or displaying a notice in the app.
+
+Your continued use of Dapr after the updated Privacy Policy becomes effective means you accept the revised policy.
+
+15. Contact Us
+
+If you have questions about this Privacy Policy or how we handle your information, contact us at:
+
+Dapr / Dapper Services LLC
+Email: [Insert Privacy Email]
+Phone: [Insert Phone Number]
+Address: [Insert Business Address]
+
+⸻
+
+A few details you should fill in
+
+Replace these before publishing:
+
+Company legal name: Dapper Services LLC, or whichever entity owns Dapr
+App name: Dapr or Dapper, whichever you’re using publicly
+Privacy email: something like privacy@dapperpros.com or support@dapperpros.com
+Business address: your official company mailing address
+Last updated date: current publish date
+Third-party tools: Square, Clerk, Google Maps/Apple Maps, QUO/SMS provider, hosting provider, analytics provider, etc.
+
+I would also add a simple checkbox or line in the app signup/checkout flow:
+
+By continuing, you agree to Dapr’s Terms of Service and Privacy Policy.
