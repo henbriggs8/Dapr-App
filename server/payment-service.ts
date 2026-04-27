@@ -97,7 +97,9 @@ export async function createTipPaymentLink(
       throw new Error('Failed to create tip payment link in Square');
     }
 
-    const checkoutUrl = (response.paymentLink as any).longUrl || response.paymentLink.url;
+    // Tip links open in a standard browser (window.location.href), so the
+    // iOS SFSafariViewController redirect issue does not apply — use url directly.
+    const checkoutUrl = response.paymentLink.url;
 
     return {
       url: checkoutUrl,

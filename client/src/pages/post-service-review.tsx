@@ -70,7 +70,8 @@ export default function PostServiceReview() {
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const service = services?.find((s) => s.id === booking?.serviceId);
 
-  const basePrice = booking?.totalPrice ?? booking?.amount ?? service?.price ?? 0;
+  // Normalize to cents: totalPrice and amount are already cents; service.price is dollars
+  const basePriceCents = booking?.totalPrice ?? booking?.amount ?? (service ? service.price * 100 : 0);
 
   function getTipCents(): number {
     if (tipChoice === "none") return 0;
@@ -78,7 +79,7 @@ export default function PostServiceReview() {
       const val = parseFloat(customTip);
       return isNaN(val) || val <= 0 ? 0 : Math.round(val * 100);
     }
-    return Math.round(basePrice * 100 * (tipChoice as number));
+    return Math.round(basePriceCents * (tipChoice as number));
   }
 
   const tipCents = getTipCents();
@@ -176,9 +177,9 @@ export default function PostServiceReview() {
               <p className="text-[13px] font-semibold text-[#111]">{service.name}</p>
               <p className="text-[12px] text-[#999] mt-0.5">Booking #{bookingId}</p>
             </div>
-            {basePrice > 0 && (
+            {basePriceCents > 0 && (
               <p className="text-[14px] font-bold text-[#111] shrink-0">
-                ${Number(basePrice).toFixed(2)}
+                ${(basePriceCents / 100).toFixed(2)}
               </p>
             )}
           </div>
@@ -252,7 +253,7 @@ export default function PostServiceReview() {
 
             {TIP_PRESETS.map(({ label, pct }) => {
               const active = tipChoice === pct;
-              const amt = basePrice > 0 ? `$${(basePrice * pct).toFixed(2)}` : "";
+              const amt = basePriceCents > 0 ? `$${(basePriceCents * pct / 100).toFixed(2)}` : "";
               return (
                 <button
                   key={label}
