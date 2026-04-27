@@ -1486,9 +1486,8 @@ export function registerRoutes(app: Express): Server {
       if (booking.tipAmount !== null && booking.tipAmount !== undefined) {
         return res.status(409).send('A tip has already been recorded for this booking');
       }
-      if (booking.pendingTipOrderId) {
-        return res.status(409).send('A tip checkout is already pending for this booking');
-      }
+      // Allow overwriting a stale/abandoned pending tip reference so customers
+      // aren't permanently blocked if they close the Square tab without paying.
 
       const { createTipPaymentLink } = await import('./payment-service');
       const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
