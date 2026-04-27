@@ -54,6 +54,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
+  deleteUser(id: number): Promise<void>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
@@ -395,6 +396,10 @@ export class MemStorage implements IStorage {
     
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    this.users.delete(id);
   }
 
   async updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void> {
@@ -1477,6 +1482,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void> {

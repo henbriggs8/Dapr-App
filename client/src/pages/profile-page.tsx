@@ -10,7 +10,10 @@ import { insertUserSchema, Booking, Vehicle, insertVehicleSchema } from "@shared
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import {
+  Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight,
+  Bell, Shield, UserX, Settings, Star, Calendar, Hash
+} from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
 import {
@@ -22,6 +25,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { YEARS, CAR_MAKES, CAR_MODELS } from "@/utils/car-data";
 
 const selectCls = "flex h-11 w-full border border-gray-200 bg-white px-3 text-sm text-black outline-none appearance-none rounded-none focus:border-black transition-colors";
@@ -47,14 +52,34 @@ const vehicleSchema = insertVehicleSchema.extend({
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
 
+function getInitials(name?: string | null) {
+  if (!name) return "?";
+  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function statusColor(status: string) {
+  const map: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-700",
+    confirmed: "bg-blue-100 text-blue-700",
+    completed: "bg-green-100 text-green-700",
+    cancelled: "bg-red-100 text-red-700",
+    in_progress: "bg-purple-100 text-purple-700",
+  };
+  return map[status] ?? "bg-gray-100 text-gray-600";
+}
+
 export default function ProfilePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "vehicles" | "bookings">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "vehicles" | "bookings" | "settings">("profile");
   const [dialogMake, setDialogMake] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [marketingEnabled, setMarketingEnabled] = useState(false);
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -100,7 +125,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: z.infer<typeof profileSchema>) => {
-      const res = await apiRequest("PATCH", "/api/user", data);
+      const res = await apiRequest("PATCH", "/api/user/profile", data);
       return await res.json();
     },
     onSuccess: () => {
@@ -155,6 +180,25 @@ export default function ProfilePage() {
     },
   });
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", "/api/user");
+    },
+    onSuccess: async () => {
+      const clerkInstance = (window as any).Clerk;
+      if (clerkInstance?.signOut) {
+        try { await clerkInstance.signOut(); } catch (_) {}
+      }
+      logoutMutation.mutate(undefined, {
+        onSuccess: () => setLocation("/auth"),
+      });
+      toast({ title: "Account deleted", description: "Your account has been permanently removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleVehicleSubmit = (data: VehicleFormValues) => {
     if (selectedVehicle) {
       updateVehicleMutation.mutate({ id: selectedVehicle.id, updates: data });
@@ -169,6 +213,19 @@ export default function ProfilePage() {
     setDialogOpen(true);
   };
 
+  const handleSignOut = async () => {
+    const clerkInstance = (window as any).Clerk;
+    if (clerkInstance?.signOut) {
+      try { await clerkInstance.signOut(); } catch (_) {}
+    }
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        setLocation("/auth");
+        toast({ title: "Signed out" });
+      },
+    });
+  };
+
   if (bookingsLoading || vehiclesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen pb-32">
@@ -177,9 +234,18 @@ export default function ProfilePage() {
     );
   }
 
+  const completedBookings = bookings.filter((b) => b.status === "completed");
+  const avgRating = completedBookings.filter((b) => b.rating).length > 0
+    ? (completedBookings.reduce((sum, b) => sum + (b.rating || 0), 0) / completedBookings.filter((b) => b.rating).length).toFixed(1)
+    : null;
+
   const tabs = [
     { id: "profile" as const, label: "Profile" },
-    ...(!user?.isProvider ? [{ id: "vehicles" as const, label: "Vehicles" }, { id: "bookings" as const, label: "Bookings" }] : []),
+    ...(!user?.isProvider ? [
+      { id: "vehicles" as const, label: "Vehicles" },
+      { id: "bookings" as const, label: "Bookings" },
+    ] : []),
+    { id: "settings" as const, label: "Settings" },
   ];
 
   return (
@@ -187,57 +253,89 @@ export default function ProfilePage() {
       className="min-h-screen bg-white font-sans"
       style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
     >
-      {/* Header */}
-      <div className="pt-14 pb-6 px-6 border-b border-gray-200">
+      {/* Header — avatar + name + sign out */}
+      <div className="pt-14 pb-6 px-6 bg-white border-b border-gray-100">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Account</p>
-            <h1 className="text-3xl font-medium tracking-tight text-black">{user?.name || "Profile"}</h1>
-            {user?.email && <p className="text-sm text-gray-500 mt-1">{user.email}</p>}
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div className="w-16 h-16 rounded-full bg-[#8c52ff] flex items-center justify-center flex-shrink-0 shadow-sm">
+              <span className="text-xl font-semibold text-white tracking-tight">
+                {getInitials(user?.name)}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-0.5">Account</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-black leading-tight">
+                {user?.name || "Profile"}
+              </h1>
+              {user?.email && (
+                <p className="text-sm text-gray-500 mt-0.5">{user.email}</p>
+              )}
+            </div>
           </div>
           <button
-            onClick={async () => {
-              const clerkInstance = (window as any).Clerk;
-              if (clerkInstance?.signOut) {
-                try { await clerkInstance.signOut(); } catch (_) {}
-              }
-              logoutMutation.mutate(undefined, {
-                onSuccess: () => {
-                  setLocation("/auth");
-                  toast({ title: "Signed out" });
-                },
-              });
-            }}
+            onClick={handleSignOut}
             disabled={logoutMutation.isPending}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-black transition-colors mt-1"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-black transition-colors mt-1 flex-shrink-0"
           >
             <Icon icon={LogOut} size="sm" />
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
+
+        {/* Stats row */}
+        {!user?.isProvider && (
+          <div className="flex gap-4 mt-5">
+            <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <Icon icon={Calendar} size="xs" className="text-gray-400" />
+                <span className="text-lg font-semibold text-black">{bookings.length}</span>
+              </div>
+              <p className="text-xs text-gray-500">Bookings</p>
+            </div>
+            <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <Icon icon={Car} size="xs" className="text-gray-400" />
+                <span className="text-lg font-semibold text-black">{vehicles.length}</span>
+              </div>
+              <p className="text-xs text-gray-500">Vehicles</p>
+            </div>
+            {avgRating && (
+              <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-0.5">
+                  <Icon icon={Star} size="xs" className="text-[#8c52ff]" />
+                  <span className="text-lg font-semibold text-black">{avgRating}</span>
+                </div>
+                <p className="text-xs text-gray-500">Avg Rating</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Book CTA row */}
       <button
         onClick={() => setLocation("/")}
-        className="w-full flex items-center justify-between px-6 py-5 border-b border-gray-200"
+        className="w-full flex items-center justify-between px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <Icon icon={Car} size="sm" className="text-gray-400" />
-          <span className="text-base text-black">Book a service</span>
+          <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center flex-shrink-0">
+            <Icon icon={Car} size="sm" className="text-[#8c52ff]" />
+          </div>
+          <span className="text-base font-medium text-black">Book a service</span>
         </div>
         <Icon icon={ChevronRight} size="md" className="text-[#8c52ff]" />
       </button>
 
       {/* Tab Switcher */}
-      <div className="flex border-b border-gray-200 px-6">
+      <div className="flex border-b border-gray-100 px-6 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`mr-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`mr-5 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
               activeTab === tab.id
-                ? "border-black text-black"
+                ? "border-[#8c52ff] text-[#8c52ff]"
                 : "border-transparent text-gray-400 hover:text-gray-600"
             }`}
           >
@@ -265,8 +363,8 @@ export default function ProfilePage() {
                   control={form.control}
                   name={fieldConfig.name}
                   render={({ field }) => (
-                    <FormItem className="py-5 border-b border-gray-200 space-y-1">
-                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">
+                    <FormItem className="py-5 border-b border-gray-100 space-y-1">
+                      <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">
                         {fieldConfig.label}
                       </FormLabel>
                       <FormControl>
@@ -274,7 +372,7 @@ export default function ProfilePage() {
                           type={fieldConfig.type}
                           placeholder={fieldConfig.placeholder}
                           {...field}
-                          className="border-0 border-b border-gray-200 rounded-none px-0 text-base text-black placeholder:text-gray-300 focus-visible:ring-0 focus-visible:border-black transition-colors"
+                          className="border-0 border-b border-gray-100 rounded-none px-0 text-base text-black placeholder:text-gray-300 focus-visible:ring-0 focus-visible:border-[#8c52ff] transition-colors"
                         />
                       </FormControl>
                       <FormMessage />
@@ -287,14 +385,14 @@ export default function ProfilePage() {
                   control={form.control}
                   name="description"
                   render={({ field }) => (
-                    <FormItem className="py-5 border-b border-gray-200 space-y-1">
-                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">
+                    <FormItem className="py-5 border-b border-gray-100 space-y-1">
+                      <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">
                         Business Description
                       </FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
-                          className="border-0 border-b border-gray-200 rounded-none px-0 resize-none text-base placeholder:text-gray-300 focus-visible:ring-0"
+                          className="border-0 border-b border-gray-100 rounded-none px-0 resize-none text-base placeholder:text-gray-300 focus-visible:ring-0"
                         />
                       </FormControl>
                       <FormMessage />
@@ -306,7 +404,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={updateProfileMutation.isPending}
-                  className="bg-black text-white text-sm font-medium px-8 py-3 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-black text-white text-sm font-medium px-8 py-3 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
                 >
                   {updateProfileMutation.isPending && <Icon icon={Loader2} size="sm" className="animate-spin" />}
                   Save Changes
@@ -321,18 +419,21 @@ export default function ProfilePage() {
       {activeTab === "vehicles" && (
         <div className="px-6 pt-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase">My Vehicles</h2>
+            <h2 className="text-xs font-semibold text-gray-400 tracking-widest uppercase">My Vehicles</h2>
             <button
               onClick={() => openVehicleDialog()}
-              className="flex items-center gap-1 text-sm font-medium text-[#8c52ff]"
+              className="flex items-center gap-1.5 text-sm font-medium text-[#8c52ff] hover:text-[#7c47eb] transition-colors"
             >
-              <Icon icon={Plus} size="sm" /> Add
+              <Icon icon={Plus} size="sm" /> Add vehicle
             </button>
           </div>
 
           {vehicles.length === 0 ? (
-            <div className="py-16 text-center border-t border-gray-200">
-              <p className="text-gray-500 mb-4">No vehicles added yet</p>
+            <div className="py-16 text-center border border-dashed border-gray-200 rounded-xl">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <Icon icon={Car} size="md" className="text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-sm mb-3">No vehicles added yet</p>
               <button
                 onClick={() => openVehicleDialog()}
                 className="text-sm font-medium text-[#8c52ff] underline underline-offset-4"
@@ -341,24 +442,31 @@ export default function ProfilePage() {
               </button>
             </div>
           ) : (
-            <div className="border-t border-gray-200">
+            <div className="space-y-3">
               {vehicles.map((vehicle) => (
-                <div key={vehicle.id} className="flex items-center justify-between py-5 border-b border-gray-200">
-                  <div>
-                    <h3 className="text-base font-medium text-black">
-                      {vehicle.year} {vehicle.make} {vehicle.model}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      {[vehicle.color, vehicle.licensePlate].filter(Boolean).join(" · ")}
-                    </p>
-                    {vehicle.notes && (
-                      <p className="text-xs text-gray-400 mt-0.5">{vehicle.notes}</p>
-                    )}
+                <div key={vehicle.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#f3eeff] flex items-center justify-center flex-shrink-0">
+                      <Icon icon={Car} size="sm" className="text-[#8c52ff]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-black">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h3>
+                      {(vehicle.color || vehicle.licensePlate) && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {[vehicle.color, vehicle.licensePlate].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      {vehicle.notes && (
+                        <p className="text-xs text-gray-400 mt-0.5">{vehicle.notes}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => openVehicleDialog(vehicle)}
-                      className="p-2 text-gray-400 hover:text-black transition-colors"
+                      className="p-2 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100"
                     >
                       <Icon icon={Pencil} size="sm" />
                     </button>
@@ -366,7 +474,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         if (confirm("Delete this vehicle?")) deleteVehicleMutation.mutate(vehicle.id);
                       }}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
                     >
                       <Icon icon={Trash2} size="sm" />
                     </button>
@@ -381,28 +489,40 @@ export default function ProfilePage() {
       {/* Bookings Tab */}
       {activeTab === "bookings" && (
         <div className="px-6 pt-6">
-          <h2 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Booking History</h2>
+          <h2 className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-4">Booking History</h2>
           {bookings.length === 0 ? (
-            <div className="py-16 text-center border-t border-gray-200">
-              <p className="text-gray-500">No bookings yet</p>
+            <div className="py-16 text-center border border-dashed border-gray-200 rounded-xl">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <Icon icon={Calendar} size="md" className="text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-sm">No bookings yet</p>
             </div>
           ) : (
-            <div className="border-t border-gray-200">
+            <div className="space-y-3">
               {bookings.map((booking) => (
-                <div key={booking.id} className="flex justify-between items-center py-5 border-b border-gray-200">
+                <div key={booking.id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
                   <div>
-                    <h3 className="text-base font-medium text-black capitalize">
+                    <h3 className="text-sm font-semibold text-black capitalize">
                       {booking.priceTier} Package
                     </h3>
-                    <p className="text-sm text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {new Date(booking.timestamp).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
                     </p>
+                    {booking.rating && (
+                      <div className="flex items-center gap-1 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className={`text-xs ${i < (booking.rating || 0) ? "text-[#8c52ff]" : "text-gray-200"}`}>★</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm text-gray-400 capitalize">{booking.status.replace("_", " ")}</span>
+                  <Badge className={`text-xs border-0 ${statusColor(booking.status)}`}>
+                    {booking.status.replace("_", " ")}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -410,11 +530,157 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Settings Tab */}
+      {activeTab === "settings" && (
+        <div className="px-6 pt-6 space-y-6">
+          {/* Notifications section */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Notifications</p>
+            <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
+              <div className="flex items-center justify-between px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Icon icon={Bell} size="sm" className="text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Service updates</p>
+                    <p className="text-xs text-gray-500">Booking status & arrival alerts</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notificationsEnabled}
+                  onCheckedChange={setNotificationsEnabled}
+                />
+              </div>
+              <div className="flex items-center justify-between px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
+                    <Icon icon={Star} size="sm" className="text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Promotions & offers</p>
+                    <p className="text-xs text-gray-500">Deals and seasonal discounts</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={marketingEnabled}
+                  onCheckedChange={setMarketingEnabled}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Account section */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Account</p>
+            <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
+              <button
+                onClick={() => setActiveTab("profile")}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center">
+                    <Icon icon={Settings} size="sm" className="text-[#8c52ff]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Edit profile</p>
+                    <p className="text-xs text-gray-500">Name, email, phone, address</p>
+                  </div>
+                </div>
+                <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+              </button>
+
+              {!user?.isProvider && (
+                <button
+                  onClick={() => setActiveTab("vehicles")}
+                  className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center">
+                      <Icon icon={Car} size="sm" className="text-[#8c52ff]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-black">Manage vehicles</p>
+                      <p className="text-xs text-gray-500">{vehicles.length} {vehicles.length === 1 ? "vehicle" : "vehicles"} saved</p>
+                    </div>
+                  </div>
+                  <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+                </button>
+              )}
+
+              <button
+                onClick={handleSignOut}
+                disabled={logoutMutation.isPending}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Icon icon={LogOut} size="sm" className="text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Sign out</p>
+                    <p className="text-xs text-gray-500">Log out of this device</p>
+                  </div>
+                </div>
+                <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+              </button>
+            </div>
+          </div>
+
+          {/* Privacy & Legal section */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Privacy & Legal</p>
+            <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
+              <div className="flex items-center gap-3 px-4 py-4 opacity-60">
+                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Icon icon={Shield} size="sm" className="text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-black">Privacy policy</p>
+                  <p className="text-xs text-gray-500">How we use your data</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-4 opacity-60">
+                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Icon icon={Hash} size="sm" className="text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-black">Terms of service</p>
+                  <p className="text-xs text-gray-500">User agreement</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div>
+            <p className="text-xs font-semibold text-red-400 tracking-widest uppercase mb-3">Danger Zone</p>
+            <div className="border border-red-100 rounded-xl overflow-hidden">
+              <button
+                onClick={() => { setDeleteConfirmText(""); setDeleteDialogOpen(true); }}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-red-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
+                    <Icon icon={UserX} size="sm" className="text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-600">Delete account</p>
+                    <p className="text-xs text-red-400">Permanently remove your account and data</p>
+                  </div>
+                </div>
+                <Icon icon={ChevronRight} size="sm" className="text-red-400" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Vehicle Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
+        <DialogContent className="sm:max-w-md rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-medium">
+            <DialogTitle className="text-lg font-semibold">
               {selectedVehicle ? "Edit Vehicle" : "Add Vehicle"}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
@@ -423,13 +689,12 @@ export default function ProfilePage() {
           </DialogHeader>
           <Form {...vehicleForm}>
             <form onSubmit={vehicleForm.handleSubmit(handleVehicleSubmit)} className="space-y-4">
-              {/* Year */}
               <FormField
                 control={vehicleForm.control}
                 name="year"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Year</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Year</FormLabel>
                     <FormControl>
                       <select
                         value={field.value || ""}
@@ -444,14 +709,12 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-
-              {/* Make */}
               <FormField
                 control={vehicleForm.control}
                 name="make"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Make</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Make</FormLabel>
                     <FormControl>
                       <select
                         value={field.value || ""}
@@ -470,14 +733,12 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-
-              {/* Model */}
               <FormField
                 control={vehicleForm.control}
                 name="model"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Model</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Model</FormLabel>
                     <FormControl>
                       <select
                         value={field.value || ""}
@@ -495,8 +756,6 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-
-              {/* Color & Plate */}
               {[
                 { name: "color" as const, label: "Color (optional)", placeholder: "Blue" },
                 { name: "licensePlate" as const, label: "License Plate (optional)", placeholder: "ABC123" },
@@ -507,9 +766,9 @@ export default function ProfilePage() {
                   name={fc.name}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">{fc.label}</FormLabel>
+                      <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">{fc.label}</FormLabel>
                       <FormControl>
-                        <Input placeholder={fc.placeholder} {...field} className="rounded-none border-gray-200" />
+                        <Input placeholder={fc.placeholder} {...field} className="rounded-sm border-gray-200" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -521,9 +780,9 @@ export default function ProfilePage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Notes (optional)</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Notes (optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Special instructions..." {...field} className="rounded-none border-gray-200 resize-none" />
+                      <Textarea placeholder="Special instructions..." {...field} className="rounded-sm border-gray-200 resize-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -533,7 +792,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={createVehicleMutation.isPending || updateVehicleMutation.isPending}
-                  className="bg-black text-white text-sm font-medium px-6 py-2.5 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-black text-white text-sm font-medium px-6 py-2.5 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
                 >
                   {(createVehicleMutation.isPending || updateVehicleMutation.isPending) && (
                     <Icon icon={Loader2} size="sm" className="animate-spin" />
@@ -543,6 +802,47 @@ export default function ProfilePage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-red-600">Delete account?</DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 mt-2">
+              This will permanently delete your account, all bookings, vehicles, and personal data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-xs text-gray-500 mb-2 font-medium">
+              Type <span className="font-bold text-black">DELETE</span> to confirm
+            </p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="border-red-200 focus-visible:ring-red-300 text-sm"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmText !== "DELETE" || deleteAccountMutation.isPending}
+              onClick={() => deleteAccountMutation.mutate()}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              {deleteAccountMutation.isPending && <Icon icon={Loader2} size="sm" className="animate-spin mr-2" />}
+              Delete account
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

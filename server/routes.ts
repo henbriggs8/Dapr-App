@@ -265,6 +265,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/user", async (req, res) => {
+    let userId: number | undefined = req.user?.id;
+
+    if (!userId) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        try {
+          const token = authHeader.substring(7);
+          const { clerkClient: cc } = await import("@clerk/clerk-sdk-node");
+          const verified = await cc.verifyToken(token);
+          if (verified?.sub) {
+            const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
+            if (localUser) userId = localUser.id;
+          }
+        } catch {
+          // fall through
+        }
+      }
+    }
+
+    if (!userId) return res.sendStatus(401);
+
+    try {
+      await storage.deleteUser(userId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Delete account error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
   app.get("/api/bookings/active", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
