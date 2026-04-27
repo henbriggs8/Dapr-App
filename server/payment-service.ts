@@ -113,6 +113,27 @@ export async function createTipPaymentLink(
   }
 }
 
+/**
+ * Verify a Square order is COMPLETED and the total matches the expected amount.
+ * Used to confirm tip payments before persisting tipAmount.
+ */
+export async function verifyTipOrderPaid(
+  orderId: string,
+  expectedCents: number
+): Promise<boolean> {
+  try {
+    const response = await squareClient.orders.get({ orderId });
+    const order = response.order;
+    if (!order) return false;
+    if (order.state !== 'COMPLETED') return false;
+    const paidCents = Number(order.totalMoney?.amount ?? 0);
+    return paidCents === expectedCents;
+  } catch (error) {
+    console.error('Square order verification error:', error);
+    return false;
+  }
+}
+
 export async function processPayment(
   bookingId: number,
   nonce: string,

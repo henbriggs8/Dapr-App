@@ -24,7 +24,6 @@ export default function PostServiceReview() {
   const bookingId = parseInt(params?.bookingId ?? "0");
   const urlParams = new URLSearchParams(window.location.search);
   const tipPaid = urlParams.get("tip_paid") === "1";
-  const tipCentsFromUrl = parseInt(urlParams.get("tip_cents") ?? "0");
 
   const [stars, setStars] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -35,9 +34,11 @@ export default function PostServiceReview() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When Square redirects back with tip_paid=1, persist the tip amount
+  // When Square redirects back with tip_paid=1, ask the server to verify via Square
+  // and persist the tip. The server uses its own pending reference — no client-supplied
+  // amount is trusted.
   useEffect(() => {
-    if (tipPaid && tipCentsFromUrl >= 100 && bookingId > 0) {
+    if (tipPaid && bookingId > 0) {
       getToken().then((token) => {
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -45,11 +46,11 @@ export default function PostServiceReview() {
           method: "POST",
           headers,
           credentials: "include",
-          body: JSON.stringify({ tipAmountCents: tipCentsFromUrl }),
+          body: JSON.stringify({}),
         }).catch((err) => console.error("Tip confirm error:", err));
       });
     }
-  }, [tipPaid, tipCentsFromUrl, bookingId]);
+  }, [tipPaid, bookingId]);
 
   const { data: booking } = useQuery<Booking>({
     queryKey: [`/api/bookings/${bookingId}`],
