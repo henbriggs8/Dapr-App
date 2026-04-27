@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { Star, ChevronLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Booking, Service } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@clerk/clerk-react";
 
 const ACCENT = "#8c52ff";
 const ACCENT_BG = "#f3eeff";
@@ -19,7 +18,6 @@ const TIP_PRESETS = [
 export default function PostServiceReview() {
   const [, params] = useRoute("/review/:bookingId");
   const [, setLocation] = useLocation();
-  const { getToken } = useAuth();
 
   const bookingId = parseInt(params?.bookingId ?? "0");
   const urlParams = new URLSearchParams(window.location.search);
@@ -41,40 +39,28 @@ export default function PostServiceReview() {
   useEffect(() => {
     if (tipPaid && bookingId > 0) {
       setConfirmingTip(true);
-      getToken().then((token) => {
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-        fetch(`/api/bookings/${bookingId}/tip/confirm`, {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify({}),
+      apiRequest("POST", `/api/bookings/${bookingId}/tip/confirm`, {})
+        .then((res) => {
+          setConfirmingTip(false);
+          if (res.ok) {
+            setTipConfirmed(true);
+            setDone(true);
+          } else {
+            setError("We couldn't confirm your tip yet — Square may still be processing. Please try again shortly.");
+          }
         })
-          .then((res) => {
-            setConfirmingTip(false);
-            if (res.ok) {
-              setTipConfirmed(true);
-              setDone(true);
-            } else {
-              setError("We couldn't confirm your tip yet — Square may still be processing. Please try again shortly.");
-            }
-          })
-          .catch((err) => {
-            console.error("Tip confirm error:", err);
-            setConfirmingTip(false);
-            setError("Network error confirming tip. Please try again.");
-          });
-      });
+        .catch((err) => {
+          console.error("Tip confirm error:", err);
+          setConfirmingTip(false);
+          setError("Network error confirming tip. Please try again.");
+        });
     }
   }, [tipPaid, bookingId]);
 
   const { data: booking } = useQuery<Booking>({
     queryKey: [`/api/bookings/${bookingId}`],
     queryFn: async () => {
-      const token = await getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`/api/bookings/${bookingId}`, { headers, credentials: "include" });
+      const res = await apiRequest("GET", `/api/bookings/${bookingId}`);
       if (!res.ok) throw new Error("Failed to load booking");
       return res.json();
     },
@@ -107,28 +93,17 @@ export default function PostServiceReview() {
     setSubmitting(true);
 
     try {
-      const token = await getToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       // Save rating
-      const ratingRes = await fetch(`/api/bookings/${bookingId}/rating`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({ rating: stars, comment: comment.trim() || undefined }),
+      const ratingRes = await apiRequest("POST", `/api/bookings/${bookingId}/rating`, {
+        rating: stars,
+        comment: comment.trim() || undefined,
       });
       if (!ratingRes.ok) throw new Error("Failed to save rating");
 
       // If tip selected, create Square checkout and redirect
       if (tipCents > 0) {
-        const tipRes = await fetch(`/api/bookings/${bookingId}/tip`, {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify({ tipAmountCents: tipCents }),
+        const tipRes = await apiRequest("POST", `/api/bookings/${bookingId}/tip`, {
+          tipAmountCents: tipCents,
         });
         if (!tipRes.ok) throw new Error("Failed to create tip checkout");
         const { url } = await tipRes.json();

@@ -809,15 +809,31 @@ export class MemStorage implements IStorage {
     
     this.bookings.set(bookingId, updatedBooking);
     
-    // Update provider rating
+    // Update provider rating (idempotent: handle re-rating)
     if (booking.providerId !== null) {
       const provider = await this.getUser(booking.providerId);
       if (provider) {
         const currentRatingCount = provider.ratingCount || 0;
-        const currentRating = provider.rating || 5; // Default to 5 if no ratings yet
-        const newRatingCount = currentRatingCount + 1;
-        const newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
-        
+        const currentRating = provider.rating || 5;
+
+        let newRatingCount: number;
+        let newRating: number;
+
+        if (booking.rating !== null && booking.rating !== undefined) {
+          // Booking already had a rating — replace it in the running average
+          if (currentRatingCount <= 1) {
+            newRatingCount = 1;
+            newRating = rating;
+          } else {
+            newRatingCount = currentRatingCount;
+            newRating = ((currentRating * currentRatingCount) - booking.rating + rating) / currentRatingCount;
+          }
+        } else {
+          // New rating — increment count
+          newRatingCount = currentRatingCount + 1;
+          newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
+        }
+
         this.users.set(provider.id, {
           ...provider,
           rating: newRating,
@@ -1974,7 +1990,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking> {
-    const [booking] = await db
+    // Fetch existing booking to check for a prior rating (for idempotent aggregation)
+    const [existing] = await db
+      .select({ providerId: bookings.providerId, rating: bookings.rating })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+
+    const [updatedBooking] = await db
       .update(bookings)
       .set({
         rating,
@@ -1983,25 +2005,42 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, bookingId))
       .returning();
 
-    // Update provider's running average rating
-    if (booking?.providerId) {
+    // Update provider's running average rating (idempotent: handle re-rating)
+    if (existing?.providerId) {
       const [provider] = await db
         .select({ rating: users.rating, ratingCount: users.ratingCount })
         .from(users)
-        .where(eq(users.id, booking.providerId));
+        .where(eq(users.id, existing.providerId));
       if (provider) {
         const currentCount = provider.ratingCount || 0;
         const currentAvg = provider.rating || 5;
-        const newCount = currentCount + 1;
-        const newAvg = ((currentAvg * currentCount) + rating) / newCount;
+
+        let newCount: number;
+        let newAvg: number;
+
+        if (existing.rating !== null && existing.rating !== undefined) {
+          // Booking already rated — replace old rating in the running average
+          if (currentCount <= 1) {
+            newCount = 1;
+            newAvg = rating;
+          } else {
+            newCount = currentCount;
+            newAvg = ((currentAvg * currentCount) - existing.rating + rating) / currentCount;
+          }
+        } else {
+          // New rating — increment count
+          newCount = currentCount + 1;
+          newAvg = ((currentAvg * currentCount) + rating) / newCount;
+        }
+
         await db
           .update(users)
           .set({ rating: newAvg, ratingCount: newCount })
-          .where(eq(users.id, booking.providerId));
+          .where(eq(users.id, existing.providerId));
       }
     }
 
-    return booking;
+    return updatedBooking;
   }
 
   async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
