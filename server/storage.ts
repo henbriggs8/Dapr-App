@@ -1971,6 +1971,25 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(bookings.id, bookingId))
       .returning();
+
+    // Update provider's running average rating
+    if (booking?.providerId) {
+      const [provider] = await db
+        .select({ rating: users.rating, ratingCount: users.ratingCount })
+        .from(users)
+        .where(eq(users.id, booking.providerId));
+      if (provider) {
+        const currentCount = provider.ratingCount || 0;
+        const currentAvg = provider.rating || 5;
+        const newCount = currentCount + 1;
+        const newAvg = ((currentAvg * currentCount) + rating) / newCount;
+        await db
+          .update(users)
+          .set({ rating: newAvg, ratingCount: newCount })
+          .where(eq(users.id, booking.providerId));
+      }
+    }
+
     return booking;
   }
 

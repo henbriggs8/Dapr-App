@@ -89,7 +89,7 @@ export async function createTipPaymentLink(
         },
       },
       checkoutOptions: {
-        redirectUrl: `${baseUrl}/review/${bookingId}?tip_paid=1`,
+        redirectUrl: `${baseUrl}/review/${bookingId}?tip_paid=1&tip_cents=${tipAmountCents}`,
       },
     });
 

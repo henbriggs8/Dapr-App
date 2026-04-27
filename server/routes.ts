@@ -1475,17 +1475,49 @@ export function registerRoutes(app: Express): Server {
       if (!booking || booking.userId !== req.user.id) {
         return res.status(403).send('Access denied');
       }
+      if (booking.status !== 'completed') {
+        return res.status(400).send('Tips can only be added to completed bookings');
+      }
 
       const { createTipPaymentLink } = await import('./payment-service');
       const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
       const { url } = await createTipPaymentLink(id, tipAmountCents, siteUrl);
 
-      await storage.updateBookingTip(id, tipAmountCents);
+      // tipAmount is NOT stored here — it is persisted only after payment completes
+      // via POST /api/bookings/:id/tip/confirm (called when Square redirects with tip_paid=1)
 
       res.json({ url });
     } catch (error) {
       console.error('Tip endpoint error:', error);
       res.status(500).send(error instanceof Error ? error.message : 'Failed to create tip payment');
+    }
+  });
+
+  // Called by the frontend when Square redirects back with tip_paid=1&tip_cents=N
+  app.post('/api/bookings/:id/tip/confirm', async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const id = parseInt(req.params.id);
+    const { tipAmountCents } = req.body;
+
+    if (isNaN(id) || typeof tipAmountCents !== 'number' || tipAmountCents < 100) {
+      return res.status(400).send('Invalid booking ID or tip amount');
+    }
+
+    try {
+      const booking = await storage.getBookingById(id);
+      if (!booking || booking.userId !== req.user.id) {
+        return res.status(403).send('Access denied');
+      }
+      if (booking.status !== 'completed') {
+        return res.status(400).send('Tips can only be confirmed on completed bookings');
+      }
+
+      const updated = await storage.updateBookingTip(id, tipAmountCents);
+      res.json(updated);
+    } catch (error) {
+      console.error('Tip confirm error:', error);
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to confirm tip');
     }
   });
 
