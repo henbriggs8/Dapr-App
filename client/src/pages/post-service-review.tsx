@@ -78,7 +78,7 @@ export default function PostServiceReview() {
       const val = parseFloat(customTip);
       return isNaN(val) || val <= 0 ? 0 : Math.round(val * 100);
     }
-    return Math.round(basePrice * (tipChoice as number));
+    return Math.round(basePrice * 100 * (tipChoice as number));
   }
 
   const tipCents = getTipCents();
@@ -254,7 +254,7 @@ export default function PostServiceReview() {
 
             {TIP_PRESETS.map(({ label, pct }) => {
               const active = tipChoice === pct;
-              const amt = basePrice > 0 ? `$${(basePrice * pct / 100).toFixed(2)}` : "";
+              const amt = basePrice > 0 ? `$${(basePrice * pct).toFixed(2)}` : "";
               return (
                 <button
                   key={label}
