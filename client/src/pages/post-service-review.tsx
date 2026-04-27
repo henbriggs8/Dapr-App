@@ -180,7 +180,7 @@ export default function PostServiceReview() {
             </div>
             {basePrice > 0 && (
               <p className="text-[14px] font-bold text-[#111] shrink-0">
-                ${(basePrice / 100).toFixed(2)}
+                ${Number(basePrice).toFixed(2)}
               </p>
             )}
           </div>

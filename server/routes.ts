@@ -1480,6 +1480,9 @@ export function registerRoutes(app: Express): Server {
       if (booking.status !== 'completed') {
         return res.status(400).send('Tips can only be added to completed bookings');
       }
+      if (booking.tipAmount !== null && booking.tipAmount !== undefined) {
+        return res.status(409).send('A tip has already been recorded for this booking');
+      }
 
       const { createTipPaymentLink } = await import('./payment-service');
       const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
