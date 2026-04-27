@@ -21,6 +21,7 @@ import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
 import { ProviderProfileTab } from "@/components/provider-profile-tab";
 import { TimeAdjustmentPanel } from "@/components/time-adjustment-panel";
+import PhotoUploadPanel from "@/components/photo-upload-panel";
 
 interface ProviderEarnings {
   totalEarnings: number;
@@ -574,6 +575,11 @@ export default function ProviderDashboard() {
                       estimatedCompletionTime={(booking as any).estimatedCompletionTime}
                       onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
                     />
+                  )}
+
+                  {/* Photo upload panel — shown after arrival */}
+                  {(booking as any).arrivalTime && (
+                    <PhotoUploadPanel bookingId={booking.id} status={booking.status} />
                   )}
                 </div>
               ))}

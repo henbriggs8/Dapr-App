@@ -1683,6 +1683,45 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Booking photo endpoints
+  app.get('/api/bookings/:id/photos', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    try {
+      const photos = await storage.getBookingPhotos(id);
+      res.json(photos);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch photos' });
+    }
+  });
+
+  app.post('/api/bookings/:id/photos', async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    const { photoType, dataUrl, caption } = req.body;
+    if (!photoType || !dataUrl) return res.status(400).json({ error: 'photoType and dataUrl are required' });
+    if (!['before', 'after'].includes(photoType)) return res.status(400).json({ error: 'photoType must be before or after' });
+    try {
+      const photo = await storage.addBookingPhoto(id, photoType, dataUrl, caption);
+      res.json(photo);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save photo' });
+    }
+  });
+
+  app.delete('/api/bookings/:id/photos/:photoId', async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+    const photoId = parseInt(req.params.photoId);
+    if (isNaN(photoId)) return res.status(400).json({ error: 'Invalid photo ID' });
+    try {
+      await storage.deleteBookingPhoto(photoId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete photo' });
+    }
+  });
+
   // Booking assignment system endpoints
   
   // Get bookings by timeframe for provider dashboard

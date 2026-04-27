@@ -127,6 +127,15 @@ export const bookings = pgTable("bookings", {
   providerNotes: text("provider_notes") // Optional provider notes about the job
 });
 
+export const bookingPhotos = pgTable("booking_photos", {
+  id: serial("id").primaryKey(),
+  bookingId: integer("booking_id").notNull(),
+  photoType: text("photo_type").notNull(), // 'before' | 'after'
+  dataUrl: text("data_url").notNull(), // base64-encoded data URL
+  caption: text("caption"),
+  uploadedAt: text("uploaded_at").notNull(),
+});
+
 export const clerkSquareMapping = pgTable("clerk_square_mapping", {
   id: serial("id").primaryKey(),
   clerkUserId: text("clerk_user_id").notNull().unique(),
@@ -184,6 +193,13 @@ export const timeSlotsRelations = relations(timeSlots, ({ many }) => ({
   bookings: many(bookings)
 }));
 
+export const bookingPhotosRelations = relations(bookingPhotos, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingPhotos.bookingId],
+    references: [bookings.id]
+  })
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -204,6 +220,7 @@ export const insertPricingConfigSchema = createInsertSchema(pricingConfig);
 export const insertServiceSchema = createInsertSchema(services);
 export const insertTimeSlotSchema = createInsertSchema(timeSlots);
 export const insertBookingSchema = createInsertSchema(bookings);
+export const insertBookingPhotoSchema = createInsertSchema(bookingPhotos).omit({ id: true });
 export const insertVehicleSchema = createInsertSchema(vehicles);
 export const insertClerkSquareMappingSchema = createInsertSchema(clerkSquareMapping).omit({
   id: true
@@ -238,3 +255,5 @@ export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 export type ClerkSquareMapping = typeof clerkSquareMapping.$inferSelect;
 export type InsertClerkSquareMapping = z.infer<typeof insertClerkSquareMappingSchema>;
+export type BookingPhoto = typeof bookingPhotos.$inferSelect;
+export type InsertBookingPhoto = z.infer<typeof insertBookingPhotoSchema>;

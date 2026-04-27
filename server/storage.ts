@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -186,7 +186,12 @@ export interface IStorage {
   // Clerk-Square mapping methods
   getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined>;
   createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping>;
-  
+
+  // Booking photo methods
+  addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto>;
+  getBookingPhotos(bookingId: number): Promise<BookingPhoto[]>;
+  deleteBookingPhoto(photoId: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
@@ -1436,6 +1441,17 @@ export class MemStorage implements IStorage {
   async createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping> {
     throw new Error("Clerk-Square mapping not implemented in MemStorage");
   }
+
+  // Booking photo methods for MemStorage (not implemented)
+  async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
+    throw new Error("addBookingPhoto not implemented in MemStorage");
+  }
+  async getBookingPhotos(bookingId: number): Promise<BookingPhoto[]> {
+    throw new Error("getBookingPhotos not implemented in MemStorage");
+  }
+  async deleteBookingPhoto(photoId: number): Promise<void> {
+    throw new Error("deleteBookingPhoto not implemented in MemStorage");
+  }
 }
 
 
@@ -2308,6 +2324,22 @@ export class DatabaseStorage implements IStorage {
       .values(mapping)
       .returning();
     return newMapping;
+  }
+
+  async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
+    const [photo] = await db
+      .insert(bookingPhotos)
+      .values({ bookingId, photoType, dataUrl, caption: caption ?? null, uploadedAt: new Date().toISOString() })
+      .returning();
+    return photo;
+  }
+
+  async getBookingPhotos(bookingId: number): Promise<BookingPhoto[]> {
+    return db.select().from(bookingPhotos).where(eq(bookingPhotos.bookingId, bookingId));
+  }
+
+  async deleteBookingPhoto(photoId: number): Promise<void> {
+    await db.delete(bookingPhotos).where(eq(bookingPhotos.id, photoId));
   }
 
   async initialize(): Promise<void> {
