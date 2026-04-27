@@ -47,7 +47,7 @@ export default function PrivacyPolicy() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-3">
         <button
-          onClick={() => setLocation(-1 as any)}
+          onClick={() => window.history.back()}
           className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
         >
           <Icon icon={ArrowLeft} size="md" className="text-gray-700" />
