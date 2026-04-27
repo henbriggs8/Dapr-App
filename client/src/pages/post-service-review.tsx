@@ -36,32 +36,32 @@ export default function PostServiceReview() {
 
   // When Square redirects back with tip_paid=1, ask the server to verify the order
   // via Square and persist the tip. Success state is gated on a 200 response.
+  // apiRequest throws on non-2xx — catch and map 402 (still processing) specifically.
   useEffect(() => {
-    if (tipPaid && bookingId > 0) {
-      setConfirmingTip(true);
-      apiRequest("POST", `/api/bookings/${bookingId}/tip/confirm`, {})
-        .then((res) => {
-          setConfirmingTip(false);
-          if (res.ok) {
-            setTipConfirmed(true);
-            setDone(true);
-          } else {
-            setError("We couldn't confirm your tip yet — Square may still be processing. Please try again shortly.");
-          }
-        })
-        .catch((err) => {
-          console.error("Tip confirm error:", err);
-          setConfirmingTip(false);
-          setError("Network error confirming tip. Please try again.");
-        });
-    }
+    if (!tipPaid || bookingId <= 0) return;
+    setConfirmingTip(true);
+    (async () => {
+      try {
+        await apiRequest("POST", `/api/bookings/${bookingId}/tip/confirm`, {});
+        setTipConfirmed(true);
+        setDone(true);
+      } catch (err: any) {
+        const msg: string = err?.message ?? "";
+        if (msg.includes("402")) {
+          setError("Your tip payment is still being processed by Square. Please wait a moment and try again.");
+        } else {
+          setError("Couldn't confirm your tip right now. Please try again.");
+        }
+      } finally {
+        setConfirmingTip(false);
+      }
+    })();
   }, [tipPaid, bookingId]);
 
   const { data: booking } = useQuery<Booking>({
     queryKey: [`/api/bookings/${bookingId}`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/bookings/${bookingId}`);
-      if (!res.ok) throw new Error("Failed to load booking");
       return res.json();
     },
     enabled: bookingId > 0,
@@ -93,19 +93,17 @@ export default function PostServiceReview() {
     setSubmitting(true);
 
     try {
-      // Save rating
-      const ratingRes = await apiRequest("POST", `/api/bookings/${bookingId}/rating`, {
+      // Save rating (apiRequest throws on non-2xx)
+      await apiRequest("POST", `/api/bookings/${bookingId}/rating`, {
         rating: stars,
         comment: comment.trim() || undefined,
       });
-      if (!ratingRes.ok) throw new Error("Failed to save rating");
 
       // If tip selected, create Square checkout and redirect
       if (tipCents > 0) {
         const tipRes = await apiRequest("POST", `/api/bookings/${bookingId}/tip`, {
           tipAmountCents: tipCents,
         });
-        if (!tipRes.ok) throw new Error("Failed to create tip checkout");
         const { url } = await tipRes.json();
         window.location.href = url;
         return;
