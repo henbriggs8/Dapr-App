@@ -2,13 +2,15 @@ import { useEffect, useRef, useState, useCallback, ReactNode, createContext, use
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
-import type { InvalidateQueryFilters } from "@tanstack/react-query";
 
 type WebSocketStatus = "connecting" | "connected" | "disconnected";
+
+type CompletionSubscriber = (bookingId: number) => void;
 
 type WebSocketContextType = {
   status: WebSocketStatus;
   sendMessage: (message: object) => void;
+  subscribeToBookingCompletion: (fn: CompletionSubscriber) => () => void;
 };
 
 export const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -18,6 +20,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<WebSocketStatus>("disconnected");
   const { toast } = useToast();
+  const completionSubscribersRef = useRef<Set<CompletionSubscriber>>(new Set());
+
+  const subscribeToBookingCompletion = useCallback((fn: CompletionSubscriber) => {
+    completionSubscribersRef.current.add(fn);
+    return () => { completionSubscribersRef.current.delete(fn); };
+  }, []);
   
   const connect = useCallback(() => {
     if (!user) {
@@ -82,11 +90,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             // Invalidate booking queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
             
-            // Show a toast notification for booking updates
             if (data.booking) {
               const { status, stage, id } = data.booking;
-              const isCompleted = status === 'completed' || stage === 'completed';
+              const isCompleted = status === 'completed';
               
+              // Notify all completion subscribers (tracking page, service-progress page, etc.)
+              if (isCompleted && typeof id === 'number') {
+                completionSubscribersRef.current.forEach(fn => fn(id));
+              }
+
               // Format the stage message if available
               const stageLabels: Record<string, string> = {
                 'on_the_way': 'Detail Pro On The Way',
@@ -161,7 +173,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [user, connect]);
   
   return (
-    <WebSocketContext.Provider value={{ status, sendMessage }}>
+    <WebSocketContext.Provider value={{ status, sendMessage, subscribeToBookingCompletion }}>
       {children}
     </WebSocketContext.Provider>
   );

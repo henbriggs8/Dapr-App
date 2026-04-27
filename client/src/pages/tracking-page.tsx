@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -6,9 +6,11 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from '@/components/ui/button';
 import TrackingMap from '@/components/tracking-map';
 import { Booking } from '@shared/schema';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 export default function TrackingPage() {
   const [, setLocation] = useLocation();
+  const { subscribeToBookingCompletion } = useWebSocket();
 
   // Optional ?booking=ID query param picks a specific booking to track
   const requestedBookingId = (() => {
@@ -28,12 +30,21 @@ export default function TrackingPage() {
     enabled: !!requestedBookingId,
   });
 
+  // Determine which booking is being watched so we can subscribe to its completion
+  const trackedBookingId = requestedBookingId ?? activeBookings?.[0]?.id ?? null;
+
+  // Auto-navigate to review when the tracked booking is marked complete
+  useEffect(() => {
+    if (!trackedBookingId) return;
+    return subscribeToBookingCompletion((completedId) => {
+      if (completedId === trackedBookingId) {
+        setLocation(`/review/${completedId}`);
+      }
+    });
+  }, [trackedBookingId, subscribeToBookingCompletion, setLocation]);
+
   const handleBack = () => {
     setLocation('/');
-  };
-
-  const handleComplete = (bookingId: number) => {
-    setLocation(`/review/${bookingId}`);
   };
 
   if (isLoading) {
@@ -49,13 +60,13 @@ export default function TrackingPage() {
 
   // Prefer the explicitly requested booking (deep link from payment success)
   if (requestedBookingId) {
-    return <TrackingMap bookingId={requestedBookingId} onClose={handleBack} onComplete={handleComplete} />;
+    return <TrackingMap bookingId={requestedBookingId} onClose={handleBack} />;
   }
 
   // Otherwise fall back to the first active trackable booking
   if (activeBookings && activeBookings.length > 0) {
     const bookingToTrack = activeBookings[0];
-    return <TrackingMap bookingId={bookingToTrack.id} onClose={handleBack} onComplete={handleComplete} />;
+    return <TrackingMap bookingId={bookingToTrack.id} onClose={handleBack} />;
   }
 
   // No active trackable bookings

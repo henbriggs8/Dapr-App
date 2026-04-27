@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,44 +109,29 @@ interface ServiceProgressProps {
 export default function ServiceProgress() {
   const urlParams = new URLSearchParams(window.location.search);
   const bookingId = urlParams.get('bookingId');
+  const numericBookingId = bookingId ? Number(bookingId) : null;
   const [, setLocation] = useLocation();
+  const { subscribeToBookingCompletion } = useWebSocket();
   const [currentStage, setCurrentStage] = useState("dispatched");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [estimatedCompletion, setEstimatedCompletion] = useState(45);
-  const [providerLocation, setProviderLocation] = useState({ lat: 40.7128, lng: -74.0060 });
   const [recentUpdates, setRecentUpdates] = useState([
     { time: "Just now", message: "Service has been dispatched", type: "info" },
     { time: "2 min ago", message: "Marcus is gathering equipment", type: "progress" },
     { time: "5 min ago", message: "Booking confirmed", type: "success" }
   ]);
 
-  // Real WebSocket listener — navigate to review when booking is marked completed
+  // Auto-navigate to review when the backend marks this booking complete via WebSocket
   useEffect(() => {
-    if (!bookingId) return;
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const socket = new WebSocket(wsUrl);
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (
-          data.type === 'booking_update' &&
-          String(data.booking?.id) === bookingId &&
-          data.booking?.status === 'completed'
-        ) {
-          setLocation(`/review/${bookingId}`);
-        }
-      } catch {
-        // ignore parse errors
+    if (!numericBookingId) return;
+    return subscribeToBookingCompletion((completedId) => {
+      if (completedId === numericBookingId) {
+        setLocation(`/review/${completedId}`);
       }
-    };
+    });
+  }, [numericBookingId, subscribeToBookingCompletion, setLocation]);
 
-    return () => socket.close();
-  }, [bookingId, setLocation]);
-
-  // Simulate real-time progress updates
+  // Simulate real-time progress updates (demo only — no auto-navigate on timer)
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
@@ -170,11 +156,6 @@ export default function ServiceProgress() {
         
         // Update estimated completion time
         setEstimatedCompletion(prev => Math.max(0, prev - 8));
-
-        // When the simulated demo reaches completed, navigate to review if we have a real booking
-        if (nextStage.key === 'completed' && bookingId) {
-          setLocation(`/review/${bookingId}`);
-        }
       }
     }, 15000); // Change stage every 15 seconds for demo
 
@@ -182,7 +163,7 @@ export default function ServiceProgress() {
       clearInterval(timer);
       clearInterval(stageTimer);
     };
-  }, [currentStage, bookingId, setLocation]);
+  }, [currentStage]);
 
   const getCurrentStageData = () => {
     return DETAILED_SERVICE_STAGES.find(stage => stage.key === currentStage) || DETAILED_SERVICE_STAGES[0];
