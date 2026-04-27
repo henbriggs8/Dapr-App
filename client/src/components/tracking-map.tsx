@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 interface TrackingMapProps {
   bookingId: number;
   onClose?: () => void;
+  onComplete?: (bookingId: number) => void;
 }
 
 interface TrackingInfo {
@@ -29,7 +30,7 @@ interface ArrivalStatus {
   providerNotes?: string;
 }
 
-export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
+export default function TrackingMap({ bookingId, onClose, onComplete }: TrackingMapProps) {
   const [wsConnected, setWsConnected] = useState(false);
   const [liveTracking, setLiveTracking] = useState<TrackingInfo | null>(null);
   const [arrivalStatus, setArrivalStatus] = useState<ArrivalStatus>({
@@ -88,6 +89,14 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             adjustmentDetails: data.adjustments?.filter((a: any) => a.selected) || [],
             providerNotes: data.providerNotes,
           }));
+        }
+
+        if (
+          data.type === 'booking_update' &&
+          data.booking?.id === bookingId &&
+          data.booking?.status === 'completed'
+        ) {
+          onComplete?.(bookingId);
         }
       } catch (error) {
         console.error('GPS tracking WebSocket message error:', error);

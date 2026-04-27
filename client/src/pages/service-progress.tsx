@@ -119,6 +119,32 @@ export default function ServiceProgress() {
     { time: "5 min ago", message: "Booking confirmed", type: "success" }
   ]);
 
+  // Real WebSocket listener — navigate to review when booking is marked completed
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (
+          data.type === 'booking_update' &&
+          String(data.booking?.id) === bookingId &&
+          data.booking?.status === 'completed'
+        ) {
+          setLocation(`/review/${bookingId}`);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => socket.close();
+  }, [bookingId, setLocation]);
+
   // Simulate real-time progress updates
   useEffect(() => {
     const timer = setInterval(() => {
@@ -144,6 +170,11 @@ export default function ServiceProgress() {
         
         // Update estimated completion time
         setEstimatedCompletion(prev => Math.max(0, prev - 8));
+
+        // When the simulated demo reaches completed, navigate to review if we have a real booking
+        if (nextStage.key === 'completed' && bookingId) {
+          setLocation(`/review/${bookingId}`);
+        }
       }
     }, 15000); // Change stage every 15 seconds for demo
 
@@ -151,7 +182,7 @@ export default function ServiceProgress() {
       clearInterval(timer);
       clearInterval(stageTimer);
     };
-  }, [currentStage]);
+  }, [currentStage, bookingId, setLocation]);
 
   const getCurrentStageData = () => {
     return DETAILED_SERVICE_STAGES.find(stage => stage.key === currentStage) || DETAILED_SERVICE_STAGES[0];

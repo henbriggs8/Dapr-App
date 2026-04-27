@@ -32,6 +32,10 @@ export default function TrackingPage() {
     setLocation('/');
   };
 
+  const handleComplete = (bookingId: number) => {
+    setLocation(`/review/${bookingId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -45,13 +49,13 @@ export default function TrackingPage() {
 
   // Prefer the explicitly requested booking (deep link from payment success)
   if (requestedBookingId) {
-    return <TrackingMap bookingId={requestedBookingId} onClose={handleBack} />;
+    return <TrackingMap bookingId={requestedBookingId} onClose={handleBack} onComplete={handleComplete} />;
   }
 
   // Otherwise fall back to the first active trackable booking
   if (activeBookings && activeBookings.length > 0) {
     const bookingToTrack = activeBookings[0];
-    return <TrackingMap bookingId={bookingToTrack.id} onClose={handleBack} />;
+    return <TrackingMap bookingId={bookingToTrack.id} onClose={handleBack} onComplete={handleComplete} />;
   }
 
   // No active trackable bookings
