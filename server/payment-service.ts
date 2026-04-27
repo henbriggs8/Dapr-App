@@ -70,6 +70,49 @@ export async function createPaymentLink(
   }
 }
 
+export async function createTipPaymentLink(
+  bookingId: number,
+  tipAmountCents: number,
+  siteUrl?: string
+): Promise<{ url: string; orderId: string }> {
+  try {
+    const baseUrl = siteUrl || process.env.SITE_URL || 'https://autodapper.com';
+
+    const response = await squareClient.checkout.paymentLinks.create({
+      idempotencyKey: generateIdempotencyKey(),
+      quickPay: {
+        name: `Dapper - Tip`,
+        locationId: process.env.SQUARE_LOCATION_ID!,
+        priceMoney: {
+          amount: BigInt(tipAmountCents),
+          currency: 'USD',
+        },
+      },
+      checkoutOptions: {
+        redirectUrl: `${baseUrl}/review/${bookingId}?tip_paid=1`,
+      },
+    });
+
+    if (!response.paymentLink?.url) {
+      throw new Error('Failed to create tip payment link in Square');
+    }
+
+    const checkoutUrl = (response.paymentLink as any).longUrl || response.paymentLink.url;
+
+    return {
+      url: checkoutUrl,
+      orderId: response.paymentLink.orderId || '',
+    };
+  } catch (error: any) {
+    if (error instanceof SquareError) {
+      console.error('Square API Error (tip):', error.message);
+      throw new Error(`Square API Error: ${error.message}`);
+    }
+    console.error('Tip payment link creation error:', error);
+    throw new Error(error?.message || 'Failed to create tip payment link');
+  }
+}
+
 export async function processPayment(
   bookingId: number,
   nonce: string,

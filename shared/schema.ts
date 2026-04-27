@@ -107,6 +107,7 @@ export const bookings = pgTable("bookings", {
   paymentDate: text("payment_date"), // When payment was completed
   paymentUrl: text("payment_url"), // URL for Square checkout
   squareOrderId: text("square_order_id"), // Square order ID
+  tipAmount: integer("tip_amount"), // Tip amount in cents
   
   // GPS Tracking fields
   providerLatitude: doublePrecision("provider_latitude"), // Current provider location

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
-import { Calendar, Clock, Bell, Gift, MessageSquare, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Bell, Gift, MessageSquare, ChevronRight, Star } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
 
@@ -121,35 +121,55 @@ export default function ActivityPage() {
               {bookings.map((booking) => {
                 const service = services?.find((s) => s.id === booking.serviceId);
                 const timeSlot = timeSlots?.find((t) => t.id === booking.timeSlotId);
+                const needsRating = booking.status === "completed" && !booking.rating;
                 return (
-                  <div
-                    key={booking.id}
-                    className="flex items-center justify-between py-5 border-b border-gray-200 cursor-pointer"
-                    onClick={() => setLocation(`/booking?id=${booking.id}`)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-1.5 rounded-full w-2 h-2 shrink-0 ${statusColors[booking.status] || "bg-gray-300"}`}
-                      />
-                      <div>
-                        <h3 className="text-base font-medium text-black">{service?.name || "Service"}</h3>
-                        <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
-                          <Icon icon={Calendar} size="xs" />
-                          {timeSlot ? formatDate(timeSlot.date) : "—"}
-                          {timeSlot && (
-                            <>
-                              <span className="mx-0.5">·</span>
-                              <Icon icon={Clock} size="xs" />
-                              {timeSlot.startTime}
-                            </>
-                          )}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5 capitalize">
-                          {booking.status.replace("_", " ")}
-                        </p>
+                  <div key={booking.id} className="border-b border-gray-200">
+                    {/* Rate your experience banner */}
+                    {needsRating && (
+                      <button
+                        onClick={() => setLocation(`/review/${booking.id}`)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 bg-[#f3eeff] rounded-xl my-2 active:opacity-80 transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon icon={Star} size="xs" style={{ color: "#8c52ff" }} />
+                          <span className="text-[12px] font-semibold text-[#8c52ff]">Rate your experience</span>
+                        </div>
+                        <Icon icon={ChevronRight} size="xs" style={{ color: "#8c52ff" }} />
+                      </button>
+                    )}
+                    <div
+                      className="flex items-center justify-between py-5 cursor-pointer"
+                      onClick={() => setLocation(`/booking?id=${booking.id}`)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-1.5 rounded-full w-2 h-2 shrink-0 ${statusColors[booking.status] || "bg-gray-300"}`}
+                        />
+                        <div>
+                          <h3 className="text-base font-medium text-black">{service?.name || "Service"}</h3>
+                          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                            <Icon icon={Calendar} size="xs" />
+                            {timeSlot ? formatDate(timeSlot.date) : "—"}
+                            {timeSlot && (
+                              <>
+                                <span className="mx-0.5">·</span>
+                                <Icon icon={Clock} size="xs" />
+                                {timeSlot.startTime}
+                              </>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5 capitalize">
+                            {booking.status.replace("_", " ")}
+                            {booking.rating && (
+                              <span className="ml-2 text-[#8c52ff]">
+                                {"★".repeat(booking.rating)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
+                      <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] shrink-0" />
                     </div>
-                    <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] shrink-0" />
                   </div>
                 );
               })}

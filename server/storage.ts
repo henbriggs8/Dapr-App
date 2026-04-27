@@ -78,6 +78,7 @@ export interface IStorage {
   
   // Rating methods
   addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking>;
+  updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking>;
   
   // Vehicle methods
   getUserVehicles(userId: number): Promise<Vehicle[]>;
@@ -452,6 +453,7 @@ export class MemStorage implements IStorage {
       paymentDate: booking.paymentDate ?? null,
       paymentUrl: booking.paymentUrl ?? null,
       squareOrderId: booking.squareOrderId ?? null,
+      tipAmount: booking.tipAmount ?? null,
       providerLatitude: booking.providerLatitude ?? null,
       providerLongitude: booking.providerLongitude ?? null,
       estimatedArrival: booking.estimatedArrival ?? null,
@@ -821,6 +823,14 @@ export class MemStorage implements IStorage {
       }
     }
     
+    return updatedBooking;
+  }
+
+  async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+    const updatedBooking = { ...booking, tipAmount };
+    this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
   }
 
@@ -1959,6 +1969,15 @@ export class DatabaseStorage implements IStorage {
         rating,
         ratingComment: comment
       })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    return booking;
+  }
+
+  async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({ tipAmount })
       .where(eq(bookings.id, bookingId))
       .returning();
     return booking;

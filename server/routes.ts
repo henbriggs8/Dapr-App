@@ -1459,6 +1459,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Tip endpoint — creates a Square checkout for the tip amount
+  app.post('/api/bookings/:id/tip', async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const id = parseInt(req.params.id);
+    const { tipAmountCents } = req.body;
+
+    if (isNaN(id) || typeof tipAmountCents !== 'number' || tipAmountCents < 100) {
+      return res.status(400).send('Invalid booking ID or tip amount (minimum $1.00)');
+    }
+
+    try {
+      const booking = await storage.getBookingById(id);
+      if (!booking || booking.userId !== req.user.id) {
+        return res.status(403).send('Access denied');
+      }
+
+      const { createTipPaymentLink } = await import('./payment-service');
+      const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
+      const { url } = await createTipPaymentLink(id, tipAmountCents, siteUrl);
+
+      await storage.updateBookingTip(id, tipAmountCents);
+
+      res.json({ url });
+    } catch (error) {
+      console.error('Tip endpoint error:', error);
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to create tip payment');
+    }
+  });
+
+
   // Add API endpoint to update booking status with notifications
   app.post('/api/bookings/:id/status', async (req, res) => {
     if (!req.user?.isProvider) {
