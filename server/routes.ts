@@ -1486,6 +1486,9 @@ export function registerRoutes(app: Express): Server {
       if (booking.tipAmount !== null && booking.tipAmount !== undefined) {
         return res.status(409).send('A tip has already been recorded for this booking');
       }
+      if (!booking.rating) {
+        return res.status(400).send('Please submit a rating before adding a tip');
+      }
       // Allow overwriting a stale/abandoned pending tip reference so customers
       // aren't permanently blocked if they close the Square tab without paying.
 
