@@ -129,7 +129,7 @@ function LandingScreen({
         <img
           src="/dapper-jeep-desert.jpg"
           alt="Dapper mobile car wash"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-[30%_50%]"
         />
       </div>
 
