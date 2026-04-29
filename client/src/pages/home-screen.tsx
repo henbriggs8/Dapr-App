@@ -460,7 +460,6 @@ export default function HomeScreen() {
         onClose={() => setAddrSheetOpen(false)}
         currentAddress={user?.address}
         recentAddresses={bookings?.map((b) => b.serviceLocation).filter(Boolean) as string[]}
-        onSelect={saveAddress}
       />
     </div>
   );
