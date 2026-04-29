@@ -341,21 +341,33 @@ export default function HomeScreen() {
       </div>
 
       {/* ── Primary: Car Wash CTA ─────────────────────────────────────── */}
+      <style>{`
+        @keyframes washGradient {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .wash-card {
+          background: linear-gradient(135deg, #6d28d9, #4f46e5, #7c3aed, #3b0764);
+          background-size: 300% 300%;
+          animation: washGradient 8s ease infinite;
+        }
+      `}</style>
       <div className="px-4 pb-4">
         <button
           onClick={() => setLocation("/booking")}
-          className="w-full flex items-center gap-3.5 rounded-2xl border border-[#ececec] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] active:scale-[0.99] transition"
+          className="wash-card w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 shadow-[0_4px_20px_rgba(109,40,217,0.45)] active:scale-[0.99] transition"
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: ACCENT_BG }}>
-            <Icon icon={Droplets} size="lg" style={{ color: ACCENT }} />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
+            <Icon icon={Droplets} size="lg" style={{ color: "rgba(255,255,255,0.95)" }} />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-[16px] font-bold text-[#111]">Car Wash</p>
-            <p className="text-[12px] text-[#999] mt-0.5">Pro at your vehicle in ~10 min</p>
+            <p className="text-[16px] font-bold text-white">Car Wash</p>
+            <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>Pro at your vehicle in ~10 min</p>
           </div>
           <div
-            className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold text-white"
-            style={{ background: ACCENT }}
+            className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold"
+            style={{ background: "rgba(255,255,255,0.2)", color: "white", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.25)" }}
           >
             Book
           </div>
