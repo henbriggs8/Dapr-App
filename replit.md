@@ -24,6 +24,7 @@ Preferred communication style: Simple, everyday language.
 - **Deep Linking**: Handles payment success redirection and authenticates users via `ProtectedRoute` that honors the `redirect` query parameter after sign-in.
 - **Deployment**: Configured for Google Cloud Run and Replit, supporting PostgreSQL and automated migrations.
 - **Address Autocomplete**: Utilizes Photon (OSM-backed) for accurate vehicle location input on desktop.
+- **Home Screen Booking Sheet**: Tapping the address bar or search field on the home screen opens a 3-step bottom sheet (portal-rendered, z-9999). Step 1: vehicle location via Photon autocomplete, GPS, saved home, or recent addresses. Step 2: service picker (cards from /api/services). Step 3: arrival time selection + "Book & Pay" CTA that creates a booking and fires Square checkout. CSS carousel (translateX) handles step transitions. Address is saved to user profile at step 1→2 transition.
 - **Services Page**: A public marketing page distinct from the booking flow, featuring a sticky in-page anchor navigation, detailed service comparisons, and call-to-action buttons that deep-link to the booking system.
 - **B2B (Fleets) Page**: A dedicated desktop-only page for corporate clients featuring a live pricing estimator and quote forms.
 - **iOS In-App Payment**: Integrates Square checkout within the app via Capacitor Browser, with deep-linking for post-payment navigation.
