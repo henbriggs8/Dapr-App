@@ -342,21 +342,24 @@ export default function HomeScreen() {
 
       {/* ── Primary: Car Wash CTA ─────────────────────────────────────── */}
       <style>{`
-        @keyframes washGradient {
+        @keyframes homeCarwashGradient {
           0%   { background-position: 0% 50%; }
           50%  { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-        .wash-card {
+        .home-carwash-card {
           background: linear-gradient(135deg, #6d28d9, #4f46e5, #7c3aed, #3b0764);
           background-size: 300% 300%;
-          animation: washGradient 8s ease infinite;
+          animation: homeCarwashGradient 8s ease infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .home-carwash-card { animation: none; background-position: 0% 50%; }
         }
       `}</style>
       <div className="px-4 pb-4">
         <button
           onClick={() => setLocation("/booking")}
-          className="wash-card w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 shadow-[0_4px_20px_rgba(109,40,217,0.45)] active:scale-[0.99] transition"
+          className="home-carwash-card w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 shadow-[0_4px_20px_rgba(109,40,217,0.45)] active:scale-[0.99] transition"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
             <Icon icon={Droplets} size="lg" style={{ color: "rgba(255,255,255,0.95)" }} />
