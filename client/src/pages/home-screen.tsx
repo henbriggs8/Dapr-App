@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import {
   Bell, MoreHorizontal, Clock, Heart, Loader2, Droplets,
   Gauge, CarFront, Sparkles, Search, Home, Navigation,
-  ChevronRight, ChevronDown, CheckCircle2, type LucideIcon,
+  ChevronRight, ChevronDown, CheckCircle2, Gift, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useEffect, useRef, useState } from "react";
@@ -393,22 +393,35 @@ export default function HomeScreen() {
         ))}
       </div>
 
-      {/* ── Promo card ───────────────────────────────────────────────── */}
+      {/* ── Referral card ────────────────────────────────────────────── */}
       <div className="mx-4 mb-5 rounded-2xl overflow-hidden flex items-center px-4 py-3.5 gap-3.5 border border-[#e8dcff]" style={{ background: ACCENT_BG }}>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: ACCENT }}>Member offer</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: ACCENT }}>Refer a friend</p>
           <p className="text-[14px] font-bold text-[#111] leading-snug">
-            Save on every wash with a Dapper Plan
+            Give a free wash,<br />get a free wash
           </p>
           <button
-            onClick={() => setLocation("/booking")}
+            onClick={() => setLocation("/referral")}
             className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-[#111] border border-[#ccc] rounded-full px-3 py-1.5 bg-white"
           >
-            Browse plans →
+            Share your link →
           </button>
         </div>
-        <div className="w-24 h-20 rounded-xl overflow-hidden shrink-0">
-          <img src="/dapper-van-house.jpg" className="w-full h-full object-cover" alt="Dapper service" />
+        <div
+          className="w-20 h-20 rounded-2xl shrink-0 flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg, #7c3aed22, #4f46e522)" }}
+        >
+          <div className="relative">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: ACCENT }}>
+              <Icon icon={Gift} size="lg" style={{ color: "white" }} />
+            </div>
+            <div
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+              style={{ background: "#22c55e" }}
+            >
+              ×2
+            </div>
+          </div>
         </div>
       </div>
 
