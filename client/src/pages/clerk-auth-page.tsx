@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
-import { resolveUrl } from '@/lib/queryClient';
+import { resolveUrl, queryClient } from '@/lib/queryClient';
 
 // ─── Shared style tokens ────────────────────────────────────────────────────
 
@@ -672,8 +672,36 @@ export default function ClerkAuthPage() {
 
 function AuthFlow() {
   const [, navigate] = useLocation();
-  const { isSignedIn } = useClerkAuth();
+  const { isSignedIn, getToken } = useClerkAuth();
   const { user: localUser } = useAuth();
+
+  // After Clerk marks the session active, the /api/user TanStack query has
+  // staleTime:Infinity and won't refetch on its own. We call clerk-sync here
+  // which creates the local user if needed, then push it straight into the
+  // cache so the loading screen unblocks immediately.
+  useEffect(() => {
+    if (!isSignedIn || localUser) return;
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+        const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
+        });
+        if (res.ok && !cancelled) {
+          const user = await res.json();
+          queryClient.setQueryData(['/api/user'], user);
+        }
+      } catch (e) {
+        console.error('[clerk-sync]', e);
+      }
+    };
+    sync();
+    return () => { cancelled = true; };
+  }, [isSignedIn, localUser]);
 
   const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
   const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
