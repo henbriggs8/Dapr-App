@@ -679,26 +679,48 @@ function AuthFlow() {
   // staleTime:Infinity and won't refetch on its own. We call clerk-sync here
   // which creates the local user if needed, then push it straight into the
   // cache so the loading screen unblocks immediately.
+  //
+  // On iOS the JWT is not always ready the instant isSignedIn flips to true —
+  // poll for up to ~6 s before giving up.
   useEffect(() => {
     if (!isSignedIn || localUser) return;
     let cancelled = false;
+
     const sync = async () => {
-      try {
-        const token = await getToken();
-        if (!token || cancelled) return;
-        const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: 'include',
-        });
-        if (res.ok && !cancelled) {
-          const user = await res.json();
-          queryClient.setQueryData(['/api/user'], user);
+      // Poll until the Clerk SDK has a token (up to 20 × 300 ms = 6 s)
+      let token: string | null = null;
+      for (let i = 0; i < 20 && !cancelled; i++) {
+        try { token = await getToken(); } catch {}
+        if (token) break;
+        await new Promise<void>(r => setTimeout(r, 300));
+      }
+
+      if (cancelled) return;
+
+      if (token) {
+        try {
+          const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include',
+          });
+          if (res.ok && !cancelled) {
+            const user = await res.json();
+            queryClient.setQueryData(['/api/user'], user);
+            return;
+          }
+        } catch (e) {
+          console.error('[clerk-sync]', e);
         }
-      } catch (e) {
-        console.error('[clerk-sync]', e);
+      }
+
+      // Fallback: invalidate the cache so TanStack re-runs /api/user with
+      // whatever auth headers are available at that point.
+      if (!cancelled) {
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       }
     };
+
     sync();
     return () => { cancelled = true; };
   }, [isSignedIn, localUser]);
