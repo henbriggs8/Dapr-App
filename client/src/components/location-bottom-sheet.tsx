@@ -677,8 +677,8 @@ export function LocationBottomSheet({
     goTo(1);
   }, [getToken, queryClient, goTo, onAddressSaved]);
 
-  // Height per step
-  const sheetMaxHeight = step === 0 ? "78vh" : "88vh";
+  // Sheet height (taller for service/confirm steps)
+  const sheetH = step === 0 ? "78vh" : "88vh";
 
   const sheetContent = (
     <AnimatePresence>
@@ -686,34 +686,35 @@ export function LocationBottomSheet({
         <>
           {/* Backdrop */}
           <motion.div
+            key="backdrop"
             className="fixed inset-0 z-[9998] bg-black/40"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onPointerDown={onClose}
           />
 
-          {/* Sheet */}
+          {/* Sheet — fixed height so flex-1 children have room to grow */}
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-[9999] bg-white rounded-t-3xl flex flex-col overflow-hidden"
-            style={{ maxHeight: sheetMaxHeight }}
+            key="sheet"
+            className="fixed bottom-0 left-0 right-0 z-[9999] bg-white rounded-t-3xl overflow-hidden"
+            style={{ height: sheetH, display: "flex", flexDirection: "column" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
           >
             {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-200" />
+            <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: "#e5e7eb" }} />
             </div>
 
             {/* Progress dots */}
-            <div className="flex justify-center gap-1.5 pb-1 shrink-0">
+            <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", gap: 6, paddingBottom: 4 }}>
               {([0, 1, 2] as Step[]).map((s) => (
                 <div
                   key={s}
-                  className="rounded-full transition-all duration-300"
                   style={{
-                    width: step === s ? 20 : 6,
-                    height: 6,
+                    width: step === s ? 20 : 6, height: 6, borderRadius: 9999,
                     backgroundColor: step === s ? ACCENT : "#e5e7eb",
+                    transition: "width 0.3s, background-color 0.3s",
                   }}
                 />
               ))}
@@ -726,42 +727,48 @@ export function LocationBottomSheet({
               onClose={onClose}
             />
 
-            {/* Slides */}
-            <div className="flex-1 min-h-0 relative overflow-hidden">
-              <AnimatePresence custom={direction} initial={false}>
-                <motion.div
-                  key={step}
-                  custom={direction}
-                  variants={variants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                  className="absolute inset-0 flex flex-col"
-                >
-                  {step === 0 && (
-                    <LocationStep
-                      currentAddress={currentAddress}
-                      recentAddresses={recentAddresses}
-                      onSelect={handleAddressSelect}
-                    />
-                  )}
-                  {step === 1 && (
-                    <ServiceStep
-                      selectedId={selectedService?.id ?? null}
-                      onSelect={setSelectedService}
-                      onContinue={() => { if (selectedService) goTo(2); }}
-                    />
-                  )}
-                  {step === 2 && selectedAddress && selectedService && (
+            {/* Carousel: all 3 steps side by side, translate to show current */}
+            <div style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  width: "300%",
+                  height: "100%",
+                  transform: `translateX(${-step * (100 / 3)}%)`,
+                  transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {/* Step 0 */}
+                <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+                  <LocationStep
+                    currentAddress={currentAddress}
+                    recentAddresses={recentAddresses}
+                    onSelect={handleAddressSelect}
+                  />
+                </div>
+
+                {/* Step 1 */}
+                <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+                  <ServiceStep
+                    selectedId={selectedService?.id ?? null}
+                    onSelect={setSelectedService}
+                    onContinue={() => { if (selectedService) goTo(2); }}
+                  />
+                </div>
+
+                {/* Step 2 */}
+                <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+                  {selectedAddress && selectedService ? (
                     <ConfirmStep
                       address={selectedAddress}
                       service={selectedService}
                       onBooked={onClose}
                     />
+                  ) : (
+                    <div />
                   )}
-                </motion.div>
-              </AnimatePresence>
+                </div>
+              </div>
             </div>
           </motion.div>
         </>
