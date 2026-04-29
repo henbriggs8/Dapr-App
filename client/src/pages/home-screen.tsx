@@ -316,13 +316,16 @@ export default function HomeScreen() {
               </p>
             </div>
             {!lastServiceLocation && (
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={(e) => { e.stopPropagation(); detectLocation(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); detectLocation(); } }}
                 className="shrink-0 p-1"
                 aria-label="Detect location"
               >
                 <Icon icon={Navigation} size="xs" style={{ color: ACCENT }} />
-              </button>
+              </div>
             )}
           </button>
         </div>
