@@ -42,6 +42,7 @@ export default function ProviderDashboard() {
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(user?.currentStatus === 'online');
   const [activeTab, setActiveTab] = useState<Tab>("jobs");
+  const [confirmCompleteId, setConfirmCompleteId] = useState<number | null>(null);
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingBookings, refetch: refetchBookings } = useQuery<Booking[]>({
@@ -554,14 +555,39 @@ export default function ProviderDashboard() {
                   )}
 
                   {booking.status === 'in_progress' && (
-                    <button
-                      onClick={() => completeServiceMutation.mutate(booking.id)}
-                      disabled={completeServiceMutation.isPending}
-                      className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
-                    >
-                      <Icon icon={StopIcon} size="sm" className="inline mr-1.5" />
-                      Mark Complete
-                    </button>
+                    confirmCompleteId === booking.id ? (
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                        <p className="text-sm text-gray-700 text-center font-medium">Is the service finished?</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setConfirmCompleteId(null)}
+                            className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirmCompleteId(null);
+                              completeServiceMutation.mutate(booking.id);
+                            }}
+                            disabled={completeServiceMutation.isPending}
+                            className="flex-1 py-2 rounded-lg bg-black text-white text-sm font-medium disabled:opacity-50"
+                          >
+                            <Icon icon={CheckCircle} size="sm" className="inline mr-1.5" />
+                            Yes, Complete
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmCompleteId(booking.id)}
+                        disabled={completeServiceMutation.isPending}
+                        className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                      >
+                        <Icon icon={StopIcon} size="sm" className="inline mr-1.5" />
+                        Mark Complete
+                      </button>
+                    )
                   )}
 
                   {/* Time adjustment panel */}
