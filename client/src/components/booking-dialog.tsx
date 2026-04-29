@@ -48,7 +48,8 @@ export default function BookingDialog({
   serviceId,
   timeSlotId,
   timeSlot: timeSlotProp,
-  prefillData
+  prefillData,
+  prefillAddress,
 }: {
   provider?: User;
   open: boolean;
@@ -57,6 +58,7 @@ export default function BookingDialog({
   timeSlotId?: number;
   timeSlot?: TimeSlot;
   prefillData?: PrefillData;
+  prefillAddress?: string;
 }) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -274,9 +276,10 @@ export default function BookingDialog({
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      serviceLocation: parsedAddress
-        ? `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}`
-        : user?.address || "",
+      serviceLocation: prefillAddress
+        || (parsedAddress
+          ? `${parsedAddress.streetAddress}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zipCode}`
+          : user?.address || ""),
       serviceLocationType: parsedAddress?.locationType?.toLowerCase() || "home",
       priceTier: service?.category || "basic",
       providerId: provider?.id ?? null,

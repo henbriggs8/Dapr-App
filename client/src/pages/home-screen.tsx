@@ -283,7 +283,13 @@ export default function HomeScreen() {
         <div className="flex gap-2.5 mt-3 mb-1">
           {/* Home tile */}
           <button
-            onClick={() => setAddrSheetOpen(true)}
+            onClick={() => {
+              if (full) {
+                setLocation(`/booking?address=${encodeURIComponent(full)}`);
+              } else {
+                setAddrSheetOpen(true);
+              }
+            }}
             className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f3eeff]">
@@ -299,7 +305,13 @@ export default function HomeScreen() {
 
           {/* Last service tile */}
           <button
-            onClick={() => setLocation("/booking")}
+            onClick={() => {
+              if (lastServiceLocation) {
+                setLocation(`/booking?address=${encodeURIComponent(lastServiceLocation)}`);
+              } else {
+                setLocation("/booking");
+              }
+            }}
             className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f5]">

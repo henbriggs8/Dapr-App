@@ -710,6 +710,7 @@ export default function BookingScreen() {
 
       {bookingOpen && selectedServiceId && selectedTimeSlotId && (() => {
         const selectedSlot = timeSlots?.find((s) => s.id === selectedTimeSlotId);
+        const addressParam = new URLSearchParams(search).get("address") || undefined;
         return (
           <BookingDialog
             open={bookingOpen}
@@ -718,6 +719,7 @@ export default function BookingScreen() {
             serviceId={selectedServiceId}
             timeSlotId={selectedTimeSlotId}
             timeSlot={selectedSlot}
+            prefillAddress={addressParam}
           />
         );
       })()}
