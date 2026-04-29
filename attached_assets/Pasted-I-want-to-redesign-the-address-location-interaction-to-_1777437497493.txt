@@ -1,0 +1,47 @@
+I want to redesign the address/location interaction to feel much smoother and more Uber-like.
+
+Current problem:
+- When the user taps the address field at the top ("Search address or vehicle location"), it triggers a loading screen and takes them into the booking flow
+- This feels clunky, slow, and high-friction
+- It feels like leaving the current screen instead of editing location inline
+
+What I want instead:
+- Do NOT show a loading screen
+- Do NOT hard-navigate to a new booking page just to enter address
+- When the user taps the address field, open a smooth bottom sheet / drawer that slides up over the current screen
+- Keep the user in context on the same screen, similar to Uber / Waymo / DoorDash
+
+Desired interaction:
+1. User taps address field
+2. A bottom sheet opens immediately with smooth animation
+3. Inside the sheet, show:
+   - address search input
+   - use current location
+   - recent/saved addresses
+   - optional home/work/other shortcuts
+4. User selects or enters location
+5. Sheet closes smoothly
+6. Selected address updates instantly on the main screen
+7. User continues naturally without feeling like they left the screen
+
+Important UX requirements:
+- Open instantly, even if suggestions are still loading
+- No full-page spinner/loading state
+- No unnecessary route change
+- Should feel seamless and lightweight
+- Use polished motion and spacing
+- Make it feel premium and native-app-like
+
+Please refactor this flow to use a bottom sheet/modal pattern instead of a hard page transition.
+
+Also:
+- preload any data needed for recent addresses if possible
+- show skeleton/loading inside the sheet if needed, not on the full screen
+- preserve current screen state behind the sheet
+- make the transition feel like Uber’s location picker, not a traditional form redirect
+
+Please implement the cleanest UX version of this and tell me:
+1. what component/flow you changed
+2. whether you used a bottom sheet, modal, or drawer
+3. whether any routing was removed
+4. what animation/state approach you used

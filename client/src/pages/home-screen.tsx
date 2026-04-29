@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
+import { LocationBottomSheet } from "@/components/location-bottom-sheet";
 
 const ACCENT = "#8c52ff";
 const ACCENT_BG = "#f3eeff";
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
   const [timeOpen, setTimeOpen] = useState(false);
   const [mode, setMode] = useState<"personal" | "fleet">("personal");
+  const [addrSheetOpen, setAddrSheetOpen] = useState(false);
   const timePopRef = useRef<HTMLDivElement | null>(null);
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
@@ -113,6 +115,21 @@ export default function HomeScreen() {
     );
   }
 
+  async function saveAddress(address: string) {
+    try {
+      const token = await getToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ address }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch {}
+  }
+
   const { street, full } = parseAddress(user?.address);
   const lastServiceLocation = bookings && bookings.length > 0 ? bookings[0].serviceLocation : null;
   const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
@@ -166,7 +183,7 @@ export default function HomeScreen() {
         <div className="flex items-center justify-between mb-3">
           {/* Address dropdown trigger */}
           <button
-            onClick={() => setLocation("/booking")}
+            onClick={() => setAddrSheetOpen(true)}
             className="flex items-start gap-1.5 active:opacity-70 transition max-w-[75%] text-left"
           >
             <div className="min-w-0">
@@ -186,11 +203,13 @@ export default function HomeScreen() {
 
         {/* ── Search bar ──────────────────────────────────────────────── */}
         <button
-          onClick={() => setLocation("/booking")}
+          onClick={() => setAddrSheetOpen(true)}
           className="w-full flex items-center gap-3 rounded-2xl bg-[#f7f7f7] border border-[#efefef] px-4 py-3.5 active:bg-[#f0f0f0] transition"
         >
           <Icon icon={Search} size="sm" className="text-[#aaa] shrink-0" />
-          <span className="flex-1 text-left text-[14px] text-[#aaa]">Search address or vehicle location</span>
+          <span className="flex-1 text-left text-[14px] text-[#aaa]">
+            {full ? street : "Search address or vehicle location"}
+          </span>
         </button>
 
         {/* ── Mode row: time chip + Personal/Fleet toggle ──────────────── */}
@@ -264,7 +283,7 @@ export default function HomeScreen() {
         <div className="flex gap-2.5 mt-3 mb-1">
           {/* Home tile */}
           <button
-            onClick={() => setLocation("/booking")}
+            onClick={() => setAddrSheetOpen(true)}
             className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f3eeff]">
@@ -434,6 +453,15 @@ export default function HomeScreen() {
           <Icon icon={ChevronRight} size="sm" className="text-[#aaa]" />
         </button>
       </div>
+
+      {/* ── Location bottom sheet ─────────────────────────────────────── */}
+      <LocationBottomSheet
+        isOpen={addrSheetOpen}
+        onClose={() => setAddrSheetOpen(false)}
+        currentAddress={user?.address}
+        recentAddresses={bookings?.map((b) => b.serviceLocation).filter(Boolean) as string[]}
+        onSelect={saveAddress}
+      />
     </div>
   );
 }
