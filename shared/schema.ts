@@ -30,6 +30,7 @@ export const users = pgTable("users", {
 export const pricingConfig = pgTable("pricing_config", {
   id: serial("id").primaryKey(),
   basic: integer("basic").notNull(),
+  interior: integer("interior").notNull(),
   standard: integer("standard").notNull(),
   premium: integer("premium").notNull(),
   updatedAt: text("updated_at").notNull()

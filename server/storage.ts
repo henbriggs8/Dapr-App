@@ -238,9 +238,10 @@ export class MemStorage implements IStorage {
     // Set default pricing
     this.pricingConfig = {
       id: 1,
-      basic: 30,
-      standard: 55,
-      premium: 175,
+      basic: 39,
+      interior: 89,
+      standard: 149,
+      premium: 299,
       updatedAt: new Date().toISOString()
     };
 
@@ -904,6 +905,18 @@ export class MemStorage implements IStorage {
 
   async updatePricingConfig(config: Omit<PricingConfig, "id">): Promise<PricingConfig> {
     this.pricingConfig = { ...config, id: this.pricingConfig.id };
+    // Sync service prices so customers see the updated prices immediately
+    const categoryPriceMap: Record<string, number> = {
+      basic: config.basic,
+      interior: config.interior,
+      standard: config.standard,
+      premium: config.premium,
+    };
+    for (const [id, service] of Array.from(this.services.entries())) {
+      if (service.category in categoryPriceMap) {
+        this.services.set(id, { ...service, price: categoryPriceMap[service.category] });
+      }
+    }
     return this.pricingConfig;
   }
   
@@ -1597,14 +1610,15 @@ export class DatabaseStorage implements IStorage {
 
   async getPricingConfig(): Promise<PricingConfig> {
     const [config] = await db.select().from(pricingConfig).orderBy(desc(pricingConfig.id)).limit(1);
-    if (!config) {
-      // Create default pricing if none exists
+    if (!config || config.interior == null) {
+      // Create default pricing if none exists or if interior tier is missing (schema migration)
       const [newConfig] = await db
         .insert(pricingConfig)
         .values({
-          basic: 2999,
-          standard: 4999,
-          premium: 7999,
+          basic: config?.basic ?? 39,
+          interior: 89,
+          standard: config?.standard ?? 149,
+          premium: config?.premium ?? 299,
           updatedAt: new Date().toISOString()
         })
         .returning();
@@ -1618,6 +1632,19 @@ export class DatabaseStorage implements IStorage {
       .insert(pricingConfig)
       .values(config)
       .returning();
+    // Sync service prices so customers see the updated prices immediately
+    const categoryPriceMap: Record<string, number> = {
+      basic: config.basic,
+      interior: config.interior,
+      standard: config.standard,
+      premium: config.premium,
+    };
+    for (const [category, price] of Object.entries(categoryPriceMap)) {
+      await db
+        .update(services)
+        .set({ price })
+        .where(eq(services.category, category));
+    }
     return updatedConfig;
   }
 

@@ -35,6 +35,7 @@ export default function ProviderCard({ provider }: { provider: User }) {
           <div className="space-y-4">
             <PriceTier
               basic={pricing.basic}
+              interior={pricing.interior}
               standard={pricing.standard}
               premium={pricing.premium}
             />

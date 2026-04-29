@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Booking } from "@shared/schema";
+import { User, Booking, PricingConfig } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,8 @@ import {
   CheckCircle2,
   Zap,
   RefreshCw,
-  Car
+  Car,
+  Tag
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Enhanced types for admin dashboard
 interface AdminBooking extends Booking {
@@ -212,6 +213,35 @@ export default function AdminDashboard() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  // Pricing state and mutation
+  const { data: pricingData } = useQuery<PricingConfig>({
+    queryKey: ["/api/pricing"],
+  });
+  const [pricingForm, setPricingForm] = useState({ basic: "", interior: "", standard: "", premium: "" });
+  useEffect(() => {
+    if (pricingData) {
+      setPricingForm({
+        basic: String(pricingData.basic),
+        interior: String(pricingData.interior),
+        standard: String(pricingData.standard),
+        premium: String(pricingData.premium),
+      });
+    }
+  }, [pricingData]);
+  const updatePricingMutation = useMutation({
+    mutationFn: async (values: { basic: number; interior: number; standard: number; premium: number }) => {
+      const res = await apiRequest("PATCH", "/api/admin/pricing", values);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pricing"] });
+      toast({ title: "Prices updated", description: "All four tier prices have been saved." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update prices", description: error.message, variant: "destructive" });
     },
   });
 
@@ -447,7 +477,7 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="dispatch" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dispatch" className="flex items-center gap-2">
               <Icon icon={Radio} size="sm" />
               Dispatch
@@ -467,6 +497,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <Icon icon={BarChart3} size="sm" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <Icon icon={Tag} size="sm" />
+              Pricing
             </TabsTrigger>
           </TabsList>
 
@@ -925,6 +959,60 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Service Tier Prices</CardTitle>
+                <CardDescription>
+                  Update the base price for each of the four service tiers. Changes apply immediately to new bookings and are visible to customers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {[
+                    { key: "basic" as const, label: "Essential Wash", desc: "Hand wash, spray wax, vacuum, quick interior wipe-down" },
+                    { key: "interior" as const, label: "Interior Detail", desc: "Full vacuum, surface cleaning, seat cleaning, light stain treatment" },
+                    { key: "standard" as const, label: "Refresh Detail", desc: "Complete interior/exterior refresh with upgraded wheels and tire shine" },
+                    { key: "premium" as const, label: "Dapper Black Label Detail", desc: "Showroom-finish results with our most thorough interior and exterior work" },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key} className="space-y-2">
+                      <label className="text-sm font-semibold">{label}</label>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium">$</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={pricingForm[key]}
+                          onChange={(e) => setPricingForm(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder="0"
+                          className="max-w-[140px]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  disabled={updatePricingMutation.isPending}
+                  onClick={() => {
+                    const basic = parseInt(pricingForm.basic);
+                    const interior = parseInt(pricingForm.interior);
+                    const standard = parseInt(pricingForm.standard);
+                    const premium = parseInt(pricingForm.premium);
+                    if ([basic, interior, standard, premium].some(v => isNaN(v) || v < 1)) {
+                      toast({ title: "Invalid prices", description: "All prices must be positive numbers.", variant: "destructive" });
+                      return;
+                    }
+                    updatePricingMutation.mutate({ basic, interior, standard, premium });
+                  }}
+                >
+                  {updatePricingMutation.isPending ? "Saving…" : "Save Prices"}
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
