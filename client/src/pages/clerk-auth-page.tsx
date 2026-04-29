@@ -675,22 +675,43 @@ function AuthFlow() {
   const { isSignedIn, getToken } = useClerkAuth();
   const { user: localUser } = useAuth();
 
+  // syncError drives the error state on the loading screen (never infinite)
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  // Log every time isSignedIn changes
+  useEffect(() => {
+    console.log(`[Auth] isSignedIn changed to ${isSignedIn}`);
+  }, [isSignedIn]);
+
   // After Clerk marks the session active, the /api/user TanStack query has
   // staleTime:Infinity and won't refetch on its own. We call clerk-sync here
   // which creates the local user if needed, then push it straight into the
   // cache so the loading screen unblocks immediately.
   //
-  // On iOS the JWT is not always ready the instant isSignedIn flips to true —
-  // poll for up to ~6 s before giving up.
+  // Hard 15-second timeout ensures the loading screen is never infinite.
   useEffect(() => {
     if (!isSignedIn || localUser) return;
+    console.log('[Auth] isSignedIn=true and no localUser — starting sync');
+    setSyncError(null);
     let cancelled = false;
 
+    const hardTimeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true;
+        console.log('[Auth] loading screen timeout/failure path triggered (15 s)');
+        setSyncError('Account setup timed out. Please check your connection and try again.');
+      }
+    }, 15000);
+
     const sync = async () => {
-      // Poll until the Clerk SDK has a token (up to 20 × 300 ms = 6 s)
+      // Poll until Clerk SDK has a token (up to 20 × 300 ms = 6 s)
       let token: string | null = null;
       for (let i = 0; i < 20 && !cancelled; i++) {
-        try { token = await getToken(); } catch {}
+        console.log(`[Auth] getToken attempt #${i + 1}`);
+        try { token = await getToken(); } catch (e) {
+          console.log(`[Auth] getToken threw:`, String(e));
+        }
+        console.log(`[Auth] getToken resolved with ${token ? 'token (' + token.slice(0, 20) + '…)' : 'null'}`);
         if (token) break;
         await new Promise<void>(r => setTimeout(r, 300));
       }
@@ -699,30 +720,61 @@ function AuthFlow() {
 
       if (token) {
         try {
-          const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
+          const syncUrl = resolveUrl('/api/auth/clerk-sync');
+          console.log(`[Auth] calling ${syncUrl}`);
+          const syncRes = await fetch(syncUrl, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             credentials: 'include',
           });
-          if (res.ok && !cancelled) {
-            const user = await res.json();
-            queryClient.setQueryData(['/api/user'], user);
+          const syncBody = await syncRes.text();
+          console.log(`[Auth] /api/auth/clerk-sync response status=${syncRes.status} body=${syncBody}`);
+          if (syncRes.ok && !cancelled) {
+            clearTimeout(hardTimeout);
+            queryClient.setQueryData(['/api/user'], JSON.parse(syncBody));
+            console.log('[Auth] localUser set from clerk-sync — loading screen exit triggered');
             return;
           }
+          // Non-OK from clerk-sync — fall through to /api/user direct call
         } catch (e) {
-          console.error('[clerk-sync]', e);
+          console.log(`[Auth] /api/auth/clerk-sync threw: ${String(e)}`);
         }
       }
 
-      // Fallback: invalidate the cache so TanStack re-runs /api/user with
-      // whatever auth headers are available at that point.
-      if (!cancelled) {
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      if (cancelled) return;
+
+      // Fallback: direct GET /api/user with whatever auth we have
+      try {
+        const userUrl = resolveUrl('/api/user');
+        console.log(`[Auth] /api/user request fired (fallback) — ${userUrl}`);
+        const userRes = await fetch(userUrl, {
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const userBody = await userRes.text();
+        console.log(`[Auth] /api/user response status=${userRes.status} body=${userBody}`);
+        if (userRes.ok && !cancelled) {
+          clearTimeout(hardTimeout);
+          queryClient.setQueryData(['/api/user'], JSON.parse(userBody));
+          console.log('[Auth] localUser set from /api/user fallback — loading screen exit triggered');
+          return;
+        }
+      } catch (e) {
+        console.log(`[Auth] /api/user threw: ${String(e)}`);
       }
+
+      if (cancelled) return;
+
+      // Last-resort: let TanStack re-run the query itself
+      console.log('[Auth] invalidating /api/user query (last resort)');
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     };
 
     sync();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(hardTimeout);
+    };
   }, [isSignedIn, localUser]);
 
   const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
@@ -763,10 +815,29 @@ function AuthFlow() {
   // Navigate to redirect destination (or home) once local user is synced.
   // Must be in effect, not render.
   useEffect(() => {
-    if (localUser) navigate(postAuthDest);
+    if (localUser) {
+      console.log('[Auth] loading screen exit triggered — navigating to', postAuthDest);
+      navigate(postAuthDest);
+    }
   }, [localUser]);
 
   if (isSignedIn && !localUser) {
+    if (syncError) {
+      return (
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 px-8">
+          <p className="text-sm text-red-500 text-center">{syncError}</p>
+          <button
+            className="px-4 py-2 rounded-lg bg-[#8c52ff] text-white text-sm font-medium"
+            onClick={() => {
+              console.log('[Auth] user tapped retry — reloading');
+              window.location.reload();
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
         <div className="w-5 h-5 rounded-full border-2 border-[#8c52ff] border-t-transparent animate-spin mb-3" />
@@ -912,14 +983,18 @@ function AuthFlow() {
   const handlePasswordNext = async () => {
     setError('');
     setLoading(true);
+    console.log('[Auth] password submit started');
     try {
       const result = await signIn!.attemptFirstFactor({
         strategy: 'password',
         password,
       });
+      console.log(`[Auth] Clerk sign-in result status=${result.status}`);
 
       if (result.status === 'complete') {
+        console.log('[Auth] Clerk sign-in success — calling setSignInActive');
         await setSignInActive!({ session: result.createdSessionId });
+        console.log('[Auth] setSignInActive resolved — setting step to welcome');
         setStep('welcome');
       } else if (result.status === 'needs_second_factor') {
         // Prepare phone second factor
