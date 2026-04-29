@@ -22,6 +22,7 @@ import BookingDetails from "@/pages/booking-details";
 import BookingConfirmation from "@/pages/booking-confirmation";
 import ServiceProgress from "@/pages/service-progress";
 import PaymentSuccessPage from "@/pages/payment-success";
+import MatchingScreen from "@/pages/matching-screen";
 import PostServiceReview from "@/pages/post-service-review";
 import AdminDashboard from "@/pages/admin-dashboard";
 import ProviderDashboard from "@/pages/provider-dashboard";
@@ -158,6 +159,7 @@ function Router() {
         <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
         <ProtectedRoute path="/service-progress" component={ServiceProgress} />
         <ProtectedRoute path="/tracking" component={TrackingPage} />
+        <ProtectedRoute path="/matching" component={MatchingScreen} />
         <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
         <ProtectedRoute path="/review/:bookingId" component={PostServiceReview} />
         
@@ -286,8 +288,8 @@ function DeepLinkHandler() {
               try { await Browser.close(); } catch {}
               try { sessionStorage.removeItem("pendingPaymentBookingId"); } catch {}
               if (bookingId) {
-                console.log("[Payment] navigating to Track for bookingId=", bookingId);
-                window.history.pushState({}, "", `/tracking?booking=${bookingId}`);
+                console.log("[Payment] navigating to Matching for bookingId=", bookingId);
+                window.history.pushState({}, "", `/matching?booking=${bookingId}`);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
             } else if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {

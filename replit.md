@@ -28,7 +28,8 @@ Preferred communication style: Simple, everyday language.
 - **B2B (Fleets) Page**: A dedicated desktop-only page for corporate clients featuring a live pricing estimator and quote forms.
 - **iOS In-App Payment**: Integrates Square checkout within the app via Capacitor Browser, with deep-linking for post-payment navigation.
 - **Profile Page**: Redesigned with avatar, stats row (bookings, vehicles, avg rating), and four tabs — Profile, Vehicles, Bookings, and Settings. Settings tab includes notification toggles, account management links, Privacy Policy navigation, and a Delete Account flow (requires typing "DELETE" to confirm). Backend `DELETE /api/user` endpoint added.
-- **Privacy Policy**: Full legal privacy policy at `/privacy` (public route, no auth required). Accessible from profile Settings tab. Content covers data collection, usage, sharing, third-party services, California privacy rights, and contact info.
+- **Privacy Policy**: Full legal privacy policy at `/privacy`
+- **Post-Payment Matching Flow**: After Square checkout, `payment-success.tsx` fires a deep link on iOS (or navigates in-app on web) to `/matching`. The matching screen (`/matching`) polls the booking every 3 s and navigates to `/tracking` once a provider accepts (`status === assigned`). Deep link `com.autodapper.app://payment-success?bookingId=X` is handled by `DeepLinkHandler` in `App.tsx` which closes the in-app browser and routes to `/matching`.
 
 ## External Dependencies
 - **Database**: PostgreSQL (hosted on Neon Database) with Drizzle ORM.

@@ -1,0 +1,77 @@
+Here is my honest feedback on the latest version.
+
+Overall:
+- The UI looks a lot better
+- There are still some minor polish fixes we can review later
+- The biggest issue right now is the post-payment experience
+
+Main problem:
+After someone submits payment, they stay on the web browser / payment page instead of being brought clearly back into the app. A customer would be confused and not know whether payment actually went through.
+
+What I want instead:
+1. As soon as payment is successfully submitted, the user should be redirected back into the Dapr app automatically
+2. The in-app browser / payment page should close
+3. The user should never be left sitting on the payment confirmation webpage wondering what happened
+
+Desired post-payment flow:
+1. User completes payment
+2. App immediately returns them into Dapr
+3. Show an Uber-like full-screen loading / matching state
+4. That loading screen should communicate:
+   - payment received
+   - we are now connecting you with a nearby detailer
+5. Once a detailer accepts, transition to the live tracking screen
+6. Tracking screen should show:
+   - assigned detailer
+   - ETA / how far away they are
+   - booking status
+   - any relevant next-step info
+
+I want the transition to feel smooth and confidence-inspiring, not confusing.
+
+Please implement this flow:
+
+Payment success state:
+- Detect successful payment completion
+- Close the payment browser immediately
+- Deep link or route back into the app
+- Do not leave the user on the hosted web page
+- Do not send them to login
+- Do not leave them on the booking form
+
+After returning to app:
+- Show a dedicated full-screen “finding your Detail Pro” / “connecting you with someone nearby” screen
+- This should feel similar to Uber matching for a driver
+- Good microcopy examples:
+  - “Payment confirmed”
+  - “Finding a Detail Pro near you”
+  - “Connecting you with the nearest available pro”
+- Add subtle loading animation / premium motion if possible
+
+Once matched:
+- Automatically route to the tracking screen for that booking
+- Tracking screen should show how far away the detailer is / ETA
+- The user should feel certain the booking is active and progressing
+
+Important:
+- The payment success flow needs to carry the booking/job ID through the redirect
+- The matching/loading screen should be attached to that booking
+- Once the provider accepts, navigate to the correct track screen for that exact booking
+- If matching takes time, keep the user on the loading screen with clear status updates
+- If no provider is found yet, show a reassuring waiting state instead of an error-looking blank page
+
+Please also think through the backend/state flow:
+- payment success
+- booking marked paid
+- booking enters matching state
+- provider assigned
+- booking enters tracking state
+
+I want this to feel like:
+Book → Pay → Return to app → Matching screen → Detailer accepted → Live tracking
+
+Please implement the cleanest version of that flow and tell me:
+1. what frontend changes you made
+2. what backend/state changes were required
+3. what event triggers the redirect from payment back into app
+4. what event moves the user from matching to tracking
