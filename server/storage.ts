@@ -1610,19 +1610,21 @@ export class DatabaseStorage implements IStorage {
 
   async getPricingConfig(): Promise<PricingConfig> {
     const [config] = await db.select().from(pricingConfig).orderBy(desc(pricingConfig.id)).limit(1);
-    if (!config || config.interior == null) {
-      // Create default pricing if none exists or if interior tier is missing (schema migration)
+    if (!config) {
       const [newConfig] = await db
         .insert(pricingConfig)
-        .values({
-          basic: config?.basic ?? 39,
-          interior: 89,
-          standard: config?.standard ?? 149,
-          premium: config?.premium ?? 299,
-          updatedAt: new Date().toISOString()
-        })
+        .values({ basic: 39, interior: 89, standard: 149, premium: 299, updatedAt: new Date().toISOString() })
         .returning();
       return newConfig;
+    }
+    if (config.interior == null) {
+      // Backfill interior on existing row rather than inserting a duplicate
+      const [updated] = await db
+        .update(pricingConfig)
+        .set({ interior: 89, updatedAt: new Date().toISOString() })
+        .where(eq(pricingConfig.id, config.id))
+        .returning();
+      return updated;
     }
     return config;
   }
