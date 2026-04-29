@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, Navigation, Clock, Home, X, Loader2,
   ArrowLeft, ChevronRight, Droplets, Sparkles, Wand2, Crown,
-  Check, CheckCircle2, type LucideIcon,
+  Check, CheckCircle2, Gift, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -451,9 +452,26 @@ function ConfirmStep({
 }) {
   const { getToken } = useClerkAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [arrivalId, setArrivalId] = useState("asap");
+  const [useFreeCredit, setUseFreeCredit] = useState(false);
   const windows = getArrivalWindows();
   const [addrLine1, ...addrRest] = address.split(", ");
+
+  const { data: referralInfo } = useQuery<{ credits: number }>({
+    queryKey: ["/api/referral/my-code"],
+    queryFn: async () => {
+      const token = await getToken().catch(() => null);
+      const res = await fetch(resolveUrl("/api/referral/my-code"), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) return { credits: 0 };
+      return res.json();
+    },
+  });
+
+  const availableCredits = referralInfo?.credits ?? 0;
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -493,28 +511,33 @@ function ConfirmStep({
       }
       const booking = await bookingRes.json();
 
-      // 3. Create payment
+      // 3. Create payment (or redeem free wash credit)
       const payRes = await fetch(resolveUrl(`/api/bookings/${booking.id}/create-payment`), {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({}),
+        body: JSON.stringify(useFreeCredit ? { useFreeWashCredit: true } : {}),
       });
       if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
-      const payData = await payRes.json() as { paymentUrl: string };
-      if (!payData.paymentUrl) throw new Error("Missing payment URL.");
+      const payData = await payRes.json() as { paymentUrl: string | null; free?: boolean };
 
       try { sessionStorage.setItem("pendingPaymentBookingId", String(booking.id)); } catch {}
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
 
-      return payData.paymentUrl;
+      return payData;
     },
-    onSuccess: async (paymentUrl) => {
+    onSuccess: async (payData) => {
       onBooked();
+      if (payData.free) {
+        setLocation("/matching");
+        return;
+      }
+      if (!payData.paymentUrl) throw new Error("Missing payment URL.");
       if (Capacitor.isNativePlatform()) {
-        try { await Browser.open({ url: paymentUrl }); } catch { window.open(paymentUrl, "_blank"); }
+        try { await Browser.open({ url: payData.paymentUrl }); } catch { window.open(payData.paymentUrl, "_blank"); }
       } else {
-        window.location.href = paymentUrl;
+        window.location.href = payData.paymentUrl;
       }
     },
   });
@@ -592,6 +615,33 @@ function ConfirmStep({
           </div>
         </div>
 
+        {/* Free wash credit toggle */}
+        {availableCredits > 0 && (
+          <button
+            onClick={() => setUseFreeCredit((v) => !v)}
+            className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition border ${
+              useFreeCredit ? "bg-[#f0fdf4] border-[#86efac]" : "bg-gray-50 border-transparent active:bg-gray-100"
+            }`}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: useFreeCredit ? "#dcfce7" : "#f3eeff" }}
+            >
+              <Icon icon={Gift} size="sm" style={{ color: useFreeCredit ? "#16a34a" : ACCENT }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-gray-900">Use 1 free wash credit</p>
+              <p className="text-[12px] text-gray-400">You have {availableCredits} credit{availableCredits !== 1 ? "s" : ""} — this wash is on us</p>
+            </div>
+            <div
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition`}
+              style={useFreeCredit ? { borderColor: "#16a34a", backgroundColor: "#16a34a" } : { borderColor: "#d1d5db" }}
+            >
+              {useFreeCredit && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
+        )}
+
         {/* Error */}
         {mutation.isError && (
           <div className="rounded-xl bg-red-50 px-4 py-3">
@@ -606,15 +656,25 @@ function ConfirmStep({
       <div className="px-4 pt-3 pb-4 border-t border-gray-100 shrink-0">
         <div className="flex items-center justify-between mb-3 px-1">
           <p className="text-[13px] text-gray-500">Total</p>
-          <p className="text-[17px] font-bold text-gray-900">${service.price}</p>
+          {useFreeCredit ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] text-gray-400 line-through">${service.price}</span>
+              <span className="text-[17px] font-bold text-[#16a34a]">Free</span>
+            </div>
+          ) : (
+            <p className="text-[17px] font-bold text-gray-900">${service.price}</p>
+          )}
         </div>
         <button
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending}
-          className="w-full py-4 rounded-2xl bg-[#8c52ff] text-white text-[15px] font-bold flex items-center justify-center gap-2 active:bg-[#7b3ff5] transition disabled:opacity-60"
+          className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
+          style={{ background: useFreeCredit ? "#16a34a" : "#8c52ff" }}
         >
           {mutation.isPending ? (
-            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> Setting up payment…</>
+            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> {useFreeCredit ? "Redeeming…" : "Setting up payment…"}</>
+          ) : useFreeCredit ? (
+            <><Icon icon={Gift} size="sm" className="text-white" /> Redeem Free Wash</>
           ) : (
             <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Book &amp; Pay</>
           )}

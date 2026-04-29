@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, referrals, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto, Referral } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -186,6 +186,13 @@ export interface IStorage {
   // Clerk-Square mapping methods
   getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined>;
   createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping>;
+
+  // Referral methods
+  getUserByReferralCode(code: string): Promise<User | undefined>;
+  applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }>;
+  getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }>;
+  consumeFreeWashCredit(userId: number): Promise<boolean>;
+  creditReferrerForCompletedBooking(referredUserId: number): Promise<void>;
 
   // Booking photo methods
   addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto>;
@@ -383,6 +390,9 @@ export class MemStorage implements IStorage {
       isProvider: insertUser.isProvider || false,
       isAdmin: insertUser.isAdmin || false,
       birthday: (insertUser as any).birthday ?? null,
+      referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+      freeWashCredits: 0,
+      referredByCode: null,
     };
     this.users.set(id, user);
     return user;
@@ -1452,6 +1462,12 @@ export class MemStorage implements IStorage {
   async deleteBookingPhoto(photoId: number): Promise<void> {
     throw new Error("deleteBookingPhoto not implemented in MemStorage");
   }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> { throw new Error("Not implemented in MemStorage"); }
+  async applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }> { throw new Error("Not implemented in MemStorage"); }
+  async getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }> { throw new Error("Not implemented in MemStorage"); }
+  async consumeFreeWashCredit(userId: number): Promise<boolean> { throw new Error("Not implemented in MemStorage"); }
+  async creditReferrerForCompletedBooking(referredUserId: number): Promise<void> { throw new Error("Not implemented in MemStorage"); }
 }
 
 
@@ -1480,13 +1496,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Only hash if not already hashed (auth route may have already hashed it)
     const passwordToStore = insertUser.password.includes('.')
       ? insertUser.password
       : await hashPassword(insertUser.password);
+    const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const [user] = await db
       .insert(users)
-      .values({ ...insertUser, password: passwordToStore })
+      .values({ ...insertUser, password: passwordToStore, referralCode })
       .returning();
     return user;
   }
@@ -2398,6 +2414,62 @@ export class DatabaseStorage implements IStorage {
         );
       }
     }
+  }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.referralCode, code.toUpperCase()));
+    return user;
+  }
+
+  async applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }> {
+    const newUser = await db.select().from(users).where(eq(users.id, newUserId)).then(r => r[0]);
+    if (!newUser) return { success: false, message: 'User not found.' };
+    if (newUser.referredByCode) return { success: false, message: 'You have already applied a referral code.' };
+
+    const referrer = await this.getUserByReferralCode(code);
+    if (!referrer) return { success: false, message: 'Referral code not found.' };
+    if (referrer.id === newUserId) return { success: false, message: 'You cannot use your own referral code.' };
+
+    await db.update(users).set({ referredByCode: code.toUpperCase(), freeWashCredits: (newUser.freeWashCredits ?? 0) + 1 }).where(eq(users.id, newUserId));
+    await db.insert(referrals).values({ referrerId: referrer.id, referredUserId: newUserId, referrerCredited: false, createdAt: new Date().toISOString() });
+
+    return { success: true, message: '1 free wash credit added to your account!' };
+  }
+
+  async getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return { code: '', credits: 0, referralCount: 0, pendingCredits: 0 };
+
+    const allReferrals = await db.select().from(referrals).where(eq(referrals.referrerId, userId));
+    const credited = allReferrals.filter(r => r.referrerCredited).length;
+    const pending = allReferrals.filter(r => !r.referrerCredited).length;
+
+    return {
+      code: user.referralCode ?? '',
+      credits: user.freeWashCredits ?? 0,
+      referralCount: credited,
+      pendingCredits: pending,
+    };
+  }
+
+  async consumeFreeWashCredit(userId: number): Promise<boolean> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || (user.freeWashCredits ?? 0) < 1) return false;
+    await db.update(users).set({ freeWashCredits: (user.freeWashCredits ?? 1) - 1 }).where(eq(users.id, userId));
+    return true;
+  }
+
+  async creditReferrerForCompletedBooking(referredUserId: number): Promise<void> {
+    const [referral] = await db.select().from(referrals).where(
+      and(eq(referrals.referredUserId, referredUserId), eq(referrals.referrerCredited, false))
+    );
+    if (!referral) return;
+
+    const [referrer] = await db.select().from(users).where(eq(users.id, referral.referrerId));
+    if (!referrer) return;
+
+    await db.update(users).set({ freeWashCredits: (referrer.freeWashCredits ?? 0) + 1 }).where(eq(users.id, referral.referrerId));
+    await db.update(referrals).set({ referrerCredited: true }).where(eq(referrals.id, referral.id));
   }
 }
 

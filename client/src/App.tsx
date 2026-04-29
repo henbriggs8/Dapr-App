@@ -15,6 +15,7 @@ import OnboardingNameScreen from "@/pages/onboarding-name-screen";
 import AddressScreen from "@/pages/address-screen";
 import CarProfileScreen from "@/pages/car-profile-screen";
 import FirstWashOffer from "@/pages/first-wash-offer";
+import ReferralPage from "@/pages/referral";
 import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
 import ActivityPage from "@/pages/activity-page";
@@ -137,6 +138,7 @@ function Router() {
         <Route path="/onboarding/address" component={AddressScreen} />
         <Route path="/onboarding/car-profile" component={CarProfileScreen} />
         <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
+        <Route path="/referral" component={ReferralPage} />
         <Route path="/how-it-works" component={HowItWorks} />
         <Route path="/interior-cleaning" component={InteriorCleaning} />
         <Route path="/exterior-cleaning" component={ExteriorCleaning} />

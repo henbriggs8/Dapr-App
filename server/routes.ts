@@ -1222,6 +1222,17 @@ export function registerRoutes(app: Express): Server {
         }
       }
       
+      // Credit the referrer if this is the customer's first completed booking
+      try {
+        const customerBookings = await storage.getUserBookings(booking.userId);
+        const completedCount = customerBookings.filter(b => b.status === 'completed' && b.isPaid).length;
+        if (completedCount === 1) {
+          await storage.creditReferrerForCompletedBooking(booking.userId);
+        }
+      } catch (e) {
+        console.error('Referral credit error:', e);
+      }
+
       res.json(booking);
     } catch (error) {
       res.status(404).send(error instanceof Error ? error.message : 'Booking not found or timer not started');
@@ -1274,6 +1285,20 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Booking is already paid');
       }
       
+      // Handle free wash credit redemption
+      if (req.body.useFreeWashCredit) {
+        const consumed = await storage.consumeFreeWashCredit(req.user.id);
+        if (!consumed) {
+          return res.status(400).json({ error: 'No free wash credits available.' });
+        }
+        await storage.updateBookingPaymentInfo(booking.id, {
+          isPaid: true,
+          paymentStatus: 'completed',
+          paymentDate: new Date().toISOString(),
+        });
+        return res.json({ paymentUrl: null, free: true });
+      }
+
       // Auto-link Clerk users to Square before payment
       if (req.user.username.startsWith('clerk_')) {
         const clerkUserId = req.user.username.substring(6); // Remove 'clerk_' prefix
@@ -2071,6 +2096,43 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Link Square error:', error);
       res.status(500).json({ error: 'Failed to link Square customer' });
+    }
+  });
+
+  // ── Referral routes ──────────────────────────────────────────────────────
+  app.get('/api/referral/my-code', async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const info = await storage.getReferralInfo(req.user.id);
+      res.json(info);
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to get referral info' });
+    }
+  });
+
+  app.post('/api/referral/apply', async (req, res) => {
+    if (!req.user) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.substring(7);
+          const { clerkClient: cc } = await import('@clerk/clerk-sdk-node');
+          const verified = await cc.verifyToken(token);
+          if (verified?.sub) {
+            const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
+            if (localUser) (req as any).user = localUser;
+          }
+        } catch { /* fall through */ }
+      }
+    }
+    if (!req.user) return res.sendStatus(401);
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Code is required.' });
+    try {
+      const result = await storage.applyReferralCode(req.user.id, code.trim());
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to apply referral code' });
     }
   });
   

@@ -21,7 +21,10 @@ export const users = pgTable("users", {
   description: text("description"),
   profileImage: text("profile_image"),
   currentStatus: text("current_status").default('offline'),
-  lastLocationUpdate: text("last_location_update")
+  lastLocationUpdate: text("last_location_update"),
+  referralCode: text("referral_code").unique(),
+  freeWashCredits: integer("free_wash_credits").default(0),
+  referredByCode: text("referred_by_code")
 });
 
 export const pricingConfig = pgTable("pricing_config", {
@@ -146,6 +149,14 @@ export const clerkSquareMapping = pgTable("clerk_square_mapping", {
   createdAt: text("created_at").notNull()
 });
 
+export const referrals = pgTable("referrals", {
+  id: serial("id").primaryKey(),
+  referrerId: integer("referrer_id").notNull(),
+  referredUserId: integer("referred_user_id").notNull().unique(),
+  referrerCredited: boolean("referrer_credited").notNull().default(false),
+  createdAt: text("created_at").notNull()
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
@@ -257,3 +268,6 @@ export type ClerkSquareMapping = typeof clerkSquareMapping.$inferSelect;
 export type InsertClerkSquareMapping = z.infer<typeof insertClerkSquareMappingSchema>;
 export type BookingPhoto = typeof bookingPhotos.$inferSelect;
 export type InsertBookingPhoto = z.infer<typeof insertBookingPhotoSchema>;
+export const insertReferralSchema = createInsertSchema(referrals).omit({ id: true });
+export type Referral = typeof referrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
