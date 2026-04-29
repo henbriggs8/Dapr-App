@@ -10,11 +10,18 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
+  Send,
+  CheckCircle2,
+  MessageSquare,
+  Phone,
   type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const dapprLogo = "/dapr-logo.svg";
 
@@ -156,6 +163,28 @@ function DesktopFAQ() {
   const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [openId, setOpenId] = useState<string | null>("pricing-0");
+  const { toast } = useToast();
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [lastRequestedCallback, setLastRequestedCallback] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", requestCallback: false });
+
+  const contactMutation = useMutation({
+    mutationFn: (data: typeof contactForm) => apiRequest("POST", "/api/contact", data),
+    onSuccess: (_data, variables) => {
+      setLastRequestedCallback(variables.requestCallback);
+      setContactSubmitted(true);
+      setContactForm({ name: "", email: "", message: "", requestCallback: false });
+    },
+    onError: () => {
+      toast({ title: "Something went wrong", description: "Please try again in a moment.", variant: "destructive" });
+    },
+  });
+
+  function handleContactSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.message) return;
+    contactMutation.mutate(contactForm);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -337,33 +366,138 @@ function DesktopFAQ() {
         </div>
       </section>
 
-      {/* Still curious */}
+      {/* Still need help / Contact support */}
       <section className="py-24 border-t border-white/5 bg-[#070707]">
-        <div className="max-w-[1120px] mx-auto px-8 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center mx-auto mb-6">
-            <Icon icon={Sparkles} size="lg" />
-          </div>
-          <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-4">
-            Still curious?
-          </h2>
-          <p className="text-white/60 max-w-xl mx-auto mb-10">
-            See exactly what's included in each tier or walk through the full customer journey.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <button
-              onClick={() => setLocation("/services")}
-              className="bg-[#8c52ff] text-white px-7 py-3.5 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 shadow-[0_0_30px_-10px_#8c52ff]"
-              data-testid="button-see-services"
-            >
-              See all services <Icon icon={ArrowRight} size="sm" />
-            </button>
-            <button
-              onClick={() => setLocation("/how-it-works")}
-              className="text-white/70 hover:text-white px-6 py-3.5 rounded-full text-sm font-semibold border border-white/10 hover:border-white/20 transition-colors"
-              data-testid="button-how-it-works"
-            >
-              How it works
-            </button>
+        <div className="max-w-[1120px] mx-auto px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-start">
+            {/* Left: copy */}
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center mb-6">
+                <Icon icon={MessageSquare} size="lg" />
+              </div>
+              <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-4">
+                Still need help?
+              </h2>
+              <p className="text-white/60 text-lg leading-relaxed mb-8">
+                Didn't find what you were looking for? Send us a message and we'll get back to you, or check a box to request a callback.
+              </p>
+              <div className="flex flex-col gap-4 mb-10">
+                <div className="flex items-center gap-3 text-white/50 text-sm">
+                  <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] shrink-0" />
+                  Usually responds within a few hours
+                </div>
+                <div className="flex items-center gap-3 text-white/50 text-sm">
+                  <Icon icon={Phone} size="sm" className="text-[#8c52ff] shrink-0" />
+                  We can call you back if you prefer
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4 pt-2 border-t border-white/5">
+                <button
+                  onClick={() => setLocation("/services")}
+                  className="text-white/50 hover:text-white text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+                  data-testid="button-see-services"
+                >
+                  See all services <Icon icon={ArrowRight} size="sm" />
+                </button>
+                <button
+                  onClick={() => setLocation("/how-it-works")}
+                  className="text-white/50 hover:text-white text-sm font-semibold transition-colors"
+                  data-testid="button-how-it-works"
+                >
+                  How it works
+                </button>
+              </div>
+            </div>
+
+            {/* Right: form */}
+            <div className="rounded-2xl border border-white/8 bg-white/3 p-8">
+              {contactSubmitted ? (
+                <div className="flex flex-col items-center justify-center text-center py-10 gap-4">
+                  <div className="w-14 h-14 rounded-full bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center">
+                    <Icon icon={CheckCircle2} size="xl" />
+                  </div>
+                  <h3 className="text-xl font-bold">Message sent!</h3>
+                  <p className="text-white/60 text-sm max-w-xs">
+                    We received your message and will follow up soon.{" "}
+                    {lastRequestedCallback ? "Expect a call from us." : ""}
+                  </p>
+                  <button
+                    onClick={() => setContactSubmitted(false)}
+                    className="mt-2 text-[#8c52ff] text-sm font-semibold hover:underline"
+                  >
+                    Send another message
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="flex flex-col gap-5">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        Your name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Jane Smith"
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm((f) => ({ ...f, name: e.target.value }))}
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors"
+                        data-testid="contact-name"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        Email address
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="jane@example.com"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors"
+                        data-testid="contact-email"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                      Your message
+                    </label>
+                    <textarea
+                      required
+                      minLength={10}
+                      rows={4}
+                      placeholder="What can we help you with?"
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm((f) => ({ ...f, message: e.target.value }))}
+                      className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors resize-none"
+                      data-testid="contact-message"
+                    />
+                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer group" data-testid="contact-callback-label">
+                    <input
+                      type="checkbox"
+                      checked={contactForm.requestCallback}
+                      onChange={(e) => setContactForm((f) => ({ ...f, requestCallback: e.target.checked }))}
+                      className="w-4 h-4 accent-[#8c52ff] cursor-pointer"
+                      data-testid="contact-callback"
+                    />
+                    <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
+                      I'd prefer a callback — please call me instead of emailing
+                    </span>
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={contactMutation.isPending}
+                    className="bg-[#8c52ff] text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 inline-flex items-center justify-center gap-2 shadow-[0_0_30px_-10px_#8c52ff] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                    data-testid="contact-submit"
+                  >
+                    {contactMutation.isPending ? "Sending…" : <><Icon icon={Send} size="sm" /> Send message</>}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -409,6 +543,28 @@ function DesktopFAQ() {
 function MobileFAQ() {
   const [, setLocation] = useLocation();
   const [openId, setOpenId] = useState<string | null>("pricing-0");
+  const { toast } = useToast();
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [lastRequestedCallback, setLastRequestedCallback] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", requestCallback: false });
+
+  const contactMutation = useMutation({
+    mutationFn: (data: typeof contactForm) => apiRequest("POST", "/api/contact", data),
+    onSuccess: (_data, variables) => {
+      setLastRequestedCallback(variables.requestCallback);
+      setContactSubmitted(true);
+      setContactForm({ name: "", email: "", message: "", requestCallback: false });
+    },
+    onError: () => {
+      toast({ title: "Something went wrong", description: "Please try again in a moment.", variant: "destructive" });
+    },
+  });
+
+  function handleContactSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.message) return;
+    contactMutation.mutate(contactForm);
+  }
 
   return (
     <div
@@ -530,6 +686,88 @@ function MobileFAQ() {
             >
               How it works
             </button>
+          </div>
+        </div>
+
+        {/* Contact support */}
+        <div className="px-5 pt-8 pb-4">
+          <div className="rounded-2xl border border-[#ededed] p-5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-8 h-8 rounded-xl bg-[#f4f0ff] text-[#8c52ff] flex items-center justify-center shrink-0">
+                <Icon icon={MessageSquare} size="sm" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-[#111]">Still need help?</p>
+                <p className="text-[11px] text-[#888]">Send us a message — we respond fast</p>
+              </div>
+            </div>
+
+            {contactSubmitted ? (
+              <div className="flex flex-col items-center text-center py-6 gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#f4f0ff] text-[#8c52ff] flex items-center justify-center">
+                  <Icon icon={CheckCircle2} size="lg" />
+                </div>
+                <p className="text-[14px] font-semibold text-[#111]">Message sent!</p>
+                <p className="text-[12px] text-[#666]">
+                  We'll be in touch soon.{lastRequestedCallback ? " Expect a call from us." : ""}
+                </p>
+                <button
+                  onClick={() => setContactSubmitted(false)}
+                  className="text-[#8c52ff] text-[12px] font-semibold"
+                >
+                  Send another message
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  required
+                  placeholder="Your name"
+                  value={contactForm.name}
+                  onChange={(e) => setContactForm((f) => ({ ...f, name: e.target.value }))}
+                  className="border border-[#ededed] rounded-xl px-4 py-3 text-[13px] text-[#111] placeholder:text-[#bbb] focus:outline-none focus:border-[#8c52ff] transition-colors"
+                  data-testid="mobile-contact-name"
+                />
+                <input
+                  type="email"
+                  required
+                  placeholder="Email address"
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
+                  className="border border-[#ededed] rounded-xl px-4 py-3 text-[13px] text-[#111] placeholder:text-[#bbb] focus:outline-none focus:border-[#8c52ff] transition-colors"
+                  data-testid="mobile-contact-email"
+                />
+                <textarea
+                  required
+                  minLength={10}
+                  rows={3}
+                  placeholder="What can we help you with?"
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm((f) => ({ ...f, message: e.target.value }))}
+                  className="border border-[#ededed] rounded-xl px-4 py-3 text-[13px] text-[#111] placeholder:text-[#bbb] focus:outline-none focus:border-[#8c52ff] transition-colors resize-none"
+                  data-testid="mobile-contact-message"
+                />
+                <label className="flex items-center gap-2.5 cursor-pointer" data-testid="mobile-contact-callback-label">
+                  <input
+                    type="checkbox"
+                    checked={contactForm.requestCallback}
+                    onChange={(e) => setContactForm((f) => ({ ...f, requestCallback: e.target.checked }))}
+                    className="w-4 h-4 accent-[#8c52ff]"
+                    data-testid="mobile-contact-callback"
+                  />
+                  <span className="text-[12px] text-[#666]">Request a callback instead</span>
+                </label>
+                <button
+                  type="submit"
+                  disabled={contactMutation.isPending}
+                  className="bg-[#8c52ff] text-white px-6 py-3 rounded-full text-[13px] font-bold hover:bg-[#7a42e5] transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                  data-testid="mobile-contact-submit"
+                >
+                  {contactMutation.isPending ? "Sending…" : <><Icon icon={Send} size="sm" /> Send message</>}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

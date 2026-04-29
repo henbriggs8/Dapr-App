@@ -303,6 +303,16 @@ function DesktopHowItWorks() {
               See all services
             </button>
           </div>
+          <p className="mt-8 text-sm text-white/40">
+            Still have questions?{" "}
+            <button
+              onClick={() => setLocation("/faq")}
+              className="text-[#8c52ff] hover:underline font-semibold"
+              data-testid="link-faq-contact"
+            >
+              Contact our support team →
+            </button>
+          </p>
         </div>
       </section>
 

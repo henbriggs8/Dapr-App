@@ -4,7 +4,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema } from "@shared/schema";
+import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
 import { ADD_ONS, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
@@ -2133,6 +2133,35 @@ export function registerRoutes(app: Express): Server {
       res.json(result);
     } catch (e) {
       res.status(500).json({ error: 'Failed to apply referral code' });
+    }
+  });
+
+  // Contact support endpoint
+  app.post("/api/contact", async (req, res) => {
+    const parsed = insertContactMessageSchema.safeParse({
+      ...req.body,
+      submittedAt: new Date().toISOString(),
+    });
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    try {
+      const message = await storage.createContactMessage(parsed.data);
+      console.log(`[contact] New support request from ${message.name} <${message.email}> — callback: ${message.requestCallback}`);
+      res.json({ success: true, id: message.id });
+    } catch (error) {
+      console.error("Contact submission error:", error);
+      res.status(500).json({ error: "Failed to save contact message" });
+    }
+  });
+
+  // Admin: get all contact messages
+  app.get("/api/admin/contact-messages", isAdmin, async (req, res) => {
+    try {
+      const messages = await storage.getContactMessages();
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch contact messages" });
     }
   });
   

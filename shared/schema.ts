@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, json, timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -157,6 +157,15 @@ export const referrals = pgTable("referrals", {
   createdAt: text("created_at").notNull()
 });
 
+export const contactMessages = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  requestCallback: boolean("request_callback").notNull().default(false),
+  submittedAt: text("submitted_at").notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
@@ -271,3 +280,11 @@ export type InsertBookingPhoto = z.infer<typeof insertBookingPhotoSchema>;
 export const insertReferralSchema = createInsertSchema(referrals).omit({ id: true });
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true }).extend({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+});
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;

@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, referrals, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto, Referral } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -198,6 +198,10 @@ export interface IStorage {
   addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto>;
   getBookingPhotos(bookingId: number): Promise<BookingPhoto[]>;
   deleteBookingPhoto(photoId: number): Promise<void>;
+
+  // Contact message methods
+  createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessages(): Promise<ContactMessage[]>;
 
   sessionStore: session.Store;
 }
@@ -1468,6 +1472,12 @@ export class MemStorage implements IStorage {
   async getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }> { throw new Error("Not implemented in MemStorage"); }
   async consumeFreeWashCredit(userId: number): Promise<boolean> { throw new Error("Not implemented in MemStorage"); }
   async creditReferrerForCompletedBooking(referredUserId: number): Promise<void> { throw new Error("Not implemented in MemStorage"); }
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    throw new Error("createContactMessage not implemented in MemStorage");
+  }
+  async getContactMessages(): Promise<ContactMessage[]> {
+    throw new Error("getContactMessages not implemented in MemStorage");
+  }
 }
 
 
@@ -2356,6 +2366,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBookingPhoto(photoId: number): Promise<void> {
     await db.delete(bookingPhotos).where(eq(bookingPhotos.id, photoId));
+  }
+
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    const [created] = await db.insert(contactMessages).values(message).returning();
+    return created;
+  }
+
+  async getContactMessages(): Promise<ContactMessage[]> {
+    return db.select().from(contactMessages).orderBy(desc(contactMessages.id));
   }
 
   async initialize(): Promise<void> {
