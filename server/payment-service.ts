@@ -17,14 +17,17 @@ function generateIdempotencyKey(): string {
 export async function createPaymentLink(
   booking: Booking,
   service: Service,
-  siteUrl?: string
+  siteUrl?: string,
+  discountPercent?: number
 ): Promise<{ url: string; orderId: string }> {
   try {
     // Use booking.totalPrice (includes vehicle size & add-on markup) when available,
     // otherwise fall back to the base service price.
-    const chargeAmount = (booking.totalPrice && booking.totalPrice > 0)
+    const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
       ? booking.totalPrice
       : service.price;
+    const discount = discountPercent ? Math.min(Math.max(discountPercent, 0), 100) : 0;
+    const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
     const amountInCents = Math.round(chargeAmount * 100);
 
     // Determine the base URL: explicit param > env var > autodapper.com (never localhost)

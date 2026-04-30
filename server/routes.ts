@@ -1338,11 +1338,22 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send('Service not found');
       }
       
+      // Validate promo code
+      const PROMO_CODES: Record<string, number> = {
+        'DAPR99': 99,
+        'TEST99': 99,
+      };
+      const promoCode = typeof req.body.promoCode === 'string' ? req.body.promoCode.trim().toUpperCase() : null;
+      const discountPercent = promoCode ? (PROMO_CODES[promoCode] ?? 0) : 0;
+      if (promoCode && !PROMO_CODES[promoCode]) {
+        return res.status(400).json({ error: 'Invalid promo code.' });
+      }
+
       try {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
           `${req.protocol}://${req.get('host')}`;
-        const { url, orderId } = await createPaymentLink(booking, service, siteUrl);
+        const { url, orderId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
         
         // Update booking with payment link
         await storage.updateBookingPaymentInfo(booking.id, {

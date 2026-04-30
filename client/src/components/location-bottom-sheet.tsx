@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, Navigation, Clock, Home, X, Loader2,
   ArrowLeft, ChevronRight, ChevronDown, Droplets, Sparkles, Wand2, Crown,
-  Check, CheckCircle2, Gift, Car, Plus, type LucideIcon,
+  Check, CheckCircle2, Gift, Car, Plus, Tag, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -519,7 +519,28 @@ function ConfirmStep({
   const [, setLocation] = useLocation();
   const [arrivalId, setArrivalId] = useState("asap");
   const [useFreeCredit, setUseFreeCredit] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
   const windows = getArrivalWindows();
+
+  const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
+
+  function applyPromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    if (KNOWN_PROMOS[code] !== undefined) {
+      setAppliedPromo({ code, discountPercent: KNOWN_PROMOS[code] });
+      setPromoError(null);
+    } else {
+      setPromoError("Invalid promo code");
+      setAppliedPromo(null);
+    }
+  }
+
+  const discountedPrice = appliedPromo
+    ? Math.max(service.price * (1 - appliedPromo.discountPercent / 100), 0.50)
+    : service.price;
   const [addrLine1, ...addrRest] = address.split(", ");
 
   const { data: referralInfo } = useQuery<{ credits: number }>({
@@ -581,7 +602,11 @@ function ConfirmStep({
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify(useFreeCredit ? { useFreeWashCredit: true } : {}),
+        body: JSON.stringify(
+          useFreeCredit
+            ? { useFreeWashCredit: true }
+            : { ...(appliedPromo ? { promoCode: appliedPromo.code } : {}) }
+        ),
       });
       if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
       const payData = await payRes.json() as { paymentUrl: string | null; free?: boolean };
@@ -639,8 +664,54 @@ function ConfirmStep({
               <p className="text-[12px] text-gray-400">{service.duration} min</p>
             </div>
           </div>
-          <p className="text-[17px] font-bold text-gray-900 shrink-0">${service.price}</p>
+          <div className="flex flex-col items-end shrink-0">
+            {appliedPromo && (
+              <p className="text-[12px] text-gray-400 line-through">${service.price.toFixed(2)}</p>
+            )}
+            <p className="text-[17px] font-bold" style={{ color: appliedPromo ? ACCENT : "#111827" }}>
+              ${discountedPrice.toFixed(2)}
+            </p>
+          </div>
         </div>
+
+        {/* Promo code */}
+        {!useFreeCredit && (
+          <div>
+            {appliedPromo ? (
+              <div className="flex items-center gap-2 rounded-2xl bg-[#f3eeff] px-4 py-3 border border-[#8c52ff]/20">
+                <Icon icon={Tag} size="sm" style={{ color: ACCENT }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold" style={{ color: ACCENT }}>{appliedPromo.code} — {appliedPromo.discountPercent}% off applied</p>
+                </div>
+                <button
+                  onClick={() => { setAppliedPromo(null); setPromoInput(""); }}
+                  className="text-[12px] text-gray-400 underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && applyPromo()}
+                  placeholder="Promo code"
+                  className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[14px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#8c52ff]"
+                />
+                <button
+                  onClick={applyPromo}
+                  className="rounded-xl px-4 py-2.5 text-[14px] font-semibold text-white"
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+            {promoError && <p className="text-[12px] text-red-500 mt-1 px-1">{promoError}</p>}
+          </div>
+        )}
 
         {/* Arrival selection */}
         <div>
