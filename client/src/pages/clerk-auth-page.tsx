@@ -95,6 +95,45 @@ function OtpGrid({
   );
 }
 
+// ─── Animated word cycler ─────────────────────────────────────────────────────
+
+const CYCLE_WORDS = ['cleaned', 'detailed', 'vacuumed', 'foamed', 'shined', 'refreshed', 'Dapr.'];
+
+function AnimatedWordCycler() {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex(i => (i + 1) % CYCLE_WORDS.length);
+        setVisible(true);
+      }, 280);
+    }, 2400);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="mt-8 mb-1 text-center select-none">
+      <p className="text-[22px] font-bold tracking-[-0.02em] text-[#111] leading-tight">
+        Get your car{' '}
+        <span
+          style={{
+            color: '#8c52ff',
+            display: 'inline-block',
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0px)' : 'translateY(-5px)',
+            transition: 'opacity 0.26s ease, transform 0.26s ease',
+          }}
+        >
+          {CYCLE_WORDS[index]}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 function LandingScreen({
@@ -160,6 +199,8 @@ function LandingScreen({
         </div>
 
         {error && <ErrorBanner msg={error} />}
+
+        <AnimatedWordCycler />
 
         <div className="mt-auto pt-6 flex flex-col gap-3">
           <button
