@@ -68,7 +68,7 @@ export default function AuthPage() {
             <div className="flex justify-center mb-6">
               <img 
                 src="/assets/img/dapper-logo.png" 
-                alt="Dapper Logo" 
+                alt="Dapr Logo" 
                 className="h-12"
               />
             </div>
@@ -234,7 +234,7 @@ export default function AuthPage() {
           <div className="flex items-center justify-center mb-6">
             <img 
               src="/assets/img/dapper-logo.png" 
-              alt="Dapper Logo" 
+              alt="Dapr Logo" 
               className="h-24"
             />
           </div>

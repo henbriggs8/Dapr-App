@@ -137,7 +137,7 @@ export default function ServiceCards({
           "Cupholder & Dash clean",
           "Steam extraction",
           "Paint decontamination",
-          "Dapper scent"
+          "Dapr scent"
         ];
       default:
         return ["Car wash service"];

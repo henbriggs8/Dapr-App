@@ -1,4 +1,4 @@
-// Single source of truth for the seven Dapper add-ons.
+// Single source of truth for the seven Dapr add-ons.
 // Both the /services marketing page and the booking flow read from here so
 // names, prices, and durations stay in sync.
 

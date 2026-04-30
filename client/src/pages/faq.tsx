@@ -36,8 +36,8 @@ const CATEGORIES: Category[] = [
     blurb: "Flat prices, easy scheduling, and no surprises at the curb.",
     items: [
       {
-        q: "How much does a Dapper service cost?",
-        a: "Pricing is flat by tier: Essential Wash from $39, Interior Detail from $89, Refresh Detail from $149, and Dapper Black Label Detail from $299. The total you see at booking is the total you pay — taxes and travel are included. Add-ons (like pet hair removal or carpet shampoo) are clearly priced before you confirm.",
+        q: "How much does a Dapr service cost?",
+        a: "Pricing is flat by tier: Essential Wash from $39, Interior Detail from $89, Refresh Detail from $149, and Dapr Black Label Detail from $299. The total you see at booking is the total you pay — taxes and travel are included. Add-ons (like pet hair removal or carpet shampoo) are clearly priced before you confirm.",
       },
       {
         q: "How do I book?",
@@ -69,11 +69,11 @@ const CATEGORIES: Category[] = [
     items: [
       {
         q: "What do you bring? Do I need to provide water or power?",
-        a: "Nothing on your end. Every Dapper detailer arrives with their own water tanks, spot-free filtration, generator, and all products and tools. You don't need a hose, an outlet, or even to be home.",
+        a: "Nothing on your end. Every Dapr detailer arrives with their own water tanks, spot-free filtration, generator, and all products and tools. You don't need a hose, an outlet, or even to be home.",
       },
       {
         q: "How long does each service take?",
-        a: "Roughly 30 minutes for an Essential Wash, 60 minutes for an Interior Detail, 90 minutes for a Refresh Detail, and about 3 hours for the Dapper Black Label Detail. Heavily soiled vehicles may take longer — your detailer will flag it before adding any time.",
+        a: "Roughly 30 minutes for an Essential Wash, 60 minutes for an Interior Detail, 90 minutes for a Refresh Detail, and about 3 hours for the Dapr Black Label Detail. Heavily soiled vehicles may take longer — your detailer will flag it before adding any time.",
       },
       {
         q: "Does my vehicle size affect the price?",
@@ -206,9 +206,9 @@ function DesktopFAQ() {
               onClick={() => setLocation("/")}
               className="flex items-center"
               data-testid="link-home"
-              aria-label="Dapper home"
+              aria-label="Dapr home"
             >
-              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
+              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button
@@ -505,7 +505,7 @@ function DesktopFAQ() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button
               onClick={() => setLocation("/services")}
@@ -530,7 +530,7 @@ function DesktopFAQ() {
             </button>
           </div>
           <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Dapper. All rights reserved.
+            &copy; {new Date().getFullYear()} Dapr. All rights reserved.
           </p>
         </div>
       </footer>
@@ -580,7 +580,7 @@ function MobileFAQ() {
             data-testid="link-back"
           >
             <Icon icon={ArrowLeft} size="sm" />
-            Dapper
+            Dapr
           </button>
           <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-2">
             Frequently Asked

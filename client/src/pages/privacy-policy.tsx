@@ -4,8 +4,8 @@ import { Icon } from "@/components/ui/icon";
 
 const LAST_UPDATED = "April 27, 2025";
 const PRIVACY_EMAIL = "privacy@autodapper.com";
-const COMPANY_NAME = "Dapper Services LLC";
-const APP_NAME = "Dapper";
+const COMPANY_NAME = "Dapr Services LLC";
+const APP_NAME = "Dapr";
 
 interface SectionProps {
   number: string;
@@ -61,7 +61,7 @@ export default function PrivacyPolicy() {
       <div className="max-w-2xl mx-auto px-5 pt-8 pb-20">
         {/* Intro */}
         <p className="text-sm text-gray-600 leading-relaxed mb-10">
-          {APP_NAME}, operated by {COMPANY_NAME} ("{APP_NAME}," "Dapper," "we," "our," or "us"), respects your privacy.
+          {APP_NAME}, operated by {COMPANY_NAME} ("{APP_NAME}," "Dapr," "we," "our," or "us"), respects your privacy.
           This Privacy Policy explains how we collect, use, share, and protect your information when you use our website,
           mobile application, booking platform, payment checkout, or related services.
           By using {APP_NAME}, you agree to the practices described in this Privacy Policy.

@@ -51,7 +51,7 @@ const STEPS: Step[] = [
     icon: UserCheck,
     title: "We match you with a vetted detailer",
     body:
-      "Within minutes, we assign a Dapper professional in your area. Every detailer is background-checked, fully insured, and trained on our zero-scratch wash methodology.",
+      "Within minutes, we assign a Dapr professional in your area. Every detailer is background-checked, fully insured, and trained on our zero-scratch wash methodology.",
     bullets: [
       "See their name, photo, and rating before they arrive",
       "Real-time chat if you need to share gate codes or notes",
@@ -162,9 +162,9 @@ function DesktopHowItWorks() {
               onClick={() => setLocation("/")}
               className="flex items-center"
               data-testid="link-home"
-              aria-label="Dapper home"
+              aria-label="Dapr home"
             >
-              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
+              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button
@@ -319,7 +319,7 @@ function DesktopHowItWorks() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button
               onClick={() => setLocation("/faq")}
@@ -344,7 +344,7 @@ function DesktopHowItWorks() {
             </button>
           </div>
           <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Dapper. All rights reserved.
+            &copy; {new Date().getFullYear()} Dapr. All rights reserved.
           </p>
         </div>
       </footer>
@@ -422,7 +422,7 @@ function MobileHowItWorks() {
             data-testid="link-back"
           >
             <Icon icon={ArrowLeft} size="sm" />
-            Dapper
+            Dapr
           </button>
           <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-2">
             How It Works

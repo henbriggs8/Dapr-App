@@ -26,7 +26,7 @@ export async function createPaymentLink(booking: {
     const response = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: generateIdempotencyKey(),
       quickPay: {
-        name: `Dapper - ${booking.serviceName}`,
+        name: `Dapr - ${booking.serviceName}`,
         locationId: process.env.SQUARE_LOCATION_ID!,
         priceMoney: {
           amount: BigInt(amountInCents),

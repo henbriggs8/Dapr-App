@@ -40,7 +40,7 @@ export const TIER_SEEDS: InsertService[] = [
     category: "standard",
   },
   {
-    name: "Dapper Black Label Detail",
+    name: "Dapr Black Label Detail",
     description: "Showroom-finish results from a senior detailer with our most thorough interior and exterior work",
     price: 299,
     duration: 180,
@@ -250,7 +250,7 @@ export class MemStorage implements IStorage {
       username: "carwashcompany",
       password: "password",
       isProvider: true,
-      name: "Dapper",
+      name: "Dapr",
       description: "Premium car wash and detailing services for the discerning vehicle owner",
       latitude: 40.7128,
       longitude: -74.0060,
@@ -2416,7 +2416,7 @@ export class DatabaseStorage implements IStorage {
         password: hashed,
         isAdmin: true,
         isProvider: false,
-        name: "Dapper Admin",
+        name: "Dapr Admin",
       });
       console.log("[storage] Default admin user created (dapperadmin)");
     }

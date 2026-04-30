@@ -128,7 +128,7 @@ export function ServiceProgress({ bookingId }: { bookingId: number }) {
             <div className="text-center py-4">
               <h3 className="text-xl font-semibold mb-2">Service Completed!</h3>
               <p className="text-muted-foreground">
-                Thank you for choosing Dapper!
+                Thank you for choosing Dapr!
               </p>
             </div>
           )}

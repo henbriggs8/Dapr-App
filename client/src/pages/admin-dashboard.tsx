@@ -1003,7 +1003,7 @@ export default function AdminDashboard() {
                     { key: "basic" as const, label: "Essential Wash", desc: "Hand wash, spray wax, vacuum, quick interior wipe-down" },
                     { key: "interior" as const, label: "Interior Detail", desc: "Full vacuum, surface cleaning, seat cleaning, light stain treatment" },
                     { key: "standard" as const, label: "Refresh Detail", desc: "Complete interior/exterior refresh with upgraded wheels and tire shine" },
-                    { key: "premium" as const, label: "Dapper Black Label Detail", desc: "Showroom-finish results with our most thorough interior and exterior work" },
+                    { key: "premium" as const, label: "Dapr Black Label Detail", desc: "Showroom-finish results with our most thorough interior and exterior work" },
                   ].map(({ key, label, desc }) => (
                     <div key={key} className="space-y-2">
                       <label className="text-sm font-semibold">{label}</label>

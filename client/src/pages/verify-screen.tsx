@@ -94,7 +94,7 @@ export default function VerifyScreen() {
           
           toast({
             title: "Account created successfully!",
-            description: "Welcome to Dapper",
+            description: "Welcome to Dapr",
           });
           
           // Redirect to onboarding for new users

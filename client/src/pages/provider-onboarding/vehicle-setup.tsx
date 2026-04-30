@@ -66,7 +66,7 @@ export default function VehicleSetupPage() {
     setLocation('/provider-onboarding/bank-info');
   };
 
-  const handleDapperVehicle = () => {
+  const handleDaprVehicle = () => {
     localStorage.setItem(`provider-onboarding-vehicle-${user?.id}`, JSON.stringify({ dapperVehicle: true }));
     localStorage.setItem(`provider-onboarding-vehicle-setup-${user?.id}`, 'true');
     setLocation('/provider-onboarding/bank-info');
@@ -224,13 +224,13 @@ export default function VehicleSetupPage() {
             Continue
           </Button>
 
-          {/* Dapper Vehicle Option */}
+          {/* Dapr Vehicle Option */}
           <button
-            onClick={handleDapperVehicle}
+            onClick={handleDaprVehicle}
             className="w-full flex items-center justify-center gap-2 text-[#8c52ff] text-sm font-medium py-2 hover:opacity-75 transition-opacity"
           >
             <Icon icon={Truck} size="sm" />
-            I am using a Dapper vehicle instead
+            I am using a Dapr vehicle instead
           </button>
         </div>
       </div>

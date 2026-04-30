@@ -35,7 +35,7 @@ export async function createPaymentLink(
     const response = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: generateIdempotencyKey(),
       quickPay: {
-        name: `Dapper - ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
+        name: `Dapr - ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
         locationId: process.env.SQUARE_LOCATION_ID!,
         priceMoney: {
           amount: BigInt(amountInCents),
@@ -81,7 +81,7 @@ export async function createTipPaymentLink(
     const response = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: generateIdempotencyKey(),
       quickPay: {
-        name: `Dapper - Tip`,
+        name: `Dapr - Tip`,
         locationId: process.env.SQUARE_LOCATION_ID!,
         priceMoney: {
           amount: BigInt(tipAmountCents),

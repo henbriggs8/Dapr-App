@@ -68,7 +68,7 @@ export default function IdVerificationPage() {
               Verify Your Identity
             </h1>
             <p className="text-gray-600">
-              This helps us keep the Dapper community safe.
+              This helps us keep the Dapr community safe.
             </p>
           </div>
 

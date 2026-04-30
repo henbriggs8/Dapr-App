@@ -87,7 +87,7 @@ const FAQS = [
   },
   {
     q: "Are your detailers insured?",
-    a: "Every Dapper professional is fully insured, background-checked, and trained on our zero-scratch wash methodology.",
+    a: "Every Dapr professional is fully insured, background-checked, and trained on our zero-scratch wash methodology.",
   },
   {
     q: "What's included in custom programs?",
@@ -166,8 +166,8 @@ export default function CorporateDesktop() {
       >
         <div className="max-w-[1120px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
-              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
+            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapr home">
+              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button onClick={() => setLocation("/services")} className="hover:text-white transition-colors">Services</button>
@@ -195,14 +195,14 @@ export default function CorporateDesktop() {
         <div className="max-w-[1120px] mx-auto px-8 relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
-              <Icon icon={ShieldCheck} size="sm" /> Dapper for Fleets
+              <Icon icon={ShieldCheck} size="sm" /> Dapr for Fleets
             </div>
             <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] mb-6">
               Keep every vehicle in your fleet{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8c52ff] to-[#b28cff]">client-ready.</span>
             </h1>
             <p className="text-lg text-white/60 mb-10 leading-relaxed max-w-xl">
-              On-site, on a schedule, on one invoice. Dapper professionals come to your depot, dealer lot, or property and detail your vehicles without disrupting operations.
+              On-site, on a schedule, on one invoice. Dapr professionals come to your depot, dealer lot, or property and detail your vehicles without disrupting operations.
             </p>
             <div className="flex items-center gap-4">
               <button
@@ -350,11 +350,11 @@ export default function CorporateDesktop() {
         </div>
       </section>
 
-      {/* Why Dapper for Fleets */}
+      {/* Why Dapr for Fleets */}
       <section className="py-32">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="max-w-3xl mb-16">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Why Dapper for Fleets</p>
+            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Why Dapr for Fleets</p>
             <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Built for operators, not weekenders.</h2>
             <p className="text-lg text-white/60">
               We standardize the wash so your fleet looks the same in every city, on every truck, every week — without you managing it.
@@ -400,7 +400,7 @@ export default function CorporateDesktop() {
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="grid lg:grid-cols-[1fr_1.1fr] gap-16 items-center">
             <div className="relative rounded-3xl overflow-hidden border border-white/10 aspect-[4/5] lg:aspect-auto lg:h-[520px]">
-              <img src="/desktop/hero-car.jpg" alt="Dapper van on-site" className="w-full h-full object-cover" />
+              <img src="/desktop/hero-car.jpg" alt="Dapr van on-site" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
@@ -413,7 +413,7 @@ export default function CorporateDesktop() {
                   </div>
                 </div>
                 <p className="text-sm text-white/70 leading-relaxed">
-                  "Switching to Dapper cut the time our managers spent coordinating washes to zero. Our vans look new every week and we get one invoice."
+                  "Switching to Dapr cut the time our managers spent coordinating washes to zero. Our vans look new every week and we get one invoice."
                 </p>
               </div>
             </div>
@@ -422,7 +422,7 @@ export default function CorporateDesktop() {
               <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-4">Proof in production</p>
               <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Real results across hundreds of vehicles.</h2>
               <p className="text-lg text-white/60 mb-10 leading-relaxed">
-                Our fleet partners standardize on Dapper because the program scales without friction — same quality in every city, predictable monthly cost, and zero coordination overhead on their end.
+                Our fleet partners standardize on Dapr because the program scales without friction — same quality in every city, predictable monthly cost, and zero coordination overhead on their end.
               </p>
 
               <div className="grid grid-cols-3 gap-8 border-t border-white/10 pt-8">
@@ -577,13 +577,13 @@ export default function CorporateDesktop() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors">FAQ</button>
             <button onClick={() => setLocation("/how-it-works")} className="hover:text-white transition-colors">How it Works</button>
             <button onClick={() => setLocation("/")} className="hover:text-white transition-colors">Home</button>
           </div>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapper. All rights reserved.</p>
+          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
         </div>
       </footer>
     </div>

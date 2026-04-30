@@ -48,7 +48,7 @@ export default function BankInfoPage() {
     localStorage.setItem(`provider-onboarding-complete-${user?.id}`, 'true');
     
     toast({
-      title: "Welcome to Dapper!",
+      title: "Welcome to Dapr!",
       description: "Your onboarding is complete. Welcome to the team!",
     });
 

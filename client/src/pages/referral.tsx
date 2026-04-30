@@ -48,7 +48,7 @@ export default function ReferralPage() {
   const handleShare = () => {
     if (navigator.share && data?.code) {
       navigator.share({
-        title: "Get a free car wash with Dapper",
+        title: "Get a free car wash with Dapr",
         text: `Use my referral code ${data.code} — you'll get a free wash, and so will I!`,
         url: shareLink,
       });

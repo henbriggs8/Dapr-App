@@ -129,11 +129,11 @@ function LandingScreen({
         <div className="w-20 h-20 rounded-[22px] overflow-hidden shadow-md mb-5">
           <img
             src="/assets/dapper-app-icon-dark.svg"
-            alt="Dapper"
+            alt="Dapr"
             className="w-full h-full"
           />
         </div>
-        <p className="text-[11px] font-semibold tracking-widest text-[#8c52ff] uppercase">Dapper</p>
+        <p className="text-[11px] font-semibold tracking-widest text-[#8c52ff] uppercase">Dapr</p>
       </div>
 
       <div className="flex-1 flex flex-col px-6 pt-2 pb-10">
@@ -647,7 +647,7 @@ function ProfileInfoScreen({
           )}
         </button>
         <p className="text-center text-[11px] leading-4 text-[#a0a0a0] px-4">
-          By proceeding, you consent to receive SMS messages from Dapper to the number provided.
+          By proceeding, you consent to receive SMS messages from Dapr to the number provided.
         </p>
       </div>
     </div>

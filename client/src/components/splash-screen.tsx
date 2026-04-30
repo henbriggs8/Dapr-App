@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import logoImage from '../../../attached_assets/Dapper logo black_1763662840219.png';
+import logoImage from '../../../attached_assets/Dapr logo black_1763662840219.png';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -32,7 +32,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         >
           <motion.img
             src={logoImage}
-            alt="Dapper Logo"
+            alt="Dapr Logo"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ 

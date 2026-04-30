@@ -241,7 +241,7 @@ export function AddressAutocomplete({
         setIsLoading(false);
         console.error("Geolocation error:", error);
         if (error.code === error.PERMISSION_DENIED) {
-          setLocationError("Location access denied. On iPhone, go to Settings → Privacy & Security → Location Services and enable it for Safari (or Dapper).");
+          setLocationError("Location access denied. On iPhone, go to Settings → Privacy & Security → Location Services and enable it for Safari (or Dapr).");
         } else if (error.code === error.TIMEOUT) {
           setLocationError("Location timed out. Make sure you have a GPS signal and try again.");
         } else {

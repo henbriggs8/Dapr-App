@@ -83,7 +83,7 @@ export default function ActivityPage() {
     >
       {/* Header */}
       <div className="pt-14 pb-6 px-6 border-b border-gray-200">
-        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapper</p>
+        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapr</p>
         <h1 className="text-3xl font-medium tracking-tight text-black">Activity</h1>
       </div>
 
@@ -220,7 +220,7 @@ export default function ActivityPage() {
         <div className="px-6 pt-6">
           {/* Points Block */}
           <div className="bg-gray-950 text-white p-6 mb-6">
-            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-3">Dapper Rewards</p>
+            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-3">Dapr Rewards</p>
             <div className="flex justify-between items-baseline mb-4">
               <div>
                 <span className="text-4xl font-medium">{loyaltyPoints}</span>

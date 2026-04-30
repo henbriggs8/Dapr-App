@@ -137,8 +137,8 @@ export default function HomeDesktop() {
       >
         <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
-              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
+            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapr home">
+              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button onClick={goServices} className="hover:text-white transition-colors" data-testid="link-services">Services</button>
@@ -375,7 +375,7 @@ export default function HomeDesktop() {
             <FluidHeroBackground subtle />
             <img
               src="/desktop/lambo.jpg"
-              alt="Dapper detailers working on a black Lamborghini"
+              alt="Dapr detailers working on a black Lamborghini"
               className="absolute inset-0 w-full h-full object-cover opacity-55 mix-blend-luminosity"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
@@ -515,7 +515,7 @@ export default function HomeDesktop() {
               <div className="aspect-[4/3] rounded-2xl bg-[#111] border border-white/5 relative overflow-hidden">
                 <img
                   src="/desktop/jeep-desert.jpg"
-                  alt="Dapper detailer washing a Jeep Gladiator in the desert"
+                  alt="Dapr detailer washing a Jeep Gladiator in the desert"
                   className="absolute inset-0 w-full h-full object-cover mix-blend-luminosity opacity-70 group-hover:scale-105 group-hover:mix-blend-normal transition-all duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
@@ -648,7 +648,7 @@ export default function HomeDesktop() {
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h4 className="text-lg font-bold">Dapper Black Label Detail</h4>
+                  <h4 className="text-lg font-bold">Dapr Black Label Detail</h4>
                   <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider">Flagship</span>
                 </div>
                 <p className="text-white/60 text-sm leading-relaxed">
@@ -732,7 +732,7 @@ export default function HomeDesktop() {
       <section className="py-32 relative border-t border-white/5">
         <div className="absolute inset-0 bg-[#8c52ff]/5" />
         <div className="max-w-[1280px] mx-auto px-8 relative z-10 text-center">
-          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapper clean?</h2>
+          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapr clean?</h2>
           <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12">
             Join thousands of car owners who have upgraded to the most convenient detailing experience available.
           </p>
@@ -749,13 +749,13 @@ export default function HomeDesktop() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1280px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq">FAQ</button>
             <button onClick={goCorporate} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
             <button onClick={goHowItWorks} className="hover:text-white transition-colors" data-testid="link-how-footer">How it Works</button>
           </div>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapper. All rights reserved.</p>
+          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
         </div>
       </footer>
     </div>

@@ -1,4 +1,4 @@
-// Centralized pricing configuration for Dapper Car Wash
+// Centralized pricing configuration for Dapr Car Wash
 
 export interface ServicePricing {
   id: number;

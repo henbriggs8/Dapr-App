@@ -48,7 +48,7 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
   
   const steps = [
     {
-      title: "Welcome to Dapper",
+      title: "Welcome to Dapr",
       description: "Your premium car wash experience starts here",
       icon: Sparkles,
       tip: "We'll show you around the app in just a few steps",
@@ -98,7 +98,7 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
       // Show completion toast
       toast({
         title: "You're all set!",
-        description: "Now you're ready to enjoy Dapper services",
+        description: "Now you're ready to enjoy Dapr services",
       });
       
       // Close onboarding after a delay to show confetti
@@ -187,11 +187,11 @@ export function OnboardingJourney({ onComplete, show }: OnboardingJourneyProps) 
           >
             <Card className="w-full overflow-hidden border-[#8c52ff]/30">
               <div className="relative h-[220px] bg-gradient-to-r from-[#8c52ff]/90 to-[#6930c3] flex items-center justify-center">
-                {/* Dapper logo */}
+                {/* Dapr logo */}
                 <div className="absolute top-2 left-3 z-20">
                   <motion.img 
                     src="/assets/img/dapper-logo-white.png"
-                    alt="Dapper Logo"
+                    alt="Dapr Logo"
                     className="h-10 w-auto"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ 

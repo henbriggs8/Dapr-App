@@ -128,7 +128,7 @@ export function ServiceTracker({
                 <div className="font-medium">{providerName}</div>
                 <div className="text-sm text-muted-foreground flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  Dapper Pro • 4.9★
+                  Dapr Pro • 4.9★
                 </div>
               </div>
             </div>

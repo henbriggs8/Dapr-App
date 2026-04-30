@@ -1,7 +1,7 @@
-# Dapper Car Wash - Mobile Car Wash Service Platform
+# Dapr - Mobile Car Wash Service Platform
 
 ## Overview
-Dapper is a comprehensive mobile car wash and detailing service platform designed to connect customers with service providers and administrators. Its primary purpose is to streamline the car wash booking and management process, offering a mobile-first experience, real-time updates, geolocation services, integrated payments, and intelligent rebooking features. The platform aims to capture market share by providing a seamless and efficient service for both users and service providers.
+Dapr is a comprehensive mobile car wash and detailing service platform designed to connect customers with service providers and administrators. Its primary purpose is to streamline the car wash booking and management process, offering a mobile-first experience, real-time updates, geolocation services, integrated payments, and intelligent rebooking features. The platform aims to capture market share by providing a seamless and efficient service for both users and service providers.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

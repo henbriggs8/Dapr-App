@@ -32,7 +32,7 @@ const DETAILED_SERVICE_STAGES = [
     key: "dispatched", 
     label: "Dispatched", 
     icon: Navigation, 
-    description: "Your Dapper Pro has been assigned and is preparing",
+    description: "Your Dapr Pro has been assigned and is preparing",
     progress: 5,
     color: "bg-blue-100 text-blue-600"
   },
@@ -222,7 +222,7 @@ export default function ServiceProgress() {
                   <div className="font-medium">Marcus Johnson</div>
                   <div className="text-sm text-muted-foreground flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    Dapper Pro • 4.9★ • 2.1 mi away
+                    Dapr Pro • 4.9★ • 2.1 mi away
                   </div>
                 </div>
               </div>

@@ -112,7 +112,7 @@ export default function ProviderAuthPage() {
           {/* Title */}
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-semibold text-gray-900">
-              {isLoginMode ? "Welcome back, Detail Pro" : "Join the Dapper Team"}
+              {isLoginMode ? "Welcome back, Detail Pro" : "Join the Dapr Team"}
             </h1>
             <p className="text-gray-600">
               {isLoginMode 
@@ -234,7 +234,7 @@ export default function ProviderAuthPage() {
                 }}
                 className="text-[#8c52ff] text-base font-medium hover:underline"
               >
-                {isLoginMode ? "New to Dapper? Join our team" : "Already a Detail Pro? Sign in"}
+                {isLoginMode ? "New to Dapr? Join our team" : "Already a Detail Pro? Sign in"}
               </button>
             </div>
 

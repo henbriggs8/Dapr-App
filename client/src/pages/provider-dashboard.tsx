@@ -351,7 +351,7 @@ export default function ProviderDashboard() {
 
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="px-6 pt-14 pb-6 border-b border-gray-200">
-        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapper Pro</p>
+        <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-1">Dapr Pro</p>
         <h1 className="text-3xl font-medium tracking-tight text-black">
           {user.name || user.username}
         </h1>

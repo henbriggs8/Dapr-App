@@ -344,7 +344,7 @@ export default function BookingScreen() {
             data-testid="link-back"
           >
             <Icon icon={ArrowLeft} size="sm" />
-            Dapper
+            Dapr
           </button>
           <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#111]">
             Book a Service

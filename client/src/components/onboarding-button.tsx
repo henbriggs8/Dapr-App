@@ -24,7 +24,7 @@ export function OnboardingButton() {
         onClick={handleOpenOnboarding}
       >
         <Icon icon={HelpCircle} size="sm" />
-        <span>Tour Dapper</span>
+        <span>Tour Dapr</span>
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8c52ff] opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8c52ff]"></span>

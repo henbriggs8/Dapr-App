@@ -76,7 +76,7 @@ export default function AuthScreen() {
       <div className="w-full h-64 overflow-hidden">
         <img 
           src={dapperVanImage} 
-          alt="Dapper mobile car wash van"
+          alt="Dapr mobile car wash van"
           className="w-full h-full object-cover"
         />
       </div>

@@ -118,7 +118,7 @@ const TIERS: Tier[] = [
   },
   {
     slug: "black-label",
-    name: "Dapper Black Label Detail",
+    name: "Dapr Black Label Detail",
     price: 299,
     duration: "3 hrs",
     icon: Crown,
@@ -226,8 +226,8 @@ function DesktopServices() {
       >
         <div className="max-w-[1120px] mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapper home">
-              <img src={dapprLogo} alt="Dapper" className="h-28 w-auto" />
+            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapr home">
+              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
             </button>
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
               <button className="text-white" data-testid="link-services-active">Services</button>
@@ -267,7 +267,7 @@ function DesktopServices() {
             Every detail of every detail.
           </h1>
           <p className="text-lg lg:text-xl text-white/60 leading-relaxed max-w-2xl mx-auto">
-            From a quick weekly hand wash to a full showroom restoration — every Dapper service is performed at your home, office, or curb by a vetted professional with their own water and power.
+            From a quick weekly hand wash to a full showroom restoration — every Dapr service is performed at your home, office, or curb by a vetted professional with their own water and power.
           </p>
         </div>
       </section>
@@ -307,11 +307,11 @@ function DesktopServices() {
         </div>
       </div>
 
-      {/* Why Dapper */}
+      {/* Why Dapr */}
       <section className="py-16 border-t border-white/5">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="text-center mb-12">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-3">Why Dapper</p>
+            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-3">Why Dapr</p>
             <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">Premium results, with care for what matters.</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -429,7 +429,7 @@ function DesktopServices() {
       <section className="py-32 relative border-t border-white/5">
         <div className="absolute inset-0 bg-[#8c52ff]/5" />
         <div className="max-w-[1100px] mx-auto px-8 relative z-10 text-center">
-          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapper clean?</h2>
+          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapr clean?</h2>
           <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12">
             Pick your service and we'll come to you. Most bookings start in under 60 minutes.
           </p>
@@ -446,13 +446,13 @@ function DesktopServices() {
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 bg-[#020202]">
         <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapper" className="h-20 w-auto opacity-80" />
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
           <div className="flex gap-6 text-sm text-white/40">
             <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq-footer">FAQ</button>
             <button onClick={() => setLocation("/corporate")} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
             <button onClick={() => setLocation("/how-it-works")} className="hover:text-white transition-colors" data-testid="link-how-footer">How it Works</button>
           </div>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapper. All rights reserved.</p>
+          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
         </div>
       </footer>
     </div>
@@ -549,7 +549,7 @@ function MobileServices() {
             data-testid="link-back"
           >
             <Icon icon={ArrowLeft} size="sm" />
-            Dapper
+            Dapr
           </button>
           <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-2">Our Services</p>
           <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#111] leading-tight mb-3">
@@ -560,9 +560,9 @@ function MobileServices() {
           </p>
         </div>
 
-        {/* Why Dapper compact */}
+        {/* Why Dapr compact */}
         <div className="px-5 pb-2">
-          <p className="text-[10px] font-semibold tracking-widest text-[#999] uppercase mb-3">Why Dapper</p>
+          <p className="text-[10px] font-semibold tracking-widest text-[#999] uppercase mb-3">Why Dapr</p>
           <div className="grid grid-cols-2 gap-2">
             {DIFFERENTIATORS.slice(0, 4).map((d) => (
               <div key={d.title} className="rounded-xl border border-[#ededed] p-3" data-testid={`mobile-diff-${d.title.toLowerCase().replace(/\s+/g, "-")}`}>
@@ -745,7 +745,7 @@ function MobileServices() {
         {/* Final CTA */}
         <div className="px-5 pt-8">
           <div className="rounded-2xl bg-[#111] p-6 text-center">
-            <h3 className="text-[20px] font-bold text-white mb-2">Ready for a Dapper clean?</h3>
+            <h3 className="text-[20px] font-bold text-white mb-2">Ready for a Dapr clean?</h3>
             <p className="text-[13px] text-white/60 mb-5 leading-relaxed">
               Pick your service and we'll come to you.
             </p>

@@ -1,6 +1,6 @@
 {
-  "name": "Dapper",
-  "short_name": "Dapper",
+  "name": "Dapr",
+  "short_name": "Dapr",
   "description": "Premium mobile car wash & detailing, on demand.",
   "start_url": "/",
   "display": "standalone",
