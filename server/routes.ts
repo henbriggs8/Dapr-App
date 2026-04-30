@@ -2159,6 +2159,22 @@ export function registerRoutes(app: Express): Server {
     try {
       const message = await storage.createContactMessage(parsed.data);
       console.log(`[contact] New support request from ${message.name} <${message.email}> — callback: ${message.requestCallback}`);
+
+      // Send email notification to support team (non-blocking)
+      import("./email-service").then(({ sendSupportNotificationEmail }) => {
+        sendSupportNotificationEmail({
+          name: message.name,
+          email: message.email,
+          message: message.message,
+          requestCallback: message.requestCallback,
+          submittedAt: message.submittedAt,
+        }).catch((err) => {
+          console.error("[contact] Email notification error:", err);
+        });
+      }).catch((err) => {
+        console.error("[contact] Failed to load email service:", err);
+      });
+
       res.json({ success: true, id: message.id });
     } catch (error) {
       console.error("Contact submission error:", error);
