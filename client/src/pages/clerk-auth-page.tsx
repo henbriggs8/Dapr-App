@@ -118,16 +118,19 @@ function AnimatedWordCycler() {
     <div className="mt-8 mb-1 text-center select-none">
       <p className="text-[22px] font-bold tracking-[-0.02em] text-[#111] leading-tight">
         Get your car{' '}
-        <span
-          style={{
-            color: '#8c52ff',
-            display: 'inline-block',
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0px)' : 'translateY(-5px)',
-            transition: 'opacity 0.26s ease, transform 0.26s ease',
-          }}
-        >
-          {CYCLE_WORDS[index]}
+        {/* Fixed-width bucket — sized to "refreshed", the longest word */}
+        <span style={{ display: 'inline-block', width: '6.8em', textAlign: 'center', verticalAlign: 'baseline' }}>
+          <span
+            style={{
+              color: '#8c52ff',
+              display: 'inline-block',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0px)' : 'translateY(-5px)',
+              transition: 'opacity 0.26s ease, transform 0.26s ease',
+            }}
+          >
+            {CYCLE_WORDS[index]}
+          </span>
         </span>
       </p>
     </div>
