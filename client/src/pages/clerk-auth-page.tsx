@@ -124,19 +124,19 @@ function LandingScreen({
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* Hero image */}
-      <div className="h-[42vh] overflow-hidden">
+      {/* App icon */}
+      <div className="flex flex-col items-center pt-20 pb-8">
         <img
-          src="/dapper-jeep-desert.jpg"
-          alt="Dapper mobile car wash"
-          className="w-full h-full object-cover object-[30%_50%]"
+          src="/icons/icon-192.png"
+          alt="Dapper"
+          className="w-20 h-20 rounded-[22px] shadow-sm mb-5"
         />
+        <p className="text-[11px] font-semibold tracking-widest text-[#8c52ff] uppercase">Dapper</p>
       </div>
 
-      <div className="flex-1 flex flex-col px-6 pt-8 pb-10">
-        <p className="text-[10px] font-semibold tracking-widest text-[#8c52ff] uppercase mb-3">Dapper</p>
+      <div className="flex-1 flex flex-col px-6 pt-2 pb-10">
         <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[#111] mb-8">
-          Enter your phone<br />to get started with Dapper
+          Enter your phone<br />to get started
         </h1>
 
         {/* Phone input with +1 prefix */}
