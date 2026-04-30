@@ -126,11 +126,13 @@ function LandingScreen({
     <div className="flex flex-col min-h-screen bg-white">
       {/* App icon */}
       <div className="flex flex-col items-center pt-20 pb-8">
-        <img
-          src="/icons/icon-192.png"
-          alt="Dapper"
-          className="w-20 h-20 rounded-[22px] shadow-sm mb-5"
-        />
+        <div className="w-20 h-20 rounded-[22px] overflow-hidden shadow-md mb-5">
+          <img
+            src="/assets/dapper-app-icon-dark.svg"
+            alt="Dapper"
+            className="w-full h-full"
+          />
+        </div>
         <p className="text-[11px] font-semibold tracking-widest text-[#8c52ff] uppercase">Dapper</p>
       </div>
 
