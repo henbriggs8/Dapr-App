@@ -168,16 +168,13 @@ function LandingScreen({
     <div className="flex flex-col min-h-screen bg-white px-6 pt-16 pb-10">
       {/* App icon */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-[72px] h-[72px] rounded-[18px] bg-[#111] flex items-center justify-center mb-6 shadow-md">
-          <img
-            src="/dapper-d-logo.png"
-            alt="Dapper"
-            className="w-10 h-10 object-contain"
-          />
-        </div>
-        <h1 className="text-[24px] font-bold tracking-[-0.02em] text-[#111] text-center">
-          Get started with Dapper
-        </h1>
+        <img
+          src="/assets/dapper-app-icon-dark.svg"
+          alt="Dapr"
+          className="w-[72px] h-[72px] mb-6"
+          style={{ borderRadius: "18px" }}
+        />
+        <AnimatedWordCycler />
       </div>
 
       {/* Phone input */}
