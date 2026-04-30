@@ -370,7 +370,7 @@ export default function HomeScreen() {
       `}</style>
       <div className="px-4 pb-4">
         <button
-          onClick={() => setLocation("/booking")}
+          onClick={() => setAddrSheetOpen(true)}
           className="home-carwash-card w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 shadow-[0_4px_20px_rgba(109,40,217,0.45)] active:scale-[0.99] transition"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
