@@ -4,8 +4,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, Navigation, Clock, Home, X, Loader2,
-  ArrowLeft, ChevronRight, Droplets, Sparkles, Wand2, Crown,
-  Check, CheckCircle2, Gift, type LucideIcon,
+  ArrowLeft, ChevronRight, ChevronDown, Droplets, Sparkles, Wand2, Crown,
+  Check, CheckCircle2, Gift, Car, Plus, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { type Service, type TimeSlot } from "@shared/schema";
+import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 
 const ACCENT = "#8c52ff";
 
@@ -326,13 +326,23 @@ function LocationStep({
 
 // ── Step 1: Service picker ────────────────────────────────────────────────────
 function ServiceStep({
-  selectedId, onSelect, onContinue,
+  selectedId, onSelect, onContinue, selectedVehicleId, onVehicleSelect,
 }: {
   selectedId: number | null;
   onSelect: (s: Service) => void;
   onContinue: () => void;
+  selectedVehicleId: number | null;
+  onVehicleSelect: (id: number | null) => void;
 }) {
+  const [, setLocation] = useLocation();
+  const [vehicleOpen, setVehicleOpen] = useState(false);
   const { data: services, isLoading } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: vehicles } = useQuery<Vehicle[]>({ queryKey: ["/api/vehicles"] });
+
+  const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId);
+  const vehicleLabel = selectedVehicle
+    ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
+    : "Select vehicle";
 
   const packages = services
     ?.filter((s) => s.category !== "premium")
@@ -342,6 +352,59 @@ function ServiceStep({
 
   return (
     <div className="flex flex-col min-h-0">
+      {/* Vehicle picker */}
+      <div className="px-4 pt-3 pb-2 relative">
+        <button
+          onClick={() => setVehicleOpen(o => !o)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-gray-50 border border-transparent active:bg-gray-100 transition"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+            <Icon icon={Car} size="sm" style={{ color: ACCENT }} />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-0.5">Vehicle</p>
+            <p className={`text-[14px] font-semibold truncate ${selectedVehicle ? "text-gray-900" : "text-gray-400"}`}>
+              {vehicleLabel}
+            </p>
+          </div>
+          <Icon icon={ChevronDown} size="sm" className={`text-gray-400 shrink-0 transition-transform ${vehicleOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* Dropdown */}
+        {vehicleOpen && (
+          <div className="absolute left-4 right-4 top-full z-10 mt-1 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+            {vehicles && vehicles.length > 0 ? (
+              vehicles.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => { onVehicleSelect(v.id); setVehicleOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition hover:bg-gray-50 ${v.id === selectedVehicleId ? "bg-[#f3eeff]" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold text-gray-900 truncate">
+                      {v.year} {v.make} {v.model}
+                    </p>
+                    {v.color && <p className="text-[12px] text-gray-400">{v.color}</p>}
+                  </div>
+                  {v.id === selectedVehicleId && <Icon icon={Check} size="sm" style={{ color: ACCENT }} />}
+                </button>
+              ))
+            ) : (
+              <p className="px-4 py-3 text-[13px] text-gray-400">No vehicles saved yet</p>
+            )}
+            <div className="border-t border-gray-100">
+              <button
+                onClick={() => { setVehicleOpen(false); setLocation("/profile?tab=vehicles"); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
+              >
+                <Icon icon={Plus} size="sm" style={{ color: ACCENT }} />
+                <p className="text-[14px] font-semibold" style={{ color: ACCENT }}>Add new vehicle</p>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="overflow-y-auto flex-1 pb-2">
         {isLoading ? (
           <div className="space-y-3 px-4 pt-2">
@@ -444,10 +507,11 @@ function ServiceStep({
 
 // ── Step 2: Confirm ───────────────────────────────────────────────────────────
 function ConfirmStep({
-  address, service, onBooked,
+  address, service, vehicleId, onBooked,
 }: {
   address: string;
   service: Service;
+  vehicleId: number | null;
   onBooked: () => void;
 }) {
   const { getToken } = useClerkAuth();
@@ -502,6 +566,7 @@ function ConfirmStep({
           serviceLocationType: "address",
           priceTier: service.category,
           timeSlotId: available.id,
+          ...(vehicleId ? { vehicleId } : {}),
           timestamp: new Date().toISOString(),
         }),
       });
@@ -699,6 +764,7 @@ export function LocationBottomSheet({
   const [direction, setDirection] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const { getToken } = useClerkAuth();
   const queryClient = useQueryClient();
 
@@ -709,6 +775,7 @@ export function LocationBottomSheet({
         setStep(0);
         setSelectedAddress(null);
         setSelectedService(null);
+        setSelectedVehicleId(null);
         setDirection(1);
       }, 300);
     }
@@ -813,6 +880,8 @@ export function LocationBottomSheet({
                     selectedId={selectedService?.id ?? null}
                     onSelect={setSelectedService}
                     onContinue={() => { if (selectedService) goTo(2); }}
+                    selectedVehicleId={selectedVehicleId}
+                    onVehicleSelect={setSelectedVehicleId}
                   />
                 </div>
 
@@ -822,6 +891,7 @@ export function LocationBottomSheet({
                     <ConfirmStep
                       address={selectedAddress}
                       service={selectedService}
+                      vehicleId={selectedVehicleId}
                       onBooked={onClose}
                     />
                   ) : (
