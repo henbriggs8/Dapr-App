@@ -488,17 +488,20 @@ function ServiceStep({
 
       {/* Sticky continue button */}
       <div className="px-4 pt-3 pb-4 border-t border-gray-100 shrink-0">
+        {selectedId !== null && selectedVehicleId === null && (
+          <p className="text-center text-[12px] text-gray-400 mb-2">Select a vehicle to continue</p>
+        )}
         <button
           onClick={onContinue}
-          disabled={selectedId === null}
+          disabled={selectedId === null || selectedVehicleId === null}
           className={`w-full py-4 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 transition ${
-            selectedId !== null
+            selectedId !== null && selectedVehicleId !== null
               ? "bg-[#111] text-white active:bg-[#222]"
               : "bg-gray-100 text-gray-400"
           }`}
         >
           Continue
-          <Icon icon={ChevronRight} size="sm" className={selectedId !== null ? "text-white" : "text-gray-400"} />
+          <Icon icon={ChevronRight} size="sm" className={selectedId !== null && selectedVehicleId !== null ? "text-white" : "text-gray-400"} />
         </button>
       </div>
     </div>
