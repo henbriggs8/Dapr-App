@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Booking, PricingConfig } from "@shared/schema";
+import { User, Booking, PricingConfig, ContactMessage } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,10 @@ import {
   Zap,
   RefreshCw,
   Car,
-  Tag
+  Tag,
+  MessageSquare,
+  Phone,
+  Mail
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +150,15 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/analytics"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/analytics");
+      return await res.json();
+    },
+  });
+
+  // Fetch contact messages
+  const { data: contactMessages = [], isLoading: messagesLoading } = useQuery<ContactMessage[]>({
+    queryKey: ["/api/admin/contact-messages"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/contact-messages");
       return await res.json();
     },
   });
@@ -477,7 +489,7 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="dispatch" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dispatch" className="flex items-center gap-2">
               <Icon icon={Radio} size="sm" />
               Dispatch
@@ -501,6 +513,21 @@ export default function AdminDashboard() {
             <TabsTrigger value="pricing" className="flex items-center gap-2">
               <Icon icon={Tag} size="sm" />
               Pricing
+            </TabsTrigger>
+            <TabsTrigger value="support" className="flex items-center gap-2">
+              <Icon icon={MessageSquare} size="sm" />
+              Support
+              {contactMessages.filter(m => {
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                return m.submittedAt >= oneDayAgo;
+              }).length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
+                  {contactMessages.filter(m => {
+                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                    return m.submittedAt >= oneDayAgo;
+                  }).length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -1011,6 +1038,122 @@ export default function AdminDashboard() {
                 >
                   {updatePricingMutation.isPending ? "Saving…" : "Save Prices"}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support" className="space-y-4">
+            {/* Summary stats */}
+            {(() => {
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+              const newMessages = contactMessages.filter(m => m.submittedAt >= oneDayAgo);
+              const callbackRequested = contactMessages.filter(m => m.requestCallback);
+              return (
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Messages</p>
+                          <p className="text-3xl font-bold text-gray-800">{contactMessages.length}</p>
+                        </div>
+                        <Icon icon={MessageSquare} size="xl" className="text-gray-400" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-blue-100 bg-blue-50">
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">New (Last 24h)</p>
+                          <p className="text-3xl font-bold text-blue-700">{newMessages.length}</p>
+                        </div>
+                        <Icon icon={AlertCircle} size="xl" className="text-blue-400" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-amber-100 bg-amber-50">
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Callback Requested</p>
+                          <p className="text-3xl font-bold text-amber-700">{callbackRequested.length}</p>
+                        </div>
+                        <Icon icon={Phone} size="xl" className="text-amber-400" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
+
+            {/* Messages list */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Icon icon={MessageSquare} size="sm" />
+                  Customer Messages
+                </CardTitle>
+                <CardDescription>Messages submitted through the FAQ / contact form</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {messagesLoading ? (
+                  <div className="text-center py-8 text-gray-400">Loading messages…</div>
+                ) : contactMessages.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">No messages yet</div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...contactMessages]
+                      .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+                      .map((msg) => {
+                        const isNew = msg.submittedAt >= new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                        const submittedDate = new Date(msg.submittedAt);
+                        const formattedDate = submittedDate.toLocaleDateString(undefined, {
+                          month: "short", day: "numeric", year: "numeric"
+                        });
+                        const formattedTime = submittedDate.toLocaleTimeString(undefined, {
+                          hour: "numeric", minute: "2-digit"
+                        });
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`p-4 rounded-lg border ${isNew ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-white"}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0 space-y-1">
+                                {/* Header row */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm text-gray-900">{msg.name}</span>
+                                  {isNew && (
+                                    <Badge variant="default" className="text-xs h-4 px-1.5">New</Badge>
+                                  )}
+                                  {msg.requestCallback && (
+                                    <Badge variant="outline" className="text-xs h-4 px-1.5 border-amber-400 text-amber-600">
+                                      <Icon icon={Phone} size="xs" className="mr-1" />
+                                      Callback requested
+                                    </Badge>
+                                  )}
+                                </div>
+                                {/* Email */}
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Icon icon={Mail} size="xs" />
+                                  <a href={`mailto:${msg.email}`} className="hover:underline">{msg.email}</a>
+                                </div>
+                                {/* Message */}
+                                <p className="text-sm text-gray-700 mt-2 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                              </div>
+                              {/* Date */}
+                              <div className="text-right shrink-0">
+                                <p className="text-xs text-gray-500">{formattedDate}</p>
+                                <p className="text-xs text-gray-400">{formattedTime}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
