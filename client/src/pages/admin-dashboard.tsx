@@ -101,6 +101,7 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [supportFilter, setSupportFilter] = useState<"open" | "all" | "resolved">("open");
 
   // Role-based access check
   if (!user?.isAdmin) {
@@ -160,6 +161,21 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/contact-messages");
       return await res.json();
+    },
+  });
+
+  // Resolve contact message mutation
+  const resolveMessageMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/contact-messages/${id}/resolve`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contact-messages"] });
+      toast({ title: "Message marked as resolved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to resolve message", variant: "destructive" });
     },
   });
 
@@ -519,12 +535,12 @@ export default function AdminDashboard() {
               Support
               {contactMessages.filter(m => {
                 const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                return m.submittedAt >= oneDayAgo;
+                return !m.resolved && m.submittedAt >= oneDayAgo;
               }).length > 0 && (
                 <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
                   {contactMessages.filter(m => {
                     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                    return m.submittedAt >= oneDayAgo;
+                    return !m.resolved && m.submittedAt >= oneDayAgo;
                   }).length}
                 </Badge>
               )}
@@ -1047,16 +1063,17 @@ export default function AdminDashboard() {
             {/* Summary stats */}
             {(() => {
               const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-              const newMessages = contactMessages.filter(m => m.submittedAt >= oneDayAgo);
-              const callbackRequested = contactMessages.filter(m => m.requestCallback);
+              const newMessages = contactMessages.filter(m => !m.resolved && m.submittedAt >= oneDayAgo);
+              const callbackRequested = contactMessages.filter(m => !m.resolved && m.requestCallback);
+              const openMessages = contactMessages.filter(m => !m.resolved);
               return (
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="pt-4 pb-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Messages</p>
-                          <p className="text-3xl font-bold text-gray-800">{contactMessages.length}</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Open Messages</p>
+                          <p className="text-3xl font-bold text-gray-800">{openMessages.length}</p>
                         </div>
                         <Icon icon={MessageSquare} size="xl" className="text-gray-400" />
                       </div>
@@ -1091,11 +1108,31 @@ export default function AdminDashboard() {
             {/* Messages list */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Icon icon={MessageSquare} size="sm" />
-                  Customer Messages
-                </CardTitle>
-                <CardDescription>Messages submitted through the FAQ / contact form</CardDescription>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Icon icon={MessageSquare} size="sm" />
+                      Customer Messages
+                    </CardTitle>
+                    <CardDescription>Messages submitted through the FAQ / contact form</CardDescription>
+                  </div>
+                  {/* Filter toggle */}
+                  <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-1 bg-gray-50">
+                    {(["open", "all", "resolved"] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setSupportFilter(f)}
+                        className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+                          supportFilter === f
+                            ? "bg-white shadow-sm text-gray-900 border border-gray-200"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {messagesLoading ? (
@@ -1103,56 +1140,107 @@ export default function AdminDashboard() {
                 ) : contactMessages.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">No messages yet</div>
                 ) : (
-                  <div className="space-y-3">
-                    {[...contactMessages]
+                  (() => {
+                    const filtered = [...contactMessages]
                       .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-                      .map((msg) => {
-                        const isNew = msg.submittedAt >= new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                        const submittedDate = new Date(msg.submittedAt);
-                        const formattedDate = submittedDate.toLocaleDateString(undefined, {
-                          month: "short", day: "numeric", year: "numeric"
-                        });
-                        const formattedTime = submittedDate.toLocaleTimeString(undefined, {
-                          hour: "numeric", minute: "2-digit"
-                        });
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`p-4 rounded-lg border ${isNew ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-white"}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0 space-y-1">
-                                {/* Header row */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-sm text-gray-900">{msg.name}</span>
-                                  {isNew && (
-                                    <Badge variant="default" className="text-xs h-4 px-1.5">New</Badge>
-                                  )}
-                                  {msg.requestCallback && (
-                                    <Badge variant="outline" className="text-xs h-4 px-1.5 border-amber-400 text-amber-600">
-                                      <Icon icon={Phone} size="xs" className="mr-1" />
-                                      Callback requested
-                                    </Badge>
+                      .filter(m => {
+                        if (supportFilter === "open") return !m.resolved;
+                        if (supportFilter === "resolved") return m.resolved;
+                        return true;
+                      });
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-400">
+                          No {supportFilter === "all" ? "" : supportFilter} messages
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-3">
+                        {filtered.map((msg) => {
+                          const isNew = !msg.resolved && msg.submittedAt >= new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                          const submittedDate = new Date(msg.submittedAt);
+                          const formattedDate = submittedDate.toLocaleDateString(undefined, {
+                            month: "short", day: "numeric", year: "numeric"
+                          });
+                          const formattedTime = submittedDate.toLocaleTimeString(undefined, {
+                            hour: "numeric", minute: "2-digit"
+                          });
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`p-4 rounded-lg border ${
+                                msg.resolved
+                                  ? "border-gray-100 bg-gray-50/60 opacity-70"
+                                  : isNew
+                                  ? "border-blue-200 bg-blue-50/40"
+                                  : "border-gray-100 bg-white"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  {/* Header row */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`font-semibold text-sm ${msg.resolved ? "text-gray-400" : "text-gray-900"}`}>
+                                      {msg.name}
+                                    </span>
+                                    {msg.resolved ? (
+                                      <Badge variant="secondary" className="text-xs h-4 px-1.5 bg-green-100 text-green-700 border-green-200">
+                                        <Icon icon={CheckCircle2} size="xs" className="mr-1" />
+                                        Resolved
+                                      </Badge>
+                                    ) : isNew ? (
+                                      <Badge variant="default" className="text-xs h-4 px-1.5">New</Badge>
+                                    ) : null}
+                                    {msg.requestCallback && (
+                                      <Badge variant="outline" className={`text-xs h-4 px-1.5 ${msg.resolved ? "border-gray-300 text-gray-400" : "border-amber-400 text-amber-600"}`}>
+                                        <Icon icon={Phone} size="xs" className="mr-1" />
+                                        Callback requested
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {/* Email */}
+                                  <div className={`flex items-center gap-1 text-xs ${msg.resolved ? "text-gray-400" : "text-gray-500"}`}>
+                                    <Icon icon={Mail} size="xs" />
+                                    <a href={`mailto:${msg.email}`} className="hover:underline">{msg.email}</a>
+                                  </div>
+                                  {/* Message */}
+                                  <p className={`text-sm mt-2 leading-relaxed whitespace-pre-wrap ${msg.resolved ? "text-gray-400" : "text-gray-700"}`}>
+                                    {msg.message}
+                                  </p>
+                                  {/* Resolved timestamp */}
+                                  {msg.resolved && msg.resolvedAt && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      Resolved {new Date(msg.resolvedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                                    </p>
                                   )}
                                 </div>
-                                {/* Email */}
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Icon icon={Mail} size="xs" />
-                                  <a href={`mailto:${msg.email}`} className="hover:underline">{msg.email}</a>
+                                {/* Date + action */}
+                                <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                                  <div>
+                                    <p className="text-xs text-gray-500">{formattedDate}</p>
+                                    <p className="text-xs text-gray-400">{formattedTime}</p>
+                                  </div>
+                                  {!msg.resolved && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-7 px-2 text-green-700 border-green-300 hover:bg-green-50"
+                                      disabled={resolveMessageMutation.isPending}
+                                      onClick={() => resolveMessageMutation.mutate(msg.id)}
+                                    >
+                                      <Icon icon={CheckCircle2} size="xs" className="mr-1" />
+                                      Mark Resolved
+                                    </Button>
+                                  )}
                                 </div>
-                                {/* Message */}
-                                <p className="text-sm text-gray-700 mt-2 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                              </div>
-                              {/* Date */}
-                              <div className="text-right shrink-0">
-                                <p className="text-xs text-gray-500">{formattedDate}</p>
-                                <p className="text-xs text-gray-400">{formattedTime}</p>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
                 )}
               </CardContent>
             </Card>

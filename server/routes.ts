@@ -2191,6 +2191,21 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to fetch contact messages" });
     }
   });
+
+  // Admin: mark a contact message as resolved
+  app.patch("/api/admin/contact-messages/:id/resolve", isAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid message ID" });
+    try {
+      const updated = await storage.resolveContactMessage(id);
+      res.json(updated);
+    } catch (error: any) {
+      if (error?.message === "Contact message not found") {
+        return res.status(404).json({ error: "Contact message not found" });
+      }
+      res.status(500).json({ error: "Failed to resolve contact message" });
+    }
+  });
   
   return httpServer;
 }

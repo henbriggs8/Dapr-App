@@ -165,6 +165,8 @@ export const contactMessages = pgTable("contact_messages", {
   message: text("message").notNull(),
   requestCallback: boolean("request_callback").notNull().default(false),
   submittedAt: text("submitted_at").notNull(),
+  resolved: boolean("resolved").notNull().default(false),
+  resolvedAt: text("resolved_at"),
 });
 
 // Relations
@@ -282,7 +284,7 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({ id: tru
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
 
-export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true }).extend({
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true, resolved: true, resolvedAt: true }).extend({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   message: z.string().min(10, "Message must be at least 10 characters"),

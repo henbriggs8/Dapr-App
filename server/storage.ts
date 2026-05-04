@@ -202,6 +202,7 @@ export interface IStorage {
   // Contact message methods
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
   getContactMessages(): Promise<ContactMessage[]>;
+  resolveContactMessage(id: number): Promise<ContactMessage>;
 
   sessionStore: session.Store;
 }
@@ -1491,6 +1492,9 @@ export class MemStorage implements IStorage {
   async getContactMessages(): Promise<ContactMessage[]> {
     throw new Error("getContactMessages not implemented in MemStorage");
   }
+  async resolveContactMessage(id: number): Promise<ContactMessage> {
+    throw new Error("resolveContactMessage not implemented in MemStorage");
+  }
 }
 
 
@@ -2404,6 +2408,16 @@ export class DatabaseStorage implements IStorage {
 
   async getContactMessages(): Promise<ContactMessage[]> {
     return db.select().from(contactMessages).orderBy(desc(contactMessages.id));
+  }
+
+  async resolveContactMessage(id: number): Promise<ContactMessage> {
+    const [updated] = await db
+      .update(contactMessages)
+      .set({ resolved: true, resolvedAt: new Date().toISOString() })
+      .where(eq(contactMessages.id, id))
+      .returning();
+    if (!updated) throw new Error("Contact message not found");
+    return updated;
   }
 
   async initialize(): Promise<void> {
