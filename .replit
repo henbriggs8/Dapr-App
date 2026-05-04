@@ -90,6 +90,7 @@ isValidation = true
 
 [userenv.shared]
 VITE_API_BASE_URL = "https://dapper-pros.replit.app"
+SUPPORT_FROM_EMAIL = "noreply@dapper-pros.com"
 
 [postMerge]
 path = "scripts/post-merge.sh"
