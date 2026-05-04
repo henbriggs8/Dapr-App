@@ -24,6 +24,7 @@ export interface LocationBottomSheetProps {
   currentAddress?: string | null;
   recentAddresses?: string[];
   onAddressSaved?: (address: string) => void;
+  navigateToBookingOnSelect?: boolean;
 }
 
 type Step = 0 | 1 | 2;
@@ -832,8 +833,9 @@ const variants = {
 
 // ── Main sheet ────────────────────────────────────────────────────────────────
 export function LocationBottomSheet({
-  isOpen, onClose, currentAddress, recentAddresses = [], onAddressSaved,
+  isOpen, onClose, currentAddress, recentAddresses = [], onAddressSaved, navigateToBookingOnSelect,
 }: LocationBottomSheetProps) {
+  const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>(0);
   const [direction, setDirection] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
@@ -860,7 +862,7 @@ export function LocationBottomSheet({
     setStep(next);
   }, [step]);
 
-  // Save address to profile and move to service step
+  // Save address to profile and move to service step (or navigate to booking)
   const handleAddressSelect = useCallback(async (address: string) => {
     setSelectedAddress(address);
     onAddressSaved?.(address);
@@ -875,8 +877,13 @@ export function LocationBottomSheet({
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     } catch {}
-    goTo(1);
-  }, [getToken, queryClient, goTo, onAddressSaved]);
+    if (navigateToBookingOnSelect) {
+      onClose();
+      setLocation(`/booking?address=${encodeURIComponent(address)}`);
+    } else {
+      goTo(1);
+    }
+  }, [getToken, queryClient, goTo, onAddressSaved, navigateToBookingOnSelect, onClose, setLocation]);
 
   // Sheet height (taller for service/confirm steps)
   const sheetH = step === 0 ? "78vh" : "88vh";
