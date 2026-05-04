@@ -77,3 +77,9 @@ id = "6lu9UXw7zDs4o5tOwWkbk"
 uri = "file://dist_public.tar.gz"
 type = "unspecified"
 title = "dist_public.tar.gz — matching screen + post-payment flow"
+
+[[outputs]]
+id = "Sbjeha-fFK-cSiTZ4B5ik"
+uri = "file://dapr-ios-xcode.zip"
+type = "unspecified"
+title = "Dapr iOS Xcode Project"
