@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight,
-  Bell, Shield, UserX, Settings, Star, Calendar, Hash
+  Bell, Shield, UserX, Settings, Star, Calendar, Hash, KeyRound, Eye, EyeOff
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
@@ -71,6 +72,7 @@ function statusColor(status: string) {
 
 export default function ProfilePage() {
   const { user, logoutMutation } = useAuth();
+  const { user: clerkUser } = useUser();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,6 +83,14 @@ export default function ProfilePage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [marketingEnabled, setMarketingEnabled] = useState(false);
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwShowCurrent, setPwShowCurrent] = useState(false);
+  const [pwShowNew, setPwShowNew] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -199,6 +209,25 @@ export default function ProfilePage() {
       toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
     },
   });
+
+  const handleChangePassword = async () => {
+    setPwError("");
+    if (!pwNew || pwNew.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    if (pwNew !== pwConfirm) { setPwError("Passwords don't match."); return; }
+    if (!clerkUser) { setPwError("Not signed in."); return; }
+    setPwLoading(true);
+    try {
+      await clerkUser.updatePassword({ currentPassword: pwCurrent || undefined, newPassword: pwNew });
+      toast({ title: "Password updated", description: "Your password has been changed successfully." });
+      setPwDialogOpen(false);
+      setPwCurrent(""); setPwNew(""); setPwConfirm("");
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.message || err?.message || "Failed to update password.";
+      setPwError(msg);
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   const handleVehicleSubmit = (data: VehicleFormValues) => {
     if (selectedVehicle) {
@@ -610,6 +639,22 @@ export default function ProfilePage() {
               )}
 
               <button
+                onClick={() => { setPwError(""); setPwCurrent(""); setPwNew(""); setPwConfirm(""); setPwDialogOpen(true); }}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center">
+                    <Icon icon={KeyRound} size="sm" className="text-[#8c52ff]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-black">Change password</p>
+                    <p className="text-xs text-gray-500">Update your account password</p>
+                  </div>
+                </div>
+                <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+              </button>
+
+              <button
                 onClick={handleSignOut}
                 disabled={logoutMutation.isPending}
                 className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors text-left"
@@ -809,6 +854,74 @@ export default function ProfilePage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={pwDialogOpen} onOpenChange={(open) => { setPwDialogOpen(open); if (!open) setPwError(""); }}>
+        <DialogContent className="sm:max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Change password</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              Choose a new password for your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-1.5">Current password</p>
+              <div className="relative">
+                <input
+                  type={pwShowCurrent ? "text" : "password"}
+                  value={pwCurrent}
+                  onChange={(e) => setPwCurrent(e.target.value)}
+                  placeholder="Enter current password"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 pr-10 text-[14px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#8c52ff] transition"
+                />
+                <button type="button" onClick={() => setPwShowCurrent(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Icon icon={pwShowCurrent ? EyeOff : Eye} size="sm" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-1.5">New password</p>
+              <div className="relative">
+                <input
+                  type={pwShowNew ? "text" : "password"}
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 pr-10 text-[14px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#8c52ff] transition"
+                />
+                <button type="button" onClick={() => setPwShowNew(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Icon icon={pwShowNew ? EyeOff : Eye} size="sm" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-1.5">Confirm new password</p>
+              <input
+                type="password"
+                value={pwConfirm}
+                onChange={(e) => setPwConfirm(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
+                placeholder="Repeat new password"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-[14px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#8c52ff] transition"
+              />
+            </div>
+            {pwError && (
+              <p className="text-[12px] text-red-500 bg-red-50 rounded-lg px-3 py-2">{pwError}</p>
+            )}
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setPwDialogOpen(false)} className="rounded-lg">Cancel</Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={pwLoading || !pwNew || !pwConfirm}
+              className="rounded-lg bg-[#111] hover:bg-[#222] text-white"
+            >
+              {pwLoading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : "Update password"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
