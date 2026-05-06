@@ -124,7 +124,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // GPS Tracking endpoints
-  app.post("/api/tracking/enable/:bookingId", async (req, res) => {
+  app.post("/api/tracking/enable/:bookingId", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
     try {
@@ -137,7 +137,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/tracking/active", async (req, res) => {
+  app.get("/api/tracking/active", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
     try {
@@ -149,7 +149,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/tracking/:bookingId", async (req, res) => {
+  app.get("/api/tracking/:bookingId", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     
     try {

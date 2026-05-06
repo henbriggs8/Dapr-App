@@ -1811,7 +1811,8 @@ export class DatabaseStorage implements IStorage {
         providerId,
         status: 'assigned',
         assignedAt: new Date().toISOString(),
-        assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+        assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        trackingEnabled: true
       })
       .where(
         and(
@@ -2274,7 +2275,6 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(bookings.userId, userId),
-          eq(bookings.trackingEnabled, true),
           or(
             eq(bookings.status, 'assigned'),
             eq(bookings.status, 'confirmed'),
