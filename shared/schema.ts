@@ -73,6 +73,8 @@ export const bookings = pgTable("bookings", {
   serviceId: integer("service_id").notNull(),
   timeSlotId: integer("time_slot_id").notNull(),
   vehicleId: integer("vehicle_id"),
+  // Human-readable booking reference e.g. DAPR-A3X9K2
+  bookingRef: text("booking_ref").unique(),
   // Status can be: 'pending', 'assigned', 'confirmed', 'in_progress', 'completed', 'cancelled'
   status: text("status").notNull().default('pending'),
   currentStage: text("current_stage"), // For tracking service progress stages

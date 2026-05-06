@@ -461,7 +461,9 @@ export default function ProviderDashboard() {
                         {booking.status.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400">#{booking.id}</span>
+                    <span className="text-xs font-mono font-medium text-[#8c52ff]">
+                      {(booking as any).bookingRef || `#${booking.id}`}
+                    </span>
                   </div>
 
                   {/* Details */}
@@ -641,17 +643,22 @@ export default function ProviderDashboard() {
             <div>
               {availableJobs.map((job, i) => (
                 <div key={job.id} className={`px-6 py-5 ${i < availableJobs.length - 1 ? "border-b border-gray-200" : ""}`}>
-                  {/* Tier + distance */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 font-medium">
-                      {formatCategory(job.priceTier)}
-                    </span>
-                    {job.distance != null && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Icon icon={Navigation} size="xs" />
-                        {job.distance} mi away
+                  {/* Ref + tier + distance */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 font-medium">
+                        {formatCategory(job.priceTier)}
                       </span>
-                    )}
+                      {job.distance != null && (
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <Icon icon={Navigation} size="xs" />
+                          {job.distance} mi away
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-mono font-medium text-[#8c52ff]">
+                      {(job as any).bookingRef || `#${job.id}`}
+                    </span>
                   </div>
 
                   {/* Details */}

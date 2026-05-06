@@ -543,7 +543,10 @@ export default function ProfilePage() {
                     <h3 className="text-sm font-semibold text-black capitalize">
                       {booking.priceTier} Package
                     </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs font-mono text-[#8c52ff] mt-0.5">
+                      {(booking as any).bookingRef || `#${booking.id}`}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(booking.timestamp).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",

@@ -507,6 +507,7 @@ export class MemStorage implements IStorage {
       estimatedCompletionTime: booking.estimatedCompletionTime ?? null,
       timeAdjustments: booking.timeAdjustments ?? [],
       providerNotes: booking.providerNotes ?? null,
+      bookingRef: (() => { const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r='DAPR-'; for(let i=0;i<6;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; })(),
     };
     this.bookings.set(id, newBooking);
     return newBooking;
@@ -1572,9 +1573,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let ref = 'DAPR-';
+    for (let i = 0; i < 6; i++) ref += chars[Math.floor(Math.random() * chars.length)];
     const [newBooking] = await db
       .insert(bookings)
-      .values(booking as any)
+      .values({ ...booking, bookingRef: ref } as any)
       .returning();
     return newBooking;
   }

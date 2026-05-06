@@ -383,6 +383,15 @@ export default function AdminDashboard() {
   // Bookings table columns
   const bookingColumns: ColumnDef<AdminBooking>[] = [
     {
+      accessorKey: "bookingRef",
+      header: "Ref",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-[#8c52ff] font-medium">
+          {(row.original as any).bookingRef || `#${row.original.id}`}
+        </span>
+      ),
+    },
+    {
       accessorKey: "customerName",
       header: "Customer",
       cell: ({ row }) => row.original.customerName || "Unknown Customer",

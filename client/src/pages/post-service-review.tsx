@@ -175,7 +175,9 @@ export default function PostServiceReview() {
           <div className="rounded-2xl border border-[#efefef] bg-[#fafafa] px-4 py-3.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-[#111]">{service.name}</p>
-              <p className="text-[12px] text-[#999] mt-0.5">Booking #{bookingId}</p>
+              <p className="text-[12px] text-[#999] mt-0.5 font-mono">
+                {(booking as any)?.bookingRef || `#${bookingId}`}
+              </p>
             </div>
             {basePriceCents > 0 && (
               <p className="text-[14px] font-bold text-[#111] shrink-0">

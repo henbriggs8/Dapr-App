@@ -143,8 +143,8 @@ export default function BookingDetails() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-between border-t pt-4">
-          <div className="text-sm text-muted-foreground">
-            Booking ID: #{booking.id}
+          <div className="text-sm text-muted-foreground font-mono">
+            {(booking as any).bookingRef || `#${booking.id}`}
           </div>
           <div>
             <Badge 
