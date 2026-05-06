@@ -491,14 +491,14 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Vehicle endpoints
-  app.get("/api/vehicles", async (req, res) => {
+  app.get("/api/vehicles", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const vehicles = await storage.getUserVehicles(req.user.id);
     res.json(vehicles);
   });
 
-  app.get("/api/vehicles/:id", async (req, res) => {
+  app.get("/api/vehicles/:id", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const id = parseInt(req.params.id);
@@ -519,7 +519,7 @@ export function registerRoutes(app: Express): Server {
     res.json(vehicle);
   });
 
-  app.post("/api/vehicles", async (req, res) => {
+  app.post("/api/vehicles", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     try {
@@ -539,7 +539,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/vehicles/:id", async (req, res) => {
+  app.patch("/api/vehicles/:id", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const id = parseInt(req.params.id);
@@ -565,7 +565,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/vehicles/:id", async (req, res) => {
+  app.delete("/api/vehicles/:id", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const id = parseInt(req.params.id);
