@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Clock, Navigation, Car, Phone } from 'lucide-react';
+import { MapPin, Clock, Navigation, Car, Phone, CheckCircle, Loader2, Radio } from 'lucide-react';
 import { Icon } from "@/components/ui/icon";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TrackingMapProps {
   bookingId: number;
@@ -39,22 +38,19 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
     extraTimeMinutes: 0,
     adjustmentDetails: [],
   });
+  const [lastPing, setLastPing] = useState<Date | null>(null);
 
-  // Query for initial tracking data
   const { data: trackingData } = useQuery<TrackingInfo>({
     queryKey: [`/api/tracking/${bookingId}`],
     refetchInterval: 10000,
   });
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     const socket = new WebSocket(wsUrl);
 
-    socket.onopen = () => {
-      setWsConnected(true);
-    };
+    socket.onopen = () => setWsConnected(true);
 
     socket.onmessage = (event) => {
       try {
@@ -68,6 +64,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             distance: data.distance,
             lastUpdate: new Date().toISOString(),
           });
+          setLastPing(new Date());
         }
 
         if (data.type === 'provider_arrived' && data.bookingId === bookingId) {
@@ -78,6 +75,7 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
             extraTimeMinutes: 0,
             adjustmentDetails: [],
           });
+          setLastPing(new Date());
         }
 
         if (data.type === 'eta_update' && data.bookingId === bookingId) {
@@ -90,293 +88,232 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
           }));
         }
       } catch (error) {
-        console.error('GPS tracking WebSocket message error:', error);
+        console.error('Tracking WS error:', error);
       }
     };
 
-    socket.onclose = () => {
-      setWsConnected(false);
-    };
-
+    socket.onclose = () => setWsConnected(false);
     return () => socket.close();
   }, [bookingId, trackingData]);
 
-  const currentTracking = liveTracking || trackingData;
-
-  const formatCompletionTime = (isoString: string | null) => {
-    if (!isoString) return null;
-    return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
+  const current = liveTracking || trackingData;
+  const hasLiveLocation = !!current?.providerLocation;
 
   const formatETA = (eta: string | null) => {
-    if (!eta) return 'Calculating...';
-    
-    const etaDate = new Date(eta);
-    const now = new Date();
-    const diffMinutes = Math.round((etaDate.getTime() - now.getTime()) / (1000 * 60));
-    
-    if (diffMinutes <= 0) return 'Arriving now';
-    if (diffMinutes <= 60) return `${diffMinutes} min`;
-    
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-    return `${hours}h ${minutes}m`;
+    if (!eta) return null;
+    const diff = Math.round((new Date(eta).getTime() - Date.now()) / 60000);
+    if (diff <= 0) return 'Arriving now';
+    if (diff < 60) return `${diff} min`;
+    return `${Math.floor(diff / 60)}h ${diff % 60}m`;
   };
 
-  const formatDistance = (distance: number | null) => {
-    if (!distance) return 'Calculating...';
-    return distance < 1 ? `${(distance * 5280).toFixed(0)} ft` : `${distance.toFixed(1)} mi`;
+  const formatDistance = (d: number | null) => {
+    if (!d) return null;
+    return d < 1 ? `${(d * 5280).toFixed(0)} ft` : `${d.toFixed(1)} mi`;
   };
 
-  const formatLastUpdate = (lastUpdate: string | null) => {
-    if (!lastUpdate) return 'No updates yet';
-    
-    const updateTime = new Date(lastUpdate);
-    const now = new Date();
-    const diffMinutes = Math.round((now.getTime() - updateTime.getTime()) / (1000 * 60));
-    
-    if (diffMinutes === 0) return 'Just now';
-    if (diffMinutes === 1) return '1 minute ago';
-    return `${diffMinutes} minutes ago`;
+  const formatTime = (iso: string | null) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  const timeSincePing = lastPing
+    ? Math.round((Date.now() - lastPing.getTime()) / 1000)
+    : null;
+
+  const steps = [
+    { label: 'Booking confirmed', done: true },
+    { label: arrivalStatus.arrived ? 'Provider arrived' : 'Provider en route', done: arrivalStatus.arrived, active: !arrivalStatus.arrived },
+    { label: 'Service in progress', done: false, active: arrivalStatus.arrived },
+    { label: 'Service completed', done: false },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-md mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Track Your Service</h1>
-          {onClose && (
-            <Button variant="ghost" onClick={onClose}>
-              Close
-            </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div>
+          <h1 className="text-[17px] font-semibold text-black">Live Tracking</h1>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+            <span className="text-[11px] text-gray-400">
+              {wsConnected ? 'Connected' : 'Reconnecting...'}
+            </span>
+            {timeSincePing !== null && (
+              <span className="text-[11px] text-gray-400">· updated {timeSincePing}s ago</span>
+            )}
+          </div>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-sm text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            Close
+          </button>
+        )}
+      </div>
+
+      <div className="max-w-md mx-auto px-4 py-5 space-y-4">
+
+        {/* Status banner */}
+        <AnimatePresence mode="wait">
+          {arrivalStatus.arrived ? (
+            <motion.div
+              key="arrived"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-950 text-white rounded-2xl px-5 py-4 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#8c52ff] animate-pulse" />
+                <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-widest">Provider On-Site</span>
+              </div>
+              {arrivalStatus.estimatedCompletionTime && (
+                <div>
+                  <p className="text-xs text-gray-400">Estimated finish</p>
+                  <p className="text-3xl font-bold">{formatTime(arrivalStatus.estimatedCompletionTime)}</p>
+                </div>
+              )}
+              {arrivalStatus.adjustmentDetails.length > 0 && (
+                <div className="border-t border-gray-800 pt-3 space-y-1">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Time adjustments</p>
+                  {arrivalStatus.adjustmentDetails.map((adj, i) => (
+                    <div key={i} className="flex justify-between text-sm text-gray-300">
+                      <span>{adj.label}</span>
+                      <span>+{adj.minutes}m</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {arrivalStatus.providerNotes && (
+                <p className="text-xs text-gray-400 border-t border-gray-800 pt-2 italic">"{arrivalStatus.providerNotes}"</p>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="enroute"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#8c52ff] text-white rounded-2xl px-5 py-4"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-80 mb-1">Your Pro is on the way</p>
+                  {formatETA(current?.eta || null) ? (
+                    <p className="text-4xl font-bold">{formatETA(current?.eta || null)}</p>
+                  ) : (
+                    <p className="text-lg font-medium opacity-70">Calculating ETA…</p>
+                  )}
+                  {formatDistance(current?.distance || null) && (
+                    <p className="text-sm opacity-70 mt-1">{formatDistance(current?.distance || null)} away</p>
+                  )}
+                </div>
+                <motion.div
+                  animate={{ x: [0, 6, 0] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <Icon icon={Car} size="xl" className="opacity-80" />
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Location status card */}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Provider Location</span>
+            {hasLiveLocation ? (
+              <Badge className="bg-green-50 text-green-700 border-green-100 text-[10px] font-semibold">
+                <Icon icon={Radio} size="xs" className="mr-1 animate-pulse" />
+                Live
+              </Badge>
+            ) : (
+              <Badge className="bg-gray-50 text-gray-400 border-gray-100 text-[10px]">Pending</Badge>
+            )}
+          </div>
+
+          {hasLiveLocation ? (
+            <div className="px-4 py-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#f3eeff] flex items-center justify-center flex-shrink-0">
+                  <Icon icon={MapPin} size="sm" className="text-[#8c52ff]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-black">Location received</p>
+                  <p className="text-xs text-gray-400">
+                    {current?.providerLocation?.lat.toFixed(4)}°, {current?.providerLocation?.lng.toFixed(4)}°
+                    {lastPing && <span className="ml-2">· {Math.round((Date.now() - lastPing.getTime()) / 1000)}s ago</span>}
+                  </p>
+                </div>
+              </div>
+              {(formatETA(current?.eta || null) || formatDistance(current?.distance || null)) && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {formatETA(current?.eta || null) && (
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">ETA</p>
+                      <p className="text-base font-bold text-black">{formatETA(current?.eta || null)}</p>
+                    </div>
+                  )}
+                  {formatDistance(current?.distance || null) && (
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Distance</p>
+                      <p className="text-base font-bold text-black">{formatDistance(current?.distance || null)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="px-4 py-6 flex items-center gap-3">
+              <Icon icon={Loader2} size="md" className="text-gray-300 animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-sm text-gray-500">Waiting for provider GPS signal</p>
+                <p className="text-xs text-gray-400 mt-0.5">Updates every 20 seconds once en route</p>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Connection Status */}
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
-          <span className="text-sm text-gray-600">
-            {wsConnected ? 'Live tracking active' : 'Connecting...'}
-          </span>
+        {/* Progress steps */}
+        <div className="bg-white rounded-2xl border border-gray-100 px-4 py-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Service Progress</p>
+          <div className="space-y-0">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    step.done ? 'bg-[#8c52ff]' :
+                    step.active ? 'bg-[#8c52ff]' :
+                    'bg-gray-100'
+                  }`}>
+                    {step.done ? (
+                      <Icon icon={CheckCircle} size="xs" className="text-white" />
+                    ) : step.active ? (
+                      <motion.div
+                        className="w-2 h-2 rounded-full bg-white"
+                        animate={{ scale: [1, 1.3, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-gray-300" />
+                    )}
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div className={`w-0.5 h-6 mt-1 mb-1 ${step.done ? 'bg-[#8c52ff]' : 'bg-gray-100'}`} />
+                  )}
+                </div>
+                <p className={`text-sm pt-0.5 ${step.done || step.active ? 'font-medium text-black' : 'text-gray-400'}`}>
+                  {step.label}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Map Placeholder */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="h-64 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center relative overflow-hidden">
-              {/* Animated Background */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-blue-300/20 to-purple-300/20"
-                animate={{
-                  backgroundPosition: ['0% 0%', '100% 100%'],
-                }}
-                transition={{
-                  duration: 20,
-                  repeat: Infinity,
-                  repeatType: 'reverse',
-                }}
-              />
-              
-              {/* Provider Location Indicator */}
-              {currentTracking?.providerLocation && (
-                <motion.div
-                  className="absolute top-1/3 left-1/2 transform -translate-x-1/2"
-                  animate={{
-                    y: [0, -10, 0],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                  }}
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="bg-blue-500 text-white p-2 rounded-full shadow-lg">
-                      <Icon icon={Car} size="md" />
-                    </div>
-                    <div className="text-xs font-medium text-gray-700 mt-1">Provider</div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Customer Location Indicator */}
-              {currentTracking?.customerLocation && (
-                <div className="absolute bottom-1/3 right-1/3 transform translate-x-1/2">
-                  <div className="flex flex-col items-center">
-                    <div className="bg-green-500 text-white p-2 rounded-full shadow-lg">
-                      <Icon icon={MapPin} size="md" />
-                    </div>
-                    <div className="text-xs font-medium text-gray-700 mt-1">You</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Route Line */}
-              {currentTracking?.providerLocation && currentTracking?.customerLocation && (
-                <svg className="absolute inset-0 w-full h-full">
-                  <motion.path
-                    d="M 50% 33% Q 60% 50% 66% 66%"
-                    stroke="#6366f1"
-                    strokeWidth="3"
-                    strokeDasharray="10,5"
-                    fill="none"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                </svg>
-              )}
-
-              {/* No Data State */}
-              {!currentTracking?.providerLocation && (
-                <div className="text-center text-gray-500">
-                  <Icon icon={Navigation} size="xl" className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Waiting for provider location...</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Arrival banner */}
-        {arrivalStatus.arrived && (
-          <div className="bg-gray-950 text-white rounded-xl px-5 py-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#8c52ff] animate-pulse" />
-              <span className="text-sm font-semibold text-[#8c52ff] uppercase tracking-widest">Provider Arrived</span>
-            </div>
-            {arrivalStatus.estimatedCompletionTime && (
-              <div>
-                <p className="text-xs text-gray-400">Estimated completion</p>
-                <p className="text-3xl font-bold">{formatCompletionTime(arrivalStatus.estimatedCompletionTime)}</p>
-              </div>
-            )}
-            {arrivalStatus.adjustmentDetails.length > 0 && (
-              <div className="border-t border-gray-800 pt-3 space-y-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Time adjustments</p>
-                {arrivalStatus.adjustmentDetails.map((adj, i) => (
-                  <div key={i} className="flex justify-between text-sm text-gray-300">
-                    <span>{adj.label}</span>
-                    <span>+{adj.minutes}m</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {arrivalStatus.providerNotes && (
-              <p className="text-xs text-gray-400 border-t border-gray-800 pt-2">{arrivalStatus.providerNotes}</p>
-            )}
-          </div>
-        )}
-
-        {/* Status Cards */}
-        {!arrivalStatus.arrived && (
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Icon icon={Clock} size="sm" />
-                  Estimated Arrival
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {formatETA(currentTracking?.eta || null)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Icon icon={Navigation} size="sm" />
-                  Distance Away
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {formatDistance(currentTracking?.distance || null)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Service Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Service Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Current Status:</span>
-              <Badge variant="secondary" className={arrivalStatus.arrived ? "bg-[#8c52ff]/10 text-[#8c52ff]" : "bg-blue-100 text-blue-800"}>
-                {arrivalStatus.arrived ? "Provider On-Site" : "Provider En Route"}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Last Update:</span>
-              <span className="text-sm font-medium">
-                {formatLastUpdate(currentTracking?.lastUpdate || null)}
-              </span>
-            </div>
-
-            <Button className="w-full" variant="outline">
-              <Icon icon={Phone} size="sm" className="mr-2" />
-              Contact Provider
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Progress Indicators */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Service Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-white" />
-                </div>
-                <span className="text-sm">Booking confirmed</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${arrivalStatus.arrived ? "bg-green-500" : "bg-blue-500"}`}>
-                  {arrivalStatus.arrived ? (
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  ) : (
-                    <motion.div
-                      className="w-2 h-2 rounded-full bg-white"
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    />
-                  )}
-                </div>
-                <span className="text-sm font-medium">{arrivalStatus.arrived ? "Provider arrived" : "Provider on the way"}</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className={`w-4 h-4 rounded-full ${arrivalStatus.arrived ? "bg-[#8c52ff]" : "bg-gray-300"}`}>
-                  {arrivalStatus.arrived && (
-                    <motion.div
-                      className="w-full h-full rounded-full bg-[#8c52ff]"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                  )}
-                </div>
-                <span className={`text-sm ${arrivalStatus.arrived ? "font-medium" : "text-gray-500"}`}>Service in progress</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-gray-300" />
-                <span className="text-sm text-gray-500">Service completed</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Contact */}
+        <Button variant="outline" className="w-full rounded-xl h-11 text-sm font-medium">
+          <Icon icon={Phone} size="sm" className="mr-2 text-gray-500" />
+          Contact Provider
+        </Button>
       </div>
     </div>
   );

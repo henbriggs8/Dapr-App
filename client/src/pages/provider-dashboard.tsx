@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ProviderProfileTab } from "@/components/provider-profile-tab";
 import { TimeAdjustmentPanel } from "@/components/time-adjustment-panel";
 import PhotoUploadPanel from "@/components/photo-upload-panel";
@@ -275,6 +275,30 @@ export default function ProviderDashboard() {
       toast({ title: "Failed to mark arrival", description: error.message, variant: "destructive" });
     },
   });
+
+  // Auto-broadcast GPS location every 20 s for each active booking
+  const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    const activeJobs = activeBookings.filter(b =>
+      b.status === 'assigned' || b.status === 'in_progress'
+    );
+    if (activeJobs.length === 0) {
+      if (gpsIntervalRef.current) { clearInterval(gpsIntervalRef.current); gpsIntervalRef.current = null; }
+      return;
+    }
+    const sendLocation = () => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        activeJobs.forEach((booking) => {
+          apiRequest("POST", `/api/provider/location/booking/${booking.id}`, { latitude, longitude }).catch(() => {});
+        });
+      }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 });
+    };
+    sendLocation();
+    gpsIntervalRef.current = setInterval(sendLocation, 20000);
+    return () => { if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current); };
+  }, [activeBookings]);
 
   const handleStatusToggle = (checked: boolean) => {
     const newStatus = checked ? 'online' : 'offline';
