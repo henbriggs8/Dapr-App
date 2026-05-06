@@ -129,8 +129,10 @@ export default function ProfilePage() {
         licensePlate: selectedVehicle.licensePlate || "",
         notes: selectedVehicle.notes || "",
       });
+      setDialogMake(selectedVehicle.make || "");
     } else {
       vehicleForm.reset({ userId: user?.id, year: undefined, make: "", model: "", color: "", licensePlate: "", notes: "" });
+      setDialogMake("");
     }
   }, [selectedVehicle, user?.id, vehicleForm]);
 
@@ -157,6 +159,9 @@ export default function ProfilePage() {
       setDialogOpen(false);
       setSelectedVehicle(null);
     },
+    onError: (err: any) => {
+      toast({ title: "Failed to add vehicle", description: err?.message || "Please try again.", variant: "destructive" });
+    },
   });
 
   const updateVehicleMutation = useMutation({
@@ -170,6 +175,9 @@ export default function ProfilePage() {
       toast({ title: "Vehicle updated" });
       setDialogOpen(false);
       setSelectedVehicle(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to update vehicle", description: err?.message || "Please try again.", variant: "destructive" });
     },
   });
 
@@ -740,7 +748,7 @@ export default function ProfilePage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...vehicleForm}>
-            <form onSubmit={vehicleForm.handleSubmit(handleVehicleSubmit)} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); vehicleForm.handleSubmit(handleVehicleSubmit)(); }} className="space-y-4">
               <FormField
                 control={vehicleForm.control}
                 name="year"
@@ -842,7 +850,8 @@ export default function ProfilePage() {
               />
               <DialogFooter>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => vehicleForm.handleSubmit(handleVehicleSubmit)()}
                   disabled={createVehicleMutation.isPending || updateVehicleMutation.isPending}
                   className="bg-black text-white text-sm font-medium px-6 py-2.5 hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
                 >
