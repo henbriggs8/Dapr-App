@@ -1284,6 +1284,13 @@ export function registerRoutes(app: Express): Server {
       if (booking.isPaid) {
         return res.status(400).send('Booking is already paid');
       }
+
+      // If a payment link was already created for this booking, reuse it.
+      // This prevents duplicate Square charges when the customer retries after
+      // a network error or a Square-side error on the checkout page.
+      if (booking.paymentUrl && booking.paymentStatus === 'pending') {
+        return res.json({ paymentUrl: booking.paymentUrl });
+      }
       
       // Handle free wash credit redemption
       if (req.body.useFreeWashCredit) {

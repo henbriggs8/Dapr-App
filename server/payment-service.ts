@@ -14,6 +14,11 @@ function generateIdempotencyKey(): string {
   return randomBytes(16).toString('hex');
 }
 
+/** Stable key for a booking+discount combo — Square dedupes on this. */
+function bookingIdempotencyKey(bookingId: number, discountPercent: number): string {
+  return `booking-${bookingId}-discount-${discountPercent}`;
+}
+
 export async function createPaymentLink(
   booking: Booking,
   service: Service,
@@ -36,7 +41,9 @@ export async function createPaymentLink(
       'https://autodapper.com';
 
     const response = await squareClient.checkout.paymentLinks.create({
-      idempotencyKey: generateIdempotencyKey(),
+      // Deterministic key: Square will return the same order if called again
+      // with the same key, preventing duplicate charges on retries.
+      idempotencyKey: bookingIdempotencyKey(booking.id, discount),
       quickPay: {
         name: `Dapr - ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
         locationId: process.env.SQUARE_LOCATION_ID!,
