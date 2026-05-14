@@ -18,6 +18,7 @@ import {
   Elements, CardElement, PaymentRequestButtonElement,
   useStripe, useElements,
 } from "@stripe/react-stripe-js";
+import type { PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
@@ -54,7 +55,7 @@ function StripePaymentForm({
     pr.canMakePayment().then((result) => {
       if (result?.applePay || result?.googlePay) setApplePayAvailable(true);
     });
-    pr.on("paymentmethod", async (ev: any) => {
+    pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
       const { paymentIntent, error: err1 } = await stripe.confirmCardPayment(
         clientSecret,
         { payment_method: ev.paymentMethod.id },
@@ -850,7 +851,7 @@ function ConfirmStep({
           >
             <Icon icon={ArrowLeft} size="sm" /> Back
           </button>
-          <p className="text-[15px] font-semibold text-gray-900">Payment</p>
+          <p className="text-[15px] font-semibold text-gray-900">Enter payment details</p>
           <div className="w-12" />
         </div>
         <div className="overflow-y-auto flex-1 px-4 py-4">
