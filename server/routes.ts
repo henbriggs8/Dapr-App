@@ -2249,8 +2249,8 @@ export function registerRoutes(app: Express): Server {
       const message = await storage.createContactMessage(parsed.data);
       console.log(`[contact] New support request from ${message.name} <${message.email}> — callback: ${message.requestCallback}`);
 
-      // Send emails (non-blocking)
-      import("./email-service").then(({ sendSupportNotificationEmail, sendCustomerConfirmationEmail }) => {
+      // Send emails (non-blocking): notify support team + confirm to customer
+      import("./email-service").then(({ sendSupportNotificationEmail, sendSupportConfirmationEmail }) => {
         const emailPayload = {
           name: message.name,
           email: message.email,
@@ -2261,7 +2261,7 @@ export function registerRoutes(app: Express): Server {
         sendSupportNotificationEmail(emailPayload).catch((err) => {
           console.error("[contact] Support notification email error:", err);
         });
-        sendCustomerConfirmationEmail(emailPayload).catch((err) => {
+        sendSupportConfirmationEmail(emailPayload).catch((err) => {
           console.error("[contact] Customer confirmation email error:", err);
         });
       }).catch((err) => {
