@@ -2179,7 +2179,7 @@ export function registerRoutes(app: Express): Server {
     const { pmId } = req.params;
     if (!pmId.startsWith('pm_')) return res.status(400).json({ error: 'Invalid payment method ID' });
     try {
-      const stripeCustomerId = req.user!.stripeCustomerId;
+      const stripeCustomerId = await resolveOrCreateStripeCustomerId(req.user!);
       if (!stripeCustomerId) return res.status(403).json({ error: 'No payment account linked' });
 
       // Verify ownership: the payment method must belong to this user's Stripe customer
