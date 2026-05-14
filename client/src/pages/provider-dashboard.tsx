@@ -51,9 +51,11 @@ export default function ProviderDashboard() {
     queryKey: ['/api/provider/active-bookings'],
   });
 
-  // Fetch available jobs (within 15 miles)
+  // Fetch available jobs (within 15 miles) — poll every 10 s so new bookings appear automatically
   const { data: availableJobs = [], isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<(Booking & { distance: number | null })[]>({
     queryKey: ['/api/provider/available-jobs'],
+    refetchInterval: 10000,
+    staleTime: 0,
   });
 
   // Accept job mutation

@@ -81,11 +81,22 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           } else if (data.type === "job_accepted") {
             // A provider accepted a job — refresh customer bookings and provider active list
             queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+            // Also invalidate the specific booking query so the matching screen transitions instantly
+            if (data.bookingId) {
+              queryClient.invalidateQueries({ queryKey: [`/api/bookings/${data.bookingId}`] });
+            }
             queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
             queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
           } else if (data.type === "new_job_available") {
-            // A new booking was created — refresh provider available jobs
+            // A new booking was created — refresh provider available jobs and alert them
             queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
+            if (user?.isProvider) {
+              toast({
+                title: "New job near you!",
+                description: "A customer just booked in your area. Check the Available tab.",
+                duration: 8000,
+              });
+            }
           } else if (data.type === "booking_update") {
             // Invalidate booking queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
