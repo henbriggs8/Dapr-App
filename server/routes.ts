@@ -26,6 +26,55 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+/**
+ * Returns the Stripe customer ID for any authenticated user.
+ * Works for both Clerk users (via clerkStripeMapping table) and non-Clerk users.
+ * Creates a Stripe customer if one doesn't exist yet, and persists it on the user record.
+ */
+async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<string | undefined> {
+  // Fast path: already stored directly on the user record
+  if ((user as any).stripeCustomerId) return (user as any).stripeCustomerId;
+
+  try {
+    const { createStripeCustomer } = await import('./payment-service');
+
+    if (user.username.startsWith('clerk_')) {
+      const clerkUserId = user.username.substring(6);
+      let mapping = await storage.getClerkStripeMapping(clerkUserId);
+      if (!mapping) {
+        const newId = await createStripeCustomer(
+          user.email || undefined,
+          user.phone || undefined,
+          user.name || undefined
+        );
+        mapping = await storage.createClerkStripeMapping({
+          clerkUserId,
+          stripeCustomerId: newId,
+          email: user.email || null,
+          phone: user.phone || null,
+          name: user.name || null,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      // Persist on user record for future fast-path lookups
+      await storage.updateUserStripeCustomerId(user.id, mapping.stripeCustomerId);
+      return mapping.stripeCustomerId;
+    }
+
+    // Non-Clerk user: create a Stripe customer and store it on the user record
+    const newId = await createStripeCustomer(
+      user.email || undefined,
+      user.phone || undefined,
+      user.name || undefined
+    );
+    await storage.updateUserStripeCustomerId(user.id, newId);
+    return newId;
+  } catch (err) {
+    console.error('resolveOrCreateStripeCustomerId error:', err);
+    return undefined;
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
@@ -1303,33 +1352,8 @@ export function registerRoutes(app: Express): Server {
         return res.json({ paymentUrl: null, free: true });
       }
 
-      // Auto-link Clerk users to Stripe before payment and capture stripeCustomerId
-      let stripeCustomerId: string | undefined;
-      if (req.user.username.startsWith('clerk_')) {
-        const clerkUserId = req.user.username.substring(6);
-        try {
-          let mapping = await storage.getClerkStripeMapping(clerkUserId);
-          if (!mapping) {
-            const { createStripeCustomer } = await import('./payment-service');
-            const newStripeCustomerId = await createStripeCustomer(
-              req.user.email || undefined,
-              req.user.phone || undefined,
-              req.user.name || undefined
-            );
-            mapping = await storage.createClerkStripeMapping({
-              clerkUserId,
-              stripeCustomerId: newStripeCustomerId,
-              email: req.user.email || null,
-              phone: req.user.phone || null,
-              name: req.user.name || null,
-              createdAt: new Date().toISOString()
-            });
-          }
-          stripeCustomerId = mapping.stripeCustomerId;
-        } catch (stripeError) {
-          console.error('Stripe linking error:', stripeError);
-        }
-      }
+      // Resolve or create a Stripe customer for this user (works for both Clerk and non-Clerk users)
+      const stripeCustomerId = await resolveOrCreateStripeCustomerId(req.user);
       
       // Get service details
       const service = await storage.getServiceById(booking.serviceId);
@@ -2137,12 +2161,10 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/payment-methods', async (req, res) => {
     if (!await resolveUserFromRequest(req)) return res.sendStatus(401);
     try {
-      if (!req.user!.username.startsWith('clerk_')) return res.json({ methods: [] });
-      const clerkUserId = req.user!.username.substring(6);
-      const mapping = await storage.getClerkStripeMapping(clerkUserId);
-      if (!mapping) return res.json({ methods: [] });
+      const stripeCustomerId = (req.user! as any).stripeCustomerId as string | undefined;
+      if (!stripeCustomerId) return res.json({ methods: [] });
       const { listSavedPaymentMethods } = await import('./payment-service');
-      const methods = await listSavedPaymentMethods(mapping.stripeCustomerId);
+      const methods = await listSavedPaymentMethods(stripeCustomerId);
       res.json({ methods });
     } catch (error) {
       console.error('Get payment methods error:', error);
@@ -2155,16 +2177,14 @@ export function registerRoutes(app: Express): Server {
     const { pmId } = req.params;
     if (!pmId.startsWith('pm_')) return res.status(400).json({ error: 'Invalid payment method ID' });
     try {
-      if (!req.user!.username.startsWith('clerk_')) return res.status(403).json({ error: 'Forbidden' });
-      const clerkUserId = req.user!.username.substring(6);
-      const mapping = await storage.getClerkStripeMapping(clerkUserId);
-      if (!mapping) return res.status(403).json({ error: 'No payment account linked' });
+      const stripeCustomerId = (req.user! as any).stripeCustomerId as string | undefined;
+      if (!stripeCustomerId) return res.status(403).json({ error: 'No payment account linked' });
 
       // Verify ownership: the payment method must belong to this user's Stripe customer
       const Stripe = (await import('stripe')).default;
       const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
       const pm = await stripeInstance.paymentMethods.retrieve(pmId);
-      if (pm.customer !== mapping.stripeCustomerId) {
+      if (pm.customer !== stripeCustomerId) {
         return res.status(403).json({ error: 'Payment method does not belong to this account' });
       }
 

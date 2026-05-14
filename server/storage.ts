@@ -54,6 +54,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
+  updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void>;
   deleteUser(id: number): Promise<void>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
@@ -400,6 +401,7 @@ export class MemStorage implements IStorage {
       referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
       freeWashCredits: 0,
       referredByCode: null,
+      stripeCustomerId: null,
     };
     this.users.set(id, user);
     return user;
@@ -418,6 +420,11 @@ export class MemStorage implements IStorage {
     
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void> {
+    const user = await this.getUser(id);
+    if (user) this.users.set(id, { ...user, stripeCustomerId });
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -1555,6 +1562,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void> {
+    await db.update(users).set({ stripeCustomerId }).where(eq(users.id, id));
   }
 
   async deleteUser(id: number): Promise<void> {
