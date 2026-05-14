@@ -150,7 +150,7 @@ export default function BookingDialog({
     }
   }, [service]);
   
-  // Payment mutation — calls Square to generate a checkout link
+  // Payment mutation — calls Stripe to generate a checkout link
   const paymentMutation = useMutation({
     mutationFn: async (bookingId: number) => {
       const token = await getToken().catch(() => null);
@@ -305,7 +305,7 @@ export default function BookingDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
       localStorage.setItem('latest-booking', JSON.stringify(data));
       clearSelectedAddOns();
-      // Immediately kick off payment — user will be redirected to Square checkout
+      // Immediately kick off payment — user will be redirected to Stripe checkout
       paymentMutation.mutate(data.id);
     },
     onError: (error: Error) => {

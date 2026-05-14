@@ -101,7 +101,7 @@ export default function PrivacyPolicy() {
 
           <div>
             <p className="font-medium text-black mb-2">Payment Information</p>
-            <p>Payments may be processed by third-party payment providers, including Square. We do not store full credit card numbers on our own systems. Payment processors may collect and process payment information, billing details, fraud-prevention information, and transaction history according to their own privacy policies.</p>
+            <p>Payments may be processed by third-party payment providers, including Stripe. We do not store full credit card numbers on our own systems. Payment processors may collect and process payment information, billing details, fraud-prevention information, and transaction history according to their own privacy policies.</p>
           </div>
 
           <div>
@@ -161,7 +161,7 @@ export default function PrivacyPolicy() {
 
           <div>
             <p className="font-medium text-black mb-2">With Payment Processors</p>
-            <p>We share payment-related information with payment processors such as Square to process payments, deposits, tips, refunds, invoices, and receipts.</p>
+            <p>We share payment-related information with payment processors such as Stripe to process payments, deposits, tips, refunds, invoices, and receipts.</p>
           </div>
 
           <div>
@@ -193,7 +193,7 @@ export default function PrivacyPolicy() {
         <Section number="4" title="Third-Party Services">
           <p>{APP_NAME} may use third-party services such as:</p>
           <BulletList items={[
-            "Square for payments",
+            "Stripe for payments",
             "Clerk for authentication and account management",
             "Google Maps, Apple Maps, or similar tools for location and routing",
             "Email, SMS, or notification providers",

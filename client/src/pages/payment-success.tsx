@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { resolveUrl, queryClient } from "@/lib/queryClient";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 
-// This page is the redirect target for Square after checkout.
+// This page is the redirect target for Stripe after checkout.
 //
 // On iOS native:  fires the custom-scheme deep link so the DeepLinkHandler
 //                 in App.tsx can close the in-app browser and route to /matching.

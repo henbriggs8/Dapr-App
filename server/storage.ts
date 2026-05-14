@@ -901,15 +901,15 @@ export class MemStorage implements IStorage {
   async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
     if (!booking) throw new Error('Booking not found');
-    const updatedBooking = { ...booking, tipAmount, pendingTipOrderId: null, pendingTipCents: null };
+    const updatedBooking = { ...booking, tipAmount, pendingTipSessionId: null, pendingTipCents: null };
     this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
   }
 
-  async updatePendingTipReference(bookingId: number, orderId: string, tipCents: number): Promise<Booking> {
+  async updatePendingTipReference(bookingId: number, sessionId: string, tipCents: number): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
     if (!booking) throw new Error('Booking not found');
-    const updatedBooking = { ...booking, pendingTipOrderId: orderId, pendingTipCents: tipCents };
+    const updatedBooking = { ...booking, pendingTipSessionId: sessionId, pendingTipCents: tipCents };
     this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
   }

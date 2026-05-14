@@ -29,30 +29,6 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Apple Pay domain verification
-  app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
-    const filename = "apple-developer-merchantid-domain-association";
-    const candidates = [
-      path.resolve(process.cwd(), "public/.well-known", filename),
-      path.resolve(process.cwd(), "client/public/.well-known", filename),
-      path.resolve(process.cwd(), "dist/public/.well-known", filename),
-    ];
-    const filePath = candidates.find(p => fs.existsSync(p));
-    if (filePath) {
-      const content = fs.readFileSync(filePath);
-      res.removeHeader("Transfer-Encoding");
-      res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Length", content.length);
-      res.setHeader("Cache-Control", "no-store, no-cache");
-      res.setHeader("Connection", "close");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.status(200);
-      res.write(content);
-      res.end();
-    } else {
-      res.status(404).send("Not found");
-    }
-  });
 
   // Public endpoints
   app.get("/api/providers", async (req, res) => {

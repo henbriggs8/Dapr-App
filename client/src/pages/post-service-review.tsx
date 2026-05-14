@@ -34,8 +34,8 @@ export default function PostServiceReview() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When Square redirects back with tip_paid=1, ask the server to verify the order
-  // via Square and persist the tip. Success state is gated on a 200 response.
+  // When Stripe redirects back with tip_paid=1, ask the server to verify the session
+  // and persist the tip. Success state is gated on a 200 response.
   // apiRequest throws on non-2xx — catch and map 402 (still processing) specifically.
   useEffect(() => {
     if (!tipPaid || bookingId <= 0) return;
@@ -48,7 +48,7 @@ export default function PostServiceReview() {
       } catch (err: any) {
         const msg: string = err?.message ?? "";
         if (msg.includes("402")) {
-          setError("Your tip payment is still being processed by Square. Please wait a moment and try again.");
+          setError("Your tip payment is still being processed. Please wait a moment and try again.");
         } else {
           setError("Couldn't confirm your tip right now. Please try again.");
         }
@@ -100,7 +100,7 @@ export default function PostServiceReview() {
         comment: comment.trim() || undefined,
       });
 
-      // If tip selected, create Square checkout and redirect
+      // If tip selected, create Stripe checkout and redirect
       if (tipCents > 0) {
         const tipRes = await apiRequest("POST", `/api/bookings/${bookingId}/tip`, {
           tipAmountCents: tipCents,
@@ -122,7 +122,7 @@ export default function PostServiceReview() {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
         <Icon icon={Loader2} size="xl" style={{ color: ACCENT }} className="animate-spin mb-4" />
-        <p className="text-[15px] text-[#888]">Confirming your tip with Square…</p>
+        <p className="text-[15px] text-[#888]">Confirming your tip payment…</p>
       </div>
     );
   }

@@ -527,7 +527,7 @@ function ConfirmStep({
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   // Permanently lock the button after first tap — survives sheet close/reopen
-  // via sessionStorage so a second tap never creates a second Square order.
+  // via sessionStorage so a second tap never creates a second Stripe session.
   const [submitted, setSubmitted] = useState<boolean>(() => {
     try { return !!sessionStorage.getItem("pendingPaymentBookingId"); } catch { return false; }
   });
@@ -640,11 +640,11 @@ function ConfirmStep({
 
       if (Capacitor.isNativePlatform()) {
         // iOS: navigate to matching immediately (shows under the browser),
-        // then open Square in-app browser on top.
+        // then open Stripe checkout in-app browser on top.
         setLocation(`/matching?booking=${payData.bookingId}`);
         try { await Browser.open({ url: payData.paymentUrl }); } catch { window.open(payData.paymentUrl, "_blank"); }
       } else {
-        // Web: redirect the whole tab to Square. Payment-success will
+        // Web: redirect the whole tab to Stripe. Payment-success will
         // bring them back to /matching when done.
         window.location.href = payData.paymentUrl;
       }
