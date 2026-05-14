@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, gt, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -143,7 +143,7 @@ export interface IStorage {
       paymentId?: string;
       paymentDate?: string;
       paymentUrl?: string;
-      squareOrderId?: string;
+      stripeSessionId?: string;
       isPaid?: boolean;
     }
   ): Promise<Booking>;
@@ -184,9 +184,9 @@ export interface IStorage {
     lastUpdate: string | null;
   } | null>;
   
-  // Clerk-Square mapping methods
-  getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined>;
-  createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping>;
+  // Clerk-Stripe mapping methods
+  getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined>;
+  createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping>;
 
   // Referral methods
   getUserByReferralCode(code: string): Promise<User | undefined>;
@@ -337,7 +337,7 @@ export class MemStorage implements IStorage {
       paymentId: "sample_payment_1",
       paymentDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       paymentUrl: null,
-      squareOrderId: null,
+      stripeSessionId: null,
     });
   }
 
@@ -493,9 +493,9 @@ export class MemStorage implements IStorage {
       paymentId: booking.paymentId ?? null,
       paymentDate: booking.paymentDate ?? null,
       paymentUrl: booking.paymentUrl ?? null,
-      squareOrderId: booking.squareOrderId ?? null,
+      stripeSessionId: booking.stripeSessionId ?? null,
       tipAmount: booking.tipAmount ?? null,
-      pendingTipOrderId: booking.pendingTipOrderId ?? null,
+      pendingTipSessionId: booking.pendingTipSessionId ?? null,
       pendingTipCents: booking.pendingTipCents ?? null,
       providerLatitude: booking.providerLatitude ?? null,
       providerLongitude: booking.providerLongitude ?? null,
@@ -1257,7 +1257,7 @@ export class MemStorage implements IStorage {
       paymentId?: string;
       paymentDate?: string;
       paymentUrl?: string;
-      squareOrderId?: string;
+      stripeSessionId?: string;
       isPaid?: boolean;
     }
   ): Promise<Booking> {
@@ -1272,7 +1272,7 @@ export class MemStorage implements IStorage {
       paymentId: paymentInfo.paymentId || booking.paymentId || null,
       paymentDate: paymentInfo.paymentDate || booking.paymentDate || null,
       paymentUrl: paymentInfo.paymentUrl || booking.paymentUrl || null,
-      squareOrderId: paymentInfo.squareOrderId || booking.squareOrderId || null,
+      stripeSessionId: paymentInfo.stripeSessionId || booking.stripeSessionId || null,
       isPaid: paymentInfo.isPaid !== undefined ? paymentInfo.isPaid : booking.isPaid || false
     };
     
@@ -1476,12 +1476,12 @@ export class MemStorage implements IStorage {
     throw new Error("updateTimeAdjustments not implemented in MemStorage");
   }
 
-  // Clerk-Square mapping methods for MemStorage (not implemented)
-  async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {
-    throw new Error("Clerk-Square mapping not implemented in MemStorage");
+  // Clerk-Stripe mapping methods for MemStorage (not implemented)
+  async getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined> {
+    throw new Error("Clerk-Stripe mapping not implemented in MemStorage");
   }
-  async createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping> {
-    throw new Error("Clerk-Square mapping not implemented in MemStorage");
+  async createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping> {
+    throw new Error("Clerk-Stripe mapping not implemented in MemStorage");
   }
 
   // Booking photo methods for MemStorage (not implemented)
@@ -2190,16 +2190,16 @@ export class DatabaseStorage implements IStorage {
   async updateBookingTip(bookingId: number, tipAmount: number): Promise<Booking> {
     const [booking] = await db
       .update(bookings)
-      .set({ tipAmount, pendingTipOrderId: null, pendingTipCents: null })
+      .set({ tipAmount, pendingTipSessionId: null, pendingTipCents: null })
       .where(eq(bookings.id, bookingId))
       .returning();
     return booking;
   }
 
-  async updatePendingTipReference(bookingId: number, orderId: string, tipCents: number): Promise<Booking> {
+  async updatePendingTipReference(bookingId: number, sessionId: string, tipCents: number): Promise<Booking> {
     const [booking] = await db
       .update(bookings)
-      .set({ pendingTipOrderId: orderId, pendingTipCents: tipCents })
+      .set({ pendingTipSessionId: sessionId, pendingTipCents: tipCents })
       .where(eq(bookings.id, bookingId))
       .returning();
     return booking;
@@ -2212,7 +2212,7 @@ export class DatabaseStorage implements IStorage {
       paymentId?: string;
       paymentDate?: string;
       paymentUrl?: string;
-      squareOrderId?: string;
+      stripeSessionId?: string;
       isPaid?: boolean;
     }
   ): Promise<Booking> {
@@ -2405,17 +2405,17 @@ export class DatabaseStorage implements IStorage {
     return booking;
   }
 
-  async getClerkSquareMapping(clerkUserId: string): Promise<ClerkSquareMapping | undefined> {
+  async getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined> {
     const [mapping] = await db
       .select()
-      .from(clerkSquareMapping)
-      .where(eq(clerkSquareMapping.clerkUserId, clerkUserId));
+      .from(clerkStripeMapping)
+      .where(eq(clerkStripeMapping.clerkUserId, clerkUserId));
     return mapping || undefined;
   }
 
-  async createClerkSquareMapping(mapping: InsertClerkSquareMapping): Promise<ClerkSquareMapping> {
+  async createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping> {
     const [newMapping] = await db
-      .insert(clerkSquareMapping)
+      .insert(clerkStripeMapping)
       .values(mapping)
       .returning();
     return newMapping;

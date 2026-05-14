@@ -109,12 +109,12 @@ export const bookings = pgTable("bookings", {
   // Payment fields
   isPaid: boolean("is_paid").default(false), // Whether booking has been paid for
   paymentStatus: text("payment_status").default('pending'), // 'pending', 'processing', 'completed', 'failed'
-  paymentId: text("payment_id"), // Square payment ID
+  paymentId: text("payment_id"), // Payment provider payment/session ID
   paymentDate: text("payment_date"), // When payment was completed
-  paymentUrl: text("payment_url"), // URL for Square checkout
-  squareOrderId: text("square_order_id"), // Square order ID
-  tipAmount: integer("tip_amount"), // Tip amount in cents (set after Square confirms payment)
-  pendingTipOrderId: text("pending_tip_order_id"), // Square order ID for pending tip checkout
+  paymentUrl: text("payment_url"), // URL for Stripe checkout
+  stripeSessionId: text("stripe_session_id"), // Stripe Checkout Session ID
+  tipAmount: integer("tip_amount"), // Tip amount in cents (set after Stripe confirms payment)
+  pendingTipSessionId: text("pending_tip_session_id"), // Stripe Checkout Session ID for pending tip
   pendingTipCents: integer("pending_tip_cents"), // Expected tip cents for pending checkout
   
   // GPS Tracking fields
@@ -142,10 +142,10 @@ export const bookingPhotos = pgTable("booking_photos", {
   uploadedAt: text("uploaded_at").notNull(),
 });
 
-export const clerkSquareMapping = pgTable("clerk_square_mapping", {
+export const clerkStripeMapping = pgTable("clerk_stripe_mapping", {
   id: serial("id").primaryKey(),
   clerkUserId: text("clerk_user_id").notNull().unique(),
-  squareCustomerId: text("square_customer_id").notNull(),
+  stripeCustomerId: text("stripe_customer_id").notNull(),
   email: text("email"),
   phone: text("phone"),
   name: text("name"),
@@ -247,7 +247,7 @@ export const insertTimeSlotSchema = createInsertSchema(timeSlots);
 export const insertBookingSchema = createInsertSchema(bookings);
 export const insertBookingPhotoSchema = createInsertSchema(bookingPhotos).omit({ id: true });
 export const insertVehicleSchema = createInsertSchema(vehicles);
-export const insertClerkSquareMappingSchema = createInsertSchema(clerkSquareMapping).omit({
+export const insertClerkStripeMappingSchema = createInsertSchema(clerkStripeMapping).omit({
   id: true
 });
 
@@ -278,8 +278,8 @@ export type InsertService = z.infer<typeof insertServiceSchema>;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
-export type ClerkSquareMapping = typeof clerkSquareMapping.$inferSelect;
-export type InsertClerkSquareMapping = z.infer<typeof insertClerkSquareMappingSchema>;
+export type ClerkStripeMapping = typeof clerkStripeMapping.$inferSelect;
+export type InsertClerkStripeMapping = z.infer<typeof insertClerkStripeMappingSchema>;
 export type BookingPhoto = typeof bookingPhotos.$inferSelect;
 export type InsertBookingPhoto = z.infer<typeof insertBookingPhotoSchema>;
 export const insertReferralSchema = createInsertSchema(referrals).omit({ id: true });

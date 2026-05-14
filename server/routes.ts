@@ -1,3 +1,4 @@
+import express from "express";
 import type { Express } from "express";
 import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
@@ -1026,38 +1027,33 @@ export function registerRoutes(app: Express): Server {
     return R * c;
   }
 
-  // Test Square connection endpoint
-  app.get("/api/test-square", async (req, res) => {
+  // Test Stripe connection endpoint
+  app.get("/api/test-stripe", async (req, res) => {
     try {
-      // Check if credentials exist
-      const hasToken = !!process.env.SQUARE_ACCESS_TOKEN;
-      const hasAppId = !!process.env.SQUARE_APPLICATION_ID;
-      const hasLocationId = !!process.env.SQUARE_LOCATION_ID;
+      const hasKey = !!process.env.STRIPE_SECRET_KEY;
+      const hasWebhookSecret = !!process.env.STRIPE_WEBHOOK_SECRET;
       
-      if (!hasToken || !hasAppId || !hasLocationId) {
+      if (!hasKey) {
         return res.json({
           status: "missing_credentials",
-          credentials: {
-            access_token: hasToken,
-            application_id: hasAppId,
-            location_id: hasLocationId
-          },
-          message: "Square credentials are incomplete"
+          credentials: { secret_key: hasKey, webhook_secret: hasWebhookSecret },
+          message: "STRIPE_SECRET_KEY is not configured"
         });
       }
       
-      const environment = process.env.SQUARE_ACCESS_TOKEN?.startsWith('sandbox') ? 'sandbox' : 'production';
+      const isLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_');
       
       res.json({
         status: "credentials_available",
-        environment,
-        message: "Square credentials are configured. Payment processing should work for bookings."
+        environment: isLive ? 'production' : 'test',
+        webhookConfigured: hasWebhookSecret,
+        message: "Stripe credentials are configured. Payment processing should work for bookings."
       });
     } catch (error: any) {
-      console.error("Square connection test failed:", error);
+      console.error("Stripe connection test failed:", error);
       res.status(500).json({
         status: "error",
-        message: error.message || "Failed to test Square connection"
+        message: error.message || "Failed to test Stripe connection"
       });
     }
   });
@@ -1323,36 +1319,36 @@ export function registerRoutes(app: Express): Server {
         return res.json({ paymentUrl: null, free: true });
       }
 
-      // Auto-link Clerk users to Square before payment
+      // Auto-link Clerk users to Stripe before payment
       if (req.user.username.startsWith('clerk_')) {
         const clerkUserId = req.user.username.substring(6); // Remove 'clerk_' prefix
         
         try {
-          // Check if already linked to Square
-          const existingMapping = await storage.getClerkSquareMapping(clerkUserId);
+          // Check if already linked to Stripe
+          const existingMapping = await storage.getClerkStripeMapping(clerkUserId);
           
           if (!existingMapping) {
-            // Create Square customer and link to Clerk
-            const { createSquareCustomer } = await import('./payment-service');
-            const squareCustomerId = await createSquareCustomer(
+            // Create Stripe customer and link to Clerk
+            const { createStripeCustomer } = await import('./payment-service');
+            const stripeCustomerId = await createStripeCustomer(
               req.user.email || undefined,
               req.user.phone || undefined,
               req.user.name || undefined
             );
             
             // Create mapping
-            await storage.createClerkSquareMapping({
+            await storage.createClerkStripeMapping({
               clerkUserId,
-              squareCustomerId,
+              stripeCustomerId,
               email: req.user.email || null,
               phone: req.user.phone || null,
               name: req.user.name || null,
               createdAt: new Date().toISOString()
             });
           }
-        } catch (squareError) {
-          console.error('Square linking error:', squareError);
-          // Continue with payment even if Square linking fails
+        } catch (stripeError) {
+          console.error('Stripe linking error:', stripeError);
+          // Continue with payment even if Stripe linking fails
         }
       }
       
@@ -1377,12 +1373,12 @@ export function registerRoutes(app: Express): Server {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
           `${req.protocol}://${req.get('host')}`;
-        const { url, orderId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
+        const { url, sessionId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
         
         // Update booking with payment link
         await storage.updateBookingPaymentInfo(booking.id, {
           paymentUrl: url,
-          squareOrderId: orderId,
+          stripeSessionId: sessionId,
           paymentStatus: 'pending'
         });
         
@@ -1418,10 +1414,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send('Booking not found');
       }
       
-      // Verify payment status using Square
-      if (booking.paymentId) {
+      // Verify payment status using Stripe
+      if (booking.stripeSessionId || booking.paymentId) {
         const { verifyPaymentStatus } = await import('./payment-service');
-        const isPaid = await verifyPaymentStatus(booking.paymentId);
+        const isPaid = await verifyPaymentStatus((booking.stripeSessionId || booking.paymentId)!);
         
         if (isPaid && !booking.isPaid) {
           // Update booking payment status
@@ -1450,55 +1446,65 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Payment webhook endpoint (this would be called by Square)
-  app.post('/api/payment-webhook', async (req, res) => {
-    try {
-      const { type, data } = req.body;
-      
-      // Handle payment.updated event
-      if (type === 'payment.updated') {
-        const { payment } = data.object;
-        
-        if (payment.status === 'COMPLETED') {
-          // Find booking with this payment ID
-          const bookings = await storage.getPendingPaymentBookings();
-          const booking = bookings.find(b => b.paymentId === payment.id);
-          
-          if (booking) {
-            // Mark booking as paid
-            await storage.updateBookingPaymentInfo(booking.id, {
-              isPaid: true,
-              paymentStatus: 'completed',
-              paymentDate: new Date().toISOString()
-            });
-            
-            // Update booking status to confirmed
-            await storage.updateBookingStatus(booking.id, 'confirmed');
-            
-            // Notify user via WebSocket
-            const userClients = clients.get(booking.userId) || [];
-            if (userClients.length > 0) {
+  // Stripe webhook endpoint — receives events from Stripe.
+  // Uses express.raw() so we can verify the signature.
+  app.post('/api/webhooks/stripe',
+    express.raw({ type: 'application/json' }),
+    async (req, res) => {
+      const sig = req.headers['stripe-signature'] as string;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+      if (!webhookSecret) {
+        console.warn('STRIPE_WEBHOOK_SECRET not set — skipping webhook verification');
+        return res.status(200).end();
+      }
+
+      let event: import('stripe').Stripe.Event;
+      try {
+        const { constructWebhookEvent } = await import('./payment-service');
+        event = constructWebhookEvent(req.body as Buffer, sig, webhookSecret);
+      } catch (err: any) {
+        console.error('Stripe webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      try {
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data.object as import('stripe').Stripe.Checkout.Session;
+          const bookingId = session.metadata?.bookingId
+            ? parseInt(session.metadata.bookingId)
+            : null;
+
+          if (bookingId && session.payment_status === 'paid') {
+            const booking = await storage.getBookingById(bookingId);
+            if (booking && !booking.isPaid) {
+              await storage.updateBookingPaymentInfo(booking.id, {
+                isPaid: true,
+                paymentStatus: 'completed',
+                paymentDate: new Date().toISOString(),
+                stripeSessionId: session.id,
+              });
+              await storage.updateBookingStatus(booking.id, 'confirmed');
+
+              const userClients = clients.get(booking.userId) || [];
               const notification = JSON.stringify({
                 type: 'payment_completed',
                 bookingId: booking.id
               });
-              
               userClients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                  client.send(notification);
-                }
+                if (client.readyState === WebSocket.OPEN) client.send(notification);
               });
             }
           }
         }
+
+        res.status(200).end();
+      } catch (error) {
+        console.error('Stripe webhook handling error:', error);
+        res.status(500).end();
       }
-      
-      res.status(200).end();
-    } catch (error) {
-      console.error('Payment webhook error:', error);
-      res.status(500).end();
     }
-  });
+  );
 
   // Rating endpoint
   app.post('/api/bookings/:id/rating', async (req, res) => {
@@ -1553,8 +1559,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Tip endpoint — creates a Square checkout for the tip amount.
-  // Persists the pending tip reference (orderId + expectedCents) to the DB so it
+  // Tip endpoint — creates a Stripe Checkout for the tip amount.
+  // Persists the pending tip reference (sessionId + expectedCents) to the DB so it
   // survives server restarts and horizontal scaling.
   app.post('/api/bookings/:id/tip', async (req, res) => {
     if (!req.user) return res.sendStatus(401);
@@ -1581,16 +1587,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Please submit a rating before adding a tip');
       }
       // Allow overwriting a stale/abandoned pending tip reference so customers
-      // aren't permanently blocked if they close the Square tab without paying.
+      // aren't permanently blocked if they close the Stripe tab without paying.
 
       const { createTipPaymentLink } = await import('./payment-service');
       const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
-      const { url, orderId } = await createTipPaymentLink(id, tipAmountCents, siteUrl);
+      const { url, sessionId } = await createTipPaymentLink(id, tipAmountCents, siteUrl);
 
       // Store the pending tip reference in the DB (durable — survives restarts)
-      await storage.updatePendingTipReference(id, orderId, tipAmountCents);
+      await storage.updatePendingTipReference(id, sessionId, tipAmountCents);
 
-      // tipAmount is NOT persisted here — only after Square confirms payment
+      // tipAmount is NOT persisted here — only after Stripe confirms payment
       res.json({ url });
     } catch (error) {
       console.error('Tip endpoint error:', error);
@@ -1598,9 +1604,9 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Called by the frontend when Square redirects back with tip_paid=1.
+  // Called by the frontend when Stripe redirects back with tip_paid=1.
   // Reads the pending reference from the DB (no client-supplied values trusted),
-  // verifies against Square Orders API, then persists tipAmount.
+  // verifies against Stripe Sessions API, then persists tipAmount.
   app.post('/api/bookings/:id/tip/confirm', async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -1621,15 +1627,15 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Read the pending reference from the DB
-      if (!booking.pendingTipOrderId || !booking.pendingTipCents) {
+      if (!booking.pendingTipSessionId || !booking.pendingTipCents) {
         return res.status(400).send('No pending tip found for this booking');
       }
 
-      // Verify the Square order is actually COMPLETED
-      const { verifyTipOrderPaid } = await import('./payment-service');
-      const paid = await verifyTipOrderPaid(booking.pendingTipOrderId, booking.pendingTipCents);
+      // Verify the Stripe session is actually paid
+      const { verifySessionPaid } = await import('./payment-service');
+      const paid = await verifySessionPaid(booking.pendingTipSessionId);
       if (!paid) {
-        return res.status(402).send('Tip payment not yet confirmed by Square');
+        return res.status(402).send('Tip payment not yet confirmed by Stripe');
       }
 
       // Payment verified — persist tipAmount and clear pending reference
@@ -2074,8 +2080,8 @@ export function registerRoutes(app: Express): Server {
       // Get Clerk user info
       const clerkUser = await clerkClient.users.getUser(clerkUserId);
       
-      // Check if user is linked to Square
-      const squareMapping = await storage.getClerkSquareMapping(clerkUserId);
+      // Check if user is linked to Stripe
+      const stripeMapping = await storage.getClerkStripeMapping(clerkUserId);
       
       res.json({
         id: clerkUser.id,
@@ -2083,8 +2089,8 @@ export function registerRoutes(app: Express): Server {
         phone: clerkUser.phoneNumbers[0]?.phoneNumber || null,
         firstName: clerkUser.firstName,
         lastName: clerkUser.lastName,
-        squareCustomerId: squareMapping?.squareCustomerId || null,
-        isLinkedToSquare: !!squareMapping
+        stripeCustomerId: stripeMapping?.stripeCustomerId || null,
+        isLinkedToStripe: !!stripeMapping
       });
     } catch (error) {
       console.error('Secure /me error:', error);
@@ -2092,7 +2098,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post('/api/secure/link-square', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
+  app.post('/api/secure/link-stripe', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
     try {
       if (!req.auth) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -2101,9 +2107,9 @@ export function registerRoutes(app: Express): Server {
       const clerkUserId = req.auth.userId;
       
       // Check if already linked
-      const existingMapping = await storage.getClerkSquareMapping(clerkUserId);
+      const existingMapping = await storage.getClerkStripeMapping(clerkUserId);
       if (existingMapping) {
-        return res.json({ squareCustomerId: existingMapping.squareCustomerId });
+        return res.json({ stripeCustomerId: existingMapping.stripeCustomerId });
       }
       
       // Get Clerk user info
@@ -2113,24 +2119,24 @@ export function registerRoutes(app: Express): Server {
       const phone = clerkUser.phoneNumbers[0]?.phoneNumber;
       const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ');
       
-      // Create Square customer
-      const { createSquareCustomer } = await import('./payment-service');
-      const squareCustomerId = await createSquareCustomer(email, phone, name);
+      // Create Stripe customer
+      const { createStripeCustomer } = await import('./payment-service');
+      const stripeCustomerId = await createStripeCustomer(email, phone, name);
       
       // Create mapping
-      const mapping = await storage.createClerkSquareMapping({
+      const mapping = await storage.createClerkStripeMapping({
         clerkUserId,
-        squareCustomerId,
+        stripeCustomerId,
         email: email || null,
         phone: phone || null,
         name: name || null,
         createdAt: new Date().toISOString()
       });
       
-      res.json({ squareCustomerId: mapping.squareCustomerId });
+      res.json({ stripeCustomerId: mapping.stripeCustomerId });
     } catch (error) {
-      console.error('Link Square error:', error);
-      res.status(500).json({ error: 'Failed to link Square customer' });
+      console.error('Link Stripe error:', error);
+      res.status(500).json({ error: 'Failed to link Stripe customer' });
     }
   });
 

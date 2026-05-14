@@ -1,20 +1,11 @@
-import { randomBytes } from 'crypto';
-import { SquareClient, SquareEnvironment, SquareError } from 'square';
+import Stripe from 'stripe';
 import { Service, Booking } from '@shared/schema';
 
-const isSandbox = !process.env.SQUARE_ACCESS_TOKEN ||
-  process.env.SQUARE_ACCESS_TOKEN.startsWith('sandbox');
-
-const squareClient = new SquareClient({
-  token: process.env.SQUARE_ACCESS_TOKEN || '',
-  environment: isSandbox ? SquareEnvironment.Sandbox : SquareEnvironment.Production,
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2026-04-22.dahlia' as any,
 });
 
-function generateIdempotencyKey(): string {
-  return randomBytes(16).toString('hex');
-}
-
-/** Stable key for a booking+discount combo — Square dedupes on this. */
+/** Stable idempotency key for a booking+discount combo. */
 function bookingIdempotencyKey(bookingId: number, discountPercent: number): string {
   return `booking-${bookingId}-discount-${discountPercent}`;
 }
@@ -24,207 +15,118 @@ export async function createPaymentLink(
   service: Service,
   siteUrl?: string,
   discountPercent?: number
-): Promise<{ url: string; orderId: string }> {
-  try {
-    // Use booking.totalPrice (includes vehicle size & add-on markup) when available,
-    // otherwise fall back to the base service price.
-    const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
-      ? booking.totalPrice
-      : service.price;
-    const discount = discountPercent ? Math.min(Math.max(discountPercent, 0), 100) : 0;
-    const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
-    const amountInCents = Math.round(chargeAmount * 100);
+): Promise<{ url: string; sessionId: string }> {
+  const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
+    ? booking.totalPrice
+    : service.price;
+  const discount = discountPercent ? Math.min(Math.max(discountPercent, 0), 100) : 0;
+  const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
+  const amountInCents = Math.round(chargeAmount * 100);
 
-    // Determine the base URL: explicit param > env var > autodapper.com (never localhost)
-    const baseUrl = siteUrl ||
-      process.env.SITE_URL ||
-      'https://autodapper.com';
+  const baseUrl = siteUrl || process.env.SITE_URL || 'https://autodapper.com';
 
-    const response = await squareClient.checkout.paymentLinks.create({
-      // Deterministic key: Square will return the same order if called again
-      // with the same key, preventing duplicate charges on retries.
-      idempotencyKey: bookingIdempotencyKey(booking.id, discount),
-      quickPay: {
-        name: `Dapr - ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
-        locationId: process.env.SQUARE_LOCATION_ID!,
-        priceMoney: {
-          amount: BigInt(amountInCents),
-          currency: 'USD',
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: 'payment',
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'usd',
+            unit_amount: amountInCents,
+            product_data: {
+              name: `Dapr – ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
+            },
+          },
         },
+      ],
+      success_url: `${baseUrl}/payment-success?booking=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/`,
+      metadata: {
+        bookingId: String(booking.id),
       },
-      checkoutOptions: {
-        redirectUrl: `${baseUrl}/payment-success?booking=${booking.id}`,
-      },
-    });
-
-    if (!response.paymentLink?.url) {
-      throw new Error('Failed to create payment link in Square');
+    },
+    {
+      idempotencyKey: bookingIdempotencyKey(booking.id, discount),
     }
+  );
 
-    // Prefer longUrl (direct checkout page) over url (square.link short
-    // redirector) — the short redirector causes a blank screen in iOS
-    // SFSafariViewController during the 302 redirect chain.
-    const checkoutUrl = (response.paymentLink as any).longUrl || response.paymentLink.url;
+  if (!session.url) throw new Error('Failed to create Stripe checkout session');
 
-    return {
-      url: checkoutUrl,
-      orderId: response.paymentLink.orderId || '',
-    };
-  } catch (error: any) {
-    if (error instanceof SquareError) {
-      console.error('Square API Error:', error.message);
-      throw new Error(`Square API Error: ${error.message}`);
-    }
-    console.error('Payment link creation error:', error);
-    throw new Error(error?.message || 'Failed to create payment link');
-  }
+  return { url: session.url, sessionId: session.id };
 }
 
 export async function createTipPaymentLink(
   bookingId: number,
   tipAmountCents: number,
   siteUrl?: string
-): Promise<{ url: string; orderId: string }> {
-  try {
-    const baseUrl = siteUrl || process.env.SITE_URL || 'https://autodapper.com';
+): Promise<{ url: string; sessionId: string }> {
+  const baseUrl = siteUrl || process.env.SITE_URL || 'https://autodapper.com';
 
-    const response = await squareClient.checkout.paymentLinks.create({
-      idempotencyKey: generateIdempotencyKey(),
-      quickPay: {
-        name: `Dapr - Tip`,
-        locationId: process.env.SQUARE_LOCATION_ID!,
-        priceMoney: {
-          amount: BigInt(tipAmountCents),
-          currency: 'USD',
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: tipAmountCents,
+          product_data: { name: 'Dapr – Tip' },
         },
       },
-      checkoutOptions: {
-        redirectUrl: `${baseUrl}/review/${bookingId}?tip_paid=1&tip_cents=${tipAmountCents}`,
-      },
-    });
+    ],
+    success_url: `${baseUrl}/review/${bookingId}?tip_paid=1&tip_cents=${tipAmountCents}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/review/${bookingId}`,
+    metadata: {
+      bookingId: String(bookingId),
+      isTip: 'true',
+    },
+  });
 
-    if (!response.paymentLink?.url) {
-      throw new Error('Failed to create tip payment link in Square');
-    }
+  if (!session.url) throw new Error('Failed to create Stripe tip checkout session');
 
-    // Tip links open in a standard browser (window.location.href), so the
-    // iOS SFSafariViewController redirect issue does not apply — use url directly.
-    const checkoutUrl = response.paymentLink.url;
-
-    return {
-      url: checkoutUrl,
-      orderId: response.paymentLink.orderId || '',
-    };
-  } catch (error: any) {
-    if (error instanceof SquareError) {
-      console.error('Square API Error (tip):', error.message);
-      throw new Error(`Square API Error: ${error.message}`);
-    }
-    console.error('Tip payment link creation error:', error);
-    throw new Error(error?.message || 'Failed to create tip payment link');
-  }
+  return { url: session.url, sessionId: session.id };
 }
 
 /**
- * Verify a Square order is COMPLETED and the total matches the expected amount.
+ * Verify a Stripe Checkout Session is paid.
  * Used to confirm tip payments before persisting tipAmount.
  */
-export async function verifyTipOrderPaid(
-  orderId: string,
-  expectedCents: number
+export async function verifySessionPaid(
+  sessionId: string,
 ): Promise<boolean> {
   try {
-    const response = await squareClient.orders.get({ orderId });
-    const order = response.order;
-    if (!order) return false;
-    if (order.state !== 'COMPLETED') return false;
-    const paidCents = Number(order.totalMoney?.amount ?? 0);
-    return paidCents === expectedCents;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return session.payment_status === 'paid';
   } catch (error) {
-    console.error('Square order verification error:', error);
+    console.error('Stripe session verification error:', error);
     return false;
   }
 }
 
-export async function processPayment(
-  bookingId: number,
-  nonce: string,
-  amount: number
-): Promise<{ success: boolean; paymentId?: string; error?: string }> {
-  try {
-    const amountInCents = Math.round(amount * 100);
-
-    const response = await squareClient.payments.create({
-      sourceId: nonce,
-      amountMoney: {
-        amount: BigInt(amountInCents),
-        currency: 'USD',
-      },
-      idempotencyKey: generateIdempotencyKey(),
-      locationId: process.env.SQUARE_LOCATION_ID!,
-      referenceId: `booking-${bookingId}`,
-    });
-
-    return {
-      success: true,
-      paymentId: response.payment?.id,
-    };
-  } catch (error: any) {
-    if (error instanceof SquareError) {
-      console.error('Square API Error:', error.message);
-      return { success: false, error: `Payment failed: ${error.message}` };
-    }
-    console.error('Payment processing error:', error);
-    return {
-      success: false,
-      error: error?.message || 'Payment processing failed. Please try again.',
-    };
-  }
+/** Legacy alias used by verify-payment route */
+export async function verifyPaymentStatus(sessionId: string): Promise<boolean> {
+  return verifySessionPaid(sessionId);
 }
 
-export async function verifyPaymentStatus(paymentId: string): Promise<boolean> {
-  try {
-    const response = await squareClient.payments.get({ paymentId });
-    return response.payment?.status === 'COMPLETED';
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    return false;
-  }
-}
-
-export async function createSquareCustomer(
+export async function createStripeCustomer(
   email?: string,
   phone?: string,
   name?: string
 ): Promise<string> {
-  try {
-    const customerRequest: Record<string, any> = {
-      idempotencyKey: generateIdempotencyKey(),
-    };
+  const customer = await stripe.customers.create({
+    ...(email ? { email } : {}),
+    ...(phone ? { phone } : {}),
+    ...(name ? { name } : {}),
+  });
+  return customer.id;
+}
 
-    if (email) customerRequest.emailAddress = email;
-    if (phone) customerRequest.phoneNumber = phone;
-    if (name) {
-      const nameParts = name.split(' ');
-      customerRequest.givenName = nameParts[0];
-      if (nameParts.length > 1) {
-        customerRequest.familyName = nameParts.slice(1).join(' ');
-      }
-    }
-
-    const response = await squareClient.customers.create(customerRequest);
-
-    if (!response.customer?.id) {
-      throw new Error('Failed to create Square customer');
-    }
-
-    return response.customer.id;
-  } catch (error: any) {
-    if (error instanceof SquareError) {
-      console.error('Square customer creation error:', error.message);
-      throw new Error(`Square API Error: ${error.message}`);
-    }
-    console.error('Square customer creation error:', error);
-    throw new Error(error?.message || 'Failed to create Square customer');
-  }
+/** Construct and verify a Stripe webhook event from raw body + signature. */
+export function constructWebhookEvent(
+  rawBody: Buffer,
+  signature: string,
+  secret: string
+): Stripe.Event {
+  return stripe.webhooks.constructEvent(rawBody, signature, secret);
 }
