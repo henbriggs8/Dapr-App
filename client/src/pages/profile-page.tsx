@@ -99,7 +99,7 @@ export default function ProfilePage() {
     queryKey: ["/api/vehicles"],
   });
 
-  const { data: savedMethodsData, refetch: refetchMethods } = useQuery<{ methods: Array<{ id: string; brand: string; last4: string; expMonth: number; expYear: number }> }>({
+  const { data: savedMethodsData } = useQuery<{ methods: Array<{ id: string; brand: string; last4: string; expMonth: number; expYear: number }> }>({
     queryKey: ["/api/payment-methods"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/payment-methods");

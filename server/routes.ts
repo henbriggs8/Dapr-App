@@ -33,7 +33,7 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
  */
 async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<string | undefined> {
   // Fast path: already stored directly on the user record
-  if ((user as any).stripeCustomerId) return (user as any).stripeCustomerId;
+  if (user.stripeCustomerId) return user.stripeCustomerId;
 
   try {
     const { createStripeCustomer } = await import('./payment-service');
@@ -2161,7 +2161,9 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/payment-methods', async (req, res) => {
     if (!await resolveUserFromRequest(req)) return res.sendStatus(401);
     try {
-      const stripeCustomerId = (req.user! as any).stripeCustomerId as string | undefined;
+      // Use the unified resolver so existing Clerk-linked users without a populated
+      // users.stripe_customer_id still see their saved cards on first load.
+      const stripeCustomerId = await resolveOrCreateStripeCustomerId(req.user!);
       if (!stripeCustomerId) return res.json({ methods: [] });
       const { listSavedPaymentMethods } = await import('./payment-service');
       const methods = await listSavedPaymentMethods(stripeCustomerId);
@@ -2177,7 +2179,7 @@ export function registerRoutes(app: Express): Server {
     const { pmId } = req.params;
     if (!pmId.startsWith('pm_')) return res.status(400).json({ error: 'Invalid payment method ID' });
     try {
-      const stripeCustomerId = (req.user! as any).stripeCustomerId as string | undefined;
+      const stripeCustomerId = req.user!.stripeCustomerId;
       if (!stripeCustomerId) return res.status(403).json({ error: 'No payment account linked' });
 
       // Verify ownership: the payment method must belong to this user's Stripe customer
