@@ -19,9 +19,10 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 // ── Stripe Payment Form (inner — must be inside <Elements>) ───────────────────
-function StripePaymentForm({ bookingId, onSuccess }: { bookingId: number; onSuccess: () => void }) {
+function StripePaymentForm({ onSuccess }: { onSuccess: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
+  const [ready, setReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
@@ -41,25 +42,40 @@ function StripePaymentForm({ bookingId, onSuccess }: { bookingId: number; onSucc
     }
   }
 
+  const isLoading = !stripe || !elements || !ready;
+
   return (
     <div className="flex flex-col gap-4">
-      <PaymentElement options={{ layout: "accordion" }} />
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <Icon icon={Loader2} size="lg" className="animate-spin" style={{ color: "#8c52ff" }} />
+          <p className="text-[13px] text-gray-400">Loading payment form…</p>
+        </div>
+      )}
+      <div style={{ display: isLoading ? "none" : "block" }}>
+        <PaymentElement
+          options={{ layout: "accordion" }}
+          onReady={() => setReady(true)}
+        />
+      </div>
       {payError && (
         <div className="rounded-xl bg-red-50 px-4 py-3">
           <p className="text-[13px] text-red-600">{payError}</p>
         </div>
       )}
-      <button
-        onClick={handlePay}
-        disabled={!stripe || !elements || paying}
-        className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
-        style={{ background: "#8c52ff" }}
-      >
-        {paying
-          ? <><Icon icon={Loader2} size="sm" className="animate-spin text-white" /> Processing…</>
-          : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay now</>
-        }
-      </button>
+      {!isLoading && (
+        <button
+          onClick={handlePay}
+          disabled={paying}
+          className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
+          style={{ background: "#8c52ff" }}
+        >
+          {paying
+            ? <><Icon icon={Loader2} size="sm" className="animate-spin text-white" /> Processing…</>
+            : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay now</>
+          }
+        </button>
+      )}
     </div>
   );
 }
@@ -707,7 +723,6 @@ function ConfirmStep({
             options={{ clientSecret: stripeClientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#8c52ff" } } }}
           >
             <StripePaymentForm
-              bookingId={stripeBookingId}
               onSuccess={() => {
                 setStripeClientSecret(null);
                 setStripeBookingId(null);
