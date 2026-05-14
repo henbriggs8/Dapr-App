@@ -141,35 +141,38 @@ export default function ProviderDashboard() {
   const updateLocationMutation = useMutation({
     mutationFn: async () => {
       if (!navigator.geolocation) {
-        throw new Error("Geolocation is not supported");
+        throw new Error("Geolocation is not supported by this browser");
       }
 
-      return new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-          },
-          (error) => reject(new Error("Failed to get location")),
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        });
       });
-    },
-    onSuccess: async (location) => {
+
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+
       const res = await apiRequest("PATCH", "/api/provider/location", location);
-      const updatedUser = await res.json();
+      return await res.json();
+    },
+    onSuccess: (updatedUser) => {
       queryClient.setQueryData(["/api/user"], updatedUser);
       toast({
         title: "Location updated",
-        description: "Your location has been updated successfully",
+        description: "Your location has been saved successfully",
       });
     },
     onError: (error: Error) => {
+      const isPermission = error.message.includes("denied") || error.message.includes("permission") || error.message.includes("1:");
       toast({
-        title: "Failed to update location",
-        description: error.message,
+        title: "Location update failed",
+        description: isPermission
+          ? "Location permission was denied. Please allow location access in your browser settings."
+          : error.message,
         variant: "destructive",
       });
     },
