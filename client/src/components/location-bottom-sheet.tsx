@@ -12,8 +12,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
+import { loadStripe } from "@stripe/stripe-js";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 const ACCENT = "#8c52ff";
 
@@ -526,11 +529,10 @@ function ConfirmStep({
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
-  // Permanently lock the button after first tap — survives sheet close/reopen
-  // via sessionStorage so a second tap never creates a second Stripe session.
-  const [submitted, setSubmitted] = useState<boolean>(() => {
-    try { return !!sessionStorage.getItem("pendingPaymentBookingId"); } catch { return false; }
-  });
+  // Never initialize as submitted — always start fresh so there's no stuck button
+  const [submitted, setSubmitted] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripeBookingId, setStripeBookingId] = useState<number | null>(null);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -618,38 +620,59 @@ function ConfirmStep({
         ),
       });
       if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
-      const payData = await payRes.json() as { paymentUrl: string | null; free?: boolean };
+      const payData = await payRes.json() as { paymentUrl: string | null; clientSecret: string | null; free?: boolean };
 
-      try { sessionStorage.setItem("pendingPaymentBookingId", String(booking.id)); } catch {}
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
 
       return { ...payData, bookingId: booking.id };
     },
-    onSuccess: async (payData) => {
-      // Lock the button permanently — no more taps allowed
-      setSubmitted(true);
-      onBooked();
-
+    onSuccess: (payData) => {
       if (payData.free) {
         setLocation(`/matching?booking=${payData.bookingId}`);
         return;
       }
 
-      if (!payData.paymentUrl) throw new Error("Missing payment URL.");
+      if (!payData.clientSecret) throw new Error("Missing payment client secret.");
 
-      if (Capacitor.isNativePlatform()) {
-        // iOS: navigate to matching immediately (shows under the browser),
-        // then open Stripe checkout in-app browser on top.
-        setLocation(`/matching?booking=${payData.bookingId}`);
-        try { await Browser.open({ url: payData.paymentUrl }); } catch { window.open(payData.paymentUrl, "_blank"); }
-      } else {
-        // Web: redirect the whole tab to Stripe. Payment-success will
-        // bring them back to /matching when done.
-        window.location.href = payData.paymentUrl;
-      }
+      // Show embedded Stripe checkout inside the app
+      setStripeClientSecret(payData.clientSecret);
+      setStripeBookingId(payData.bookingId);
     },
   });
+
+  // ── Embedded Stripe Checkout overlay ────────────────────────────────────────
+  if (stripeClientSecret && stripeBookingId) {
+    return (
+      <div className="flex flex-col min-h-0 h-full">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+          <button
+            onClick={() => { setStripeClientSecret(null); setStripeBookingId(null); }}
+            className="flex items-center gap-1 text-[13px] text-gray-500"
+          >
+            <Icon icon={ArrowLeft} size="sm" /> Back
+          </button>
+          <p className="text-[15px] font-semibold text-gray-900">Enter payment details</p>
+          <div className="w-12" />
+        </div>
+        <div className="overflow-y-auto flex-1 px-2 py-3">
+          <EmbeddedCheckoutProvider
+            stripe={stripePromise}
+            options={{
+              clientSecret: stripeClientSecret,
+              onComplete: () => {
+                setStripeClientSecret(null);
+                setStripeBookingId(null);
+                setLocation(`/payment-success?booking=${stripeBookingId}`);
+              },
+            }}
+          >
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-0">
@@ -821,14 +844,12 @@ function ConfirmStep({
           )}
         </div>
         <button
-          onClick={() => { if (!submitted && !mutation.isPending) mutation.mutate(); }}
-          disabled={mutation.isPending || submitted}
+          onClick={() => { if (!mutation.isPending) mutation.mutate(); }}
+          disabled={mutation.isPending}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
-          style={{ background: submitted ? "#6b7280" : useFreeCredit ? "#16a34a" : "#8c52ff" }}
+          style={{ background: useFreeCredit ? "#16a34a" : "#8c52ff" }}
         >
-          {submitted ? (
-            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> Redirecting to payment…</>
-          ) : mutation.isPending ? (
+          {mutation.isPending ? (
             <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> {useFreeCredit ? "Redeeming…" : "Setting up payment…"}</>
           ) : useFreeCredit ? (
             <><Icon icon={Gift} size="sm" className="text-white" /> Redeem Free Wash</>

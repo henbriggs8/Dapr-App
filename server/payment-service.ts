@@ -15,7 +15,7 @@ export async function createPaymentLink(
   service: Service,
   siteUrl?: string,
   discountPercent?: number
-): Promise<{ url: string; sessionId: string }> {
+): Promise<{ url: string | null; clientSecret: string | null; sessionId: string }> {
   const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
     ? booking.totalPrice
     : service.price;
@@ -28,6 +28,7 @@ export async function createPaymentLink(
   const session = await stripe.checkout.sessions.create(
     {
       mode: 'payment',
+      ui_mode: 'embedded' as any,
       line_items: [
         {
           quantity: 1,
@@ -40,8 +41,7 @@ export async function createPaymentLink(
           },
         },
       ],
-      success_url: `${baseUrl}/payment-success?booking=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/`,
+      return_url: `${baseUrl}/payment-success?booking=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         bookingId: String(booking.id),
       },
@@ -51,9 +51,9 @@ export async function createPaymentLink(
     }
   );
 
-  if (!session.url) throw new Error('Failed to create Stripe checkout session');
+  if (!session.client_secret) throw new Error('Failed to create Stripe embedded checkout session');
 
-  return { url: session.url, sessionId: session.id };
+  return { url: null, clientSecret: session.client_secret, sessionId: session.id };
 }
 
 export async function createTipPaymentLink(

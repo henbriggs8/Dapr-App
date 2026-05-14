@@ -1274,11 +1274,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Booking is already paid');
       }
 
-      // If a payment link was already created for this booking, reuse it.
-      // This prevents duplicate Stripe charges when the customer retries after
-      // a network error or a Stripe-side error on the checkout page.
-      if (booking.paymentUrl && booking.paymentStatus === 'pending') {
-        return res.json({ paymentUrl: booking.paymentUrl });
+      // If a session was already created for this booking, reuse it.
+      // This prevents duplicate Stripe charges when the customer retries.
+      if (booking.stripeSessionId && booking.paymentStatus === 'pending') {
+        try {
+          const stripe = (await import('stripe')).default;
+          const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
+          const existing = await stripeInstance.checkout.sessions.retrieve(booking.stripeSessionId);
+          if (existing.client_secret && existing.status !== 'complete') {
+            return res.json({ paymentUrl: null, clientSecret: existing.client_secret, sessionId: existing.id });
+          }
+        } catch {
+          // fall through to create a new session
+        }
       }
       
       // Handle free wash credit redemption
@@ -1349,16 +1357,16 @@ export function registerRoutes(app: Express): Server {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
           `${req.protocol}://${req.get('host')}`;
-        const { url, sessionId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
+        const { url, clientSecret, sessionId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
         
-        // Update booking with payment link
+        // Update booking with payment info
         await storage.updateBookingPaymentInfo(booking.id, {
-          paymentUrl: url,
+          paymentUrl: url || undefined,
           stripeSessionId: sessionId,
           paymentStatus: 'pending'
         });
         
-        res.json({ paymentUrl: url });
+        res.json({ paymentUrl: url, clientSecret, sessionId });
       } catch (error) {
         console.error('Payment creation error:', error);
         res.status(500).json({ 
