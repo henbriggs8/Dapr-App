@@ -26,14 +26,20 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+/** Returns true only for real Stripe customer IDs (cus_...). */
+function isValidStripeCustomerId(id: string | null | undefined): id is string {
+  return typeof id === 'string' && id.startsWith('cus_');
+}
+
 /**
  * Returns the Stripe customer ID for any authenticated user.
  * Works for both Clerk users (via clerkStripeMapping table) and non-Clerk users.
- * Creates a Stripe customer if one doesn't exist yet, and persists it on the user record.
+ * Creates a Stripe customer if one doesn't exist yet (or if a stale Square ID is stored),
+ * and persists it on the user record for fast future lookups.
  */
 async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<string | undefined> {
-  // Fast path: already stored directly on the user record
-  if (user.stripeCustomerId) return user.stripeCustomerId;
+  // Fast path: a valid Stripe customer ID is already on the user record
+  if (isValidStripeCustomerId(user.stripeCustomerId)) return user.stripeCustomerId;
 
   try {
     const { createStripeCustomer } = await import('./payment-service');
@@ -41,20 +47,17 @@ async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<stri
     if (user.username.startsWith('clerk_')) {
       const clerkUserId = user.username.substring(6);
       let mapping = await storage.getClerkStripeMapping(clerkUserId);
-      if (!mapping) {
+
+      // If no mapping, or mapping holds a legacy Square ID (not cus_...), create a fresh Stripe customer
+      if (!mapping || !isValidStripeCustomerId(mapping.stripeCustomerId)) {
         const newId = await createStripeCustomer(
           user.email || undefined,
           user.phone || undefined,
           user.name || undefined
         );
-        mapping = await storage.createClerkStripeMapping({
-          clerkUserId,
-          stripeCustomerId: newId,
-          email: user.email || null,
-          phone: user.phone || null,
-          name: user.name || null,
-          createdAt: new Date().toISOString(),
-        });
+        // Upsert handles both insert-new and overwrite-stale-Square-ID cases
+        await storage.upsertClerkStripeMapping(clerkUserId, newId);
+        mapping = { ...(mapping ?? { id: 0, email: null, phone: null, name: null, createdAt: new Date().toISOString() }), clerkUserId, stripeCustomerId: newId };
       }
       // Persist on user record for future fast-path lookups
       await storage.updateUserStripeCustomerId(user.id, mapping.stripeCustomerId);

@@ -188,6 +188,7 @@ export interface IStorage {
   // Clerk-Stripe mapping methods
   getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined>;
   createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping>;
+  upsertClerkStripeMapping(clerkUserId: string, stripeCustomerId: string): Promise<void>;
 
   // Referral methods
   getUserByReferralCode(code: string): Promise<User | undefined>;
@@ -1491,6 +1492,9 @@ export class MemStorage implements IStorage {
   async createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping> {
     throw new Error("Clerk-Stripe mapping not implemented in MemStorage");
   }
+  async upsertClerkStripeMapping(_clerkUserId: string, _stripeCustomerId: string): Promise<void> {
+    throw new Error("upsertClerkStripeMapping not implemented in MemStorage");
+  }
 
   // Booking photo methods for MemStorage (not implemented)
   async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
@@ -2435,6 +2439,16 @@ export class DatabaseStorage implements IStorage {
       .values(mapping)
       .returning();
     return newMapping;
+  }
+
+  async upsertClerkStripeMapping(clerkUserId: string, stripeCustomerId: string): Promise<void> {
+    await db
+      .insert(clerkStripeMapping)
+      .values({ clerkUserId, stripeCustomerId, createdAt: new Date().toISOString() })
+      .onConflictDoUpdate({
+        target: clerkStripeMapping.clerkUserId,
+        set: { stripeCustomerId },
+      });
   }
 
   async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
