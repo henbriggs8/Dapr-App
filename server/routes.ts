@@ -1303,36 +1303,31 @@ export function registerRoutes(app: Express): Server {
         return res.json({ paymentUrl: null, free: true });
       }
 
-      // Auto-link Clerk users to Stripe before payment
+      // Auto-link Clerk users to Stripe before payment and capture stripeCustomerId
+      let stripeCustomerId: string | undefined;
       if (req.user.username.startsWith('clerk_')) {
-        const clerkUserId = req.user.username.substring(6); // Remove 'clerk_' prefix
-        
+        const clerkUserId = req.user.username.substring(6);
         try {
-          // Check if already linked to Stripe
-          const existingMapping = await storage.getClerkStripeMapping(clerkUserId);
-          
-          if (!existingMapping) {
-            // Create Stripe customer and link to Clerk
+          let mapping = await storage.getClerkStripeMapping(clerkUserId);
+          if (!mapping) {
             const { createStripeCustomer } = await import('./payment-service');
-            const stripeCustomerId = await createStripeCustomer(
+            const newStripeCustomerId = await createStripeCustomer(
               req.user.email || undefined,
               req.user.phone || undefined,
               req.user.name || undefined
             );
-            
-            // Create mapping
-            await storage.createClerkStripeMapping({
+            mapping = await storage.createClerkStripeMapping({
               clerkUserId,
-              stripeCustomerId,
+              stripeCustomerId: newStripeCustomerId,
               email: req.user.email || null,
               phone: req.user.phone || null,
               name: req.user.name || null,
               createdAt: new Date().toISOString()
             });
           }
+          stripeCustomerId = mapping.stripeCustomerId;
         } catch (stripeError) {
           console.error('Stripe linking error:', stripeError);
-          // Continue with payment even if Stripe linking fails
         }
       }
       
@@ -1357,7 +1352,7 @@ export function registerRoutes(app: Express): Server {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
           `${req.protocol}://${req.get('host')}`;
-        const { url, clientSecret, sessionId, amountInCents } = await createPaymentLink(booking, service, siteUrl, discountPercent);
+        const { url, clientSecret, sessionId, amountInCents } = await createPaymentLink(booking, service, siteUrl, discountPercent, stripeCustomerId, Boolean(req.body.saveCard));
         
         // Update booking with payment info
         await storage.updateBookingPaymentInfo(booking.id, {
@@ -2118,6 +2113,52 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Link Stripe error:', error);
       res.status(500).json({ error: 'Failed to link Stripe customer' });
+    }
+  });
+
+  // ── Saved payment methods routes ─────────────────────────────────────────
+  async function resolveUserFromRequest(req: any): Promise<boolean> {
+    if (req.user) return true;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const { clerkClient: cc } = await import('@clerk/clerk-sdk-node');
+        const verified = await cc.verifyToken(token);
+        if (verified?.sub) {
+          const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
+          if (localUser) { (req as any).user = localUser; return true; }
+        }
+      } catch { }
+    }
+    return false;
+  }
+
+  app.get('/api/payment-methods', async (req, res) => {
+    if (!await resolveUserFromRequest(req)) return res.sendStatus(401);
+    try {
+      if (!req.user!.username.startsWith('clerk_')) return res.json({ methods: [] });
+      const clerkUserId = req.user!.username.substring(6);
+      const mapping = await storage.getClerkStripeMapping(clerkUserId);
+      if (!mapping) return res.json({ methods: [] });
+      const { listSavedPaymentMethods } = await import('./payment-service');
+      const methods = await listSavedPaymentMethods(mapping.stripeCustomerId);
+      res.json({ methods });
+    } catch (error) {
+      console.error('Get payment methods error:', error);
+      res.status(500).json({ error: 'Failed to get payment methods' });
+    }
+  });
+
+  app.delete('/api/payment-methods/:pmId', async (req, res) => {
+    if (!await resolveUserFromRequest(req)) return res.sendStatus(401);
+    try {
+      const { detachPaymentMethod } = await import('./payment-service');
+      await detachPaymentMethod(req.params.pmId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Delete payment method error:', error);
+      res.status(500).json({ error: 'Failed to delete payment method' });
     }
   });
 

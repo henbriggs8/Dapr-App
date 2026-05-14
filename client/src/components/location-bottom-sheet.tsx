@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, Navigation, Clock, Home, X, Loader2,
   ArrowLeft, ChevronRight, ChevronDown, Droplets, Sparkles, Wand2, Crown,
-  Check, CheckCircle2, Gift, Car, Plus, Tag, type LucideIcon,
+  Check, CheckCircle2, Gift, Car, Plus, Tag, CreditCard, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,15 +22,36 @@ import type { PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
+// ── Saved card type ────────────────────────────────────────────────────────────
+interface SavedCard {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
+
+function cardBrandLabel(brand: string): string {
+  const map: Record<string, string> = {
+    visa: "Visa", mastercard: "Mastercard", amex: "Amex",
+    discover: "Discover", jcb: "JCB", unionpay: "UnionPay",
+  };
+  return map[brand.toLowerCase()] ?? brand.charAt(0).toUpperCase() + brand.slice(1);
+}
+
 // ── Stripe Payment Form (inner — must be inside <Elements>) ───────────────────
 function StripePaymentForm({
   onSuccess,
   amountCents,
   clientSecret,
+  savedCards,
+  saveCard,
 }: {
   onSuccess: () => void;
   amountCents: number;
   clientSecret: string;
+  savedCards: SavedCard[];
+  saveCard: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -41,6 +62,7 @@ function StripePaymentForm({
   const [paymentRequest, setPaymentRequest] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [stripeLoaded, setStripeLoaded] = useState(false);
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!stripe || !amountCents) return;
@@ -93,6 +115,21 @@ function StripePaymentForm({
     }
   }
 
+  async function handleSavedCardPay() {
+    if (!stripe || !selectedSavedId) return;
+    setPaying(true);
+    setPayError(null);
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: selectedSavedId,
+    });
+    if (error) {
+      setPayError(error.message || "Payment failed. Please try again.");
+      setPaying(false);
+    } else {
+      onSuccess();
+    }
+  }
+
   if (!stripeLoaded) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -103,6 +140,7 @@ function StripePaymentForm({
   }
 
   const dollarAmount = (amountCents / 100).toFixed(2);
+  const showNewCardSection = !selectedSavedId;
 
   return (
     <div className="flex flex-col gap-5">
@@ -112,8 +150,55 @@ function StripePaymentForm({
         <span className="text-[17px] font-bold text-gray-900">${dollarAmount}</span>
       </div>
 
+      {/* Saved cards */}
+      {savedCards.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-1">Saved cards</p>
+          <div className="space-y-2">
+            {savedCards.map((card) => {
+              const selected = selectedSavedId === card.id;
+              return (
+                <button
+                  key={card.id}
+                  onClick={() => setSelectedSavedId(selected ? null : card.id)}
+                  className="w-full flex items-center gap-3 rounded-2xl border-2 px-4 py-3 transition-all text-left"
+                  style={{
+                    borderColor: selected ? "#8c52ff" : "#e5e7eb",
+                    background: selected ? "#f3eeff" : "#fff",
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: selected ? "#e9d8ff" : "#f3f4f6" }}
+                  >
+                    <Icon icon={CreditCard} size="sm" style={{ color: selected ? "#8c52ff" : "#6b7280" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold" style={{ color: selected ? "#8c52ff" : "#111827" }}>
+                      {cardBrandLabel(card.brand)} •••• {card.last4}
+                    </p>
+                    <p className="text-[12px] text-gray-400">Expires {card.expMonth}/{String(card.expYear).slice(-2)}</p>
+                  </div>
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                    style={selected ? { borderColor: "#8c52ff", backgroundColor: "#8c52ff" } : { borderColor: "#d1d5db" }}
+                  >
+                    {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[12px] text-gray-400 font-medium">or enter new card</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+        </div>
+      )}
+
       {/* Apple Pay button — only shows on supported devices */}
-      {applePayAvailable && paymentRequest && (
+      {showNewCardSection && applePayAvailable && paymentRequest && (
         <div className="flex flex-col gap-2">
           <PaymentRequestButtonElement
             options={{
@@ -129,35 +214,34 @@ function StripePaymentForm({
         </div>
       )}
 
-      {/* Method picker */}
-      <div className="grid grid-cols-2 gap-3">
-        {(["credit", "debit"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => { setMethod(m); setCardReady(false); }}
-            className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-all"
-            style={{
-              borderColor: method === m ? "#8c52ff" : "#e5e7eb",
-              background: method === m ? "#f3eeff" : "#fff",
-            }}
-          >
-            <span className="text-2xl">{m === "credit" ? "💳" : "🏦"}</span>
-            <span
-              className="text-[13px] font-semibold capitalize"
-              style={{ color: method === m ? "#8c52ff" : "#374151" }}
+      {/* New card method picker */}
+      {showNewCardSection && (
+        <div className="grid grid-cols-2 gap-3">
+          {(["credit", "debit"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMethod(m); setCardReady(false); }}
+              className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-all"
+              style={{
+                borderColor: method === m ? "#8c52ff" : "#e5e7eb",
+                background: method === m ? "#f3eeff" : "#fff",
+              }}
             >
-              {m === "credit" ? "Credit Card" : "Debit Card"}
-            </span>
-          </button>
-        ))}
-      </div>
+              <span className="text-2xl">{m === "credit" ? "💳" : "🏦"}</span>
+              <span
+                className="text-[13px] font-semibold capitalize"
+                style={{ color: method === m ? "#8c52ff" : "#374151" }}
+              >
+                {m === "credit" ? "Credit Card" : "Debit Card"}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Card input — revealed once a method is picked */}
-      {method && (
-        <div
-          className="rounded-2xl border border-gray-200 px-4 py-4"
-          style={{ background: "#fafafa" }}
-        >
+      {/* Card input */}
+      {showNewCardSection && method && (
+        <div className="rounded-2xl border border-gray-200 px-4 py-4" style={{ background: "#fafafa" }}>
           {!cardReady && (
             <div className="flex items-center gap-2 py-2">
               <Icon icon={Loader2} size="sm" className="animate-spin text-gray-400" />
@@ -185,6 +269,14 @@ function StripePaymentForm({
         </div>
       )}
 
+      {/* Save card confirmation note */}
+      {showNewCardSection && saveCard && method && (
+        <div className="flex items-center gap-2 px-1">
+          <Icon icon={CreditCard} size="xs" style={{ color: "#8c52ff" }} />
+          <span className="text-[12px]" style={{ color: "#8c52ff" }}>This card will be saved for future bookings</span>
+        </div>
+      )}
+
       {/* Error */}
       {payError && (
         <div className="rounded-xl bg-red-50 px-4 py-3">
@@ -192,8 +284,23 @@ function StripePaymentForm({
         </div>
       )}
 
-      {/* Pay button — only shown once card method selected and card ready */}
-      {method && cardReady && (
+      {/* Pay with saved card */}
+      {selectedSavedId && (
+        <button
+          onClick={handleSavedCardPay}
+          disabled={paying}
+          className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
+          style={{ background: "#8c52ff" }}
+        >
+          {paying
+            ? <><Icon icon={Loader2} size="sm" className="animate-spin text-white" /> Processing…</>
+            : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay ${dollarAmount}</>
+          }
+        </button>
+      )}
+
+      {/* Pay with new card */}
+      {showNewCardSection && method && cardReady && (
         <button
           onClick={handleCardPay}
           disabled={paying}
@@ -731,6 +838,7 @@ function ConfirmStep({
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [stripeBookingId, setStripeBookingId] = useState<number | null>(null);
   const [stripeAmountCents, setStripeAmountCents] = useState<number>(0);
+  const [saveCard, setSaveCard] = useState(false);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -763,6 +871,20 @@ function ConfirmStep({
       if (!res.ok) return { credits: 0 };
       return res.json();
     },
+  });
+
+  const { data: savedCardsData } = useQuery<{ methods: SavedCard[] }>({
+    queryKey: ["/api/payment-methods"],
+    queryFn: async () => {
+      const token = await getToken().catch(() => null);
+      const res = await fetch(resolveUrl("/api/payment-methods"), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) return { methods: [] };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   const availableCredits = referralInfo?.credits ?? 0;
@@ -814,7 +936,7 @@ function ConfirmStep({
         body: JSON.stringify(
           useFreeCredit
             ? { useFreeWashCredit: true }
-            : { ...(appliedPromo ? { promoCode: appliedPromo.code } : {}) }
+            : { ...(appliedPromo ? { promoCode: appliedPromo.code } : {}), saveCard }
         ),
       });
       if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
@@ -822,6 +944,7 @@ function ConfirmStep({
 
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
 
       return { ...payData, bookingId: booking.id };
     },
@@ -862,11 +985,14 @@ function ConfirmStep({
             <StripePaymentForm
               amountCents={stripeAmountCents}
               clientSecret={stripeClientSecret}
+              savedCards={savedCardsData?.methods ?? []}
+              saveCard={saveCard}
               onSuccess={() => {
                 const id = stripeBookingId;
                 setStripeClientSecret(null);
                 setStripeBookingId(null);
                 setStripeAmountCents(0);
+                queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
                 setLocation(`/matching?booking=${id}`);
               }}
             />
@@ -994,6 +1120,33 @@ function ConfirmStep({
             })}
           </div>
         </div>
+
+        {/* Save card for future payments toggle */}
+        {!useFreeCredit && (
+          <button
+            onClick={() => setSaveCard((v) => !v)}
+            className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition border ${
+              saveCard ? "bg-[#f3eeff] border-[#8c52ff]/30" : "bg-gray-50 border-transparent active:bg-gray-100"
+            }`}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: saveCard ? "#e9d8ff" : "#f3eeff" }}
+            >
+              <Icon icon={CreditCard} size="sm" style={{ color: ACCENT }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-gray-900">Save card for future payments</p>
+              <p className="text-[12px] text-gray-400">Skip card entry on your next booking</p>
+            </div>
+            <div
+              className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+              style={saveCard ? { borderColor: ACCENT, backgroundColor: ACCENT } : { borderColor: "#d1d5db" }}
+            >
+              {saveCard && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
+        )}
 
         {/* Free wash credit toggle */}
         {availableCredits > 0 && (

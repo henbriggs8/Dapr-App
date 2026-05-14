@@ -13,7 +13,9 @@ export async function createPaymentLink(
   booking: Booking,
   service: Service,
   _siteUrl?: string,
-  discountPercent?: number
+  discountPercent?: number,
+  stripeCustomerId?: string,
+  saveCard?: boolean
 ): Promise<{ url: string | null; clientSecret: string | null; sessionId: string; amountInCents: number }> {
   const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
     ? booking.totalPrice
@@ -27,11 +29,34 @@ export async function createPaymentLink(
     currency: 'usd',
     payment_method_types: ['card'],
     metadata: { bookingId: String(booking.id) },
+    ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
+    ...(saveCard && stripeCustomerId ? { setup_future_usage: 'on_session' } : {}),
   });
 
   if (!intent.client_secret) throw new Error('Failed to create Stripe PaymentIntent');
 
   return { url: null, clientSecret: intent.client_secret, sessionId: intent.id, amountInCents };
+}
+
+export async function listSavedPaymentMethods(stripeCustomerId: string): Promise<Array<{
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}>> {
+  const methods = await stripe.paymentMethods.list({ customer: stripeCustomerId, type: 'card' });
+  return methods.data.map((pm) => ({
+    id: pm.id,
+    brand: pm.card?.brand ?? 'card',
+    last4: pm.card?.last4 ?? '****',
+    expMonth: pm.card?.exp_month ?? 0,
+    expYear: pm.card?.exp_year ?? 0,
+  }));
+}
+
+export async function detachPaymentMethod(paymentMethodId: string): Promise<void> {
+  await stripe.paymentMethods.detach(paymentMethodId);
 }
 
 export async function createTipPaymentLink(

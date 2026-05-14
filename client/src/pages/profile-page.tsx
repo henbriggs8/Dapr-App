@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight,
-  Bell, Shield, UserX, Settings, Star, Calendar, Hash, KeyRound, Eye, EyeOff
+  Bell, Shield, UserX, Settings, Star, Calendar, Hash, KeyRound, Eye, EyeOff, CreditCard
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
@@ -98,6 +98,16 @@ export default function ProfilePage() {
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
+
+  const { data: savedMethodsData, refetch: refetchMethods } = useQuery<{ methods: Array<{ id: string; brand: string; last4: string; expMonth: number; expYear: number }> }>({
+    queryKey: ["/api/payment-methods"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/payment-methods");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const savedMethods = savedMethodsData?.methods ?? [];
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -196,6 +206,19 @@ export default function ProfilePage() {
         localStorage.removeItem("userVehicle");
       }
       toast({ title: "Vehicle removed" });
+    },
+  });
+
+  const deleteCardMutation = useMutation({
+    mutationFn: async (pmId: string) => {
+      await apiRequest("DELETE", `/api/payment-methods/${pmId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+      toast({ title: "Card removed" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card", variant: "destructive" });
     },
   });
 
@@ -610,6 +633,37 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Payment methods section */}
+          {savedMethods.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Payment methods</p>
+              <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
+                {savedMethods.map((card) => (
+                  <div key={card.id} className="flex items-center justify-between px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center">
+                        <Icon icon={CreditCard} size="sm" className="text-[#8c52ff]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-black capitalize">
+                          {card.brand} •••• {card.last4}
+                        </p>
+                        <p className="text-xs text-gray-500">Expires {card.expMonth}/{String(card.expYear).slice(-2)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteCardMutation.mutate(card.id)}
+                      disabled={deleteCardMutation.isPending}
+                      className="text-red-400 text-[13px] font-medium disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Account section */}
           <div>
