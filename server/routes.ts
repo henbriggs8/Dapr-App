@@ -2152,9 +2152,24 @@ export function registerRoutes(app: Express): Server {
 
   app.delete('/api/payment-methods/:pmId', async (req, res) => {
     if (!await resolveUserFromRequest(req)) return res.sendStatus(401);
+    const { pmId } = req.params;
+    if (!pmId.startsWith('pm_')) return res.status(400).json({ error: 'Invalid payment method ID' });
     try {
+      if (!req.user!.username.startsWith('clerk_')) return res.status(403).json({ error: 'Forbidden' });
+      const clerkUserId = req.user!.username.substring(6);
+      const mapping = await storage.getClerkStripeMapping(clerkUserId);
+      if (!mapping) return res.status(403).json({ error: 'No payment account linked' });
+
+      // Verify ownership: the payment method must belong to this user's Stripe customer
+      const Stripe = (await import('stripe')).default;
+      const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
+      const pm = await stripeInstance.paymentMethods.retrieve(pmId);
+      if (pm.customer !== mapping.stripeCustomerId) {
+        return res.status(403).json({ error: 'Payment method does not belong to this account' });
+      }
+
       const { detachPaymentMethod } = await import('./payment-service');
-      await detachPaymentMethod(req.params.pmId);
+      await detachPaymentMethod(pmId);
       res.sendStatus(204);
     } catch (error) {
       console.error('Delete payment method error:', error);
