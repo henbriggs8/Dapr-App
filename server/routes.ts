@@ -1429,8 +1429,8 @@ export function registerRoutes(app: Express): Server {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!webhookSecret) {
-        console.warn('STRIPE_WEBHOOK_SECRET not set — skipping webhook verification');
-        return res.status(200).end();
+        console.error('CRITICAL: STRIPE_WEBHOOK_SECRET is not configured — webhook rejected. Set this env var to enable payment webhooks.');
+        return res.status(500).json({ error: 'Webhook secret not configured' });
       }
 
       let event: import('stripe').Stripe.Event;
