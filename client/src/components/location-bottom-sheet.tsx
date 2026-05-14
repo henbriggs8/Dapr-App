@@ -53,7 +53,7 @@ function StripePaymentForm({
       requestPayerEmail: false,
     });
     pr.canMakePayment().then((result) => {
-      if (result?.applePay || result?.googlePay) setApplePayAvailable(true);
+      if (result?.applePay) setApplePayAvailable(true);
     });
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
       const { paymentIntent, error: err1 } = await stripe.confirmCardPayment(
