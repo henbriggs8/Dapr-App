@@ -43,6 +43,8 @@ export default function ProviderDashboard() {
   const [isOnline, setIsOnline] = useState(user?.currentStatus === 'online');
   const [activeTab, setActiveTab] = useState<Tab>("jobs");
   const [confirmCompleteId, setConfirmCompleteId] = useState<number | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const isCompletingRef = useRef(false);
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingBookings, refetch: refetchBookings } = useQuery<Booking[]>({
@@ -258,6 +260,10 @@ export default function ProviderDashboard() {
         description: error.message,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      isCompletingRef.current = false;
+      setIsCompleting(false);
     },
   });
 
@@ -593,10 +599,13 @@ export default function ProviderDashboard() {
                           </button>
                           <button
                             onClick={() => {
+                              if (isCompletingRef.current) return;
+                              isCompletingRef.current = true;
+                              setIsCompleting(true);
                               setConfirmCompleteId(null);
                               completeServiceMutation.mutate(booking.id);
                             }}
-                            disabled={completeServiceMutation.isPending}
+                            disabled={completeServiceMutation.isPending || isCompleting}
                             className="flex-1 py-2 rounded-lg bg-black text-white text-sm font-medium disabled:opacity-50"
                           >
                             <Icon icon={CheckCircle} size="sm" className="inline mr-1.5" />
