@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { Service, Booking } from '@shared/schema';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2026-04-22.dahlia' as any,
+  apiVersion: '2026-04-22.dahlia',
 });
 
 /** Stable idempotency key for a booking+discount combo. */

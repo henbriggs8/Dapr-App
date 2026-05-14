@@ -29,7 +29,7 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Apple Pay domain verification for Square
+  // Apple Pay domain verification
   app.get("/.well-known/apple-developer-merchantid-domain-association", (req, res) => {
     const filename = "apple-developer-merchantid-domain-association";
     const candidates = [
@@ -315,7 +315,7 @@ export function registerRoutes(app: Express): Server {
       // ── Duplicate-booking guard ───────────────────────────────────────────
       // If this user already has an unpaid booking for the same service
       // created within the last hour, return it immediately instead of
-      // creating a second booking (which would produce a second Square order).
+      // creating a second booking (which would produce a second payment session).
       const incomingServiceId = Number(req.body.serviceId);
       if (!isNaN(incomingServiceId)) {
         const existingBooking = await storage.findRecentUnpaidBooking(
@@ -417,7 +417,7 @@ export function registerRoutes(app: Express): Server {
         paymentId: null,
         paymentDate: null,
         paymentUrl: null,
-        squareOrderId: null
+        stripeSessionId: null
       };
 
       const newBooking = await storage.createBooking(booking);
@@ -1299,8 +1299,8 @@ export function registerRoutes(app: Express): Server {
       }
 
       // If a payment link was already created for this booking, reuse it.
-      // This prevents duplicate Square charges when the customer retries after
-      // a network error or a Square-side error on the checkout page.
+      // This prevents duplicate Stripe charges when the customer retries after
+      // a network error or a Stripe-side error on the checkout page.
       if (booking.paymentUrl && booking.paymentStatus === 'pending') {
         return res.json({ paymentUrl: booking.paymentUrl });
       }
@@ -1447,10 +1447,8 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Stripe webhook endpoint — receives events from Stripe.
-  // Uses express.raw() so we can verify the signature.
-  app.post('/api/webhooks/stripe',
-    express.raw({ type: 'application/json' }),
-    async (req, res) => {
+  // Raw body parsing is applied in index.ts (before express.json()) for this path.
+  app.post('/api/webhooks/stripe', async (req, res) => {
       const sig = req.headers['stripe-signature'] as string;
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
