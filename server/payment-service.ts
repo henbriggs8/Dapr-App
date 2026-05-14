@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 /** Stable idempotency key for a booking+discount combo. */
 function bookingIdempotencyKey(bookingId: number, discountPercent: number): string {
-  return `booking-${bookingId}-discount-${discountPercent}`;
+  return `booking-${bookingId}-discount-${discountPercent}-v2`;
 }
 
 export async function createPaymentLink(
@@ -28,7 +28,7 @@ export async function createPaymentLink(
   const session = await stripe.checkout.sessions.create(
     {
       mode: 'payment',
-      ui_mode: 'embedded' as any,
+      ui_mode: 'embedded_page' as any,
       line_items: [
         {
           quantity: 1,
