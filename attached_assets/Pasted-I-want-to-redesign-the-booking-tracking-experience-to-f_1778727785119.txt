@@ -1,0 +1,148 @@
+I want to redesign the booking/tracking experience to feel MUCH more alive and real-time like Uber, DoorDash, or Instacart — not like a traditional appointment booking app.
+
+The goal is for the customer to feel:
+- progress is constantly happening
+- the app is actively working for them
+- a Detail Pro is being sourced in real time
+- the experience feels instant/on-demand
+- high trust + low anxiety
+
+Right now the experience feels static and empty.
+
+I want a hybrid system:
+1. Dynamic “finding your Detail Pro” flow before assignment
+2. Live map tracking once assigned
+3. Service progress tracker once service starts
+
+IMPORTANT:
+The UI should feel premium, modern, animated, and alive.
+Think:
+- Uber
+- DoorDash
+- Instacart
+- Waymo
+NOT:
+- old booking software
+- appointment scheduler
+- static forms
+
+-----------------------------------
+PHASE 1 — MATCHING FLOW
+-----------------------------------
+
+After customer confirms booking, immediately transition into a full-screen live activity state.
+
+Show:
+- animated searching state
+- nearby Detail Pros being sourced
+- ETA estimates changing slightly
+- subtle map movement/background animation
+- pulsing loading indicators
+- status text cycling naturally
+
+I want rotating intelligent status messages like:
+
+- Finding nearby Detail Pros…
+- Connecting you with the best Detail Pro…
+- Checking availability nearby…
+- Looking for the fastest arrival…
+- Matching you with a top-rated Detail Pro…
+- Optimizing arrival time…
+- Searching your area…
+- Finding someone close…
+- Preparing your service…
+- Locking in your arrival window…
+- Confirming equipment availability…
+- Building the best route…
+- Finalizing your Detail Pro…
+
+These should rotate naturally every few seconds with smooth fade/slide transitions.
+
+The experience should feel:
+- active
+- intelligent
+- real-time
+- exciting
+
+NOT fake or cheesy.
+
+-----------------------------------
+PHASE 2 — DETAIL PRO ASSIGNED
+-----------------------------------
+
+Once assigned:
+Transition smoothly into a live map view.
+
+Show:
+- live Detail Pro location
+- moving vehicle icon
+- live ETA
+- Detail Pro photo
+- vehicle info
+- distance away
+- estimated arrival time
+- call/message buttons
+- smooth map animations
+
+The transition should feel seamless and premium.
+
+Very similar emotional feel to:
+- Uber driver assigned
+- DoorDash dasher en route
+
+-----------------------------------
+PHASE 3 — SERVICE PROGRESS
+-----------------------------------
+
+Once the Detail Pro arrives:
+Switch from navigation-focused UI into service progress UI.
+
+Use a clean progress tracker with animated states like:
+
+1. Arrived
+2. Setting Up Equipment
+3. Exterior Wash In Progress
+4. Interior Detail In Progress
+5. Final Touches
+6. Quality Check
+7. Service Complete
+
+Each stage should:
+- animate smoothly
+- feel satisfying
+- reassure the customer that progress is happening
+
+Optionally show:
+- estimated remaining time
+- live updated completion estimate
+- add-on alerts (pet hair, stains, XL vehicle, etc.)
+
+-----------------------------------
+DESIGN STYLE
+-----------------------------------
+
+Design language should feel:
+- minimal
+- premium
+- tech-forward
+- slightly futuristic
+- clean typography
+- smooth animations
+- soft gradients
+- subtle motion
+- no clutter
+
+Avoid:
+- giant empty white space
+- boring loaders
+- generic booking software vibes
+
+Focus heavily on:
+- motion
+- responsiveness
+- perceived speed
+- reassurance
+- premium UX psychology
+
+The customer should constantly feel:
+“Something is happening right now.”
