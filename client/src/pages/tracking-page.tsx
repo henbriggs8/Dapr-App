@@ -23,17 +23,22 @@ export default function TrackingPage() {
   // Get active bookings that can be tracked
   const { data: activeBookings, isLoading } = useQuery<Booking[]>({
     queryKey: ['/api/tracking/active'],
+    refetchInterval: 5000,
+    staleTime: 0,
   });
 
+  // Fetch the specific booking by ID so we can poll its status as a fallback
   const { data: requestedBooking } = useQuery<Booking>({
-    queryKey: ['/api/bookings', requestedBookingId],
+    queryKey: [`/api/bookings/${requestedBookingId}`],
     enabled: !!requestedBookingId,
+    refetchInterval: 4000,
+    staleTime: 0,
   });
 
   // Determine which booking is being watched so we can subscribe to its completion
   const trackedBookingId = requestedBookingId ?? activeBookings?.[0]?.id ?? null;
 
-  // Auto-navigate to review when the tracked booking is marked complete
+  // Auto-navigate to review when the tracked booking is marked complete via WS
   useEffect(() => {
     if (!trackedBookingId) return;
     return subscribeToBookingCompletion((completedId) => {
@@ -42,6 +47,13 @@ export default function TrackingPage() {
       }
     });
   }, [trackedBookingId, subscribeToBookingCompletion, setLocation]);
+
+  // REST-based fallback: navigate to review if the polled booking shows completed
+  useEffect(() => {
+    if (requestedBooking?.status === 'completed' && requestedBookingId) {
+      setLocation(`/review/${requestedBookingId}`);
+    }
+  }, [requestedBooking?.status, requestedBookingId, setLocation]);
 
   const handleBack = () => {
     setLocation('/');

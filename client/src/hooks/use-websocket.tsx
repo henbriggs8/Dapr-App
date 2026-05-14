@@ -100,6 +100,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           } else if (data.type === "booking_update") {
             // Invalidate booking queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/tracking/active"] });
+            // Invalidate the specific booking query used by the tracking page
+            if (data.booking?.id) {
+              queryClient.invalidateQueries({ queryKey: [`/api/bookings/${data.booking.id}`] });
+            }
             
             if (data.booking) {
               const { status, stage, id } = data.booking;
