@@ -311,6 +311,23 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      // ── Duplicate-booking guard ───────────────────────────────────────────
+      // If this user already has an unpaid booking for the same service
+      // created within the last hour, return it immediately instead of
+      // creating a second booking (which would produce a second Square order).
+      const incomingServiceId = Number(req.body.serviceId);
+      if (!isNaN(incomingServiceId)) {
+        const existingBooking = await storage.findRecentUnpaidBooking(
+          req.user.id,
+          incomingServiceId
+        );
+        if (existingBooking) {
+          console.log(`[bookings] Reusing existing unpaid booking #${existingBooking.id} for user ${req.user.id}`);
+          return res.status(200).json(existingBooking);
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       const bookingData = insertBookingSchema.parse({
         ...req.body,
         userId: req.user.id,

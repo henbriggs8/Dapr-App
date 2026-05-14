@@ -526,8 +526,11 @@ function ConfirmStep({
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
-  // Permanently lock the button after first tap — prevents double bookings
-  const [submitted, setSubmitted] = useState(false);
+  // Permanently lock the button after first tap — survives sheet close/reopen
+  // via sessionStorage so a second tap never creates a second Square order.
+  const [submitted, setSubmitted] = useState<boolean>(() => {
+    try { return !!sessionStorage.getItem("pendingPaymentBookingId"); } catch { return false; }
+  });
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };

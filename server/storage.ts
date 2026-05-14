@@ -1,6 +1,6 @@
 import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkSquareMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkSquareMapping, InsertClerkSquareMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, gt, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -60,6 +60,7 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   getBookingById(id: number): Promise<Booking | undefined>;
   getUserBookings(userId: number): Promise<Booking[]>;
+  findRecentUnpaidBooking(userId: number, serviceId: number): Promise<Booking | undefined>;
   getActiveBookings(providerId: number): Promise<Booking[]>;
   updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking>;
   updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void>;
@@ -516,6 +517,18 @@ export class MemStorage implements IStorage {
   async getUserBookings(userId: number): Promise<Booking[]> {
     return Array.from(this.bookings.values()).filter(
       (booking) => booking.userId === userId
+    );
+  }
+
+  async findRecentUnpaidBooking(userId: number, serviceId: number): Promise<Booking | undefined> {
+    const cutoff = Date.now() - 60 * 60 * 1000; // 60 minutes
+    return Array.from(this.bookings.values()).find(
+      (b) =>
+        b.userId === userId &&
+        b.serviceId === serviceId &&
+        !b.isPaid &&
+        b.status === 'pending' &&
+        new Date(b.timestamp).getTime() > cutoff
     );
   }
 
@@ -1585,6 +1598,25 @@ export class DatabaseStorage implements IStorage {
 
   async getUserBookings(userId: number): Promise<Booking[]> {
     return await db.select().from(bookings).where(eq(bookings.userId, userId));
+  }
+
+  async findRecentUnpaidBooking(userId: number, serviceId: number): Promise<Booking | undefined> {
+    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.userId, userId),
+          eq(bookings.serviceId, serviceId),
+          eq(bookings.isPaid, false),
+          eq(bookings.status, 'pending'),
+          gt(bookings.timestamp, cutoff)
+        )
+      )
+      .orderBy(desc(bookings.id))
+      .limit(1);
+    return booking || undefined;
   }
 
   async getActiveBookings(providerId: number): Promise<Booking[]> {
