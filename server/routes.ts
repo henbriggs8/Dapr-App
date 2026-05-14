@@ -2300,5 +2300,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Admin: reopen a resolved contact message
+  app.patch("/api/admin/contact-messages/:id/reopen", isAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid message ID" });
+    try {
+      const updated = await storage.reopenContactMessage(id);
+      res.json(updated);
+    } catch (error: any) {
+      if (error?.message === "Contact message not found") {
+        return res.status(404).json({ error: "Contact message not found" });
+      }
+      res.status(500).json({ error: "Failed to reopen contact message" });
+    }
+  });
+
   return httpServer;
 }

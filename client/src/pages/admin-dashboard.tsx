@@ -36,7 +36,8 @@ import {
   Tag,
   MessageSquare,
   Phone,
-  Mail
+  Mail,
+  RotateCcw
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -176,6 +177,21 @@ export default function AdminDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to resolve message", variant: "destructive" });
+    },
+  });
+
+  // Reopen contact message mutation
+  const reopenMessageMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PATCH", `/api/admin/contact-messages/${id}/reopen`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contact-messages"] });
+      toast({ title: "Message reopened" });
+    },
+    onError: () => {
+      toast({ title: "Failed to reopen message", variant: "destructive" });
     },
   });
 
@@ -1230,7 +1246,7 @@ export default function AdminDashboard() {
                                     <p className="text-xs text-gray-500">{formattedDate}</p>
                                     <p className="text-xs text-gray-400">{formattedTime}</p>
                                   </div>
-                                  {!msg.resolved && (
+                                  {!msg.resolved ? (
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -1240,6 +1256,17 @@ export default function AdminDashboard() {
                                     >
                                       <Icon icon={CheckCircle2} size="xs" className="mr-1" />
                                       Mark Resolved
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-7 px-2 text-amber-700 border-amber-300 hover:bg-amber-50"
+                                      disabled={reopenMessageMutation.isPending}
+                                      onClick={() => reopenMessageMutation.mutate(msg.id)}
+                                    >
+                                      <Icon icon={RotateCcw} size="xs" className="mr-1" />
+                                      Reopen
                                     </Button>
                                   )}
                                 </div>
