@@ -526,6 +526,8 @@ function ConfirmStep({
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
+  // Permanently lock the button after first tap — prevents double bookings
+  const [submitted, setSubmitted] = useState(false);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -619,18 +621,28 @@ function ConfirmStep({
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
 
-      return payData;
+      return { ...payData, bookingId: booking.id };
     },
     onSuccess: async (payData) => {
+      // Lock the button permanently — no more taps allowed
+      setSubmitted(true);
       onBooked();
+
       if (payData.free) {
-        setLocation("/matching");
+        setLocation(`/matching?booking=${payData.bookingId}`);
         return;
       }
+
       if (!payData.paymentUrl) throw new Error("Missing payment URL.");
+
       if (Capacitor.isNativePlatform()) {
+        // iOS: navigate to matching immediately (shows under the browser),
+        // then open Square in-app browser on top.
+        setLocation(`/matching?booking=${payData.bookingId}`);
         try { await Browser.open({ url: payData.paymentUrl }); } catch { window.open(payData.paymentUrl, "_blank"); }
       } else {
+        // Web: redirect the whole tab to Square. Payment-success will
+        // bring them back to /matching when done.
         window.location.href = payData.paymentUrl;
       }
     },
@@ -806,12 +818,14 @@ function ConfirmStep({
           )}
         </div>
         <button
-          onClick={() => mutation.mutate()}
-          disabled={mutation.isPending}
+          onClick={() => { if (!submitted && !mutation.isPending) mutation.mutate(); }}
+          disabled={mutation.isPending || submitted}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
-          style={{ background: useFreeCredit ? "#16a34a" : "#8c52ff" }}
+          style={{ background: submitted ? "#6b7280" : useFreeCredit ? "#16a34a" : "#8c52ff" }}
         >
-          {mutation.isPending ? (
+          {submitted ? (
+            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> Redirecting to payment…</>
+          ) : mutation.isPending ? (
             <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> {useFreeCredit ? "Redeeming…" : "Setting up payment…"}</>
           ) : useFreeCredit ? (
             <><Icon icon={Gift} size="sm" className="text-white" /> Redeem Free Wash</>
