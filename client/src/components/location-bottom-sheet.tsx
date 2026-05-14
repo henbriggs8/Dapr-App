@@ -14,9 +14,55 @@ import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 import { loadStripe } from "@stripe/stripe-js";
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
+// ── Stripe Payment Form (inner — must be inside <Elements>) ───────────────────
+function StripePaymentForm({ bookingId, onSuccess }: { bookingId: number; onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  async function handlePay() {
+    if (!stripe || !elements) return;
+    setPaying(true);
+    setPayError(null);
+    const { error } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+    });
+    if (error) {
+      setPayError(error.message || "Payment failed. Please try again.");
+      setPaying(false);
+    } else {
+      onSuccess();
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PaymentElement options={{ layout: "accordion" }} />
+      {payError && (
+        <div className="rounded-xl bg-red-50 px-4 py-3">
+          <p className="text-[13px] text-red-600">{payError}</p>
+        </div>
+      )}
+      <button
+        onClick={handlePay}
+        disabled={!stripe || !elements || paying}
+        className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
+        style={{ background: "#8c52ff" }}
+      >
+        {paying
+          ? <><Icon icon={Loader2} size="sm" className="animate-spin text-white" /> Processing…</>
+          : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay now</>
+        }
+      </button>
+    </div>
+  );
+}
 
 const ACCENT = "#8c52ff";
 
@@ -655,20 +701,20 @@ function ConfirmStep({
           <p className="text-[15px] font-semibold text-gray-900">Enter payment details</p>
           <div className="w-12" />
         </div>
-        <div className="overflow-y-auto flex-1 px-2 py-3">
-          <EmbeddedCheckoutProvider
+        <div className="overflow-y-auto flex-1 px-4 py-4">
+          <Elements
             stripe={stripePromise}
-            options={{
-              clientSecret: stripeClientSecret,
-              onComplete: () => {
+            options={{ clientSecret: stripeClientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#8c52ff" } } }}
+          >
+            <StripePaymentForm
+              bookingId={stripeBookingId}
+              onSuccess={() => {
                 setStripeClientSecret(null);
                 setStripeBookingId(null);
-                setLocation(`/payment-success?booking=${stripeBookingId}`);
-              },
-            }}
-          >
-            <EmbeddedCheckout />
-          </EmbeddedCheckoutProvider>
+                setLocation(`/matching?booking=${stripeBookingId}`);
+              }}
+            />
+          </Elements>
         </div>
       </div>
     );

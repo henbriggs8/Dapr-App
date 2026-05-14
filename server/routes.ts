@@ -1274,18 +1274,18 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Booking is already paid');
       }
 
-      // If a session was already created for this booking, reuse it.
-      // This prevents duplicate Stripe charges when the customer retries.
+      // If a PaymentIntent was already created for this booking, reuse it.
+      // This prevents duplicate charges when the customer retries.
       if (booking.stripeSessionId && booking.paymentStatus === 'pending') {
         try {
-          const stripe = (await import('stripe')).default;
-          const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
-          const existing = await stripeInstance.checkout.sessions.retrieve(booking.stripeSessionId);
-          if (existing.client_secret && existing.status !== 'complete') {
+          const Stripe = (await import('stripe')).default;
+          const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
+          const existing = await stripeInstance.paymentIntents.retrieve(booking.stripeSessionId);
+          if (existing.client_secret && existing.status !== 'succeeded' && existing.status !== 'canceled') {
             return res.json({ paymentUrl: null, clientSecret: existing.client_secret, sessionId: existing.id });
           }
         } catch {
-          // fall through to create a new session
+          // fall through to create a new intent
         }
       }
       
@@ -1450,34 +1450,33 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
+      const markBookingPaid = async (bookingId: number, intentId: string) => {
+        const booking = await storage.getBookingById(bookingId);
+        if (booking && !booking.isPaid) {
+          await storage.updateBookingPaymentInfo(booking.id, {
+            isPaid: true,
+            paymentStatus: 'completed',
+            paymentDate: new Date().toISOString(),
+            stripeSessionId: intentId,
+          });
+          await storage.updateBookingStatus(booking.id, 'confirmed');
+          const userClients = clients.get(booking.userId) || [];
+          const notification = JSON.stringify({ type: 'payment_completed', bookingId: booking.id });
+          userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
+        }
+      };
+
       try {
+        if (event.type === 'payment_intent.succeeded') {
+          const intent = event.data.object as import('stripe').Stripe.PaymentIntent;
+          const bookingId = intent.metadata?.bookingId ? parseInt(intent.metadata.bookingId) : null;
+          if (bookingId) await markBookingPaid(bookingId, intent.id);
+        }
+
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object as import('stripe').Stripe.Checkout.Session;
-          const bookingId = session.metadata?.bookingId
-            ? parseInt(session.metadata.bookingId)
-            : null;
-
-          if (bookingId && session.payment_status === 'paid') {
-            const booking = await storage.getBookingById(bookingId);
-            if (booking && !booking.isPaid) {
-              await storage.updateBookingPaymentInfo(booking.id, {
-                isPaid: true,
-                paymentStatus: 'completed',
-                paymentDate: new Date().toISOString(),
-                stripeSessionId: session.id,
-              });
-              await storage.updateBookingStatus(booking.id, 'confirmed');
-
-              const userClients = clients.get(booking.userId) || [];
-              const notification = JSON.stringify({
-                type: 'payment_completed',
-                bookingId: booking.id
-              });
-              userClients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) client.send(notification);
-              });
-            }
-          }
+          const bookingId = session.metadata?.bookingId ? parseInt(session.metadata.bookingId) : null;
+          if (bookingId && session.payment_status === 'paid') await markBookingPaid(bookingId, session.id);
         }
 
         res.status(200).end();

@@ -5,15 +5,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-04-22.dahlia',
 });
 
-/** Stable idempotency key for a booking+discount combo. */
-function bookingIdempotencyKey(bookingId: number, discountPercent: number): string {
-  return `booking-${bookingId}-discount-${discountPercent}-v2`;
-}
-
+/**
+ * Create a PaymentIntent for in-app embedded payment.
+ * Returns clientSecret for use with Stripe's Payment Element.
+ */
 export async function createPaymentLink(
   booking: Booking,
   service: Service,
-  siteUrl?: string,
+  _siteUrl?: string,
   discountPercent?: number
 ): Promise<{ url: string | null; clientSecret: string | null; sessionId: string }> {
   const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
@@ -23,37 +22,16 @@ export async function createPaymentLink(
   const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
   const amountInCents = Math.round(chargeAmount * 100);
 
-  const baseUrl = siteUrl || process.env.SITE_URL || 'https://autodapper.com';
+  const intent = await stripe.paymentIntents.create({
+    amount: amountInCents,
+    currency: 'usd',
+    automatic_payment_methods: { enabled: true },
+    metadata: { bookingId: String(booking.id) },
+  });
 
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      ui_mode: 'embedded_page' as any,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: 'usd',
-            unit_amount: amountInCents,
-            product_data: {
-              name: `Dapr – ${service.name}${(booking.totalPrice && booking.totalPrice > service.price) ? ' (size adjusted)' : ''}`,
-            },
-          },
-        },
-      ],
-      return_url: `${baseUrl}/payment-success?booking=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
-      metadata: {
-        bookingId: String(booking.id),
-      },
-    },
-    {
-      idempotencyKey: bookingIdempotencyKey(booking.id, discount),
-    }
-  );
+  if (!intent.client_secret) throw new Error('Failed to create Stripe PaymentIntent');
 
-  if (!session.client_secret) throw new Error('Failed to create Stripe embedded checkout session');
-
-  return { url: null, clientSecret: session.client_secret, sessionId: session.id };
+  return { url: null, clientSecret: intent.client_secret, sessionId: intent.id };
 }
 
 export async function createTipPaymentLink(
