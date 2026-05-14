@@ -1326,9 +1326,21 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send('Booking is already paid');
       }
 
-      // If a PaymentIntent was already created for this booking, reuse it.
-      // This prevents duplicate charges when the customer retries.
-      if (booking.stripeSessionId && booking.paymentStatus === 'pending') {
+      // Validate promo code early so we can decide whether to reuse an existing intent.
+      const PROMO_CODES: Record<string, number> = {
+        'DAPR99': 99,
+        'TEST99': 99,
+      };
+      const promoCodeRaw = typeof req.body.promoCode === 'string' ? req.body.promoCode.trim().toUpperCase() : null;
+      const discountPercent = promoCodeRaw ? (PROMO_CODES[promoCodeRaw] ?? 0) : 0;
+      if (promoCodeRaw && !PROMO_CODES[promoCodeRaw]) {
+        return res.status(400).json({ error: 'Invalid promo code.' });
+      }
+
+      // If a PaymentIntent was already created for this booking, reuse it —
+      // but only when no promo code or free-credit is being applied (those change the amount).
+      const applyingDiscount = promoCodeRaw || req.body.useFreeWashCredit;
+      if (!applyingDiscount && booking.stripeSessionId && booking.paymentStatus === 'pending') {
         try {
           const Stripe = (await import('stripe')).default;
           const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
@@ -1364,17 +1376,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send('Service not found');
       }
       
-      // Validate promo code
-      const PROMO_CODES: Record<string, number> = {
-        'DAPR99': 99,
-        'TEST99': 99,
-      };
-      const promoCode = typeof req.body.promoCode === 'string' ? req.body.promoCode.trim().toUpperCase() : null;
-      const discountPercent = promoCode ? (PROMO_CODES[promoCode] ?? 0) : 0;
-      if (promoCode && !PROMO_CODES[promoCode]) {
-        return res.status(400).json({ error: 'Invalid promo code.' });
-      }
-
       try {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
