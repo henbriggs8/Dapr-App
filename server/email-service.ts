@@ -127,6 +127,91 @@ ${payload.message}
   }
 }
 
+export async function sendCustomerConfirmationEmail(payload: SupportEmailPayload): Promise<void> {
+  const client = getResendClient();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY is not configured — skipping customer confirmation email.");
+    return;
+  }
+
+  const fromEmail = process.env.SUPPORT_FROM_EMAIL || "noreply@dapper-pros.com";
+
+  const formattedDate = new Date(payload.submittedAt).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; background: #f9f9f9; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 32px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: #1a1a2e; color: #fff; padding: 24px 32px; }
+    .header h1 { margin: 0; font-size: 20px; }
+    .header p { margin: 8px 0 0; font-size: 14px; color: #aaa; }
+    .body { padding: 32px; }
+    .greeting { font-size: 16px; margin-bottom: 20px; line-height: 1.6; }
+    .field { margin-bottom: 20px; }
+    .field label { display: block; font-size: 12px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+    .field p { margin: 0; font-size: 15px; line-height: 1.6; }
+    .message-box { background: #f5f5f5; border-left: 4px solid #1a1a2e; padding: 16px; border-radius: 4px; white-space: pre-wrap; font-size: 15px; line-height: 1.6; }
+    .response-time { background: #eef4ff; border-radius: 6px; padding: 14px 18px; font-size: 14px; color: #3355aa; margin-top: 24px; }
+    .footer { padding: 16px 32px; background: #f0f0f0; font-size: 12px; color: #999; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>We received your message</h1>
+      <p>Dapper Pros Support</p>
+    </div>
+    <div class="body">
+      <p class="greeting">Hi ${escapeHtml(payload.name)},<br /><br />Thanks for reaching out! We've received your support request and our team will get back to you as soon as possible.</p>
+      <div class="field">
+        <label>Your Message (submitted ${formattedDate})</label>
+        <div class="message-box">${escapeHtml(payload.message)}</div>
+      </div>
+      <div class="response-time">
+        <strong>Estimated response time:</strong> We typically respond within <strong>1–2 business days</strong>.${payload.requestCallback ? " Since you requested a callback, we'll reach out by phone as well." : ""}
+      </div>
+    </div>
+    <div class="footer">This confirmation was sent automatically by the Dapper Pros platform. Please do not reply to this email.</div>
+  </div>
+</body>
+</html>
+`;
+
+  const textBody = `
+Hi ${payload.name},
+
+Thanks for reaching out! We've received your support request and our team will get back to you as soon as possible.
+
+Your message (submitted ${formattedDate}):
+${payload.message}
+
+Estimated response time: We typically respond within 1–2 business days.${payload.requestCallback ? " Since you requested a callback, we'll reach out by phone as well." : ""}
+
+— Dapper Pros Support
+`.trim();
+
+  const { error } = await client.emails.send({
+    from: fromEmail,
+    to: [payload.email],
+    subject: "We received your message — Dapper Pros Support",
+    html: htmlBody,
+    text: textBody,
+  });
+
+  if (error) {
+    console.error("[email] Failed to send customer confirmation email:", error);
+  } else {
+    console.log(`[email] Customer confirmation sent to ${payload.email}`);
+  }
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
