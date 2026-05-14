@@ -1194,8 +1194,13 @@ function ConfirmStep({
               <span className="text-[14px] text-gray-400 line-through">${service.price}</span>
               <span className="text-[17px] font-bold text-[#16a34a]">Free</span>
             </div>
+          ) : appliedPromo ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] text-gray-400 line-through">${service.price.toFixed(2)}</span>
+              <span className="text-[17px] font-bold" style={{ color: ACCENT }}>${discountedPrice.toFixed(2)}</span>
+            </div>
           ) : (
-            <p className="text-[17px] font-bold text-gray-900">${service.price}</p>
+            <p className="text-[17px] font-bold text-gray-900">${service.price.toFixed(2)}</p>
           )}
         </div>
         <button
