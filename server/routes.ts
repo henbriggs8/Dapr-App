@@ -1282,7 +1282,7 @@ export function registerRoutes(app: Express): Server {
           const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' });
           const existing = await stripeInstance.paymentIntents.retrieve(booking.stripeSessionId);
           if (existing.client_secret && existing.status !== 'succeeded' && existing.status !== 'canceled') {
-            return res.json({ paymentUrl: null, clientSecret: existing.client_secret, sessionId: existing.id });
+            return res.json({ paymentUrl: null, clientSecret: existing.client_secret, sessionId: existing.id, amountInCents: existing.amount });
           }
         } catch {
           // fall through to create a new intent
@@ -1357,7 +1357,7 @@ export function registerRoutes(app: Express): Server {
         const { createPaymentLink } = await import('./payment-service');
         const siteUrl = process.env.SITE_URL ||
           `${req.protocol}://${req.get('host')}`;
-        const { url, clientSecret, sessionId } = await createPaymentLink(booking, service, siteUrl, discountPercent);
+        const { url, clientSecret, sessionId, amountInCents } = await createPaymentLink(booking, service, siteUrl, discountPercent);
         
         // Update booking with payment info
         await storage.updateBookingPaymentInfo(booking.id, {
@@ -1366,7 +1366,7 @@ export function registerRoutes(app: Express): Server {
           paymentStatus: 'pending'
         });
         
-        res.json({ paymentUrl: url, clientSecret, sessionId });
+        res.json({ paymentUrl: url, clientSecret, sessionId, amountInCents });
       } catch (error) {
         console.error('Payment creation error:', error);
         res.status(500).json({ 

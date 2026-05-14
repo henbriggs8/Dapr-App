@@ -14,25 +14,75 @@ import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {
+  Elements, CardElement, PaymentRequestButtonElement,
+  useStripe, useElements,
+} from "@stripe/react-stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 // ── Stripe Payment Form (inner — must be inside <Elements>) ───────────────────
-function StripePaymentForm({ onSuccess }: { onSuccess: () => void }) {
+function StripePaymentForm({
+  onSuccess,
+  amountCents,
+  clientSecret,
+}: {
+  onSuccess: () => void;
+  amountCents: number;
+  clientSecret: string;
+}) {
   const stripe = useStripe();
   const elements = useElements();
-  const [ready, setReady] = useState(false);
+  const [method, setMethod] = useState<"credit" | "debit" | null>(null);
+  const [cardReady, setCardReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [paymentRequest, setPaymentRequest] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
+  const [applePayAvailable, setApplePayAvailable] = useState(false);
+  const [stripeLoaded, setStripeLoaded] = useState(false);
 
-  async function handlePay() {
+  useEffect(() => {
+    if (!stripe || !amountCents) return;
+    setStripeLoaded(true);
+    const pr = stripe.paymentRequest({
+      country: "US",
+      currency: "usd",
+      total: { label: "Dapr Car Wash", amount: amountCents },
+      requestPayerName: false,
+      requestPayerEmail: false,
+    });
+    pr.canMakePayment().then((result) => {
+      if (result?.applePay || result?.googlePay) setApplePayAvailable(true);
+    });
+    pr.on("paymentmethod", async (ev: any) => {
+      const { paymentIntent, error: err1 } = await stripe.confirmCardPayment(
+        clientSecret,
+        { payment_method: ev.paymentMethod.id },
+        { handleActions: false }
+      );
+      if (err1) {
+        ev.complete("fail");
+        setPayError(err1.message || "Apple Pay failed.");
+      } else if (paymentIntent?.status === "requires_action") {
+        const { error: err2 } = await stripe.confirmCardPayment(clientSecret);
+        if (err2) { ev.complete("fail"); setPayError(err2.message || "Payment failed."); }
+        else { ev.complete("success"); onSuccess(); }
+      } else {
+        ev.complete("success");
+        onSuccess();
+      }
+    });
+    setPaymentRequest(pr);
+  }, [stripe, amountCents, clientSecret]);
+
+  async function handleCardPay() {
     if (!stripe || !elements) return;
+    const cardEl = elements.getElement(CardElement);
+    if (!cardEl) return;
     setPaying(true);
     setPayError(null);
-    const { error } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardEl },
     });
     if (error) {
       setPayError(error.message || "Payment failed. Please try again.");
@@ -42,40 +92,124 @@ function StripePaymentForm({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
-  const isLoading = !stripe || !elements || !ready;
+  if (!stripeLoaded) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <Icon icon={Loader2} size="lg" className="animate-spin" style={{ color: "#8c52ff" }} />
+        <p className="text-[13px] text-gray-400">Loading payment options…</p>
+      </div>
+    );
+  }
+
+  const dollarAmount = (amountCents / 100).toFixed(2);
 
   return (
-    <div className="flex flex-col gap-4">
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-10 gap-3">
-          <Icon icon={Loader2} size="lg" className="animate-spin" style={{ color: "#8c52ff" }} />
-          <p className="text-[13px] text-gray-400">Loading payment form…</p>
+    <div className="flex flex-col gap-5">
+      {/* Amount summary */}
+      <div className="rounded-2xl bg-gray-50 px-4 py-3.5 flex items-center justify-between">
+        <span className="text-[14px] text-gray-500 font-medium">Total due</span>
+        <span className="text-[17px] font-bold text-gray-900">${dollarAmount}</span>
+      </div>
+
+      {/* Apple Pay button — only shows on supported devices */}
+      {applePayAvailable && paymentRequest && (
+        <div className="flex flex-col gap-2">
+          <PaymentRequestButtonElement
+            options={{
+              paymentRequest,
+              style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
+            }}
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[12px] text-gray-400 font-medium">or pay with card</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
         </div>
       )}
-      <div style={{ display: isLoading ? "none" : "block" }}>
-        <PaymentElement
-          options={{ layout: "accordion" }}
-          onReady={() => setReady(true)}
-        />
+
+      {/* Method picker */}
+      <div className="grid grid-cols-2 gap-3">
+        {(["credit", "debit"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMethod(m); setCardReady(false); }}
+            className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-all"
+            style={{
+              borderColor: method === m ? "#8c52ff" : "#e5e7eb",
+              background: method === m ? "#f3eeff" : "#fff",
+            }}
+          >
+            <span className="text-2xl">{m === "credit" ? "💳" : "🏦"}</span>
+            <span
+              className="text-[13px] font-semibold capitalize"
+              style={{ color: method === m ? "#8c52ff" : "#374151" }}
+            >
+              {m === "credit" ? "Credit Card" : "Debit Card"}
+            </span>
+          </button>
+        ))}
       </div>
+
+      {/* Card input — revealed once a method is picked */}
+      {method && (
+        <div
+          className="rounded-2xl border border-gray-200 px-4 py-4"
+          style={{ background: "#fafafa" }}
+        >
+          {!cardReady && (
+            <div className="flex items-center gap-2 py-2">
+              <Icon icon={Loader2} size="sm" className="animate-spin text-gray-400" />
+              <span className="text-[13px] text-gray-400">Loading card fields…</span>
+            </div>
+          )}
+          <div style={{ display: cardReady ? "block" : "none" }}>
+            <CardElement
+              onReady={() => setCardReady(true)}
+              options={{
+                hidePostalCode: true,
+                style: {
+                  base: {
+                    fontSize: "16px",
+                    color: "#111827",
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    "::placeholder": { color: "#9ca3af" },
+                  },
+                  invalid: { color: "#ef4444" },
+                  complete: { color: "#8c52ff" },
+                },
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Error */}
       {payError && (
         <div className="rounded-xl bg-red-50 px-4 py-3">
           <p className="text-[13px] text-red-600">{payError}</p>
         </div>
       )}
-      {!isLoading && (
+
+      {/* Pay button — only shown once card method selected and card ready */}
+      {method && cardReady && (
         <button
-          onClick={handlePay}
+          onClick={handleCardPay}
           disabled={paying}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
           style={{ background: "#8c52ff" }}
         >
           {paying
             ? <><Icon icon={Loader2} size="sm" className="animate-spin text-white" /> Processing…</>
-            : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay now</>
+            : <><Icon icon={CheckCircle2} size="sm" className="text-white" /> Pay ${dollarAmount}</>
           }
         </button>
       )}
+
+      {/* Secure badge */}
+      <p className="text-center text-[11px] text-gray-400">
+        🔒 Payments secured by Stripe
+      </p>
     </div>
   );
 }
@@ -595,6 +729,7 @@ function ConfirmStep({
   const [submitted, setSubmitted] = useState(false);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [stripeBookingId, setStripeBookingId] = useState<number | null>(null);
+  const [stripeAmountCents, setStripeAmountCents] = useState<number>(0);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -682,7 +817,7 @@ function ConfirmStep({
         ),
       });
       if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
-      const payData = await payRes.json() as { paymentUrl: string | null; clientSecret: string | null; free?: boolean };
+      const payData = await payRes.json() as { paymentUrl: string | null; clientSecret: string | null; free?: boolean; amountInCents?: number };
 
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
@@ -700,6 +835,7 @@ function ConfirmStep({
       // Show embedded Stripe checkout inside the app
       setStripeClientSecret(payData.clientSecret);
       setStripeBookingId(payData.bookingId);
+      setStripeAmountCents(payData.amountInCents ?? Math.round(discountedPrice * 100));
     },
   });
 
@@ -709,24 +845,28 @@ function ConfirmStep({
       <div className="flex flex-col min-h-0 h-full">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
           <button
-            onClick={() => { setStripeClientSecret(null); setStripeBookingId(null); }}
+            onClick={() => { setStripeClientSecret(null); setStripeBookingId(null); setStripeAmountCents(0); }}
             className="flex items-center gap-1 text-[13px] text-gray-500"
           >
             <Icon icon={ArrowLeft} size="sm" /> Back
           </button>
-          <p className="text-[15px] font-semibold text-gray-900">Enter payment details</p>
+          <p className="text-[15px] font-semibold text-gray-900">Payment</p>
           <div className="w-12" />
         </div>
         <div className="overflow-y-auto flex-1 px-4 py-4">
           <Elements
             stripe={stripePromise}
-            options={{ clientSecret: stripeClientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#8c52ff" } } }}
+            options={{ clientSecret: stripeClientSecret, appearance: { theme: "night", variables: { colorPrimary: "#8c52ff" } } }}
           >
             <StripePaymentForm
+              amountCents={stripeAmountCents}
+              clientSecret={stripeClientSecret}
               onSuccess={() => {
+                const id = stripeBookingId;
                 setStripeClientSecret(null);
                 setStripeBookingId(null);
-                setLocation(`/matching?booking=${stripeBookingId}`);
+                setStripeAmountCents(0);
+                setLocation(`/matching?booking=${id}`);
               }}
             />
           </Elements>

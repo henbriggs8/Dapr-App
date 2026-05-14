@@ -14,7 +14,7 @@ export async function createPaymentLink(
   service: Service,
   _siteUrl?: string,
   discountPercent?: number
-): Promise<{ url: string | null; clientSecret: string | null; sessionId: string }> {
+): Promise<{ url: string | null; clientSecret: string | null; sessionId: string; amountInCents: number }> {
   const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
     ? booking.totalPrice
     : service.price;
@@ -25,13 +25,13 @@ export async function createPaymentLink(
   const intent = await stripe.paymentIntents.create({
     amount: amountInCents,
     currency: 'usd',
-    automatic_payment_methods: { enabled: true },
+    payment_method_types: ['card'],
     metadata: { bookingId: String(booking.id) },
   });
 
   if (!intent.client_secret) throw new Error('Failed to create Stripe PaymentIntent');
 
-  return { url: null, clientSecret: intent.client_secret, sessionId: intent.id };
+  return { url: null, clientSecret: intent.client_secret, sessionId: intent.id, amountInCents };
 }
 
 export async function createTipPaymentLink(
