@@ -655,7 +655,7 @@ export default function ProviderDashboard() {
       {activeTab === "available" && (
         <div>
           <div className="px-6 pt-6 pb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Available Near You</p>
+            <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase">Available Jobs</p>
             <button
               onClick={() => refetchJobs()}
               className="text-xs text-[#8c52ff] font-medium"

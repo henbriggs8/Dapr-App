@@ -352,6 +352,17 @@ export function registerRoutes(app: Express): Server {
         );
         if (existingBooking) {
           console.log(`[bookings] Reusing existing unpaid booking #${existingBooking.id} for user ${req.user.id}`);
+          // Re-broadcast the job so providers that missed the original notification can see it
+          const jobNotification = {
+            type: 'new_job_available',
+            booking: existingBooking,
+            providersNotified: 0,
+          };
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(jobNotification));
+            }
+          });
           return res.status(200).json(existingBooking);
         }
       }
@@ -960,16 +971,14 @@ export function registerRoutes(app: Express): Server {
         const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
 
         if (providerHasLocation && bookingHasLocation) {
-          // Both have coordinates — apply 15-mile radius filter
           const distance = calculateDistance(
             provider.latitude!,
             provider.longitude!,
             booking.serviceLatitude!,
             booking.serviceLongitude!
           );
-          if (distance <= 15) {
-            jobs.push({ ...booking, distance: Math.round(distance * 10) / 10 });
-          }
+          // Include all jobs; attach distance so the provider can see how far away it is
+          jobs.push({ ...booking, distance: Math.round(distance * 10) / 10 });
         } else {
           // Missing coordinates on one or both sides — include without distance
           jobs.push({ ...booking, distance: null });
