@@ -47,18 +47,21 @@ function StripePaymentForm({
   clientSecret,
   savedCards,
   saveCard,
+  bookingId,
 }: {
   onSuccess: () => void;
   amountCents: number;
   clientSecret: string;
   savedCards: SavedCard[];
   saveCard: boolean;
+  bookingId: number | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [method, setMethod] = useState<"credit" | "debit" | null>(null);
   const [cardReady, setCardReady] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [payingPayPal, setPayingPayPal] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [prApple, setPrApple] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
   const [prGoogle, setPrGoogle] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
@@ -164,6 +167,21 @@ function StripePaymentForm({
     }
   }
 
+  async function handlePayPalPay() {
+    if (!stripe || !bookingId) return;
+    setPayingPayPal(true);
+    setPayError(null);
+    const returnUrl = `${window.location.origin}/payment-success?booking=${bookingId}`;
+    const { error } = await stripe.confirmPayPalPayment(clientSecret, {
+      return_url: returnUrl,
+    });
+    if (error) {
+      setPayError(error.message || "PayPal payment failed. Please try again.");
+      setPayingPayPal(false);
+    }
+    // On success, Stripe redirects to returnUrl — no further action needed here
+  }
+
   if (!stripeLoaded) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -231,8 +249,59 @@ function StripePaymentForm({
         </div>
       )}
 
-      {/* Apple Pay / Google Pay buttons — only shows on supported devices */}
-      {showNewCardSection && (applePayAvailable || googlePayAvailable) && (
+      {/* PayPal button — always visible so customers can use it even with a saved card selected */}
+      {bookingId && (
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handlePayPalPay}
+            disabled={payingPayPal || paying}
+            className="w-full h-[52px] rounded-lg flex items-center justify-center gap-2 font-bold text-[15px] transition disabled:opacity-60"
+            style={{ background: "#FFC439", color: "#003087" }}
+          >
+            {payingPayPal ? (
+              <><Icon icon={Loader2} size="sm" className="animate-spin" style={{ color: "#003087" }} /> Redirecting to PayPal…</>
+            ) : (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7.5 3H14.25C17.55 3 19.5 4.8 19.5 7.65C19.5 11.1 17.1 13.5 13.65 13.5H11.25L10.5 18H7.5L7.5 3Z" fill="#003087"/>
+                  <path d="M4.5 6H11.25C14.55 6 16.5 7.8 16.5 10.65C16.5 14.1 14.1 16.5 10.65 16.5H8.25L7.5 21H4.5L4.5 6Z" fill="#009cde"/>
+                </svg>
+                Pay with PayPal
+              </>
+            )}
+          </button>
+          {showNewCardSection && (applePayAvailable || googlePayAvailable) && (
+            <>
+              {applePayAvailable && prApple && (
+                <PaymentRequestButtonElement
+                  options={{
+                    paymentRequest: prApple,
+                    style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
+                  }}
+                />
+              )}
+              {googlePayAvailable && prGoogle && (
+                <PaymentRequestButtonElement
+                  options={{
+                    paymentRequest: prGoogle,
+                    style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
+                  }}
+                />
+              )}
+            </>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[12px] text-gray-400 font-medium">
+              {selectedSavedId ? "or pay with saved card" : "or pay with card"}
+            </span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+        </div>
+      )}
+
+      {/* Apple Pay / Google Pay — shown for new card section when PayPal section is not rendered */}
+      {!bookingId && showNewCardSection && (applePayAvailable || googlePayAvailable) && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 px-1">
             {applePayAvailable && !googlePayAvailable && (
@@ -1046,6 +1115,7 @@ function ConfirmStep({
               clientSecret={stripeClientSecret}
               savedCards={savedCardsData?.methods ?? []}
               saveCard={saveCard}
+              bookingId={stripeBookingId}
               onSuccess={() => {
                 const id = stripeBookingId;
                 setStripeClientSecret(null);
