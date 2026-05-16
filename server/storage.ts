@@ -146,6 +146,7 @@ export interface IStorage {
       paymentUrl?: string;
       stripeSessionId?: string;
       isPaid?: boolean;
+      paymentMethod?: string;
     }
   ): Promise<Booking>;
   
@@ -1268,6 +1269,7 @@ export class MemStorage implements IStorage {
       paymentUrl?: string;
       stripeSessionId?: string;
       isPaid?: boolean;
+      paymentMethod?: string;
     }
   ): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
@@ -1282,7 +1284,8 @@ export class MemStorage implements IStorage {
       paymentDate: paymentInfo.paymentDate || booking.paymentDate || null,
       paymentUrl: paymentInfo.paymentUrl || booking.paymentUrl || null,
       stripeSessionId: paymentInfo.stripeSessionId || booking.stripeSessionId || null,
-      isPaid: paymentInfo.isPaid !== undefined ? paymentInfo.isPaid : booking.isPaid || false
+      isPaid: paymentInfo.isPaid !== undefined ? paymentInfo.isPaid : booking.isPaid || false,
+      paymentMethod: paymentInfo.paymentMethod || booking.paymentMethod || null
     };
     
     this.bookings.set(bookingId, updatedBooking);
@@ -2234,6 +2237,7 @@ export class DatabaseStorage implements IStorage {
       paymentUrl?: string;
       stripeSessionId?: string;
       isPaid?: boolean;
+      paymentMethod?: string;
     }
   ): Promise<Booking> {
     const [booking] = await db

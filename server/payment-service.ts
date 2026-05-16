@@ -117,6 +117,52 @@ export async function verifyPaymentStatus(sessionId: string): Promise<boolean> {
   return verifySessionPaid(sessionId);
 }
 
+/**
+ * Retrieve the wallet type used for a payment.
+ * Accepts either a PaymentIntent ID (pi_*) or a Checkout Session ID (cs_*).
+ * Returns 'apple_pay', 'google_pay', or 'card'.
+ * Returns null if the type cannot be determined (caller should preserve existing value).
+ */
+export async function getPaymentMethodType(stripeId: string): Promise<string | null> {
+  try {
+    let paymentMethodObj: Stripe.PaymentMethod | null = null;
+
+    if (stripeId.startsWith('pi_')) {
+      const intent = await stripe.paymentIntents.retrieve(stripeId, {
+        expand: ['payment_method'],
+      });
+      const pm = intent.payment_method;
+      if (pm && typeof pm === 'object') {
+        paymentMethodObj = pm as Stripe.PaymentMethod;
+      }
+    } else if (stripeId.startsWith('cs_')) {
+      const session = await stripe.checkout.sessions.retrieve(stripeId, {
+        expand: ['payment_intent.payment_method'],
+      });
+      const pi = session.payment_intent;
+      if (pi && typeof pi === 'object') {
+        const pm = (pi as Stripe.PaymentIntent).payment_method;
+        if (pm && typeof pm === 'object') {
+          paymentMethodObj = pm as Stripe.PaymentMethod;
+        }
+      }
+    } else {
+      console.warn(`getPaymentMethodType: unrecognised Stripe ID prefix for "${stripeId}" — skipping`);
+      return null;
+    }
+
+    if (paymentMethodObj) {
+      const walletType = paymentMethodObj.card?.wallet?.type;
+      if (walletType === 'apple_pay') return 'apple_pay';
+      if (walletType === 'google_pay') return 'google_pay';
+    }
+    return 'card';
+  } catch (error) {
+    console.error('Error retrieving payment method type for', stripeId, ':', error);
+    return null;
+  }
+}
+
 export async function createStripeCustomer(
   email?: string,
   phone?: string,

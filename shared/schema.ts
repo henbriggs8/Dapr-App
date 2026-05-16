@@ -117,6 +117,7 @@ export const bookings = pgTable("bookings", {
   tipAmount: integer("tip_amount"), // Tip amount in cents (set after Stripe confirms payment)
   pendingTipSessionId: text("pending_tip_session_id"), // Stripe Checkout Session ID for pending tip
   pendingTipCents: integer("pending_tip_cents"), // Expected tip cents for pending checkout
+  paymentMethod: text("payment_method"), // Payment method used: 'card', 'apple_pay', 'google_pay', 'paypal'
   
   // GPS Tracking fields
   providerLatitude: doublePrecision("provider_latitude"), // Current provider location

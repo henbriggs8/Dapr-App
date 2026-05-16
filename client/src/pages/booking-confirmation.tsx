@@ -45,18 +45,12 @@ function PaymentMethodBadge({ method }: { method: string }) {
 export default function BookingConfirmation() {
   const [, navigate] = useLocation();
   const [bookingId, setBookingId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>("card");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("booking") || urlParams.get("bookingId");
     if (id) {
-      const numId = parseInt(id);
-      setBookingId(numId);
-      try {
-        const stored = sessionStorage.getItem(`lastPaymentMethod:${numId}`);
-        if (stored) setPaymentMethod(stored);
-      } catch {}
+      setBookingId(parseInt(id));
     }
   }, []);
 
@@ -214,7 +208,7 @@ export default function BookingConfirmation() {
             <Icon icon={CreditCard} size="sm" className="text-gray-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Paid with</p>
-              <PaymentMethodBadge method={paymentMethod} />
+              <PaymentMethodBadge method={booking.paymentMethod ?? "card"} />
             </div>
           </div>
         </div>

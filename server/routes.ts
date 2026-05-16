@@ -1432,20 +1432,38 @@ export function registerRoutes(app: Express): Server {
       
       // Verify payment status using Stripe
       if (booking.stripeSessionId || booking.paymentId) {
-        const { verifyPaymentStatus } = await import('./payment-service');
-        const isPaid = await verifyPaymentStatus((booking.stripeSessionId || booking.paymentId)!);
-        
-        if (isPaid && !booking.isPaid) {
-          // Update booking payment status
-          await storage.updateBookingPaymentInfo(booking.id, {
-            isPaid: true,
-            paymentStatus: 'completed',
-            paymentDate: new Date().toISOString()
-          });
-          
-          // Also update booking status to confirmed
-          await storage.updateBookingStatus(booking.id, 'confirmed');
-          
+        const { verifyPaymentStatus, getPaymentMethodType } = await import('./payment-service');
+        const stripeId = (booking.stripeSessionId || booking.paymentId)!;
+        const isPaid = await verifyPaymentStatus(stripeId);
+
+        if (isPaid) {
+          const paymentInfoUpdate: {
+            isPaid: boolean;
+            paymentStatus: string;
+            paymentDate?: string;
+            paymentMethod?: string;
+          } = { isPaid: true, paymentStatus: 'completed' };
+
+          if (!booking.isPaid) {
+            paymentInfoUpdate.paymentDate = new Date().toISOString();
+          }
+
+          // Detect wallet type if not already stored
+          if (!booking.paymentMethod) {
+            const detected = await getPaymentMethodType(stripeId);
+            if (detected !== null) {
+              paymentInfoUpdate.paymentMethod = detected;
+            } else {
+              console.warn(`verify-payment: could not detect payment method for booking ${booking.id}, preserving existing value`);
+            }
+          }
+
+          await storage.updateBookingPaymentInfo(booking.id, paymentInfoUpdate);
+
+          if (!booking.isPaid) {
+            await storage.updateBookingStatus(booking.id, 'confirmed');
+          }
+
           return res.json({ verified: true, status: 'completed' });
         }
       }
