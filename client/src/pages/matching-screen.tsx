@@ -2,10 +2,17 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Shield, Zap, X } from "lucide-react";
+import { Star, Shield, Zap, X, CheckCircle } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Booking } from "@shared/schema";
 import { getQueryFn } from "@/lib/queryClient";
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  paypal: "PayPal",
+  card: "Card",
+  apple_pay: "Apple Pay",
+  google_pay: "Google Pay",
+};
 
 const ACCENT = "#8c52ff";
 
@@ -267,6 +274,23 @@ export default function MatchingScreen() {
           <div className="w-px h-3 bg-white/10" />
           <span className="text-[11px] text-gray-500">Free cancellation</span>
         </div>
+
+        {/* Payment method confirmation pill */}
+        {booking?.paymentMethod && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="flex items-center justify-center"
+          >
+            <div className="flex items-center gap-2 bg-white/6 border border-white/10 rounded-full px-4 py-2">
+              <Icon icon={CheckCircle} size="xs" className="text-green-400" />
+              <span className="text-[12px] text-gray-300 font-medium">
+                Paid with {PAYMENT_METHOD_LABELS[booking.paymentMethod] ?? booking.paymentMethod}
+              </span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Assigned toast */}
         <AnimatePresence>

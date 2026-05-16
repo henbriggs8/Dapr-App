@@ -114,6 +114,7 @@ export const bookings = pgTable("bookings", {
   paymentDate: text("payment_date"), // When payment was completed
   paymentUrl: text("payment_url"), // URL for Stripe checkout
   stripeSessionId: text("stripe_session_id"), // Stripe Checkout Session ID
+  paymentMethod: text("payment_method"), // Payment method used e.g. 'paypal', 'card', 'apple_pay', 'google_pay'
   tipAmount: integer("tip_amount"), // Tip amount in cents (set after Stripe confirms payment)
   pendingTipSessionId: text("pending_tip_session_id"), // Stripe Checkout Session ID for pending tip
   pendingTipCents: integer("pending_tip_cents"), // Expected tip cents for pending checkout

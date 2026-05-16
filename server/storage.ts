@@ -504,6 +504,7 @@ export class MemStorage implements IStorage {
       paymentDate: booking.paymentDate ?? null,
       paymentUrl: booking.paymentUrl ?? null,
       stripeSessionId: booking.stripeSessionId ?? null,
+      paymentMethod: booking.paymentMethod ?? null,
       tipAmount: booking.tipAmount ?? null,
       pendingTipSessionId: booking.pendingTipSessionId ?? null,
       pendingTipCents: booking.pendingTipCents ?? null,
@@ -1285,7 +1286,7 @@ export class MemStorage implements IStorage {
       paymentUrl: paymentInfo.paymentUrl || booking.paymentUrl || null,
       stripeSessionId: paymentInfo.stripeSessionId || booking.stripeSessionId || null,
       isPaid: paymentInfo.isPaid !== undefined ? paymentInfo.isPaid : booking.isPaid || false,
-      paymentMethod: paymentInfo.paymentMethod || booking.paymentMethod || null
+      paymentMethod: paymentInfo.paymentMethod || booking.paymentMethod || null,
     };
     
     this.bookings.set(bookingId, updatedBooking);

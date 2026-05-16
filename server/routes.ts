@@ -1429,46 +1429,42 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Verify payment status using Stripe
-      if (booking.stripeSessionId || booking.paymentId) {
-        const { verifyPaymentStatus, getPaymentMethodType } = await import('./payment-service');
-        const stripeId = (booking.stripeSessionId || booking.paymentId)!;
-        const isPaid = await verifyPaymentStatus(stripeId);
-
+      const intentId = booking.stripeSessionId || booking.paymentId;
+      if (intentId) {
+        const { getPaymentDetails } = await import('./payment-service');
+        const { isPaid, paymentMethod } = await getPaymentDetails(intentId);
+        
         if (isPaid) {
-          const paymentInfoUpdate: {
-            isPaid: boolean;
-            paymentStatus: string;
-            paymentDate?: string;
-            paymentMethod?: string;
-          } = { isPaid: true, paymentStatus: 'completed' };
-
-          if (!booking.isPaid) {
-            paymentInfoUpdate.paymentDate = new Date().toISOString();
-          }
-
-          // Detect wallet type if not already stored
-          if (!booking.paymentMethod) {
-            const detected = await getPaymentMethodType(stripeId);
-            if (detected !== null) {
-              paymentInfoUpdate.paymentMethod = detected;
-            } else {
-              console.warn(`verify-payment: could not detect payment method for booking ${booking.id}, preserving existing value`);
+          // Build the update — always back-fill paymentMethod if it was missing
+          const needsUpdate =
+            !booking.isPaid ||
+            (paymentMethod && !booking.paymentMethod);
+          
+          if (needsUpdate) {
+            await storage.updateBookingPaymentInfo(booking.id, {
+              isPaid: true,
+              paymentStatus: 'completed',
+              paymentDate: booking.paymentDate || new Date().toISOString(),
+              ...(paymentMethod ? { paymentMethod } : {}),
+            });
+            
+            if (!booking.isPaid) {
+              await storage.updateBookingStatus(booking.id, 'confirmed');
             }
           }
-
-          await storage.updateBookingPaymentInfo(booking.id, paymentInfoUpdate);
-
-          if (!booking.isPaid) {
-            await storage.updateBookingStatus(booking.id, 'confirmed');
-          }
-
-          return res.json({ verified: true, status: 'completed' });
+          
+          return res.json({
+            verified: true,
+            status: 'completed',
+            paymentMethod: paymentMethod ?? booking.paymentMethod ?? null,
+          });
         }
       }
       
       res.json({ 
         verified: booking.isPaid, 
-        status: booking.paymentStatus 
+        status: booking.paymentStatus,
+        paymentMethod: booking.paymentMethod ?? null,
       });
     } catch (error) {
       console.error('Payment verification error:', error);
@@ -1498,19 +1494,27 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      const markBookingPaid = async (bookingId: number, intentId: string) => {
+      const markBookingPaid = async (bookingId: number, intentId: string, detectedMethod?: string | null) => {
         const booking = await storage.getBookingById(bookingId);
-        if (booking && !booking.isPaid) {
-          await storage.updateBookingPaymentInfo(booking.id, {
-            isPaid: true,
-            paymentStatus: 'completed',
-            paymentDate: new Date().toISOString(),
-            stripeSessionId: intentId,
-          });
-          await storage.updateBookingStatus(booking.id, 'confirmed');
-          const userClients = clients.get(booking.userId) || [];
-          const notification = JSON.stringify({ type: 'payment_completed', bookingId: booking.id });
-          userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
+        if (booking) {
+          const needsUpdate =
+            !booking.isPaid ||
+            (detectedMethod && !booking.paymentMethod);
+          if (needsUpdate) {
+            await storage.updateBookingPaymentInfo(booking.id, {
+              isPaid: true,
+              paymentStatus: 'completed',
+              paymentDate: booking.paymentDate || new Date().toISOString(),
+              stripeSessionId: intentId,
+              ...(detectedMethod ? { paymentMethod: detectedMethod } : {}),
+            });
+            if (!booking.isPaid) {
+              await storage.updateBookingStatus(booking.id, 'confirmed');
+              const userClients = clients.get(booking.userId) || [];
+              const notification = JSON.stringify({ type: 'payment_completed', bookingId: booking.id });
+              userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
+            }
+          }
         }
       };
 
@@ -1518,13 +1522,24 @@ export function registerRoutes(app: Express): Server {
         if (event.type === 'payment_intent.succeeded') {
           const intent = event.data.object as import('stripe').Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId ? parseInt(intent.metadata.bookingId) : null;
-          if (bookingId) await markBookingPaid(bookingId, intent.id);
+          if (bookingId) {
+            // Detect payment method from the intent's types list (no extra API call needed)
+            let method: string | null = null;
+            if (intent.payment_method_types?.includes('paypal')) method = 'paypal';
+            else if (intent.payment_method_types?.length) method = 'card';
+            await markBookingPaid(bookingId, intent.id, method);
+          }
         }
 
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object as import('stripe').Stripe.Checkout.Session;
           const bookingId = session.metadata?.bookingId ? parseInt(session.metadata.bookingId) : null;
-          if (bookingId && session.payment_status === 'paid') await markBookingPaid(bookingId, session.id);
+          if (bookingId && session.payment_status === 'paid') {
+            let method: string | null = null;
+            if (session.payment_method_types?.includes('paypal')) method = 'paypal';
+            else if (session.payment_method_types?.length) method = 'card';
+            await markBookingPaid(bookingId, session.id, method);
+          }
         }
 
         res.status(200).end();

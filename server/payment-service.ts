@@ -163,6 +163,66 @@ export async function getPaymentMethodType(stripeId: string): Promise<string | n
   }
 }
 
+/**
+ * Derive a human-readable payment method label from a Stripe PaymentIntent's
+ * payment_method_types array and optional expanded PaymentMethod object.
+ */
+function resolvePaymentMethodFromIntent(intent: import('stripe').Stripe.PaymentIntent): string | null {
+  // PayPal intents have payment_method_types: ['paypal']
+  if (intent.payment_method_types?.includes('paypal')) return 'paypal';
+  if (!intent.payment_method) return null;
+  const pm = intent.payment_method as import('stripe').Stripe.PaymentMethod;
+  if (pm.type === 'paypal') return 'paypal';
+  if (pm.type === 'card') {
+    const wallet = pm.card?.wallet?.type;
+    if (wallet === 'apple_pay') return 'apple_pay';
+    if (wallet === 'google_pay') return 'google_pay';
+    return 'card';
+  }
+  return pm.type ?? null;
+}
+
+/**
+ * Retrieve a Stripe object (PaymentIntent OR Checkout Session — detected by prefix)
+ * and return both paid status and the human-readable payment method type.
+ * Falls back gracefully if the object cannot be found.
+ */
+export async function getPaymentDetails(stripeId: string): Promise<{
+  isPaid: boolean;
+  paymentMethod: string | null;
+}> {
+  try {
+    // Checkout Session IDs start with "cs_"
+    if (stripeId.startsWith('cs_')) {
+      const session = await stripe.checkout.sessions.retrieve(stripeId, {
+        expand: ['payment_intent.payment_method'],
+      });
+      const isPaid = session.payment_status === 'paid';
+      // Derive the ACTUAL method used from the linked PaymentIntent, not from the
+      // allowed-methods list (payment_method_types is just the allowlist on sessions)
+      let paymentMethod: string | null = null;
+      if (isPaid && session.payment_intent) {
+        const intent = session.payment_intent as import('stripe').Stripe.PaymentIntent;
+        paymentMethod = resolvePaymentMethodFromIntent(intent);
+      }
+      return { isPaid, paymentMethod };
+    }
+
+    // Default: PaymentIntent (pi_ prefix) — the common embedded-payment path
+    const intent = await stripe.paymentIntents.retrieve(stripeId, {
+      expand: ['payment_method'],
+    });
+    const isPaid = intent.status === 'succeeded';
+    return { isPaid, paymentMethod: isPaid ? resolvePaymentMethodFromIntent(intent) : null };
+  } catch (error) {
+    console.error('getPaymentDetails error:', error);
+    return { isPaid: false, paymentMethod: null };
+  }
+}
+
+/** Legacy alias used by verify-payment route — kept for backward compat */
+export { getPaymentDetails as getPaymentIntentDetails };
+
 export async function createStripeCustomer(
   email?: string,
   phone?: string,
