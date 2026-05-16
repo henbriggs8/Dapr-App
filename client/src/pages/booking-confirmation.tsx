@@ -1,19 +1,63 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { CheckCircle, Calendar, Clock, MapPin, Car } from "lucide-react";
+import { CheckCircle, Calendar, Clock, MapPin, Car, CreditCard } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
+import { WalletLogo } from "@/components/wallet-logo";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
 
+function PaymentMethodBadge({ method }: { method: string }) {
+  if (method === "apple_pay") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <WalletLogo wallet="apple" className="text-gray-800 shrink-0" />
+        <span className="text-sm font-medium text-gray-900">Apple Pay</span>
+      </div>
+    );
+  }
+  if (method === "google_pay") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <WalletLogo wallet="google" />
+        <span className="text-sm font-medium text-gray-900">Google Pay</span>
+      </div>
+    );
+  }
+  if (method === "paypal") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-label="PayPal" fill="#003087" className="shrink-0">
+          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082H9.828c-.524 0-.968.383-1.05.9l-1.453 9.204a.641.641 0 0 0 .634.74h4.094c.46 0 .85-.333.92-.788l.038-.197.733-4.648.047-.255a.932.932 0 0 1 .92-.789h.58c3.754 0 6.694-1.524 7.552-5.932.359-1.845.173-3.386-.671-4.03z"/>
+        </svg>
+        <span className="text-sm font-medium text-gray-900">PayPal</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon icon={CreditCard} size="sm" className="text-gray-400 shrink-0" />
+      <span className="text-sm font-medium text-gray-900">Credit / Debit Card</span>
+    </div>
+  );
+}
+
 export default function BookingConfirmation() {
   const [, navigate] = useLocation();
   const [bookingId, setBookingId] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>("card");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("booking") || urlParams.get("bookingId");
-    if (id) setBookingId(parseInt(id));
+    if (id) {
+      const numId = parseInt(id);
+      setBookingId(numId);
+      try {
+        const stored = sessionStorage.getItem(`lastPaymentMethod:${numId}`);
+        if (stored) setPaymentMethod(stored);
+      } catch {}
+    }
   }, []);
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
@@ -158,11 +202,19 @@ export default function BookingConfirmation() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 px-4 py-4">
+          <div className="flex items-start gap-3 px-4 py-4 border-b border-gray-200">
             <Icon icon={MapPin} size="sm" className="text-gray-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Location</p>
               <p className="text-sm font-medium text-gray-900 leading-snug">{booking.serviceLocation}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 px-4 py-4">
+            <Icon icon={CreditCard} size="sm" className="text-gray-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Paid with</p>
+              <PaymentMethodBadge method={paymentMethod} />
             </div>
           </div>
         </div>

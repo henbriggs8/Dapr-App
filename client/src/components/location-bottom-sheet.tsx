@@ -88,7 +88,11 @@ function StripePaymentForm({
       requestPayerEmail: false,
     });
 
-    const attachHandler = (s: NonNullable<typeof stripe>, pr: ReturnType<typeof makePR>) => {
+    const storePm = (method: string) => {
+      try { sessionStorage.setItem(`lastPaymentMethod:${bookingId ?? ""}`, method); } catch {}
+    };
+
+    const attachHandler = (s: NonNullable<typeof stripe>, pr: ReturnType<typeof makePR>, walletType: string) => {
       pr.on("paymentmethod", async (ev) => {
         const { paymentIntent, error: err1 } = await s.confirmCardPayment(
           clientSecret,
@@ -105,10 +109,12 @@ function StripePaymentForm({
             setPayError(err2.message || "Payment failed.");
           } else {
             ev.complete("success");
+            storePm(walletType);
             onSuccess();
           }
         } else {
           ev.complete("success");
+          storePm(walletType);
           onSuccess();
         }
       });
@@ -119,7 +125,7 @@ function StripePaymentForm({
     pA.canMakePayment().then((result) => {
       if (result?.applePay) {
         setApplePayAvailable(true);
-        attachHandler(stripe, pA);
+        attachHandler(stripe, pA, "apple_pay");
         setPrApple(pA);
       }
     });
@@ -129,7 +135,7 @@ function StripePaymentForm({
     pG.canMakePayment().then((result) => {
       if (result?.googlePay) {
         setGooglePayAvailable(true);
-        attachHandler(stripe, pG);
+        attachHandler(stripe, pG, "google_pay");
         setPrGoogle(pG);
       }
     });
@@ -148,6 +154,7 @@ function StripePaymentForm({
       setPayError(error.message || "Payment failed. Please try again.");
       setPaying(false);
     } else {
+      try { sessionStorage.setItem(`lastPaymentMethod:${bookingId ?? ""}`, "card"); } catch {}
       onSuccess();
     }
   }
@@ -163,6 +170,7 @@ function StripePaymentForm({
       setPayError(error.message || "Payment failed. Please try again.");
       setPaying(false);
     } else {
+      try { sessionStorage.setItem(`lastPaymentMethod:${bookingId ?? ""}`, "card"); } catch {}
       onSuccess();
     }
   }
@@ -171,6 +179,8 @@ function StripePaymentForm({
     if (!stripe || !bookingId) return;
     setPayingPayPal(true);
     setPayError(null);
+    // Store before redirect — on success Stripe takes the user away from this page
+    try { sessionStorage.setItem(`lastPaymentMethod:${bookingId}`, "paypal"); } catch {}
     const returnUrl = `${window.location.origin}/payment-success?booking=${bookingId}`;
     const { error } = await stripe.confirmPayPalPayment(clientSecret, {
       return_url: returnUrl,
