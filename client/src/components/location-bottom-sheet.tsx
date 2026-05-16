@@ -59,44 +59,77 @@ function StripePaymentForm({
   const [cardReady, setCardReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
-  const [paymentRequest, setPaymentRequest] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
+  const [prApple, setPrApple] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
+  const [prGoogle, setPrGoogle] = useState<ReturnType<NonNullable<typeof stripe>["paymentRequest"]> | null>(null);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
+  const [googlePayAvailable, setGooglePayAvailable] = useState(false);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!stripe || !amountCents) return;
     setStripeLoaded(true);
-    const pr = stripe.paymentRequest({
+
+    // Reset states before re-checking
+    setApplePayAvailable(false);
+    setGooglePayAvailable(false);
+    setPrApple(null);
+    setPrGoogle(null);
+
+    const makePR = () => stripe.paymentRequest({
       country: "US",
       currency: "usd",
       total: { label: "Dapr Car Wash", amount: amountCents },
       requestPayerName: false,
       requestPayerEmail: false,
     });
-    pr.canMakePayment().then((result) => {
-      if (result?.applePay) setApplePayAvailable(true);
-    });
-    pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
-      const { paymentIntent, error: err1 } = await stripe.confirmCardPayment(
-        clientSecret,
-        { payment_method: ev.paymentMethod.id },
-        { handleActions: false }
-      );
-      if (err1) {
-        ev.complete("fail");
-        setPayError(err1.message || "Apple Pay failed.");
-      } else if (paymentIntent?.status === "requires_action") {
-        const { error: err2 } = await stripe.confirmCardPayment(clientSecret);
-        if (err2) { ev.complete("fail"); setPayError(err2.message || "Payment failed."); }
-        else { ev.complete("success"); onSuccess(); }
-      } else {
-        ev.complete("success");
-        onSuccess();
+
+    const attachHandler = (s: NonNullable<typeof stripe>, pr: ReturnType<typeof makePR>) => {
+      pr.on("paymentmethod", async (ev) => {
+        const { paymentIntent, error: err1 } = await s.confirmCardPayment(
+          clientSecret,
+          { payment_method: ev.paymentMethod.id },
+          { handleActions: false }
+        );
+        if (err1) {
+          ev.complete("fail");
+          setPayError(err1.message || "Payment failed.");
+        } else if (paymentIntent?.status === "requires_action") {
+          const { error: err2 } = await s.confirmCardPayment(clientSecret);
+          if (err2) {
+            ev.complete("fail");
+            setPayError(err2.message || "Payment failed.");
+          } else {
+            ev.complete("success");
+            onSuccess();
+          }
+        } else {
+          ev.complete("success");
+          onSuccess();
+        }
+      });
+    };
+
+    // Separate instance for Apple Pay
+    const pA = makePR();
+    pA.canMakePayment().then((result) => {
+      if (result?.applePay) {
+        setApplePayAvailable(true);
+        attachHandler(stripe, pA);
+        setPrApple(pA);
       }
     });
-    setPaymentRequest(pr);
-  }, [stripe, amountCents, clientSecret]);
+
+    // Separate instance for Google Pay
+    const pG = makePR();
+    pG.canMakePayment().then((result) => {
+      if (result?.googlePay) {
+        setGooglePayAvailable(true);
+        attachHandler(stripe, pG);
+        setPrGoogle(pG);
+      }
+    });
+  }, [stripe, amountCents, clientSecret, onSuccess]);
 
   async function handleCardPay() {
     if (!stripe || !elements) return;
@@ -197,15 +230,25 @@ function StripePaymentForm({
         </div>
       )}
 
-      {/* Apple Pay button — only shows on supported devices */}
-      {showNewCardSection && applePayAvailable && paymentRequest && (
-        <div className="flex flex-col gap-2">
-          <PaymentRequestButtonElement
-            options={{
-              paymentRequest,
-              style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
-            }}
-          />
+      {/* Apple Pay / Google Pay buttons — only shows on supported devices */}
+      {showNewCardSection && (applePayAvailable || googlePayAvailable) && (
+        <div className="flex flex-col gap-3">
+          {applePayAvailable && prApple && (
+            <PaymentRequestButtonElement
+              options={{
+                paymentRequest: prApple,
+                style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
+              }}
+            />
+          )}
+          {googlePayAvailable && prGoogle && (
+            <PaymentRequestButtonElement
+              options={{
+                paymentRequest: prGoogle,
+                style: { paymentRequestButton: { type: "buy", theme: "dark", height: "52px" } },
+              }}
+            />
+          )}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-[12px] text-gray-400 font-medium">or pay with card</span>
