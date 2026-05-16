@@ -27,7 +27,7 @@ export async function createPaymentLink(
   const intent = await stripe.paymentIntents.create({
     amount: amountInCents,
     currency: 'usd',
-    payment_method_types: ['card'],
+    payment_method_types: ['card', 'paypal'],
     metadata: { bookingId: String(booking.id) },
     ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
     ...(saveCard && stripeCustomerId ? { setup_future_usage: 'on_session' } : {}),
@@ -92,13 +92,18 @@ export async function createTipPaymentLink(
 }
 
 /**
- * Verify a Stripe Checkout Session is paid.
- * Used to confirm tip payments before persisting tipAmount.
+ * Verify a Stripe Checkout Session or PaymentIntent is paid.
+ * Handles both checkout session IDs (cs_…) and PaymentIntent IDs (pi_…).
+ * PaymentIntent IDs are stored when using the embedded payment form (card or PayPal).
  */
 export async function verifySessionPaid(
   sessionId: string,
 ): Promise<boolean> {
   try {
+    if (sessionId.startsWith('pi_')) {
+      const intent = await stripe.paymentIntents.retrieve(sessionId);
+      return intent.status === 'succeeded';
+    }
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     return session.payment_status === 'paid';
   } catch (error) {
