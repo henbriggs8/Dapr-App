@@ -233,6 +233,13 @@ function StripePaymentForm({
       {/* Apple Pay / Google Pay buttons — only shows on supported devices */}
       {showNewCardSection && (applePayAvailable || googlePayAvailable) && (
         <div className="flex flex-col gap-3">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-1">
+            {applePayAvailable && !googlePayAvailable
+              ? "Pay with Apple Pay"
+              : googlePayAvailable && !applePayAvailable
+              ? "Pay with Google Pay"
+              : "Express checkout"}
+          </p>
           {applePayAvailable && prApple && (
             <PaymentRequestButtonElement
               options={{
