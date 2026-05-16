@@ -200,22 +200,22 @@ export default function ProviderDashboard() {
     },
   });
 
-  // Reject booking mutation
+  // Pass / reject booking mutation
   const rejectBookingMutation = useMutation({
     mutationFn: async (bookingId: number) => {
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/reject`);
+      const res = await apiRequest("POST", `/api/provider/bookings/${bookingId}/reject`);
       return await res.json();
     },
-    onSuccess: (booking: Booking) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
       toast({
-        title: "Booking rejected",
-        description: "The booking has been rejected",
+        title: "Appointment passed",
+        description: "The booking has been removed from your queue.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to reject booking",
+        title: "Could not pass appointment",
         description: error.message,
         variant: "destructive",
       });
@@ -569,24 +569,33 @@ export default function ProviderDashboard() {
                   )}
 
                   {booking.status === 'assigned' && (
-                    <div className="flex gap-2">
-                      {!(booking as any).arrivalTime && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {!(booking as any).arrivalTime && (
+                          <button
+                            onClick={() => markArrivedMutation.mutate(booking.id)}
+                            disabled={markArrivedMutation.isPending}
+                            className="flex-1 py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
+                          >
+                            <Icon icon={MapPin} size="sm" className="inline mr-1.5" />
+                            {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
+                          </button>
+                        )}
                         <button
-                          onClick={() => markArrivedMutation.mutate(booking.id)}
-                          disabled={markArrivedMutation.isPending}
-                          className="flex-1 py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
+                          onClick={() => startServiceMutation.mutate(booking.id)}
+                          disabled={startServiceMutation.isPending}
+                          className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
                         >
-                          <Icon icon={MapPin} size="sm" className="inline mr-1.5" />
-                          {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
+                          <Icon icon={Play} size="sm" className="inline mr-1.5" />
+                          Start Service
                         </button>
-                      )}
+                      </div>
                       <button
-                        onClick={() => startServiceMutation.mutate(booking.id)}
-                        disabled={startServiceMutation.isPending}
-                        className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                        onClick={() => rejectBookingMutation.mutate(booking.id)}
+                        disabled={rejectBookingMutation.isPending}
+                        className="w-full py-2 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50"
                       >
-                        <Icon icon={Play} size="sm" className="inline mr-1.5" />
-                        Start Service
+                        {rejectBookingMutation.isPending ? "Passing..." : "Pass on this appointment"}
                       </button>
                     </div>
                   )}
