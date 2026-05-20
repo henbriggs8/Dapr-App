@@ -139,7 +139,7 @@ export default function ActivityPage() {
                     )}
                     <div
                       className="flex items-center justify-between py-5 cursor-pointer"
-                      onClick={() => setLocation(`/booking?id=${booking.id}`)}
+                      onClick={() => setLocation(`/booking-details/${booking.id}`)}
                     >
                       <div className="flex items-start gap-3">
                         <div

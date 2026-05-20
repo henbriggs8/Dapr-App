@@ -25,10 +25,9 @@ export default function HomeDesktop() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const goBook = () => setLocation(user ? "/booking" : "/auth");
-  const goBookWith = (slug: string) => {
-    const dest = `/booking?service=${slug}`;
-    setLocation(user ? dest : `/auth?redirect=${encodeURIComponent(dest)}`);
+  const goBook = () => setLocation(user ? "/" : "/auth");
+  const goBookWith = (_slug: string) => {
+    setLocation(user ? "/" : "/auth");
   };
   const goServices = () => setLocation("/services");
   const goLogin = () => setLocation("/auth");

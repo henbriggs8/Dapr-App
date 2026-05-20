@@ -16,7 +16,7 @@ export default function FirstWashOffer() {
   const handleBook = () => {
     localStorage.setItem("sawFirstWash", "true");
     localStorage.setItem("onboardingCompleted", "true");
-    setLocation("/booking");
+    setLocation("/");
   };
 
   const handleSkip = () => {

@@ -213,7 +213,7 @@ function DesktopServices() {
   }, []);
 
   const goBookWith = (slug?: string) => {
-    setLocation(slug ? `/booking?service=${slug}` : "/booking");
+    setLocation("/");
   };
 
   return (
@@ -532,7 +532,7 @@ function MobileServices() {
   const [openAddOns, setOpenAddOns] = useState(false);
 
   const goBookWith = (slug?: string) => {
-    setLocation(slug ? `/booking?service=${slug}` : "/booking");
+    setLocation("/");
   };
 
   return (

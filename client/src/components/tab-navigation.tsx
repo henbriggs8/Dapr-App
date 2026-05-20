@@ -1,12 +1,12 @@
 import { useLocation } from "wouter";
-import { CalendarCheck, MapPin, Activity, User } from "lucide-react";
+import { Home, MapPin, Activity, User } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 
 export default function TabNavigation() {
   const [location, setLocation] = useLocation();
 
   const tabs = [
-    { icon: CalendarCheck, label: "Book", route: "/booking" },
+    { icon: Home, label: "Home", route: "/" },
     { icon: MapPin, label: "Track", route: "/tracking" },
     { icon: Activity, label: "Activity", route: "/activity" },
     { icon: User, label: "Profile", route: "/profile" },
@@ -19,7 +19,7 @@ export default function TabNavigation() {
     >
       <div className="grid grid-cols-4">
         {tabs.map((tab) => {
-          const active = location === tab.route;
+          const active = tab.route === "/" ? location === "/" : location === tab.route;
           return (
             <button
               key={tab.route}

@@ -16,7 +16,6 @@ import AddressScreen from "@/pages/address-screen";
 import CarProfileScreen from "@/pages/car-profile-screen";
 import FirstWashOffer from "@/pages/first-wash-offer";
 import ReferralPage from "@/pages/referral";
-import BookingScreen from "@/pages/booking-screen";
 import ProfilePage from "@/pages/profile-page";
 import ActivityPage from "@/pages/activity-page";
 import BookingDetails from "@/pages/booking-details";
@@ -153,7 +152,6 @@ function Router() {
         <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
         
         {/* Protected routes */}
-        <ProtectedRoute path="/booking" component={BookingScreen} />
         <Route path="/services" component={ServicesOverview} />
         <ProtectedRoute path="/activity" component={ActivityPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />

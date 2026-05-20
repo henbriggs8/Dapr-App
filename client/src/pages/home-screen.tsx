@@ -133,10 +133,10 @@ export default function HomeScreen() {
   const lastServiceLocation = bookings && bookings.length > 0 ? bookings[0].serviceLocation : null;
   const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
 
-  const categories: { icon: LucideIcon; label: string; route: string }[] = [
-    { icon: Gauge,         label: "Interior",    route: "/booking" },
-    { icon: CarFront,      label: "Exterior",    route: "/booking" },
-    { icon: Sparkles,      label: "Full Detail", route: "/booking" },
+  const categories: { icon: LucideIcon; label: string; route?: string; openSheet?: boolean }[] = [
+    { icon: Gauge,         label: "Interior",    openSheet: true },
+    { icon: CarFront,      label: "Exterior",    openSheet: true },
+    { icon: Sparkles,      label: "Full Detail", openSheet: true },
     { icon: MoreHorizontal,label: "More",        route: "/services" },
   ];
 
@@ -259,13 +259,7 @@ export default function HomeScreen() {
         <div className="flex gap-2.5 mt-3 mb-1">
           {/* Home tile */}
           <button
-            onClick={() => {
-              if (full) {
-                setLocation(`/booking?address=${encodeURIComponent(full)}`);
-              } else {
-                setAddrSheetOpen(true);
-              }
-            }}
+            onClick={() => setAddrSheetOpen(true)}
             className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f3eeff]">
@@ -281,13 +275,7 @@ export default function HomeScreen() {
 
           {/* Last service tile */}
           <button
-            onClick={() => {
-              if (lastServiceLocation) {
-                setLocation(`/booking?address=${encodeURIComponent(lastServiceLocation)}`);
-              } else {
-                setLocation("/booking");
-              }
-            }}
+            onClick={() => setAddrSheetOpen(true)}
             className="flex-1 flex items-center gap-2.5 rounded-2xl border border-[#efefef] bg-white px-3 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] active:bg-[#fafafa] transition text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f5]">
@@ -346,13 +334,7 @@ export default function HomeScreen() {
       `}</style>
       <div className="px-4 pb-4">
         <button
-          onClick={() => {
-            if (full) {
-              setLocation(`/booking?address=${encodeURIComponent(full)}`);
-            } else {
-              setAddrSheetOpen(true);
-            }
-          }}
+          onClick={() => setAddrSheetOpen(true)}
           className="home-carwash-card w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 shadow-[0_4px_20px_rgba(109,40,217,0.45)] active:scale-[0.99] transition"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
@@ -373,10 +355,10 @@ export default function HomeScreen() {
 
       {/* ── Category icon chips ───────────────────────────────────────── */}
       <div className="flex items-start justify-around px-4 pb-5">
-        {categories.map(({ icon: IconComp, label, route }) => (
+        {categories.map(({ icon: IconComp, label, route, openSheet }) => (
           <button
             key={label}
-            onClick={() => setLocation(route)}
+            onClick={() => openSheet ? setAddrSheetOpen(true) : setLocation(route!)}
             className="flex flex-col items-center gap-1.5 active:opacity-70 transition"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: ACCENT_BG }}>
@@ -429,7 +411,7 @@ export default function HomeScreen() {
         {serviceCards.map((card) => (
           <button
             key={card.id}
-            onClick={() => setLocation("/booking")}
+            onClick={() => setAddrSheetOpen(true)}
             className="w-full flex items-center gap-3.5 text-left active:opacity-90 transition rounded-2xl border border-[#f0f0f0] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
           >
             {/* Thumbnail */}

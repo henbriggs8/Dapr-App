@@ -253,7 +253,7 @@ function DesktopFAQ() {
               </button>
             )}
             <button
-              onClick={() => setLocation("/booking")}
+              onClick={() => setLocation("/")}
               className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95"
               data-testid="button-book-nav"
             >
@@ -663,7 +663,7 @@ function MobileFAQ() {
               Pick a service and we'll come to you.
             </p>
             <button
-              onClick={() => setLocation("/booking")}
+              onClick={() => setLocation("/")}
               className="bg-[#8c52ff] text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-colors inline-flex items-center gap-2"
               data-testid="mobile-button-book"
             >

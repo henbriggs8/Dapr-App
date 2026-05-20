@@ -205,7 +205,7 @@ function DesktopHowItWorks() {
               </button>
             )}
             <button
-              onClick={() => setLocation("/booking")}
+              onClick={() => setLocation("/")}
               className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95"
               data-testid="button-book-nav"
             >
@@ -289,7 +289,7 @@ function DesktopHowItWorks() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button
-              onClick={() => setLocation("/booking")}
+              onClick={() => setLocation("/")}
               className="bg-white text-black px-10 py-5 rounded-full text-lg font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)] inline-flex items-center gap-3"
               data-testid="button-final-cta"
             >
@@ -523,7 +523,7 @@ function MobileHowItWorks() {
               Pick a service, pick a time. Your detailer is closer than you think.
             </p>
             <button
-              onClick={() => setLocation("/booking")}
+              onClick={() => setLocation("/")}
               className="bg-[#8c52ff] text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-colors inline-flex items-center gap-2"
               data-testid="mobile-button-final-cta"
             >

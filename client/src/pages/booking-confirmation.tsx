@@ -108,7 +108,7 @@ export default function BookingConfirmation() {
           No booking found. Please complete the booking process first.
         </p>
         <button
-          onClick={() => navigate("/booking")}
+          onClick={() => navigate("/")}
           className="w-full max-w-xs py-3 bg-[#8c52ff] text-white rounded-xl text-sm font-medium"
         >
           Book a Service

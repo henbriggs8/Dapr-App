@@ -145,7 +145,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => window.location.href = `/booking?id=${id}`}
+                    onClick={() => window.location.href = `/booking-details/${id}`}
                     className="bg-primary text-white px-3 py-1 rounded-md text-xs"
                   >
                     View

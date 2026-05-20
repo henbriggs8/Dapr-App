@@ -1414,13 +1414,8 @@ export function LocationBottomSheet({
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     } catch {}
-    if (navigateToBookingOnSelect) {
-      onClose();
-      setLocation(`/booking?address=${encodeURIComponent(address)}`);
-    } else {
-      goTo(1);
-    }
-  }, [getToken, queryClient, goTo, onAddressSaved, navigateToBookingOnSelect, onClose, setLocation]);
+    goTo(1);
+  }, [getToken, queryClient, goTo, onAddressSaved]);
 
   // Sheet height (taller for service/confirm steps)
   const sheetH = step === 0 ? "78vh" : "88vh";
