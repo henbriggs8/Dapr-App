@@ -24,8 +24,8 @@ export async function createPaymentLink(
   const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
   const amountInCents = Math.round(chargeAmount * 100);
 
-  // PayPal via Stripe requires a minimum of $1.00; drop it for smaller amounts.
-  const paymentMethodTypes = amountInCents >= 100 ? ['card', 'paypal'] : ['card'];
+  // PayPal is not activated on this Stripe account — use card only.
+  const paymentMethodTypes = ['card'];
 
   const intent = await stripe.paymentIntents.create({
     amount: amountInCents,
