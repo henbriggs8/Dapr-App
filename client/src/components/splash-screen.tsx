@@ -30,7 +30,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           className="fixed inset-0 bg-black z-50 flex items-center justify-center"
         >
           <motion.img
-            src="/dapper-logo-white.png"
+            src="/dapr-logo.svg"
             alt="Dapr Logo"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -39,7 +39,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
               delay: 0.2,
               ease: [0.43, 0.13, 0.23, 0.96]
             }}
-            className="w-48 h-48 object-contain"
+            className="w-64 h-auto object-contain"
           />
         </motion.div>
       )}
