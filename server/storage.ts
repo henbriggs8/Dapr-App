@@ -2416,10 +2416,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (customerLat && customerLng) {
-      distance = this.calculateDistance(latitude, longitude, customerLat, customerLng);
-      // Simple ETA: distance / 20 mph average speed
-      const estimatedMinutes = Math.round((distance / 20) * 60);
-      eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
+      const route = await this.getDrivingRoute(latitude, longitude, customerLat, customerLng);
+      distance = route.distanceMiles;
+      eta = new Date(Date.now() + route.durationSeconds * 1000).toISOString();
     }
 
     const [updatedBooking] = await db
@@ -2454,16 +2453,55 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculateETA(
-    providerLat: number, 
-    providerLng: number, 
-    customerLat: number, 
+    providerLat: number,
+    providerLng: number,
+    customerLat: number,
     customerLng: number
   ): Promise<{ eta: string; distance: number }> {
-    const distance = this.calculateDistance(providerLat, providerLng, customerLat, customerLng);
-    const estimatedMinutes = Math.round((distance / 20) * 60); // 20 mph average speed
-    const eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
-    
-    return { eta, distance };
+    const route = await this.getDrivingRoute(providerLat, providerLng, customerLat, customerLng);
+    const eta = new Date(Date.now() + route.durationSeconds * 1000).toISOString();
+    return { eta, distance: route.distanceMiles };
+  }
+
+  /**
+   * Returns real driving duration + road distance via OSRM (free, no API key).
+   * Falls back to straight-line haversine @ 25 mph if OSRM is unreachable.
+   */
+  private async getDrivingRoute(
+    originLat: number,
+    originLng: number,
+    destLat: number,
+    destLng: number
+  ): Promise<{ durationSeconds: number; distanceMiles: number }> {
+    try {
+      const url =
+        `https://router.project-osrm.org/route/v1/driving/` +
+        `${originLng},${originLat};${destLng},${destLat}?overview=false`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000); // 4 s max
+
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = await res.json() as any;
+        if (data.code === 'Ok' && data.routes?.[0]) {
+          const { duration, distance } = data.routes[0];
+          return {
+            durationSeconds: Math.round(duration),               // OSRM → seconds
+            distanceMiles:   Math.round((distance / 1609.34) * 10) / 10, // metres → miles
+          };
+        }
+      }
+    } catch {
+      // timeout or network error — fall through to haversine
+    }
+
+    // Fallback: straight-line distance at 25 mph
+    const miles = this.calculateDistance(originLat, originLng, destLat, destLng);
+    const durationSeconds = Math.round((miles / 25) * 3600);
+    return { durationSeconds, distanceMiles: Math.round(miles * 10) / 10 };
   }
 
   async enableTrackingForBooking(bookingId: number): Promise<Booking> {
