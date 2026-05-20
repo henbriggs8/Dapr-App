@@ -48,7 +48,6 @@ export default function HomeScreen() {
   const [locating, setLocating] = useState(false);
   const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
   const [timeOpen, setTimeOpen] = useState(false);
-  const [mode, setMode] = useState<"personal" | "fleet">("personal");
   const [addrSheetOpen, setAddrSheetOpen] = useState(false);
   const timePopRef = useRef<HTMLDivElement | null>(null);
   const { getToken } = useAuth();
@@ -254,29 +253,6 @@ export default function HomeScreen() {
             )}
           </div>
 
-          {/* Personal / Fleet segmented control */}
-          <div className="flex items-center rounded-full bg-[#f0f0f0] p-0.5">
-            <button
-              onClick={() => setMode("personal")}
-              className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition ${
-                mode === "personal"
-                  ? "bg-white text-[#111] shadow-sm"
-                  : "text-[#888]"
-              }`}
-            >
-              Personal
-            </button>
-            <button
-              onClick={() => setMode("fleet")}
-              className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition ${
-                mode === "fleet"
-                  ? "bg-white text-[#111] shadow-sm"
-                  : "text-[#888]"
-              }`}
-            >
-              Fleet
-            </button>
-          </div>
         </div>
 
         {/* ── Quick-access tiles: Home + Last service ──────────────────── */}
