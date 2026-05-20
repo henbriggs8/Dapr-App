@@ -144,6 +144,7 @@ function LandingScreen({
   setPhone,
   onNext,
   onGoogle,
+  onApple,
   loading,
   error,
 }: {
@@ -151,6 +152,7 @@ function LandingScreen({
   setPhone: (v: string) => void;
   onNext: () => void;
   onGoogle: () => void;
+  onApple: () => void;
   loading: boolean;
   error: string;
 }) {
@@ -223,8 +225,19 @@ function LandingScreen({
         <div className="h-px flex-1 bg-[#e5e5e5]" />
       </div>
 
-      {/* Social buttons */}
+      {/* Social buttons — Apple must appear first per Apple HIG */}
       <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={onApple}
+          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-lg bg-[#111] text-[14px] font-medium text-white transition hover:bg-[#222] active:scale-[0.99]"
+        >
+          <svg className="h-5 w-5 shrink-0" viewBox="0 0 814 1000" fill="currentColor">
+            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 389.3 48.3 226.1 150.1 130.7c48.1-45.4 111.2-73.1 177.4-73.1 60.8 0 112.7 39.5 151.1 39.5 37.1 0 97.2-41.8 165.6-41.8 27.8 0 108.2 2.6 162.5 86.1zm-230.2-111.4c28.8-35.2 49.7-83.9 49.7-132.5 0-6.7-.6-13.5-1.9-19.2-47.5 1.6-104.2 31.8-138.4 72.9-26.9 30.2-51.6 78.2-51.6 127.5 0 7.1 1.3 14.2 1.9 16.5 3.2.6 8.4 1.3 13.5 1.3 42.2 0 95.8-28.1 126.8-66.5z"/>
+          </svg>
+          Continue with Apple
+        </button>
+
         <button
           type="button"
           onClick={onGoogle}
@@ -918,9 +931,9 @@ function AuthFlow() {
     if (code === 'form_password_incorrect') return 'Incorrect password. Please try again.';
     if (code === 'form_code_incorrect') return 'Incorrect code. Please try again.';
     if (code === 'too_many_requests') return 'Too many attempts. Please wait a moment.';
-    if (code === 'oauth_callback_invalid' || code === 'oauth_access_denied') return 'Google sign-in was cancelled or denied.';
-    if (code === 'external_account_not_found') return 'No account found for this Google account. Please sign up first.';
-    if (code === 'oauth_provider_not_enabled_for_environment') return 'Google sign-in is not enabled. Please configure it in the Clerk dashboard.';
+    if (code === 'oauth_callback_invalid' || code === 'oauth_access_denied') return 'Sign-in was cancelled or denied.';
+    if (code === 'external_account_not_found') return 'No account found for this sign-in. Please try your phone number instead.';
+    if (code === 'oauth_provider_not_enabled_for_environment') return 'This sign-in method is not enabled. Please use your phone number.';
     return first.longMessage ?? first.message ?? `Error: ${code}`;
   };
 
@@ -1156,6 +1169,46 @@ function AuthFlow() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setError('');
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const { Browser } = await import('@capacitor/browser');
+        const { App } = await import('@capacitor/app');
+
+        const deepLink = 'com.autodapper.app://sso-callback';
+
+        const si = await signIn!.create({
+          strategy: 'oauth_apple',
+          redirectUrl: deepLink,
+          actionCompleteRedirectUrl: deepLink,
+        } as any);
+
+        const oauthUrl = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
+        if (!oauthUrl) throw new Error('Could not generate Apple sign-in URL');
+
+        const listener = await App.addListener('appUrlOpen', async ({ url }) => {
+          if (url.startsWith('com.autodapper.app://')) {
+            await listener.remove();
+            await Browser.close();
+            const params = url.replace('com.autodapper.app://sso-callback', '');
+            window.location.href = '/sso-callback' + params;
+          }
+        });
+
+        await Browser.open({ url: oauthUrl });
+      } else {
+        await signIn!.authenticateWithRedirect({
+          strategy: 'oauth_apple',
+          redirectUrl: '/sso-callback',
+          redirectUrlComplete: '/',
+        });
+      }
+    } catch (err: any) {
+      setError(clerkError(err));
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setError('');
     try {
@@ -1280,6 +1333,7 @@ function AuthFlow() {
         setPhone={setLandingPhone}
         onNext={handleEmailNext}
         onGoogle={handleGoogleSignIn}
+        onApple={handleAppleSignIn}
         loading={loading}
         error={error}
       />
