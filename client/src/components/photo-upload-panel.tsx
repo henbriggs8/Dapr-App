@@ -8,6 +8,7 @@ import type { BookingPhoto } from "@shared/schema";
 interface PhotoUploadPanelProps {
   bookingId: number;
   status: string; // 'assigned' | 'in_progress' | 'completed'
+  showSection?: 'before' | 'after' | 'both';
 }
 
 function compressImage(file: File, maxWidthPx = 1200, quality = 0.78): Promise<string> {
@@ -142,7 +143,7 @@ function UploadButton({
   );
 }
 
-export default function PhotoUploadPanel({ bookingId, status }: PhotoUploadPanelProps) {
+export default function PhotoUploadPanel({ bookingId, status, showSection = 'both' }: PhotoUploadPanelProps) {
   const { data: photos = [], isLoading } = useQuery<BookingPhoto[]>({
     queryKey: ["/api/bookings", bookingId, "photos"],
     queryFn: async () => {
@@ -183,45 +184,49 @@ export default function PhotoUploadPanel({ bookingId, status }: PhotoUploadPanel
 
       <div className="p-4 space-y-5 bg-white">
         {/* Before section */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Before</span>
-            {canUpload && <UploadButton photoType="before" bookingId={bookingId} />}
+        {(showSection === 'both' || showSection === 'before') && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Before</span>
+              {canUpload && <UploadButton photoType="before" bookingId={bookingId} />}
+            </div>
+            {beforePhotos.length === 0 ? (
+              <p className="text-xs text-gray-400 italic mt-2">
+                {canUpload ? "Capture vehicle condition before starting service." : "No before photos captured."}
+              </p>
+            ) : (
+              <PhotoGrid
+                photos={beforePhotos}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                canDelete={canUpload}
+              />
+            )}
           </div>
-          {beforePhotos.length === 0 ? (
-            <p className="text-xs text-gray-400 italic mt-2">
-              {canUpload ? "Tap 'Add photo' to capture vehicle condition before service." : "No before photos captured."}
-            </p>
-          ) : (
-            <PhotoGrid
-              photos={beforePhotos}
-              onDelete={(id) => deleteMutation.mutate(id)}
-              canDelete={canUpload}
-            />
-          )}
-        </div>
+        )}
 
-        {/* Divider */}
-        <div className="border-t border-gray-100" />
+        {/* Divider — only when showing both */}
+        {showSection === 'both' && <div className="border-t border-gray-100" />}
 
         {/* After section */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">After</span>
-            {canUpload && <UploadButton photoType="after" bookingId={bookingId} />}
+        {(showSection === 'both' || showSection === 'after') && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">After</span>
+              {canUpload && <UploadButton photoType="after" bookingId={bookingId} />}
+            </div>
+            {afterPhotos.length === 0 ? (
+              <p className="text-xs text-gray-400 italic mt-2">
+                {canUpload ? "Upload after photos to complete the quality check." : "No after photos captured."}
+              </p>
+            ) : (
+              <PhotoGrid
+                photos={afterPhotos}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                canDelete={canUpload}
+              />
+            )}
           </div>
-          {afterPhotos.length === 0 ? (
-            <p className="text-xs text-gray-400 italic mt-2">
-              {canUpload ? "Capture the finished result when service is complete." : "No after photos captured."}
-            </p>
-          ) : (
-            <PhotoGrid
-              photos={afterPhotos}
-              onDelete={(id) => deleteMutation.mutate(id)}
-              canDelete={canUpload}
-            />
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

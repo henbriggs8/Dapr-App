@@ -1812,6 +1812,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Provider advances service stage — broadcasts stage_update to customer tracking screen
+  app.post('/api/bookings/:id/stage', async (req, res) => {
+    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    const { stage } = req.body;
+    if (!stage) return res.status(400).json({ error: 'stage is required' });
+    try {
+      const booking = await storage.updateBookingStage(id, stage);
+      const msg = JSON.stringify({ type: 'stage_update', bookingId: booking.id, stage });
+      wss.clients.forEach((client: WebSocket) => {
+        if (client.readyState === WebSocket.OPEN) client.send(msg);
+      });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to update stage' });
+    }
+  });
+
   // Provider updates time adjustments — recalculates ETA, notifies customer
   app.patch('/api/bookings/:id/time-adjustments', async (req, res) => {
     if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });

@@ -222,28 +222,6 @@ export default function ProviderDashboard() {
     },
   });
 
-  // Start service mutation
-  const startServiceMutation = useMutation({
-    mutationFn: async (bookingId: number) => {
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/start`);
-      return await res.json();
-    },
-    onSuccess: (booking: Booking) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
-      toast({
-        title: "Service started",
-        description: "Timer has been started for this service",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to start service",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   // Complete service mutation
   const completeServiceMutation = useMutation({
     mutationFn: async (bookingId: number) => {
@@ -269,6 +247,20 @@ export default function ProviderDashboard() {
     onSettled: () => {
       isCompletingRef.current = false;
       setIsCompleting(false);
+    },
+  });
+
+  // Advance service stage mutation
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ bookingId, stage }: { bookingId: number; stage: string }) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/stage`, { stage });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update stage", description: error.message, variant: "destructive" });
     },
   });
 
@@ -570,26 +562,16 @@ export default function ProviderDashboard() {
 
                   {booking.status === 'assigned' && (
                     <div className="space-y-2">
-                      <div className="flex gap-2">
-                        {!(booking as any).arrivalTime && (
-                          <button
-                            onClick={() => markArrivedMutation.mutate(booking.id)}
-                            disabled={markArrivedMutation.isPending}
-                            className="flex-1 py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
-                          >
-                            <Icon icon={MapPin} size="sm" className="inline mr-1.5" />
-                            {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
-                          </button>
-                        )}
+                      {!(booking as any).arrivalTime && (
                         <button
-                          onClick={() => startServiceMutation.mutate(booking.id)}
-                          disabled={startServiceMutation.isPending}
-                          className="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
+                          onClick={() => markArrivedMutation.mutate(booking.id)}
+                          disabled={markArrivedMutation.isPending}
+                          className="w-full py-2.5 rounded-xl bg-[#8c52ff] text-white text-sm font-medium disabled:opacity-60"
                         >
-                          <Icon icon={Play} size="sm" className="inline mr-1.5" />
-                          Start Service
+                          <Icon icon={MapPin} size="sm" className="inline mr-1.5" />
+                          {markArrivedMutation.isPending ? "Confirming..." : "I've Arrived"}
                         </button>
-                      </div>
+                      )}
                       <button
                         onClick={() => rejectBookingMutation.mutate(booking.id)}
                         disabled={rejectBookingMutation.isPending}
@@ -600,62 +582,123 @@ export default function ProviderDashboard() {
                     </div>
                   )}
 
-                  {booking.status === 'in_progress' && (
-                    confirmCompleteId === booking.id ? (
-                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-                        <p className="text-sm text-gray-700 text-center font-medium">Is the service finished?</p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setConfirmCompleteId(null)}
-                            className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (isCompletingRef.current) return;
-                              isCompletingRef.current = true;
-                              setIsCompleting(true);
-                              setConfirmCompleteId(null);
-                              completeServiceMutation.mutate(booking.id);
-                            }}
-                            disabled={completeServiceMutation.isPending || isCompleting}
-                            className="flex-1 py-2 rounded-lg bg-black text-white text-sm font-medium disabled:opacity-50"
-                          >
-                            <Icon icon={CheckCircle} size="sm" className="inline mr-1.5" />
-                            Yes, Complete
-                          </button>
+                  {booking.status === 'in_progress' && (() => {
+                    const stage = (booking as any).currentStage || 'setting_up';
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Stage pill */}
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 border border-purple-100">
+                          <div className="w-2 h-2 rounded-full bg-[#8c52ff]" />
+                          <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wide">
+                            {stage === 'setting_up' && 'Setting Up'}
+                            {stage === 'service_in_progress' && 'Service In Progress'}
+                            {stage === 'finishing' && 'Finishing Touches'}
+                            {stage === 'quality_check' && 'Quality Check'}
+                          </span>
                         </div>
+
+                        {/* ── SETTING UP ─────────────────────────────── */}
+                        {stage === 'setting_up' && (
+                          <>
+                            <TimeAdjustmentPanel
+                              bookingId={booking.id}
+                              baseDurationMinutes={(booking as any).estimatedDurationMinutes || 60}
+                              arrivalTime={(booking as any).arrivalTime}
+                              initialAdjustments={(booking as any).timeAdjustments || undefined}
+                              initialNotes={(booking as any).providerNotes || ""}
+                              estimatedCompletionTime={(booking as any).estimatedCompletionTime}
+                              onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
+                            />
+                            <PhotoUploadPanel
+                              bookingId={booking.id}
+                              status={booking.status}
+                              showSection="before"
+                            />
+                            <button
+                              onClick={() => updateStageMutation.mutate({ bookingId: booking.id, stage: 'service_in_progress' })}
+                              disabled={updateStageMutation.isPending}
+                              className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              <Icon icon={Play} size="sm" />
+                              Start Service
+                            </button>
+                          </>
+                        )}
+
+                        {/* ── SERVICE IN PROGRESS ────────────────────── */}
+                        {stage === 'service_in_progress' && (
+                          <button
+                            onClick={() => updateStageMutation.mutate({ bookingId: booking.id, stage: 'finishing' })}
+                            disabled={updateStageMutation.isPending}
+                            className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            <Icon icon={ChevronRight} size="sm" />
+                            Move to Finishing Touches
+                          </button>
+                        )}
+
+                        {/* ── FINISHING TOUCHES ──────────────────────── */}
+                        {stage === 'finishing' && (
+                          <button
+                            onClick={() => updateStageMutation.mutate({ bookingId: booking.id, stage: 'quality_check' })}
+                            disabled={updateStageMutation.isPending}
+                            className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            <Icon icon={ChevronRight} size="sm" />
+                            Move to Quality Check
+                          </button>
+                        )}
+
+                        {/* ── QUALITY CHECK ──────────────────────────── */}
+                        {stage === 'quality_check' && (
+                          <>
+                            <PhotoUploadPanel
+                              bookingId={booking.id}
+                              status={booking.status}
+                              showSection="after"
+                            />
+                            {confirmCompleteId === booking.id ? (
+                              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                                <p className="text-sm text-gray-700 text-center font-medium">Mark service as complete?</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setConfirmCompleteId(null)}
+                                    className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (isCompletingRef.current) return;
+                                      isCompletingRef.current = true;
+                                      setIsCompleting(true);
+                                      setConfirmCompleteId(null);
+                                      completeServiceMutation.mutate(booking.id);
+                                    }}
+                                    disabled={completeServiceMutation.isPending || isCompleting}
+                                    className="flex-1 py-2 rounded-lg bg-black text-white text-sm font-medium disabled:opacity-50"
+                                  >
+                                    <Icon icon={CheckCircle} size="sm" className="inline mr-1.5" />
+                                    Yes, Complete
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmCompleteId(booking.id)}
+                                disabled={completeServiceMutation.isPending}
+                                className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                <Icon icon={CheckCircle} size="sm" />
+                                Service Complete
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmCompleteId(booking.id)}
-                        disabled={completeServiceMutation.isPending}
-                        className="w-full py-2.5 rounded-xl bg-black text-white text-sm font-medium disabled:opacity-50"
-                      >
-                        <Icon icon={StopIcon} size="sm" className="inline mr-1.5" />
-                        Mark Complete
-                      </button>
-                    )
-                  )}
-
-                  {/* Time adjustment panel */}
-                  {(booking as any).arrivalTime && (
-                    <TimeAdjustmentPanel
-                      bookingId={booking.id}
-                      baseDurationMinutes={(booking as any).estimatedDurationMinutes || 60}
-                      arrivalTime={(booking as any).arrivalTime}
-                      initialAdjustments={(booking as any).timeAdjustments || undefined}
-                      initialNotes={(booking as any).providerNotes || ""}
-                      estimatedCompletionTime={(booking as any).estimatedCompletionTime}
-                      onUpdated={() => queryClient.invalidateQueries({ queryKey: ['/api/provider/active-bookings'] })}
-                    />
-                  )}
-
-                  {/* Photo upload panel — shown after arrival */}
-                  {(booking as any).arrivalTime && (
-                    <PhotoUploadPanel bookingId={booking.id} status={booking.status} />
-                  )}
+                    );
+                  })()}
                 </div>
               ))}
             </div>

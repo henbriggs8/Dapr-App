@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Clock, Navigation, Car, Phone, Star, CheckCircle, ChevronDown, Droplets, Sparkles, Wind, Package, Paintbrush, Eye, Award } from "lucide-react";
+import { MapPin, Clock, Navigation, Car, Phone, Star, CheckCircle, ChevronDown, Droplets, Wind, Package, Paintbrush, Eye, Award } from "lucide-react";
 import { Booking } from "@shared/schema";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,12 @@ interface ArrivalStatus {
 }
 
 const SERVICE_STAGES = [
-  { key: "arrived",           label: "Arrived",                    icon: MapPin,      color: "#10b981" },
-  { key: "setting_up",        label: "Setting Up Equipment",       icon: Package,     color: ACCENT },
-  { key: "exterior_washing",  label: "Exterior Wash In Progress",  icon: Droplets,    color: "#3b82f6" },
-  { key: "interior_cleaning", label: "Interior Detail In Progress",icon: Sparkles,    color: ACCENT },
-  { key: "finishing",         label: "Final Touches",              icon: Paintbrush,  color: "#f59e0b" },
-  { key: "quality_check",     label: "Quality Check",              icon: Eye,         color: "#06b6d4" },
-  { key: "completed",         label: "Service Complete",           icon: Award,       color: "#10b981" },
+  { key: "arrived",             label: "Arrived",             icon: MapPin,      color: "#10b981" },
+  { key: "setting_up",          label: "Setting Up",          icon: Package,     color: ACCENT },
+  { key: "service_in_progress", label: "Service In Progress", icon: Droplets,    color: "#3b82f6" },
+  { key: "finishing",           label: "Finishing Touches",   icon: Paintbrush,  color: "#f59e0b" },
+  { key: "quality_check",       label: "Quality Check",       icon: Eye,         color: "#06b6d4" },
+  { key: "completed",           label: "Service Complete",    icon: Award,       color: "#10b981" },
 ];
 
 function formatETA(eta: string | null): string | null {
@@ -461,7 +460,8 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
         };
       });
     }
-  }, [bookingPoll?.status, bookingPoll?.arrivalTime]);
+    if (bookingPoll?.currentStage) setCurrentStage(bookingPoll.currentStage);
+  }, [bookingPoll?.status, bookingPoll?.arrivalTime, bookingPoll?.currentStage]);
 
   // Mock provider info (real data would come from booking/assignment API)
   const providerName = "Marcus T.";

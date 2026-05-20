@@ -178,6 +178,7 @@ export interface IStorage {
   // Time adjustment methods
   markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking>;
   updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking>;
+  updateBookingStage(bookingId: number, stage: string): Promise<Booking>;
 
   getTrackingInfo(bookingId: number): Promise<{
     providerLocation: { lat: number; lng: number } | null;
@@ -1531,6 +1532,10 @@ export class MemStorage implements IStorage {
     throw new Error("updateTimeAdjustments not implemented in MemStorage");
   }
 
+  async updateBookingStage(bookingId: number, stage: string): Promise<Booking> {
+    throw new Error("updateBookingStage not implemented in MemStorage");
+  }
+
   // Clerk-Stripe mapping methods for MemStorage (not implemented)
   async getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined> {
     throw new Error("Clerk-Stripe mapping not implemented in MemStorage");
@@ -2507,9 +2512,20 @@ export class DatabaseStorage implements IStorage {
         timeAdjustments: [],
         status: 'in_progress',
         startTime: arrivalTime,
+        currentStage: 'setting_up',
       })
       .where(eq(bookings.id, bookingId))
       .returning();
+    return booking;
+  }
+
+  async updateBookingStage(bookingId: number, stage: string): Promise<Booking> {
+    const [booking] = await db
+      .update(bookings)
+      .set({ currentStage: stage })
+      .where(eq(bookings.id, bookingId))
+      .returning();
+    if (!booking) throw new Error('Booking not found');
     return booking;
   }
 
