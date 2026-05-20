@@ -1013,8 +1013,14 @@ export function registerRoutes(app: Express): Server {
 
       const providerHasLocation = provider.latitude != null && provider.longitude != null;
 
+      // Filter out any jobs this provider has already passed on
+      const unseenBookings = unassignedBookings.filter((b) => {
+        const prev = Array.isArray(b.previousProviders) ? (b.previousProviders as number[]) : [];
+        return !prev.includes(req.user!.id);
+      });
+
       const jobs = [];
-      for (const booking of unassignedBookings) {
+      for (const booking of unseenBookings) {
         const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
 
         if (providerHasLocation && bookingHasLocation) {
