@@ -2375,16 +2375,34 @@ export class DatabaseStorage implements IStorage {
     // Calculate distance to customer if customer location exists
     let distance = null;
     let eta = null;
-    
-    if (booking.serviceLatitude && booking.serviceLongitude) {
-      distance = this.calculateDistance(
-        latitude, 
-        longitude, 
-        booking.serviceLatitude, 
-        booking.serviceLongitude
-      );
-      
-      // Simple ETA calculation: distance / average speed (20 mph) * 60 minutes
+    let customerLat = booking.serviceLatitude;
+    let customerLng = booking.serviceLongitude;
+
+    // If booking has no customer coords but has an address, geocode it once via Nominatim
+    if ((!customerLat || !customerLng) && booking.serviceLocation) {
+      try {
+        const encoded = encodeURIComponent(booking.serviceLocation);
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'Dapr/1.0 (car wash app)' } }
+        );
+        const geoData = await geoRes.json();
+        if (Array.isArray(geoData) && geoData.length > 0) {
+          customerLat = parseFloat(geoData[0].lat);
+          customerLng = parseFloat(geoData[0].lon);
+          // Persist geocoded coords so future pings skip the API call
+          await db.update(bookings)
+            .set({ serviceLatitude: customerLat, serviceLongitude: customerLng })
+            .where(eq(bookings.id, bookingId));
+        }
+      } catch (geoErr) {
+        console.warn('Nominatim geocoding failed:', geoErr);
+      }
+    }
+
+    if (customerLat && customerLng) {
+      distance = this.calculateDistance(latitude, longitude, customerLat, customerLng);
+      // Simple ETA: distance / 20 mph average speed
       const estimatedMinutes = Math.round((distance / 20) * 60);
       eta = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
     }

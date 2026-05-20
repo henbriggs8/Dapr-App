@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Clock, Navigation, Car, Phone, Star, CheckCircle, ChevronDown, Droplets, Sparkles, Wind, Package, Paintbrush, Eye, Award } from "lucide-react";
+import { Booking } from "@shared/schema";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -438,6 +439,29 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
     queryKey: [`/api/tracking/${bookingId}`],
     refetchInterval: 10000,
   });
+
+  // Poll booking status as a fallback in case the WebSocket provider_arrived message is missed
+  const { data: bookingPoll } = useQuery<Booking>({
+    queryKey: [`/api/bookings/${bookingId}`],
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
+
+  // Sync arrived state from REST poll (guards against missed WS messages)
+  useEffect(() => {
+    if (!bookingPoll) return;
+    if (bookingPoll.status === "in_progress" || bookingPoll.arrivalTime) {
+      setArrivalStatus((prev) => {
+        if (prev.arrived) return prev;
+        return {
+          ...prev,
+          arrived: true,
+          arrivalTime: bookingPoll.arrivalTime ?? null,
+          estimatedCompletionTime: bookingPoll.estimatedCompletionTime ?? null,
+        };
+      });
+    }
+  }, [bookingPoll?.status, bookingPoll?.arrivalTime]);
 
   // Mock provider info (real data would come from booking/assignment API)
   const providerName = "Marcus T.";

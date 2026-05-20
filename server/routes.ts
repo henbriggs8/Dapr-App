@@ -1794,19 +1794,17 @@ export function registerRoutes(app: Express): Server {
     try {
       const { baseDurationMinutes = 60 } = req.body;
       const booking = await storage.markArrived(id, baseDurationMinutes);
-      // Broadcast to customer via WebSocket
-      const userClients = clients.get(booking.userId) || [];
-      userClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: 'provider_arrived',
-            bookingId: booking.id,
-            arrivalTime: booking.arrivalTime,
-            estimatedCompletionTime: booking.estimatedCompletionTime,
-            extraTimeMinutes: booking.extraTimeMinutes,
-            timeAdjustments: booking.timeAdjustments,
-          }));
-        }
+      // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
+      const arrivedMsg = JSON.stringify({
+        type: 'provider_arrived',
+        bookingId: booking.id,
+        arrivalTime: booking.arrivalTime,
+        estimatedCompletionTime: booking.estimatedCompletionTime,
+        extraTimeMinutes: booking.extraTimeMinutes,
+        timeAdjustments: booking.timeAdjustments,
+      });
+      wss.clients.forEach((client: WebSocket) => {
+        if (client.readyState === WebSocket.OPEN) client.send(arrivedMsg);
       });
       res.json(booking);
     } catch (error) {
@@ -1823,18 +1821,16 @@ export function registerRoutes(app: Express): Server {
       const { adjustments, providerNotes } = req.body;
       if (!Array.isArray(adjustments)) return res.status(400).json({ error: 'adjustments must be an array' });
       const booking = await storage.updateTimeAdjustments(id, adjustments, providerNotes);
-      // Broadcast ETA update to customer via WebSocket
-      const userClients = clients.get(booking.userId) || [];
-      userClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: 'eta_update',
-            bookingId: booking.id,
-            estimatedCompletionTime: booking.estimatedCompletionTime,
-            extraTimeMinutes: booking.extraTimeMinutes,
-            timeAdjustments: booking.timeAdjustments,
-          }));
-        }
+      // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
+      const etaMsg = JSON.stringify({
+        type: 'eta_update',
+        bookingId: booking.id,
+        estimatedCompletionTime: booking.estimatedCompletionTime,
+        extraTimeMinutes: booking.extraTimeMinutes,
+        timeAdjustments: booking.timeAdjustments,
+      });
+      wss.clients.forEach((client: WebSocket) => {
+        if (client.readyState === WebSocket.OPEN) client.send(etaMsg);
       });
       res.json(booking);
     } catch (error) {
