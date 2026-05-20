@@ -1019,9 +1019,32 @@ export function registerRoutes(app: Express): Server {
         return !prev.includes(req.user!.id);
       });
 
+      // Batch-load unique customers and vehicles for the visible bookings
+      const uniqueUserIds = [...new Set(unseenBookings.map(b => b.userId))];
+      const uniqueVehicleIds = [...new Set(unseenBookings.map(b => b.vehicleId).filter(Boolean))] as number[];
+
+      const [customerMap, vehicleMap] = await Promise.all([
+        Promise.all(uniqueUserIds.map(id => storage.getUser(id))).then(users =>
+          Object.fromEntries(users.filter(Boolean).map(u => [u!.id, u!]))
+        ),
+        Promise.all(uniqueVehicleIds.map(id => storage.getVehicleById(id))).then(vs =>
+          Object.fromEntries(vs.filter(Boolean).map(v => [v!.id, v!]))
+        ),
+      ]);
+
       const jobs = [];
       for (const booking of unseenBookings) {
         const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
+
+        const customer = customerMap[booking.userId];
+        const firstName = customer?.name ? customer.name.split(' ')[0] : null;
+
+        const vehicle = booking.vehicleId ? vehicleMap[booking.vehicleId] : null;
+        const vehicleLabel = vehicle
+          ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ''}`
+          : null;
+
+        const extra = { customerFirstName: firstName, vehicleLabel };
 
         if (providerHasLocation && bookingHasLocation) {
           const distance = calculateDistance(
@@ -1030,11 +1053,9 @@ export function registerRoutes(app: Express): Server {
             booking.serviceLatitude!,
             booking.serviceLongitude!
           );
-          // Include all jobs; attach distance so the provider can see how far away it is
-          jobs.push({ ...booking, distance: Math.round(distance * 10) / 10 });
+          jobs.push({ ...booking, ...extra, distance: Math.round(distance * 10) / 10 });
         } else {
-          // Missing coordinates on one or both sides — include without distance
-          jobs.push({ ...booking, distance: null });
+          jobs.push({ ...booking, ...extra, distance: null });
         }
       }
 

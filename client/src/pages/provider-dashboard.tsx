@@ -751,6 +751,22 @@ export default function ProviderDashboard() {
                     </span>
                   </div>
 
+                  {/* Customer + vehicle strip */}
+                  {((job as any).customerFirstName || (job as any).vehicleLabel) && (
+                    <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+                      <Icon icon={Car} size="xs" className="text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-black font-medium">
+                        {(job as any).customerFirstName || 'Customer'}
+                      </span>
+                      {(job as any).vehicleLabel && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-sm text-gray-500">{(job as any).vehicleLabel}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Details */}
                   <div className="space-y-1 mb-4">
                     <div className="flex items-start gap-2">
