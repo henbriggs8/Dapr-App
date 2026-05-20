@@ -2055,6 +2055,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get('/api/admin/passed-jobs', isAdmin, async (req, res) => {
+    try {
+      const jobs = await storage.getPassedJobs();
+      res.json(jobs);
+    } catch (error) {
+      res.status(500).send(error instanceof Error ? error.message : 'Failed to get passed jobs');
+    }
+  });
+
   // Backend-assisted sign-up completion — used when a stale sign-up has an unverified
   // email stuck to it and the user does not want to verify email.
   // Creates the user via Clerk admin API and returns a short-lived sign-in token.

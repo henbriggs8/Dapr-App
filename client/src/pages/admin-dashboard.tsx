@@ -138,6 +138,16 @@ export default function AdminDashboard() {
     refetchInterval: 15000,
   });
 
+  // Fetch passed (skipped) jobs
+  const { data: passedJobs = [] } = useQuery<AdminBooking[]>({
+    queryKey: ["/api/admin/passed-jobs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/passed-jobs");
+      return await res.json();
+    },
+    refetchInterval: 15000,
+  });
+
   // Fetch earnings data
   const { data: earnings } = useQuery<EarningsData>({
     queryKey: ["/api/admin/earnings"],
@@ -586,7 +596,7 @@ export default function AdminDashboard() {
 
               return (
                 <>
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-5 gap-4">
                     <Card className="border-red-100 bg-red-50">
                       <CardContent className="pt-4 pb-3">
                         <div className="flex items-center justify-between">
@@ -606,6 +616,17 @@ export default function AdminDashboard() {
                             <p className="text-3xl font-bold text-blue-700">{active.length}</p>
                           </div>
                           <Icon icon={Zap} size="xl" className="text-blue-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-orange-100 bg-orange-50">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Passed</p>
+                            <p className="text-3xl font-bold text-orange-700">{passedJobs.length}</p>
+                          </div>
+                          <Icon icon={RotateCcw} size="xl" className="text-orange-400" />
                         </div>
                       </CardContent>
                     </Card>
@@ -739,6 +760,66 @@ export default function AdminDashboard() {
                               </div>
                             </div>
                           ))}
+                        </CardContent>
+                      </Card>
+
+                      {/* Passed / Skipped Jobs */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Icon icon={RotateCcw} size="sm" className="text-orange-500" />
+                            Passed by Pros
+                            {passedJobs.length > 0 && (
+                              <Badge className="ml-1 bg-orange-500">{passedJobs.length}</Badge>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {passedJobs.length === 0 ? (
+                            <p className="text-sm text-gray-400 py-4 text-center">No passed jobs</p>
+                          ) : passedJobs.map((job) => {
+                            const passedCount = Array.isArray(job.previousProviders) ? (job.previousProviders as number[]).length : 0;
+                            return (
+                              <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border border-orange-100 bg-orange-50/30">
+                                <div className="space-y-1 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.priceTier}</span>
+                                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">${job.totalPrice}</Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-600 flex items-center gap-1">
+                                    <Icon icon={MapPin} size="xs" /> {job.serviceLocation || "Address not set"}
+                                  </p>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Icon icon={Clock} size="xs" /> {job.date ? `${job.date} ${job.time ?? ""}`.trim() : "ASAP"}
+                                  </p>
+                                  <p className="text-xs text-orange-600 font-medium">
+                                    Passed by {passedCount} pro{passedCount !== 1 ? "s" : ""}
+                                  </p>
+                                </div>
+                                <div className="ml-3 min-w-[160px]">
+                                  <Select
+                                    onValueChange={(providerId) => {
+                                      reassignBookingMutation.mutate({ bookingId: job.id, providerId: parseInt(providerId) });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue placeholder="Force assign…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {onlineProviders.length === 0 && (
+                                        <SelectItem value="none" disabled>No pros online</SelectItem>
+                                      )}
+                                      {onlineProviders.map((p: any) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </CardContent>
                       </Card>
                     </div>

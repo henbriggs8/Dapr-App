@@ -1,6 +1,6 @@
 import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, gt, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, gt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -74,6 +74,7 @@ export interface IStorage {
   assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking>;
   acceptBooking(bookingId: number, providerId: number): Promise<Booking>;
   rejectBooking(bookingId: number, providerId: number): Promise<Booking>;
+  getPassedJobs(): Promise<Booking[]>;
   findBookingAssignment(providerId: number): Promise<Booking | undefined>;
   getBookingsByTimeframe(providerId: number, timeframe: 'day' | 'week' | 'month'): Promise<Booking[]>;
   getUnassignedBookings(): Promise<Booking[]>;
@@ -1206,34 +1207,28 @@ export class MemStorage implements IStorage {
   
   async rejectBooking(bookingId: number, providerId: number): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
-    if (!booking) {
-      throw new Error('Booking not found');
-    }
-    
-    if (booking.providerId !== providerId) {
-      throw new Error('Booking not assigned to this provider');
-    }
-    
-    if (booking.status !== 'assigned') {
-      throw new Error('Booking is not in assigned state');
-    }
-    
-    // Add current provider to previous providers list
-    const previousProviders = Array.isArray(booking.previousProviders) 
-      ? [...booking.previousProviders, providerId]
-      : [providerId];
-    
-    const now = new Date();
+    if (!booking) throw new Error('Booking not found');
+
+    const previousProviders = Array.isArray(booking.previousProviders)
+      ? [...(booking.previousProviders as number[])]
+      : [];
+    if (!previousProviders.includes(providerId)) previousProviders.push(providerId);
+
+    const isAssigned = booking.providerId === providerId;
     const updatedBooking = {
       ...booking,
-      providerId: null, // Reset provider
-      status: 'pending', // Back to pending
-      rejectedAt: now.toISOString(),
-      previousProviders
+      ...(isAssigned ? { providerId: null, status: 'pending' } : {}),
+      rejectedAt: new Date().toISOString(),
+      previousProviders,
     };
-    
     this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
+  }
+
+  async getPassedJobs(): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      b => b.rejectedAt && b.status === 'pending'
+    );
   }
   
   // Fix the parameter nullable issue with this helper method
@@ -1981,22 +1976,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async rejectBooking(bookingId: number, providerId: number): Promise<Booking> {
-    const [booking] = await db
+    // Read first so we can manipulate previousProviders in JS (avoids json/jsonb type mismatch)
+    const [current] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!current) throw new Error("Booking not found");
+
+    const prevList = Array.isArray(current.previousProviders)
+      ? [...(current.previousProviders as number[])]
+      : [];
+    if (!prevList.includes(providerId)) prevList.push(providerId);
+
+    // If assigned to this provider → unassign; otherwise (available job) just mark as passed
+    const isAssigned = current.providerId === providerId;
+
+    const [updatedBooking] = await db
       .update(bookings)
       .set({
-        providerId: null,
-        status: 'pending',
+        ...(isAssigned ? { providerId: null, status: 'pending' } : {}),
         rejectedAt: new Date().toISOString(),
-        previousProviders: sql`array_append(coalesce(previous_providers, '[]'::jsonb), ${providerId}::jsonb)`
+        previousProviders: prevList,
       })
-      .where(
-        and(
-          eq(bookings.id, bookingId),
-          eq(bookings.providerId, providerId)
-        )
-      )
+      .where(eq(bookings.id, bookingId))
       .returning();
-    return booking;
+
+    return updatedBooking;
+  }
+
+  async getPassedJobs(): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.status, 'pending'), isNotNull(bookings.rejectedAt)))
+      .orderBy(desc(bookings.rejectedAt));
   }
 
   async findBookingAssignment(providerId: number): Promise<Booking | undefined> {
