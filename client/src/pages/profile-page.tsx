@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { YEARS, CAR_MAKES, CAR_MODELS } from "@/utils/car-data";
 
 const selectCls = "flex h-11 w-full border border-gray-200 bg-white px-3 text-sm text-black outline-none appearance-none rounded-none focus:border-black transition-colors";
@@ -81,8 +80,6 @@ export default function ProfilePage() {
   const [dialogMake, setDialogMake] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
@@ -611,10 +608,7 @@ export default function ProfilePage() {
                     <p className="text-xs text-gray-500">Booking status & arrival alerts</p>
                   </div>
                 </div>
-                <Switch
-                  checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
-                />
+                <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">Coming soon</span>
               </div>
               <div className="flex items-center justify-between px-4 py-4">
                 <div className="flex items-center gap-3">
@@ -626,10 +620,7 @@ export default function ProfilePage() {
                     <p className="text-xs text-gray-500">Deals and seasonal discounts</p>
                   </div>
                 </div>
-                <Switch
-                  checked={marketingEnabled}
-                  onCheckedChange={setMarketingEnabled}
-                />
+                <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">Coming soon</span>
               </div>
             </div>
           </div>
