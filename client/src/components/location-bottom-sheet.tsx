@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, MapPin, Navigation, Clock, Home, X, Loader2,
+  Search, MapPin, Navigation, Clock, Home, Briefcase, X, Loader2,
   ArrowLeft, ChevronRight, ChevronDown, Droplets, Sparkles, Wand2, Crown,
   Check, CheckCircle2, Gift, Car, Plus, Tag, CreditCard, type LucideIcon,
 } from "lucide-react";
@@ -468,6 +468,7 @@ export interface LocationBottomSheetProps {
   onClose: () => void;
   currentAddress?: string | null;
   recentAddresses?: string[];
+  savedAddresses?: Array<{ id: number; label: string; address: string; isDefault: boolean }>;
   onAddressSaved?: (address: string) => void;
   navigateToBookingOnSelect?: boolean;
 }
@@ -585,10 +586,11 @@ function SheetHeader({ step, onBack, onClose }: { step: Step; onBack?: () => voi
 
 // ── Step 0: Location ──────────────────────────────────────────────────────────
 function LocationStep({
-  currentAddress, recentAddresses, onSelect,
+  currentAddress, recentAddresses, savedAddresses = [], onSelect,
 }: {
   currentAddress?: string | null;
   recentAddresses: string[];
+  savedAddresses?: Array<{ id: number; label: string; address: string; isDefault: boolean }>;
   onSelect: (address: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -723,8 +725,33 @@ function LocationStep({
           </div>
         )}
 
-        {/* Saved home */}
-        {!showSuggestions && currentAddress && (
+        {/* Saved addresses */}
+        {!showSuggestions && savedAddresses.length > 0 && (
+          <div className="px-4 pb-1">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1.5">Saved</p>
+            {savedAddresses.map((saved) => {
+              const LblIcon = saved.label === "home" ? Home : saved.label === "work" ? Briefcase : MapPin;
+              const iconBg = saved.label === "home" ? "#f3eeff" : saved.label === "work" ? "#eef2ff" : "#f5f5f5";
+              const iconColor = saved.label === "home" ? ACCENT : saved.label === "work" ? "#6366f1" : "#6b7280";
+              return (
+                <button key={saved.id} onClick={() => onSelect(saved.address)}
+                  className="w-full flex items-center gap-3 rounded-xl px-1 py-2.5 active:bg-gray-50 transition text-left"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: iconBg }}>
+                    <Icon icon={LblIcon} size="sm" style={{ color: iconColor }} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-gray-900 truncate capitalize">{saved.label}</p>
+                    <p className="text-[12px] text-gray-400 truncate">{saved.address}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Fallback: single saved home address (legacy) */}
+        {!showSuggestions && savedAddresses.length === 0 && currentAddress && (
           <div className="px-4 pb-1">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1.5">Saved</p>
             <button onClick={() => onSelect(currentAddress)}
@@ -1370,7 +1397,7 @@ const variants = {
 
 // ── Main sheet ────────────────────────────────────────────────────────────────
 export function LocationBottomSheet({
-  isOpen, onClose, currentAddress, recentAddresses = [], onAddressSaved, navigateToBookingOnSelect,
+  isOpen, onClose, currentAddress, recentAddresses = [], savedAddresses = [], onAddressSaved, navigateToBookingOnSelect,
 }: LocationBottomSheetProps) {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>(0);
@@ -1483,6 +1510,7 @@ export function LocationBottomSheet({
                   <LocationStep
                     currentAddress={currentAddress}
                     recentAddresses={recentAddresses}
+                    savedAddresses={savedAddresses}
                     onSelect={handleAddressSelect}
                   />
                 </div>

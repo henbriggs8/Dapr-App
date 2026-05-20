@@ -88,6 +88,18 @@ export default function HomeScreen() {
     },
   });
 
+  const { data: savedAddresses = [] } = useQuery<Array<{ id: number; label: string; address: string; isDefault: boolean }>>({
+    queryKey: ["/api/addresses"],
+    queryFn: async () => {
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/addresses", { headers, credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   async function detectLocation() {
     if (!navigator.geolocation) return;
     setLocating(true);
@@ -467,6 +479,7 @@ export default function HomeScreen() {
         onClose={() => setAddrSheetOpen(false)}
         currentAddress={user?.address}
         recentAddresses={bookings?.map((b) => b.serviceLocation).filter(Boolean) as string[]}
+        savedAddresses={savedAddresses}
       />
     </div>
   );

@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertUserSchema, Booking, Vehicle, insertVehicleSchema } from "@shared/schema";
+import { insertUserSchema, Booking, Vehicle, insertVehicleSchema, SavedAddress } from "@shared/schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, LogOut, Car, Plus, Pencil, Trash2, ChevronRight,
-  Bell, Shield, UserX, Settings, Star, Calendar, Hash, KeyRound, Eye, EyeOff, CreditCard
+  Bell, Shield, UserX, Settings, Star, Calendar, Hash, KeyRound, Eye, EyeOff, CreditCard,
+  MapPin, Home, Briefcase
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
@@ -77,6 +78,11 @@ export default function ProfilePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "vehicles" | "bookings" | "settings">("profile");
+  const [addrDialogOpen, setAddrDialogOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<SavedAddress | null>(null);
+  const [addrLabel, setAddrLabel] = useState<"home" | "work" | "other">("home");
+  const [addrText, setAddrText] = useState("");
+  const [addrIsDefault, setAddrIsDefault] = useState(false);
   const [dialogMake, setDialogMake] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -94,6 +100,9 @@ export default function ProfilePage() {
   });
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+  const { data: savedAddrs = [] } = useQuery<SavedAddress[]>({
+    queryKey: ["/api/addresses"],
   });
 
   const { data: savedMethodsData } = useQuery<{ methods: Array<{ id: string; brand: string; last4: string; expMonth: number; expYear: number }> }>({
@@ -153,6 +162,67 @@ export default function ProfilePage() {
       toast({ title: "Profile updated", description: "Your changes have been saved" });
     },
   });
+
+  const createAddressMutation = useMutation({
+    mutationFn: async (data: { label: string; address: string; isDefault: boolean }) => {
+      const res = await apiRequest("POST", "/api/addresses", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses"] });
+      toast({ title: "Address saved" });
+      setAddrDialogOpen(false);
+    },
+    onError: () => toast({ title: "Failed to save address", variant: "destructive" }),
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: async (data: { id: number; label: string; address: string; isDefault: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/addresses/${data.id}`, { label: data.label, address: data.address, isDefault: data.isDefault });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses"] });
+      toast({ title: "Address updated" });
+      setAddrDialogOpen(false);
+    },
+    onError: () => toast({ title: "Failed to update address", variant: "destructive" }),
+  });
+
+  const deleteAddressMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/addresses/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses"] });
+      toast({ title: "Address removed" });
+    },
+    onError: () => toast({ title: "Failed to remove address", variant: "destructive" }),
+  });
+
+  function openAddrDialog(addr?: SavedAddress) {
+    if (addr) {
+      setSelectedAddress(addr);
+      setAddrLabel(addr.label as "home" | "work" | "other");
+      setAddrText(addr.address);
+      setAddrIsDefault(addr.isDefault);
+    } else {
+      setSelectedAddress(null);
+      setAddrLabel("home");
+      setAddrText("");
+      setAddrIsDefault(savedAddrs.length === 0);
+    }
+    setAddrDialogOpen(true);
+  }
+
+  function submitAddrDialog() {
+    if (!addrText.trim()) return;
+    if (selectedAddress) {
+      updateAddressMutation.mutate({ id: selectedAddress.id, label: addrLabel, address: addrText.trim(), isDefault: addrIsDefault });
+    } else {
+      createAddressMutation.mutate({ label: addrLabel, address: addrText.trim(), isDefault: addrIsDefault });
+    }
+  }
 
   const createVehicleMutation = useMutation({
     mutationFn: async (data: VehicleFormValues) => {
@@ -414,7 +484,6 @@ export default function ProfilePage() {
                 { name: "name" as const, label: "Full Name", placeholder: "Your name", type: "text" },
                 { name: "email" as const, label: "Email", placeholder: "you@example.com", type: "email" },
                 { name: "phone" as const, label: "Phone", placeholder: "(123) 456-7890", type: "tel" },
-                { name: "address" as const, label: "Home Address", placeholder: "123 Main St", type: "text" },
               ].map((fieldConfig) => (
                 <FormField
                   key={fieldConfig.name}
@@ -470,8 +539,139 @@ export default function ProfilePage() {
               </div>
             </form>
           </Form>
+
+          {/* Addresses section */}
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 tracking-widest uppercase">Addresses</h2>
+              <button
+                onClick={() => openAddrDialog()}
+                className="flex items-center gap-1.5 text-sm font-medium text-[#8c52ff] hover:text-[#7c47eb] transition-colors"
+              >
+                <Icon icon={Plus} size="sm" /> Add
+              </button>
+            </div>
+
+            {savedAddrs.length === 0 ? (
+              <div className="py-10 text-center border border-dashed border-gray-200 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                  <Icon icon={MapPin} size="md" className="text-gray-400" />
+                </div>
+                <p className="text-gray-500 text-sm mb-2">No saved addresses yet</p>
+                <button onClick={() => openAddrDialog()} className="text-sm font-medium text-[#8c52ff] underline underline-offset-4">
+                  Add your first address
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {savedAddrs.map((addr) => {
+                  const LabelIcon = addr.label === "home" ? Home : addr.label === "work" ? Briefcase : MapPin;
+                  const iconBg = addr.label === "home" ? "#f3eeff" : addr.label === "work" ? "#eef2ff" : "#f5f5f5";
+                  const iconColor = addr.label === "home" ? "#8c52ff" : addr.label === "work" ? "#6366f1" : "#6b7280";
+                  return (
+                    <div key={addr.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: iconBg }}>
+                          <Icon icon={LabelIcon} size="sm" style={{ color: iconColor }} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-black capitalize">{addr.label}</p>
+                            {addr.isDefault && (
+                              <span className="text-[10px] font-semibold bg-[#f3eeff] text-[#8c52ff] px-1.5 py-0.5 rounded-full tracking-wide">Default</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 truncate">{addr.address}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => openAddrDialog(addr)} className="p-2 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100">
+                          <Icon icon={Pencil} size="sm" />
+                        </button>
+                        <button
+                          onClick={() => { if (confirm("Remove this address?")) deleteAddressMutation.mutate(addr.id); }}
+                          className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                        >
+                          <Icon icon={Trash2} size="sm" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Address Dialog */}
+      <Dialog open={addrDialogOpen} onOpenChange={(o) => { if (!o) setAddrDialogOpen(false); }}>
+        <DialogContent className="max-w-sm mx-auto rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle>{selectedAddress ? "Edit Address" : "Add Address"}</DialogTitle>
+            <DialogDescription>Save a location for quick access during booking.</DialogDescription>
+          </DialogHeader>
+
+          {/* Label picker */}
+          <div className="space-y-4 mt-2">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Label</p>
+              <div className="flex gap-2">
+                {(["home", "work", "other"] as const).map((lbl) => {
+                  const LblIcon = lbl === "home" ? Home : lbl === "work" ? Briefcase : MapPin;
+                  return (
+                    <button
+                      key={lbl}
+                      onClick={() => setAddrLabel(lbl)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                        addrLabel === lbl
+                          ? "bg-[#8c52ff] text-white border-[#8c52ff]"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <Icon icon={LblIcon} size="xs" />
+                      <span className="capitalize">{lbl}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Address</p>
+              <input
+                type="text"
+                value={addrText}
+                onChange={(e) => setAddrText(e.target.value)}
+                placeholder="123 Main St, City, State"
+                className="w-full border-0 border-b border-gray-200 text-base text-black placeholder:text-gray-300 outline-none focus:border-[#8c52ff] transition-colors py-2 bg-transparent"
+              />
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => setAddrIsDefault(!addrIsDefault)}
+                className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 ${addrIsDefault ? "bg-[#8c52ff]" : "bg-gray-200"}`}
+              >
+                <div className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform shadow-sm ${addrIsDefault ? "translate-x-5" : "translate-x-1"}`} />
+              </div>
+              <span className="text-sm text-gray-700">Set as default address</span>
+            </label>
+          </div>
+
+          <DialogFooter className="mt-6 flex gap-2">
+            <Button variant="outline" onClick={() => setAddrDialogOpen(false)} className="flex-1">Cancel</Button>
+            <Button
+              onClick={submitAddrDialog}
+              disabled={!addrText.trim() || createAddressMutation.isPending || updateAddressMutation.isPending}
+              className="flex-1 bg-[#8c52ff] hover:bg-[#7c47eb] text-white"
+            >
+              {(createAddressMutation.isPending || updateAddressMutation.isPending) && <Icon icon={Loader2} size="sm" className="animate-spin mr-2" />}
+              {selectedAddress ? "Save Changes" : "Save Address"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Vehicles Tab */}
       {activeTab === "vehicles" && (

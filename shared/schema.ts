@@ -67,6 +67,14 @@ export const vehicles = pgTable("vehicles", {
   notes: text("notes")
 });
 
+export const savedAddresses = pgTable("saved_addresses", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  label: text("label").notNull().default("home"),
+  address: text("address").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+});
+
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -277,6 +285,9 @@ export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;
+export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({ id: true });
+export type InsertSavedAddress = z.infer<typeof insertSavedAddressSchema>;
+export type SavedAddress = typeof savedAddresses.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;

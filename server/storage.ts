@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, gt, desc, asc, sql, isNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -209,6 +209,12 @@ export interface IStorage {
   resolveContactMessage(id: number): Promise<ContactMessage>;
   reopenContactMessage(id: number): Promise<ContactMessage>;
 
+  // Saved address methods
+  getSavedAddresses(userId: number): Promise<SavedAddress[]>;
+  createSavedAddress(data: { userId: number; label: string; address: string; isDefault: boolean }): Promise<SavedAddress>;
+  updateSavedAddress(id: number, updates: Partial<Pick<SavedAddress, 'label' | 'address' | 'isDefault'>>): Promise<SavedAddress>;
+  deleteSavedAddress(id: number): Promise<boolean>;
+
   sessionStore: session.Store;
 }
 
@@ -218,6 +224,7 @@ export class MemStorage implements IStorage {
   private services: Map<number, Service>;
   private timeSlots: Map<number, TimeSlot>;
   private vehicles: Map<number, Vehicle>;
+  private savedAddressesMap: Map<number, SavedAddress>;
   private pricingConfig: PricingConfig;
   sessionStore: session.Store;
   currentUserId: number;
@@ -225,6 +232,7 @@ export class MemStorage implements IStorage {
   currentServiceId: number;
   currentTimeSlotId: number;
   currentVehicleId: number;
+  currentSavedAddressId: number;
 
   constructor() {
     this.users = new Map();
@@ -232,11 +240,13 @@ export class MemStorage implements IStorage {
     this.services = new Map();
     this.timeSlots = new Map();
     this.vehicles = new Map();
+    this.savedAddressesMap = new Map();
     this.currentUserId = 1;
     this.currentBookingId = 1;
     this.currentServiceId = 1;
     this.currentTimeSlotId = 1;
     this.currentVehicleId = 1;
+    this.currentSavedAddressId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -1065,7 +1075,44 @@ export class MemStorage implements IStorage {
     
     return this.vehicles.delete(id);
   }
-  
+
+  async getSavedAddresses(userId: number): Promise<SavedAddress[]> {
+    return Array.from(this.savedAddressesMap.values()).filter((a) => a.userId === userId);
+  }
+
+  async createSavedAddress(data: { userId: number; label: string; address: string; isDefault: boolean }): Promise<SavedAddress> {
+    if (data.isDefault) {
+      for (const [k, v] of this.savedAddressesMap.entries()) {
+        if (v.userId === data.userId && v.isDefault) {
+          this.savedAddressesMap.set(k, { ...v, isDefault: false });
+        }
+      }
+    }
+    const id = this.currentSavedAddressId++;
+    const addr: SavedAddress = { id, ...data };
+    this.savedAddressesMap.set(id, addr);
+    return addr;
+  }
+
+  async updateSavedAddress(id: number, updates: Partial<Pick<SavedAddress, 'label' | 'address' | 'isDefault'>>): Promise<SavedAddress> {
+    const existing = this.savedAddressesMap.get(id);
+    if (!existing) throw new Error('Address not found');
+    if (updates.isDefault) {
+      for (const [k, v] of this.savedAddressesMap.entries()) {
+        if (v.userId === existing.userId && v.isDefault && k !== id) {
+          this.savedAddressesMap.set(k, { ...v, isDefault: false });
+        }
+      }
+    }
+    const updated = { ...existing, ...updates };
+    this.savedAddressesMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteSavedAddress(id: number): Promise<boolean> {
+    return this.savedAddressesMap.delete(id);
+  }
+
   // Booking assignment system methods
   async getNearbyProviders(latitude: number | null, longitude: number | null, radius: number): Promise<User[]> {
     // Get all providers
@@ -1823,6 +1870,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVehicle(id: number): Promise<boolean> {
     const result = await db.delete(vehicles).where(eq(vehicles.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getSavedAddresses(userId: number): Promise<SavedAddress[]> {
+    return await db.select().from(savedAddresses).where(eq(savedAddresses.userId, userId));
+  }
+
+  async createSavedAddress(data: { userId: number; label: string; address: string; isDefault: boolean }): Promise<SavedAddress> {
+    if (data.isDefault) {
+      await db.update(savedAddresses).set({ isDefault: false }).where(eq(savedAddresses.userId, data.userId));
+    }
+    const [addr] = await db.insert(savedAddresses).values(data).returning();
+    return addr;
+  }
+
+  async updateSavedAddress(id: number, updates: Partial<Pick<SavedAddress, 'label' | 'address' | 'isDefault'>>): Promise<SavedAddress> {
+    if (updates.isDefault) {
+      const [existing] = await db.select().from(savedAddresses).where(eq(savedAddresses.id, id));
+      if (existing) {
+        await db.update(savedAddresses).set({ isDefault: false }).where(eq(savedAddresses.userId, existing.userId));
+      }
+    }
+    const [addr] = await db.update(savedAddresses).set(updates).where(eq(savedAddresses.id, id)).returning();
+    return addr;
+  }
+
+  async deleteSavedAddress(id: number): Promise<boolean> {
+    const result = await db.delete(savedAddresses).where(eq(savedAddresses.id, id));
     return (result.rowCount || 0) > 0;
   }
 

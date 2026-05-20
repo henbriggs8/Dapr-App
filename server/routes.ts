@@ -646,6 +646,55 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Saved address endpoints
+  app.get("/api/addresses", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const addresses = await storage.getSavedAddresses(req.user.id);
+    res.json(addresses);
+  });
+
+  app.post("/api/addresses", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const { label, address, isDefault } = req.body;
+      if (!label || !address) return res.status(400).json({ error: "label and address are required" });
+      const addr = await storage.createSavedAddress({
+        userId: req.user.id,
+        label: String(label).toLowerCase(),
+        address: String(address),
+        isDefault: Boolean(isDefault),
+      });
+      res.status(201).json(addr);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "An error occurred" });
+    }
+  });
+
+  app.patch("/api/addresses/:id", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).send("Invalid ID");
+    try {
+      const { label, address, isDefault } = req.body;
+      const updated = await storage.updateSavedAddress(id, {
+        ...(label !== undefined ? { label: String(label).toLowerCase() } : {}),
+        ...(address !== undefined ? { address: String(address) } : {}),
+        ...(isDefault !== undefined ? { isDefault: Boolean(isDefault) } : {}),
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "An error occurred" });
+    }
+  });
+
+  app.delete("/api/addresses/:id", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).send("Invalid ID");
+    await storage.deleteSavedAddress(id);
+    res.sendStatus(204);
+  });
+
   // Services endpoints
   app.get("/api/services", async (req, res) => {
     const services = await storage.getServices();
