@@ -30,7 +30,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           className="fixed inset-0 bg-black z-50 flex items-center justify-center"
         >
           <motion.img
-            src="/dapr-logo.svg"
+            src="/dapr-logo-splash.svg"
             alt="Dapr Logo"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
