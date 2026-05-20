@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SiApple } from 'react-icons/si';
 import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Icon } from "@/components/ui/icon";
@@ -232,9 +233,7 @@ function LandingScreen({
           onClick={onApple}
           className="flex h-[52px] w-full items-center justify-center gap-3 rounded-lg bg-[#111] text-[14px] font-medium text-white transition hover:bg-[#222] active:scale-[0.99]"
         >
-          <svg className="h-5 w-5 shrink-0" viewBox="0 0 814 1000" fill="currentColor">
-            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 389.3 48.3 226.1 150.1 130.7c48.1-45.4 111.2-73.1 177.4-73.1 60.8 0 112.7 39.5 151.1 39.5 37.1 0 97.2-41.8 165.6-41.8 27.8 0 108.2 2.6 162.5 86.1zm-230.2-111.4c28.8-35.2 49.7-83.9 49.7-132.5 0-6.7-.6-13.5-1.9-19.2-47.5 1.6-104.2 31.8-138.4 72.9-26.9 30.2-51.6 78.2-51.6 127.5 0 7.1 1.3 14.2 1.9 16.5 3.2.6 8.4 1.3 13.5 1.3 42.2 0 95.8-28.1 126.8-66.5z"/>
-          </svg>
+          <SiApple className="h-5 w-5 shrink-0" />
           Continue with Apple
         </button>
 
