@@ -1168,19 +1168,30 @@ function AuthFlow() {
     }
   };
 
+  const getOAuthUrl = async (strategy: 'oauth_apple' | 'oauth_google', deepLink: string): Promise<string> => {
+    // Try sign-in path first (handles existing users; Clerk auto-transfers new users)
+    try {
+      const si = await signIn!.create({ strategy, redirectUrl: deepLink, actionCompleteRedirectUrl: deepLink } as any);
+      const url = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
+      if (url) return url;
+    } catch (e) {
+      console.log('[Auth] signIn.create OAuth failed, trying signUp:', e);
+    }
+    // Fallback: sign-up path (for brand-new users not yet in Clerk)
+    const su = await signUp!.create({ strategy, redirectUrl: deepLink, actionCompleteRedirectUrl: deepLink } as any);
+    const url = (su as any).verifications?.externalAccount?.externalVerificationRedirectURL?.toString()
+      || (su as any).externalVerificationRedirectURL?.toString();
+    if (!url) throw new Error(`Could not get OAuth URL for ${strategy}`);
+    return url;
+  };
+
   const handleAppleSignIn = async () => {
     setError('');
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
         const deepLink = 'com.autodapper.app://sso-callback';
-        const si = await signIn!.create({
-          strategy: 'oauth_apple',
-          redirectUrl: deepLink,
-          actionCompleteRedirectUrl: deepLink,
-        } as any);
-        const oauthUrl = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
-        if (!oauthUrl) throw new Error('Could not generate Apple sign-in URL');
+        const oauthUrl = await getOAuthUrl('oauth_apple', deepLink);
         // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest
         await Browser.open({ url: oauthUrl });
       } else {
@@ -1203,13 +1214,7 @@ function AuthFlow() {
         // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest.
         const { Browser } = await import('@capacitor/browser');
         const deepLink = 'com.autodapper.app://sso-callback';
-        const si = await signIn!.create({
-          strategy: 'oauth_google',
-          redirectUrl: deepLink,
-          actionCompleteRedirectUrl: deepLink,
-        } as any);
-        const oauthUrl = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
-        if (!oauthUrl) throw new Error('Could not generate Google sign-in URL');
+        const oauthUrl = await getOAuthUrl('oauth_google', deepLink);
         await Browser.open({ url: oauthUrl });
       } else {
         await signIn!.authenticateWithRedirect({
