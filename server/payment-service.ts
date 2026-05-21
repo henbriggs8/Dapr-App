@@ -62,6 +62,46 @@ export async function detachPaymentMethod(paymentMethodId: string): Promise<void
   await stripe.paymentMethods.detach(paymentMethodId);
 }
 
+/**
+ * Creates a Stripe Checkout Session for iOS native payments.
+ * Opens in Safari View Controller which natively supports Apple Pay / Google Pay.
+ */
+export async function createIOSCheckoutSession(
+  booking: Booking,
+  service: Service,
+  discountPercent: number = 0,
+  stripeCustomerId?: string
+): Promise<{ url: string; sessionId: string; amountInCents: number }> {
+  const baseAmount = (booking.totalPrice && booking.totalPrice > 0)
+    ? booking.totalPrice
+    : service.price;
+  const discount = Math.min(Math.max(discountPercent, 0), 100);
+  const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
+  const amountInCents = Math.round(chargeAmount * 100);
+
+  const successUrl = `com.autodapper.app://payment-success?bookingId=${booking.id}`;
+  const cancelUrl  = `com.autodapper.app://payment-cancel`;
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: 'usd',
+        unit_amount: amountInCents,
+        product_data: { name: `Dapr Car Wash – ${service.name}` },
+      },
+    }],
+    success_url: successUrl,
+    cancel_url:  cancelUrl,
+    metadata: { bookingId: String(booking.id) },
+    ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
+  });
+
+  if (!session.url) throw new Error('Stripe did not return a Checkout URL');
+  return { url: session.url, sessionId: session.id, amountInCents };
+}
+
 export async function createTipPaymentLink(
   bookingId: number,
   tipAmountCents: number,

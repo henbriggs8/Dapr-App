@@ -1486,6 +1486,40 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
+
+  // iOS-specific Stripe Checkout Session (opens in Safari View Controller → supports Apple Pay)
+  app.post("/api/bookings/:id/ios-checkout", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    try {
+      const booking = await storage.getBookingById(id);
+      if (!booking) return res.status(404).json({ error: 'Booking not found' });
+      if (booking.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+      if (booking.isPaid) return res.status(400).json({ error: 'Already paid' });
+
+      const service = await storage.getServiceById(booking.serviceId);
+      if (!service) return res.status(404).json({ error: 'Service not found' });
+
+      const PROMO_CODES: Record<string, number> = { 'DAPR99': 99, 'TEST99': 99 };
+      const promoRaw = typeof req.body.promoCode === 'string' ? req.body.promoCode.trim().toUpperCase() : null;
+      const discountPercent = promoRaw ? (PROMO_CODES[promoRaw] ?? 0) : 0;
+
+      const stripeCustomerId = await resolveOrCreateStripeCustomerId(req.user!);
+      const { createIOSCheckoutSession } = await import('./payment-service');
+      const { url, sessionId, amountInCents } = await createIOSCheckoutSession(booking, service, discountPercent, stripeCustomerId);
+
+      await storage.updateBookingPaymentInfo(booking.id, {
+        stripeSessionId: sessionId,
+        paymentStatus: 'pending',
+      });
+
+      res.json({ url, sessionId, amountInCents });
+    } catch (error) {
+      console.error('iOS checkout session error:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create checkout session' });
+    }
+  });
   
   app.post('/api/bookings/:id/verify-payment', async (req, res) => {
     if (!req.user) {
