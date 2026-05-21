@@ -1173,28 +1173,15 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        const { App } = await import('@capacitor/app');
-
         const deepLink = 'com.autodapper.app://sso-callback';
-
         const si = await signIn!.create({
           strategy: 'oauth_apple',
           redirectUrl: deepLink,
           actionCompleteRedirectUrl: deepLink,
         } as any);
-
         const oauthUrl = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
         if (!oauthUrl) throw new Error('Could not generate Apple sign-in URL');
-
-        const listener = await App.addListener('appUrlOpen', async ({ url }) => {
-          if (url.startsWith('com.autodapper.app://')) {
-            await listener.remove();
-            await Browser.close();
-            const params = url.replace('com.autodapper.app://sso-callback', '');
-            window.location.href = '/sso-callback' + params;
-          }
-        });
-
+        // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest
         await Browser.open({ url: oauthUrl });
       } else {
         await signIn!.authenticateWithRedirect({
@@ -1212,35 +1199,17 @@ function AuthFlow() {
     setError('');
     try {
       if (Capacitor.isNativePlatform()) {
-        // Google blocks OAuth inside WKWebView (embedded browsers).
-        // Open the flow in SFSafariViewController via @capacitor/browser,
-        // then handle the deep-link callback to complete auth inside the app.
+        // Google blocks OAuth inside WKWebView — open in SFSafariViewController.
+        // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest.
         const { Browser } = await import('@capacitor/browser');
-        const { App } = await import('@capacitor/app');
-
         const deepLink = 'com.autodapper.app://sso-callback';
-
-        // Create the sign-in to get Clerk's OAuth redirect URL
         const si = await signIn!.create({
           strategy: 'oauth_google',
           redirectUrl: deepLink,
           actionCompleteRedirectUrl: deepLink,
         } as any);
-
         const oauthUrl = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
         if (!oauthUrl) throw new Error('Could not generate Google sign-in URL');
-
-        // Listen for the app being reopened via the deep link
-        const listener = await App.addListener('appUrlOpen', async ({ url }) => {
-          if (url.startsWith('com.autodapper.app://')) {
-            await listener.remove();
-            await Browser.close();
-            // Strip custom scheme and redirect WebView to /sso-callback with Clerk params
-            const params = url.replace('com.autodapper.app://sso-callback', '');
-            window.location.href = '/sso-callback' + params;
-          }
-        });
-
         await Browser.open({ url: oauthUrl });
       } else {
         await signIn!.authenticateWithRedirect({

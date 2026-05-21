@@ -279,6 +279,17 @@ function DeepLinkHandler() {
           try {
             const url = new URL(event.url);
             const host = url.host || url.pathname.replace(/^\/+/, "").split("/")[0];
+
+            // ── SSO callback (Apple / Google sign-in) ──────────────────────
+            if (url.protocol.startsWith("com.autodapper.app") && host.includes("sso-callback")) {
+              console.log("[Auth] SSO deep-link received, closing browser and navigating to /sso-callback");
+              try { await Browser.close(); } catch {}
+              const params = event.url.replace(/^com\.autodapper\.app:\/\/sso-callback/, "");
+              window.location.href = "/sso-callback" + params;
+              return;
+            }
+
+            // ── Payment success ────────────────────────────────────────────
             if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-success")) {
               const bookingId =
                 url.searchParams.get("bookingId") ||
@@ -292,12 +303,16 @@ function DeepLinkHandler() {
                 window.history.pushState({}, "", `/matching?booking=${bookingId}`);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }
-            } else if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
+              return;
+            }
+
+            // ── Payment cancel ─────────────────────────────────────────────
+            if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
               console.log("[Payment] cancel redirect detected, returning to booking");
               try { await Browser.close(); } catch {}
             }
           } catch (e) {
-            console.log("[Payment] appUrlOpen handler error", e);
+            console.log("[DeepLink] appUrlOpen handler error", e);
           }
         });
         cleanup = () => { handle.remove(); };
