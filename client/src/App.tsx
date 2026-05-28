@@ -35,6 +35,7 @@ import FAQ from "@/pages/faq";
 import Corporate from "@/pages/corporate";
 import ServicesOverview from "@/pages/services-overview";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/terms-of-service";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
@@ -145,6 +146,7 @@ function Router() {
         <Route path="/faq" component={FAQ} />
         <Route path="/corporate" component={Corporate} />
         <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/terms" component={TermsOfService} />
         
         {/* Provider onboarding routes */}
         <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
