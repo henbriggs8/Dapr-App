@@ -95,3 +95,6 @@ SUPPORT_FROM_EMAIL = "noreply@dapper-pros.com"
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 180000
+
+[agent]
+integrations = ["resend:1.0.0"]
