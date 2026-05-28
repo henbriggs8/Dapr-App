@@ -1,22 +1,7 @@
-import { ReplitConnectors } from "@replit/connectors-sdk";
 import { Resend } from "resend";
 
 const NOTIFY_EMAIL = "henry@autodapr.com";
 const FROM_EMAIL = "Dapr <notifications@autodapr.com>";
-
-async function resendProxy(endpoint: string, body: object): Promise<void> {
-  try {
-    const connectors = new ReplitConnectors();
-    const res = await connectors.proxy("resend", endpoint, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    console.log(`[email] Resend proxy response: ${res.status}`);
-  } catch (err) {
-    console.error("[email] Resend proxy error:", err);
-    throw err;
-  }
-}
 
 export interface BookingEmailParams {
   bookingId: number;
@@ -70,14 +55,24 @@ export async function sendNewBookingEmail(params: BookingEmailParams): Promise<v
 </body>
 </html>`;
 
-  await resendProxy("/emails", {
+  const client = getResendClient();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY not set — skipping booking notification email.");
+    return;
+  }
+
+  const { error } = await client.emails.send({
     from: FROM_EMAIL,
     to: [NOTIFY_EMAIL],
     subject: `New Booking #${params.bookingId} — ${params.customerName}`,
     html,
   });
 
-  console.log(`[email] Booking notification sent for #${params.bookingId}`);
+  if (error) {
+    console.error(`[email] Failed to send booking notification #${params.bookingId}:`, error);
+  } else {
+    console.log(`[email] Booking notification sent for #${params.bookingId}`);
+  }
 }
 
 let resend: Resend | null = null;
