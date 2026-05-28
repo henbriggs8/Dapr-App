@@ -3,7 +3,7 @@ import { SiApple } from 'react-icons/si';
 import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Icon } from "@/components/ui/icon";
-import { useSignIn, useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
+import { useSignIn, useSignUp, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { resolveUrl, queryClient } from '@/lib/queryClient';
@@ -729,6 +729,7 @@ export default function ClerkAuthPage() {
 function AuthFlow() {
   const [, navigate] = useLocation();
   const { isSignedIn, getToken } = useClerkAuth();
+  const { signOut: clerkSignOut } = useClerk();
   const { user: localUser } = useAuth();
 
   // syncError drives the error state on the loading screen (never infinite)
@@ -1195,6 +1196,8 @@ function AuthFlow() {
         // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest
         await Browser.open({ url: oauthUrl });
       } else {
+        // Clear any stale Clerk session so we don't get session_exists errors
+        await clerkSignOut();
         await signIn!.authenticateWithRedirect({
           strategy: 'oauth_apple',
           redirectUrl: '/sso-callback',
@@ -1217,6 +1220,8 @@ function AuthFlow() {
         const oauthUrl = await getOAuthUrl('oauth_google', deepLink);
         await Browser.open({ url: oauthUrl });
       } else {
+        // Clear any stale Clerk session so we don't get session_exists errors
+        await clerkSignOut();
         await signIn!.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl: '/sso-callback',
