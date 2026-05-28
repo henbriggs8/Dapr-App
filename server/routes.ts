@@ -5,6 +5,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
 import { ADD_ONS, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
@@ -458,7 +459,28 @@ export function registerRoutes(app: Express): Server {
       };
 
       const newBooking = await storage.createBooking(booking);
-      
+
+      // Send booking notification email to admin
+      try {
+        const customer = await storage.getUser(booking.userId);
+        const service = await storage.getServiceById(booking.serviceId);
+        await sendNewBookingEmail({
+          bookingId: newBooking.id,
+          customerName: [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || customer?.email || "Unknown",
+          customerEmail: customer?.email,
+          customerPhone: customer?.phone,
+          serviceLocation: booking.serviceLocation,
+          serviceName: service?.name,
+          totalPrice: booking.totalPrice,
+          date: booking.date,
+          time: booking.time,
+          priceTier: booking.priceTier,
+          addOns: booking.addOns as any[],
+        });
+      } catch (emailErr) {
+        console.error("[email] Booking notification failed (non-fatal):", emailErr);
+      }
+
       // Update time slot bookings count
       try {
         const timeSlot = await storage.getTimeSlotById(booking.timeSlotId);

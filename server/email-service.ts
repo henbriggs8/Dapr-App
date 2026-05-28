@@ -1,4 +1,84 @@
+import { ReplitConnectors } from "@replit/connectors-sdk";
 import { Resend } from "resend";
+
+const NOTIFY_EMAIL = "henry@autodapr.com";
+const FROM_EMAIL = "Dapr <notifications@autodapr.com>";
+
+async function resendProxy(endpoint: string, body: object): Promise<void> {
+  try {
+    const connectors = new ReplitConnectors();
+    const res = await connectors.proxy("resend", endpoint, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    console.log(`[email] Resend proxy response: ${res.status}`);
+  } catch (err) {
+    console.error("[email] Resend proxy error:", err);
+    throw err;
+  }
+}
+
+export interface BookingEmailParams {
+  bookingId: number;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  serviceLocation: string;
+  serviceName?: string;
+  totalPrice?: number;
+  date?: string | null;
+  time?: string | null;
+  priceTier?: string | null;
+  addOns?: any[];
+}
+
+export async function sendNewBookingEmail(params: BookingEmailParams): Promise<void> {
+  const addOnsList = params.addOns && params.addOns.length > 0
+    ? `<ul style="margin:4px 0 0 16px;padding:0;">${params.addOns.map((a: any) => `<li>${escapeHtml(a.name || a.id || String(a))}</li>`).join("")}</ul>`
+    : "<em>None</em>";
+
+  const totalDisplay = params.totalPrice != null
+    ? `$${(params.totalPrice / 100).toFixed(2)}`
+    : "—";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family:sans-serif;background:#f4f4f5;margin:0;padding:24px;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background:#8c52ff;padding:20px 28px;">
+      <h2 style="margin:0;color:#fff;font-size:20px;">New Booking — Dapr #${params.bookingId}</h2>
+    </div>
+    <div style="padding:28px;">
+      <table style="width:100%;border-collapse:collapse;font-size:15px;">
+        <tr><td style="padding:8px 0;color:#6b7280;width:130px;vertical-align:top;">Customer</td><td style="padding:8px 0;font-weight:600;">${escapeHtml(params.customerName)}</td></tr>
+        ${params.customerEmail ? `<tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Email</td><td style="padding:8px 0;"><a href="mailto:${escapeHtml(params.customerEmail)}" style="color:#8c52ff;">${escapeHtml(params.customerEmail)}</a></td></tr>` : ""}
+        ${params.customerPhone ? `<tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Phone</td><td style="padding:8px 0;">${escapeHtml(params.customerPhone)}</td></tr>` : ""}
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Service</td><td style="padding:8px 0;">${escapeHtml(params.serviceName || "—")}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Tier</td><td style="padding:8px 0;">${escapeHtml(params.priceTier || "—")}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Add-ons</td><td style="padding:8px 0;">${addOnsList}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Location</td><td style="padding:8px 0;">${escapeHtml(params.serviceLocation)}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Date / Time</td><td style="padding:8px 0;">${[params.date, params.time].filter(Boolean).map(s => escapeHtml(s!)).join(" at ") || "—"}</td></tr>
+        <tr style="border-top:1px solid #e5e7eb;"><td style="padding:12px 0;color:#6b7280;vertical-align:top;">Total</td><td style="padding:12px 0;font-weight:700;font-size:20px;color:#8c52ff;">${totalDisplay}</td></tr>
+      </table>
+    </div>
+    <div style="padding:14px 28px;background:#f9fafb;font-size:12px;color:#9ca3af;text-align:center;">
+      Sent automatically by Dapr — do not reply to this email.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  await resendProxy("/emails", {
+    from: FROM_EMAIL,
+    to: [NOTIFY_EMAIL],
+    subject: `New Booking #${params.bookingId} — ${params.customerName}`,
+    html,
+  });
+
+  console.log(`[email] Booking notification sent for #${params.bookingId}`);
+}
 
 let resend: Resend | null = null;
 
