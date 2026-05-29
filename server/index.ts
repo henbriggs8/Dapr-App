@@ -20,7 +20,11 @@ app.use(express.static(path.resolve(process.cwd(), "public")));
 const clerkPk = process.env.VITE_CLERK_PUBLISHABLE_KEY || '';
 const clerkFrontendApi = (() => {
   try {
-    const base64Part = clerkPk.split('_')[2]?.replace(/\$.*/, '');
+    // Format: pk_live_<BASE64> or pk_test_<BASE64>
+    // Base64 is URL-safe and may contain underscores, so slice after the 2nd underscore
+    const prefix = clerkPk.startsWith('pk_live_') ? 'pk_live_' : clerkPk.startsWith('pk_test_') ? 'pk_test_' : null;
+    if (!prefix) return '';
+    const base64Part = clerkPk.slice(prefix.length);
     if (!base64Part) return '';
     return Buffer.from(base64Part, 'base64').toString('utf8').replace(/\$$/, '');
   } catch { return ''; }
