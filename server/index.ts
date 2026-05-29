@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
+import https from "https";
+import http from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
@@ -39,22 +41,31 @@ if (clerkFrontendApi) {
     'host', 'origin', 'referer',
     'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto',
     'x-real-ip', 'x-replit-user-id', 'x-replit-user-name', 'x-replit-user-roles',
-    'forwarded', 'via', 'connection',
+    'forwarded', 'via', 'connection', 'transfer-encoding',
   ]);
 
-  // Retry once on stale keep-alive socket errors (bytesWritten: 0)
-  const fetchWithRetry = async (url: string, opts: RequestInit, attempts = 2): Promise<globalThis.Response> => {
-    for (let i = 0; i < attempts; i++) {
-      try {
-        return await fetch(url, opts);
-      } catch (err: any) {
-        const isSocket = err?.cause?.code === 'UND_ERR_SOCKET';
-        if (isSocket && i < attempts - 1) continue;
-        throw err;
-      }
-    }
-    throw new Error('unreachable');
-  };
+  // Use https.request with agent:false to force a fresh TCP connection every time.
+  // fetch/undici pools connections and Cloudflare silently closes idle ones (bytesWritten:0).
+  const clerkRequest = (targetUrl: string, method: string, headers: Record<string, string>, body?: Buffer): Promise<{ status: number; headers: http.IncomingMessage['headers']; body: Buffer }> =>
+    new Promise((resolve, reject) => {
+      const u = new URL(targetUrl);
+      const reqOpts: https.RequestOptions = {
+        hostname: u.hostname,
+        port: 443,
+        path: u.pathname + u.search,
+        method,
+        headers,
+        agent: false, // fresh connection every request — no pooling
+      };
+      const req = https.request(reqOpts, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode ?? 502, headers: res.headers, body: Buffer.concat(chunks) }));
+      });
+      req.on('error', reject);
+      if (body) req.write(body);
+      req.end();
+    });
 
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
     const targetUrl = `https://${clerkFrontendApi}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
@@ -67,35 +78,34 @@ if (clerkFrontendApi) {
       }
       forwardHeaders['origin'] = clerkDomain;
       forwardHeaders['referer'] = clerkDomain + '/';
-      forwardHeaders['connection'] = 'close'; // Prevent stale keep-alive reuse
+      forwardHeaders['connection'] = 'close';
 
+      let bodyBuf: Buffer | undefined;
       const hasBody = !['GET', 'HEAD'].includes(req.method);
-      let body: string | undefined;
       if (hasBody) {
         const ct = (req.headers['content-type'] || '').toLowerCase();
+        let bodyStr: string;
         if (ct.includes('application/x-www-form-urlencoded')) {
-          body = new URLSearchParams(req.body as Record<string, string>).toString();
+          bodyStr = new URLSearchParams(req.body as Record<string, string>).toString();
           forwardHeaders['content-type'] = 'application/x-www-form-urlencoded';
         } else {
-          body = JSON.stringify(req.body);
+          bodyStr = JSON.stringify(req.body);
           forwardHeaders['content-type'] = 'application/json';
         }
-        forwardHeaders['content-length'] = String(Buffer.byteLength(body));
+        bodyBuf = Buffer.from(bodyStr, 'utf8');
+        forwardHeaders['content-length'] = String(bodyBuf.byteLength);
       }
 
-      const upstream = await fetchWithRetry(targetUrl, {
-        method: req.method,
-        headers: forwardHeaders,
-        body,
-      });
+      const upstream = await clerkRequest(targetUrl, req.method, forwardHeaders, bodyBuf);
 
       res.status(upstream.status);
-      upstream.headers.forEach((v, k) => { if (k !== 'content-encoding') res.setHeader(k, v); });
-      const buf = await upstream.arrayBuffer();
-      if (upstream.status >= 400) {
-        console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, Buffer.from(buf).toString('utf8').slice(0, 300));
+      for (const [k, v] of Object.entries(upstream.headers)) {
+        if (k !== 'content-encoding' && v) res.setHeader(k, v as string);
       }
-      res.send(Buffer.from(buf));
+      if (upstream.status >= 400) {
+        console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, upstream.body.toString('utf8').slice(0, 300));
+      }
+      res.send(upstream.body);
     } catch (err) {
       console.error('[Clerk proxy] error:', err);
       res.status(502).json({ error: 'Clerk proxy error' });
