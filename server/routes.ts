@@ -1510,7 +1510,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // iOS-specific Stripe Checkout Session (opens in Safari View Controller → supports Apple Pay)
-  app.post("/api/bookings/:id/ios-checkout", async (req, res) => {
+  app.post("/api/bookings/:id/ios-checkout", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
