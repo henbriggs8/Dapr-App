@@ -36,10 +36,24 @@ if (clerkFrontendApi) {
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
     const targetUrl = `https://${clerkFrontendApi}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
     try {
+      // Strip headers that would expose the Replit dev host to Clerk (causes host_invalid).
+      // Only forward safe headers; explicitly set Origin/Referer to the real app domain.
+      const STRIP_HEADERS = new Set([
+        'host', 'origin', 'referer',
+        'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto',
+        'x-real-ip', 'x-replit-user-id', 'x-replit-user-name', 'x-replit-user-roles',
+        'forwarded', 'via',
+      ]);
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
-        if (k !== 'host' && typeof v === 'string') forwardHeaders[k] = v;
+        if (!STRIP_HEADERS.has(k) && !k.startsWith('sec-') && typeof v === 'string') {
+          forwardHeaders[k] = v;
+        }
       }
+      // Set Origin/Referer to the app's own domain so Clerk recognises the instance
+      const clerkDomain = `https://${clerkFrontendApi.replace(/^clerk\./, '')}`;
+      forwardHeaders['origin'] = clerkDomain;
+      forwardHeaders['referer'] = clerkDomain + '/';
       const hasBody = !['GET', 'HEAD'].includes(req.method);
       const upstream = await fetch(targetUrl, {
         method: req.method,
@@ -49,6 +63,9 @@ if (clerkFrontendApi) {
       res.status(upstream.status);
       upstream.headers.forEach((v, k) => { if (k !== 'content-encoding') res.setHeader(k, v); });
       const buf = await upstream.arrayBuffer();
+      if (upstream.status >= 400) {
+        console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, Buffer.from(buf).toString('utf8').slice(0, 300));
+      }
       res.send(Buffer.from(buf));
     } catch (err) {
       console.error('[Clerk proxy] error:', err);
