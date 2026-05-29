@@ -76,7 +76,7 @@ title = "Sparkling clean car"
 id = "6lu9UXw7zDs4o5tOwWkbk"
 uri = "file://dist_public.tar.gz"
 type = "unspecified"
-title = "dist_public.tar.gz — Production Clerk keys + Apple Pay fix"
+title = "dist/public (web bundle)"
 
 [[outputs]]
 id = "Sbjeha-fFK-cSiTZ4B5ik"
