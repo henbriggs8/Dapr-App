@@ -13,6 +13,46 @@ app.use(express.urlencoded({ extended: false }));
 // Serve root-level public/ folder as static (includes .well-known for Apple Pay verification)
 app.use(express.static(path.resolve(process.cwd(), "public")));
 
+// ── Clerk Frontend API proxy ────────────────────────────────────────────────
+// Production Clerk keys require clerk.<domain> subdomain to exist. Since that
+// can't be configured on *.replit.dev or capacitor://localhost, we proxy all
+// Clerk requests through /clerk-proxy on the same Express server.
+const clerkPk = process.env.VITE_CLERK_PUBLISHABLE_KEY || '';
+const clerkFrontendApi = (() => {
+  try {
+    const base64Part = clerkPk.split('_')[2]?.replace(/\$.*/, '');
+    if (!base64Part) return '';
+    return Buffer.from(base64Part, 'base64').toString('utf8').replace(/\$$/, '');
+  } catch { return ''; }
+})();
+
+console.log('[Clerk proxy] decoded frontend API:', clerkFrontendApi || '(empty — key missing or undecodable)');
+
+if (clerkFrontendApi) {
+  app.use('/clerk-proxy', async (req: Request, res: Response) => {
+    const targetUrl = `https://${clerkFrontendApi}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
+    try {
+      const forwardHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.headers)) {
+        if (k !== 'host' && typeof v === 'string') forwardHeaders[k] = v;
+      }
+      const hasBody = !['GET', 'HEAD'].includes(req.method);
+      const upstream = await fetch(targetUrl, {
+        method: req.method,
+        headers: forwardHeaders,
+        body: hasBody ? JSON.stringify(req.body) : undefined,
+      });
+      res.status(upstream.status);
+      upstream.headers.forEach((v, k) => { if (k !== 'content-encoding') res.setHeader(k, v); });
+      const buf = await upstream.arrayBuffer();
+      res.send(Buffer.from(buf));
+    } catch (err) {
+      console.error('[Clerk proxy] error:', err);
+      res.status(502).json({ error: 'Clerk proxy error' });
+    }
+  });
+}
+
 // Add CORS middleware — restrict to known origins
 const ALLOWED_ORIGINS = [
   'https://autodapper.com',

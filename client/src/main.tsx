@@ -8,6 +8,17 @@ import "./index.css";
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+// Production Clerk keys need clerk.<domain> subdomain. Instead, proxy through
+// our own server so this works on any domain (Replit dev, iOS, production).
+// Must be an absolute URL — Clerk uses it to construct the clerk.browser.js script src.
+const CLERK_PROXY_URL = (() => {
+  if (typeof window === 'undefined') return '/clerk-proxy';
+  if (window.location.protocol === 'capacitor:') {
+    return `${import.meta.env.VITE_API_BASE_URL || 'https://dapper-pros.replit.app'}/clerk-proxy`;
+  }
+  return `${window.location.origin}/clerk-proxy`;
+})();
+
 // Registers the Clerk token getter with queryClient so native API calls
 // can include Authorization: Bearer <token> headers automatically.
 function ClerkTokenBridge() {
@@ -38,7 +49,7 @@ if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
       {CLERK_PUBLISHABLE_KEY ? (
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL}>
           <ClerkTokenBridge />
           <Root />
         </ClerkProvider>
