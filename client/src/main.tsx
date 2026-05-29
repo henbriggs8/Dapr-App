@@ -19,12 +19,6 @@ const CLERK_PROXY_URL = (() => {
   return `${window.location.origin}/clerk-proxy`;
 })();
 
-// Load the Clerk browser JS directly from Clerk's npm CDN rather than through
-// the proxy. The proxy only understands FAPI paths (/v1/...) — forwarding
-// /npm/... to clerk.autodapper.com returns a 404 and silently hangs Clerk
-// initialisation in WKWebView (Capacitor). Script tags are not subject to CORS
-// so we can safely load this cross-origin in any context.
-const CLERK_JS_URL = 'https://npm.clerk.io/@clerk/clerk-js@latest/dist/clerk.browser.js';
 
 // Registers the Clerk token getter with queryClient so native API calls
 // can include Authorization: Bearer <token> headers automatically.
@@ -56,7 +50,7 @@ if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
       {CLERK_PUBLISHABLE_KEY ? (
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL} clerkJSUrl={CLERK_JS_URL}>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL}>
           <ClerkTokenBridge />
           <Root />
         </ClerkProvider>

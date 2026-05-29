@@ -68,7 +68,10 @@ if (clerkFrontendApi) {
     });
 
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
-    const targetUrl = `https://${clerkFrontendApi}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
+    // /npm/... paths are the clerk.browser.js bundle — served from npm.clerk.io,
+    // not the FAPI domain (clerk.autodapper.com), which only handles /v1/... API calls.
+    const targetHost = req.path.startsWith('/npm/') ? 'npm.clerk.io' : clerkFrontendApi;
+    const targetUrl = `https://${targetHost}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
     try {
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
