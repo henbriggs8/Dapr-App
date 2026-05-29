@@ -33,33 +33,62 @@ const clerkFrontendApi = (() => {
 console.log('[Clerk proxy] decoded frontend API:', clerkFrontendApi || '(empty — key missing or undecodable)');
 
 if (clerkFrontendApi) {
+  const clerkDomain = `https://${clerkFrontendApi.replace(/^clerk\./, '')}`;
+
+  const STRIP_HEADERS = new Set([
+    'host', 'origin', 'referer',
+    'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto',
+    'x-real-ip', 'x-replit-user-id', 'x-replit-user-name', 'x-replit-user-roles',
+    'forwarded', 'via', 'connection',
+  ]);
+
+  // Retry once on stale keep-alive socket errors (bytesWritten: 0)
+  const fetchWithRetry = async (url: string, opts: RequestInit, attempts = 2): Promise<globalThis.Response> => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fetch(url, opts);
+      } catch (err: any) {
+        const isSocket = err?.cause?.code === 'UND_ERR_SOCKET';
+        if (isSocket && i < attempts - 1) continue;
+        throw err;
+      }
+    }
+    throw new Error('unreachable');
+  };
+
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
     const targetUrl = `https://${clerkFrontendApi}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
     try {
-      // Strip headers that would expose the Replit dev host to Clerk (causes host_invalid).
-      // Only forward safe headers; explicitly set Origin/Referer to the real app domain.
-      const STRIP_HEADERS = new Set([
-        'host', 'origin', 'referer',
-        'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto',
-        'x-real-ip', 'x-replit-user-id', 'x-replit-user-name', 'x-replit-user-roles',
-        'forwarded', 'via',
-      ]);
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
         if (!STRIP_HEADERS.has(k) && !k.startsWith('sec-') && typeof v === 'string') {
           forwardHeaders[k] = v;
         }
       }
-      // Set Origin/Referer to the app's own domain so Clerk recognises the instance
-      const clerkDomain = `https://${clerkFrontendApi.replace(/^clerk\./, '')}`;
       forwardHeaders['origin'] = clerkDomain;
       forwardHeaders['referer'] = clerkDomain + '/';
+      forwardHeaders['connection'] = 'close'; // Prevent stale keep-alive reuse
+
       const hasBody = !['GET', 'HEAD'].includes(req.method);
-      const upstream = await fetch(targetUrl, {
+      let body: string | undefined;
+      if (hasBody) {
+        const ct = (req.headers['content-type'] || '').toLowerCase();
+        if (ct.includes('application/x-www-form-urlencoded')) {
+          body = new URLSearchParams(req.body as Record<string, string>).toString();
+          forwardHeaders['content-type'] = 'application/x-www-form-urlencoded';
+        } else {
+          body = JSON.stringify(req.body);
+          forwardHeaders['content-type'] = 'application/json';
+        }
+        forwardHeaders['content-length'] = String(Buffer.byteLength(body));
+      }
+
+      const upstream = await fetchWithRetry(targetUrl, {
         method: req.method,
         headers: forwardHeaders,
-        body: hasBody ? JSON.stringify(req.body) : undefined,
+        body,
       });
+
       res.status(upstream.status);
       upstream.headers.forEach((v, k) => { if (k !== 'content-encoding') res.setHeader(k, v); });
       const buf = await upstream.arrayBuffer();
