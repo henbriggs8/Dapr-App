@@ -19,6 +19,35 @@ const CLERK_PROXY_URL = (() => {
   return `${window.location.origin}/clerk-proxy`;
 })();
 
+// ── iOS session cookie workaround ────────────────────────────────────────────
+// WKWebView (Capacitor) does NOT store or send cookies from cross-origin fetch
+// responses — confirmed by production logs showing "cookies: none" on every
+// request. We work around this by:
+//  1. Generating a stable session ID stored in localStorage (survives reloads).
+//  2. Monkey-patching window.fetch to add X-Proxy-Session to every /clerk-proxy/ call.
+//  3. The server maintains a cookie jar keyed by session ID, injecting Clerk
+//     cookies into upstream requests so Clerk sees a consistent client identity.
+if (typeof window !== 'undefined' && window.location.protocol === 'capacitor:') {
+  const SID_KEY = 'clerk_proxy_session_id';
+  let sid = localStorage.getItem(SID_KEY);
+  if (!sid) {
+    sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(SID_KEY, sid);
+  }
+  const proxyBase = import.meta.env.VITE_API_BASE_URL || 'https://dapper-pros.replit.app';
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+    if (url.includes(proxyBase + '/clerk-proxy/') || url.includes('/clerk-proxy/')) {
+      const headers = new Headers((init?.headers as HeadersInit) || {});
+      headers.set('X-Proxy-Session', sid!);
+      return nativeFetch(input, { ...init, headers });
+    }
+    return nativeFetch(input, init);
+  };
+  console.log('[AuthInit] iOS fetch patch applied, proxy session:', sid);
+}
+
 // ── Boot instrumentation ────────────────────────────────────────────────────
 console.log('[AuthInit] app boot started');
 console.log('[AuthInit] protocol:', typeof window !== 'undefined' ? window.location.protocol : 'ssr');

@@ -38,6 +38,32 @@ console.log('[Clerk proxy] decoded frontend API:', clerkFrontendApi || '(empty �
 if (clerkFrontendApi) {
   const clerkDomain = `https://${clerkFrontendApi.replace(/^clerk\./, '')}`;
 
+  // ── Server-side Clerk cookie store for iOS ──────────────────────────────
+  // WKWebView (Capacitor) never stores/sends cookies from cross-origin fetch
+  // responses (confirmed: every iOS request arrives with "cookies: none").
+  // Solution: client sends X-Proxy-Session header (stable localStorage UUID),
+  // we maintain the Clerk cookie jar here and inject it into every upstream call.
+  const proxySessionStore = new Map<string, string>(); // sessionId → cookie string
+
+  const mergeIntoCookieStore = (existing: string, setCookieHeaders: string | string[]): string => {
+    const map = new Map<string, string>();
+    // Parse existing stored cookies
+    if (existing) {
+      existing.split('; ').forEach(pair => {
+        const eq = pair.indexOf('=');
+        if (eq > 0) map.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim());
+      });
+    }
+    // Overlay new Set-Cookie values (first segment only = name=value)
+    const list = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders];
+    list.forEach(sc => {
+      const nameVal = sc.split(';')[0].trim();
+      const eq = nameVal.indexOf('=');
+      if (eq > 0) map.set(nameVal.slice(0, eq).trim(), nameVal.slice(eq + 1).trim());
+    });
+    return Array.from(map.entries()).map(([k, v]) => `${k}=${v}`).join('; ');
+  };
+
   const STRIP_HEADERS = new Set([
     'host', 'origin', 'referer',
     'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto',
@@ -88,7 +114,7 @@ if (clerkFrontendApi) {
     } else if (!origin) {
       res.setHeader('Access-Control-Allow-Origin', '*');
     }
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, X-Proxy-Session');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   };
 
@@ -135,13 +161,23 @@ if (clerkFrontendApi) {
       ? `https://cdn.jsdelivr.net${req.path}${queryString}`
       : `https://${clerkFrontendApi}${req.path}${queryString}`;
     const logTarget = req.path.startsWith('/npm/') ? 'cdn.jsdelivr.net' : clerkFrontendApi;
-    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${logTarget} (origin: ${req.headers.origin || 'none'}) cookies: ${req.headers.cookie || 'none'}`);
+    // Read the proxy session ID sent by the iOS fetch patch (localStorage UUID).
+    // We use this to maintain Clerk cookies server-side since WKWebView never
+    // stores or forwards cross-origin cookies from fetch responses.
+    const proxySessionId = req.headers['x-proxy-session'] as string | undefined;
+    const storedCookies = proxySessionId ? (proxySessionStore.get(proxySessionId) || '') : '';
+    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${logTarget} (origin: ${req.headers.origin || 'none'}) psid: ${proxySessionId || 'none'} stored: ${storedCookies ? 'yes' : 'no'}`);
     try {
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
-        if (!STRIP_HEADERS.has(k) && !k.startsWith('sec-') && typeof v === 'string') {
+        if (!STRIP_HEADERS.has(k) && !k.startsWith('sec-') && !k.startsWith('x-proxy-') && typeof v === 'string') {
           forwardHeaders[k] = v;
         }
+      }
+      // Inject stored Clerk cookies into the upstream request so Clerk sees
+      // a consistent client identity even though WKWebView sends no cookies.
+      if (storedCookies) {
+        forwardHeaders['cookie'] = storedCookies;
       }
       forwardHeaders['origin'] = clerkDomain;
       forwardHeaders['referer'] = clerkDomain + '/';
@@ -193,7 +229,16 @@ if (clerkFrontendApi) {
         // Strip content-encoding (body is now decompressed), content-length
         // (length changed after decompression), and our own CORS header.
         if (k === 'set-cookie') {
-          // Rewrite domain + SameSite so WKWebView accepts and re-sends cookies.
+          // Save Clerk cookies into the server-side session store so we can
+          // inject them on subsequent iOS requests (WKWebView never re-sends
+          // cookies it receives from cross-origin fetch responses).
+          if (proxySessionId) {
+            const existing = proxySessionStore.get(proxySessionId) || '';
+            const merged = mergeIntoCookieStore(existing, v as string | string[]);
+            proxySessionStore.set(proxySessionId, merged);
+            console.log(`[Clerk proxy] session ${proxySessionId} cookies updated (${merged.split('; ').length} entries)`);
+          }
+          // Also rewrite domain + SameSite for web clients that DO use cookies.
           res.setHeader('set-cookie', rewriteSetCookie(v as string | string[]));
         } else if (k !== 'content-encoding' && k !== 'content-length' && k !== 'access-control-allow-origin' && v) {
           res.setHeader(k, v as string);
