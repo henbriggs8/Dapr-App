@@ -92,6 +92,26 @@ if (clerkFrontendApi) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   };
 
+  // Rewrite Set-Cookie headers from upstream Clerk responses so cookies are
+  // scoped to the proxy host (dapper-pros.replit.app) rather than the Clerk
+  // domain (clerk.autodapper.com). WKWebView rejects cookies whose Domain
+  // attribute doesn't match the response host, so the Clerk session is lost
+  // between sign-in steps → "You are signed out" error on iOS.
+  // We also ensure SameSite=None; Secure so cross-origin WKWebView requests
+  // (from capacitor://localhost) include the cookies on every call.
+  const rewriteSetCookie = (raw: string | string[]): string[] => {
+    const cookies = Array.isArray(raw) ? raw : [raw];
+    return cookies.map(cookie => {
+      const parts = cookie.split(';').map(p => p.trim());
+      const filtered = parts.filter(p => !p.toLowerCase().startsWith('domain='));
+      const joined = filtered.join('; ');
+      let out = joined;
+      if (!out.toLowerCase().includes('samesite')) out += '; SameSite=None';
+      if (!out.toLowerCase().includes('secure'))   out += '; Secure';
+      return out;
+    });
+  };
+
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
     applyProxyCors(req, res);
 
@@ -166,9 +186,12 @@ if (clerkFrontendApi) {
 
       res.status(upstream.status);
       for (const [k, v] of Object.entries(upstream.headers)) {
-        // Strip content-encoding (body is now decompressed) and content-length
-        // (length changed after decompression) and our own CORS header.
-        if (k !== 'content-encoding' && k !== 'content-length' && k !== 'access-control-allow-origin' && v) {
+        // Strip content-encoding (body is now decompressed), content-length
+        // (length changed after decompression), and our own CORS header.
+        if (k === 'set-cookie') {
+          // Rewrite domain + SameSite so WKWebView accepts and re-sends cookies.
+          res.setHeader('set-cookie', rewriteSetCookie(v as string | string[]));
+        } else if (k !== 'content-encoding' && k !== 'content-length' && k !== 'access-control-allow-origin' && v) {
           res.setHeader(k, v as string);
         }
       }
