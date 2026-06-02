@@ -121,6 +121,13 @@ if (clerkFrontendApi) {
       forwardHeaders['origin'] = clerkDomain;
       forwardHeaders['referer'] = clerkDomain + '/';
       forwardHeaders['connection'] = 'close';
+      // For npm bundle requests, ask for plain (uncompressed) response so the
+      // proxy can forward the raw bytes without any content-encoding mismatch.
+      // WKWebView would get raw gzip bytes if the CDN compressed and we stripped
+      // content-encoding, causing silent JS parse failure → Clerk never loads.
+      if (req.path.startsWith('/npm/')) {
+        forwardHeaders['accept-encoding'] = 'identity';
+      }
 
       let bodyBuf: Buffer | undefined;
       const hasBody = !['GET', 'HEAD'].includes(req.method);
