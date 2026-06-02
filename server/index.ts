@@ -67,11 +67,45 @@ if (clerkFrontendApi) {
       req.end();
     });
 
+  const PROXY_CORS_ORIGINS = new Set([
+    'capacitor://localhost',
+    'ionic://localhost',
+    'https://dapper-pros.replit.app',
+    'https://autodapper.com',
+    'https://www.autodapper.com',
+  ]);
+
+  // Apply CORS for the proxy directly — the global CORS middleware is registered
+  // AFTER this handler so it never runs for /clerk-proxy responses. WKWebView
+  // (Capacitor) sends Origin: capacitor://localhost and blocks any response that
+  // lacks Access-Control-Allow-Origin, which is why Clerk never initialises on iOS.
+  const applyProxyCors = (req: Request, res: Response) => {
+    const origin = req.headers.origin || '';
+    if (PROXY_CORS_ORIGINS.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else if (!origin) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  };
+
   app.use('/clerk-proxy', async (req: Request, res: Response) => {
+    applyProxyCors(req, res);
+
+    // Handle CORS preflight — WKWebView sends OPTIONS before every POST
+    if (req.method === 'OPTIONS') {
+      console.log('[Clerk proxy] OPTIONS preflight from origin:', req.headers.origin);
+      res.status(204).send('');
+      return;
+    }
+
     // /npm/... paths are the clerk.browser.js bundle — served from npm.clerk.io,
     // not the FAPI domain (clerk.autodapper.com), which only handles /v1/... API calls.
     const targetHost = req.path.startsWith('/npm/') ? 'npm.clerk.io' : clerkFrontendApi;
     const targetUrl = `https://${targetHost}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
+    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${targetHost} (origin: ${req.headers.origin || 'none'})`);
     try {
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
@@ -103,7 +137,9 @@ if (clerkFrontendApi) {
 
       res.status(upstream.status);
       for (const [k, v] of Object.entries(upstream.headers)) {
-        if (k !== 'content-encoding' && v) res.setHeader(k, v as string);
+        if (k !== 'content-encoding' && k !== 'access-control-allow-origin' && v) {
+          res.setHeader(k, v as string);
+        }
       }
       if (upstream.status >= 400) {
         console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, upstream.body.toString('utf8').slice(0, 300));

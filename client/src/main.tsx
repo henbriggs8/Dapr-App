@@ -19,6 +19,12 @@ const CLERK_PROXY_URL = (() => {
   return `${window.location.origin}/clerk-proxy`;
 })();
 
+// ── Boot instrumentation ────────────────────────────────────────────────────
+console.log('[AuthInit] app boot started');
+console.log('[AuthInit] protocol:', typeof window !== 'undefined' ? window.location.protocol : 'ssr');
+console.log('[AuthInit] CLERK_PUBLISHABLE_KEY present:', !!CLERK_PUBLISHABLE_KEY);
+console.log('[AuthInit] proxyUrl:', CLERK_PROXY_URL);
+
 
 // Registers the Clerk token getter with queryClient so native API calls
 // can include Authorization: Bearer <token> headers automatically.

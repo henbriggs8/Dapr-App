@@ -1,0 +1,60 @@
+We are still back to the same issue on iOS:
+
+Problem:
+- In the Xcode iPhone app, right after the splash screen, the app gets stuck on an infinite auth loading screen
+- It works on desktop browser
+- It works in Safari
+- The problem is specifically in the iOS app / WKWebView / Capacitor flow
+
+I need you to stop giving me generic rebuild steps and debug this root-cause directly.
+
+Please instrument the iOS auth initialization flow end-to-end and find exactly where it hangs.
+
+What I need logged:
+1. [AuthInit] app boot started
+2. [AuthInit] ClerkProvider mounted
+3. [AuthInit] Clerk loaded / Clerk failed
+4. [AuthInit] proxyUrl value
+5. [AuthInit] clerkJSUrl value
+6. [AuthInit] isLoaded
+7. [AuthInit] isSignedIn
+8. [AuthInit] getToken attempt + result
+9. [AuthInit] calling /api/auth/clerk-sync
+10. [AuthInit] /api/auth/clerk-sync response status + body
+11. [AuthInit] calling /api/user
+12. [AuthInit] /api/user response status + body
+13. [AuthInit] loading screen exit condition reached
+14. [AuthInit] loading screen timeout/failure condition reached
+15. [AuthInit] any thrown error in auth bootstrap
+
+Please also add a visible on-screen temporary debug state on iOS only, so if it hangs I can see which stage it’s stuck on, for example:
+- Loading Clerk
+- Clerk loaded
+- Waiting for token
+- Syncing account
+- Loading user
+- Ready
+- Failed at [specific step]
+
+Important:
+- The loading screen must never wait forever
+- Add a hard timeout fallback so if auth init takes too long, it shows a visible error and retry button instead of infinite loading
+- If Clerk loads but token is null, retry with polling for a few seconds and log each attempt
+- If /api/auth/clerk-sync fails, surface it
+- If /api/user fails, surface it
+- If Clerk JS fails to load in WKWebView, surface the exact URL and error
+
+Please specifically verify these iOS-only possibilities:
+1. Clerk JS bundle is not loading correctly in WKWebView
+2. proxyUrl / clerkJSUrl configuration is wrong in native webview
+3. auth bootstrap depends on a browser-only behavior that Safari tolerates but WKWebView does not
+4. loading state is waiting on a query that never resolves
+5. the latest iOS bundle still has stale config or stale API base URL
+
+What I want back from you:
+- the exact root cause
+- the exact file(s) you changed
+- the exact step where the hang happens
+- a fresh bundle only after you’ve verified the hang point is fixed
+
+Do not just tell me to rebuild first. I want the actual auth boot sequence debugged and fixed.

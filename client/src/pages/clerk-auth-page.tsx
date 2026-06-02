@@ -837,6 +837,56 @@ function AuthFlow() {
   const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
   const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
 
+  // ── Clerk-load instrumentation + timeout ────────────────────────────────
+  const isNative = typeof window !== 'undefined' && window.location.protocol === 'capacitor:';
+  const [clerkStage, setClerkStage] = useState<string>('Loading Clerk…');
+  const [clerkTimedOut, setClerkTimedOut] = useState(false);
+
+  useEffect(() => {
+    console.log(`[AuthInit] ClerkProvider mounted — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
+    console.log(`[AuthInit] isNative=${isNative}`);
+  }, []);
+
+  useEffect(() => {
+    console.log(`[AuthInit] isLoaded change — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
+    if (signInLoaded && signUpLoaded) {
+      console.log('[AuthInit] Clerk loaded ✓');
+      setClerkStage('Clerk loaded');
+    }
+  }, [signInLoaded, signUpLoaded]);
+
+  // Hard 15s timeout on Clerk JS load — surfaces failure instead of hanging.
+  // Deps include signInLoaded/signUpLoaded so the effect re-runs (and cleanup
+  // cancels all timers) as soon as Clerk reports it has loaded.
+  useEffect(() => {
+    if (signInLoaded && signUpLoaded) {
+      // Clerk just loaded — any pending timers were already cleared by cleanup
+      console.log('[AuthInit] watchdog cancelled — Clerk loaded ✓');
+      return;
+    }
+    console.log('[AuthInit] starting 15s Clerk-load watchdog');
+    const stages: [number, string][] = [
+      [3000, 'Loading Clerk SDK…'],
+      [7000, 'Still waiting for Clerk…'],
+      [11000, 'Network may be slow…'],
+    ];
+    const timers = stages.map(([ms, label]) =>
+      setTimeout(() => {
+        setClerkStage(label);
+        console.log(`[AuthInit] stage: ${label}`);
+      }, ms)
+    );
+    const timeout = setTimeout(() => {
+      console.error('[AuthInit] TIMEOUT — Clerk JS never loaded after 15s');
+      setClerkTimedOut(true);
+      setClerkStage('Failed — Clerk SDK did not load');
+    }, 15000);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(timeout);
+    };
+  }, [signInLoaded, signUpLoaded]);
+
   // Demo mode: ?demo=1 in URL lets you preview sign-up screens without Clerk
   const params = new URLSearchParams(window.location.search);
   const isDemo = params.get('demo') === '1';
@@ -904,9 +954,27 @@ function AuthFlow() {
   }
 
   if (!signInLoaded || !signUpLoaded) {
+    if (clerkTimedOut) {
+      return (
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 px-8">
+          <p className="text-sm font-medium text-gray-800 text-center">Sign-in unavailable</p>
+          <p className="text-xs text-red-500 text-center">
+            Authentication service failed to load. Check your connection and try again.
+          </p>
+          <p className="text-[10px] text-gray-400 text-center font-mono">Stage: {clerkStage}</p>
+          <button
+            className="mt-2 px-5 py-2.5 rounded-full bg-[#8c52ff] text-white text-sm font-medium"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-3">
         <div className="w-5 h-5 rounded-full border-2 border-[#8c52ff] border-t-transparent animate-spin" />
+        <p className="text-xs text-gray-400">{clerkStage}</p>
       </div>
     );
   }
