@@ -76,7 +76,7 @@ title = "Sparkling clean car"
 id = "6lu9UXw7zDs4o5tOwWkbk"
 uri = "file://dist_public.tar.gz"
 type = "unspecified"
-title = "dist/public — final build (CORS fix + watchdog + instrumentation)"
+title = "dist/public — v3 (jsdelivr CDN fix)"
 
 [[outputs]]
 id = "Sbjeha-fFK-cSiTZ4B5ik"

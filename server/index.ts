@@ -101,11 +101,16 @@ if (clerkFrontendApi) {
       return;
     }
 
-    // /npm/... paths are the clerk.browser.js bundle — served from npm.clerk.io,
-    // not the FAPI domain (clerk.autodapper.com), which only handles /v1/... API calls.
-    const targetHost = req.path.startsWith('/npm/') ? 'npm.clerk.io' : clerkFrontendApi;
-    const targetUrl = `https://${targetHost}${req.path}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
-    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${targetHost} (origin: ${req.headers.origin || 'none'})`);
+    // /npm/... paths are the clerk.browser.js bundle.
+    // npm.clerk.io does not resolve from Replit's production container (ENOTFOUND),
+    // so we proxy the bundle through cdn.jsdelivr.net which is publicly accessible.
+    // Both hosts use the /npm/<pkg> URL convention so req.path maps directly.
+    const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    const targetUrl = req.path.startsWith('/npm/')
+      ? `https://cdn.jsdelivr.net${req.path}${queryString}`
+      : `https://${clerkFrontendApi}${req.path}${queryString}`;
+    const logTarget = req.path.startsWith('/npm/') ? 'cdn.jsdelivr.net' : clerkFrontendApi;
+    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${logTarget} (origin: ${req.headers.origin || 'none'})`);
     try {
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
