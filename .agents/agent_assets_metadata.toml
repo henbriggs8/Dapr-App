@@ -76,7 +76,7 @@ title = "Sparkling clean car"
 id = "6lu9UXw7zDs4o5tOwWkbk"
 uri = "file://dist_public.tar.gz"
 type = "unspecified"
-title = "dist/public (web bundle)"
+title = "dist/public (latest build)"
 
 [[outputs]]
 id = "Sbjeha-fFK-cSiTZ4B5ik"
