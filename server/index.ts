@@ -103,12 +103,16 @@ if (clerkFrontendApi) {
     const cookies = Array.isArray(raw) ? raw : [raw];
     return cookies.map(cookie => {
       const parts = cookie.split(';').map(p => p.trim());
-      const filtered = parts.filter(p => !p.toLowerCase().startsWith('domain='));
-      const joined = filtered.join('; ');
-      let out = joined;
-      if (!out.toLowerCase().includes('samesite')) out += '; SameSite=None';
-      if (!out.toLowerCase().includes('secure'))   out += '; Secure';
-      return out;
+      // Strip Domain (would mismatch proxy host), existing SameSite (Clerk sends
+      // SameSite=Lax which blocks cross-origin fetch from capacitor://localhost),
+      // and Secure (we re-add it below).
+      const filtered = parts.filter(p => {
+        const pl = p.toLowerCase();
+        return !pl.startsWith('domain=') && !pl.startsWith('samesite=') && pl !== 'secure';
+      });
+      // Force SameSite=None; Secure so WKWebView includes the cookie in
+      // cross-origin fetch requests (capacitor://localhost → dapper-pros.replit.app).
+      return filtered.join('; ') + '; SameSite=None; Secure';
     });
   };
 
