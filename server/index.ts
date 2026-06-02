@@ -135,7 +135,7 @@ if (clerkFrontendApi) {
       ? `https://cdn.jsdelivr.net${req.path}${queryString}`
       : `https://${clerkFrontendApi}${req.path}${queryString}`;
     const logTarget = req.path.startsWith('/npm/') ? 'cdn.jsdelivr.net' : clerkFrontendApi;
-    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${logTarget} (origin: ${req.headers.origin || 'none'})`);
+    console.log(`[Clerk proxy] ${req.method} ${req.path} → ${logTarget} (origin: ${req.headers.origin || 'none'}) cookies: ${req.headers.cookie || 'none'}`);
     try {
       const forwardHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) {
