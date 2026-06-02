@@ -1,0 +1,1 @@
+- [Clerk iOS proxy bugs](clerk-ios-proxy.md) — three bugs (CORS order, npm.clerk.io DNS, jsDelivr gzip) that prevent Clerk initializing in WKWebView; fix details inside.

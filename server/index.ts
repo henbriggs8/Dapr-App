@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import https from "https";
 import http from "http";
+import zlib from "zlib";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
@@ -147,16 +148,34 @@ if (clerkFrontendApi) {
 
       const upstream = await clerkRequest(targetUrl, req.method, forwardHeaders, bodyBuf);
 
+      // Decompress the upstream body if needed — jsDelivr/CDNs ignore
+      // Accept-Encoding:identity and return gzip anyway. WKWebView (iOS) receives
+      // raw gzip bytes, can't parse them as JS, and throws SyntaxError \ufffd.
+      // We decompress server-side so the client always gets plain text/JSON.
+      let responseBody = upstream.body;
+      const enc = (upstream.headers['content-encoding'] || '').toLowerCase();
+      try {
+        if (enc === 'gzip' || enc === 'deflate') {
+          responseBody = zlib.gunzipSync(upstream.body);
+        } else if (enc === 'br') {
+          responseBody = zlib.brotliDecompressSync(upstream.body);
+        }
+      } catch (decompErr) {
+        console.error('[Clerk proxy] decompression failed, forwarding raw body:', decompErr);
+      }
+
       res.status(upstream.status);
       for (const [k, v] of Object.entries(upstream.headers)) {
-        if (k !== 'content-encoding' && k !== 'access-control-allow-origin' && v) {
+        // Strip content-encoding (body is now decompressed) and content-length
+        // (length changed after decompression) and our own CORS header.
+        if (k !== 'content-encoding' && k !== 'content-length' && k !== 'access-control-allow-origin' && v) {
           res.setHeader(k, v as string);
         }
       }
       if (upstream.status >= 400) {
-        console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, upstream.body.toString('utf8').slice(0, 300));
+        console.error('[Clerk proxy] upstream error', upstream.status, req.method, targetUrl, responseBody.toString('utf8').slice(0, 300));
       }
-      res.send(upstream.body);
+      res.send(responseBody);
     } catch (err) {
       console.error('[Clerk proxy] error:', err);
       res.status(502).json({ error: 'Clerk proxy error' });
