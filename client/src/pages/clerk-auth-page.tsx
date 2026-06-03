@@ -911,6 +911,7 @@ function AuthFlow() {
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSecondFactor, setIsSecondFactor] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [signUpNeedsEmail, setSignUpNeedsEmail] = useState(false);
   // Sign-up profile info
@@ -1127,6 +1128,7 @@ function AuthFlow() {
         const phoneFactor = factors.find((f: any) => f.strategy === 'phone_code');
         if (phoneFactor) {
           await signIn!.prepareSecondFactor({ strategy: 'phone_code' });
+          setIsSecondFactor(true);
           setOtpCode('');
           setStep('phoneOtp');
         } else {
@@ -1154,7 +1156,18 @@ function AuthFlow() {
         } else {
           setError(`Verification failed (${result.status}). Please try again.`);
         }
+      } else if (isSecondFactor) {
+        // Password was the first factor; this OTP is the second factor (2FA)
+        const result = await signIn!.attemptSecondFactor({ strategy: 'phone_code', code: otpCode });
+        if (result.status === 'complete') {
+          await setSignInActive!({ session: result.createdSessionId });
+          setIsSecondFactor(false);
+          setStep('welcome');
+        } else {
+          setError(`Verification returned unexpected status (${result.status}). Please try again.`);
+        }
       } else {
+        // Phone OTP is the primary (first) factor — e.g. password reset or phone-only sign-in
         const strategy = isResettingPassword ? 'reset_password_phone_code' : 'phone_code';
         const result = await signIn!.attemptFirstFactor({ strategy, code: otpCode });
         if (result.status === 'complete') {
@@ -1164,17 +1177,6 @@ function AuthFlow() {
         } else if (result.status === 'needs_new_password') {
           setOtpCode('');
           setStep('setPassword');
-        } else if (result.status === 'needs_second_factor') {
-          // Try to use phone as second factor if available
-          const secondFactors = (result as any).supportedSecondFactors ?? [];
-          const phoneSF = secondFactors.find((f: any) => f.strategy === 'phone_code');
-          if (phoneSF) {
-            await signIn!.prepareSecondFactor({ strategy: 'phone_code' });
-            setOtpCode('');
-            // Stay on phoneOtp step — next verify call will use second factor
-          } else {
-            setError('A second verification step is required. Please contact support.');
-          }
         } else {
           setError(`Verification returned unexpected status (${result.status}). Please try again.`);
         }
