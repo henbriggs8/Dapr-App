@@ -4,12 +4,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
-import ProviderAuthPage from "@/pages/provider-auth-page";
 import IdVerificationPage from "@/pages/provider-onboarding/id-verification";
 import VehicleSetupPage from "@/pages/provider-onboarding/vehicle-setup";
 import BankInfoPage from "@/pages/provider-onboarding/bank-info";
 import ClerkAuthPage from "@/pages/clerk-auth-page";
-import VerifyScreen from "@/pages/verify-screen";
 import HomeScreen from "@/pages/home-screen";
 import OnboardingNameScreen from "@/pages/onboarding-name-screen";
 import AddressScreen from "@/pages/address-screen";
@@ -133,8 +131,8 @@ function Router() {
         )} />
         <Route path="/auth" component={ClerkAuthPage} />
         <Route path="/auth/:rest*" component={ClerkAuthPage} />
-        <Route path="/provider-auth" component={ProviderAuthPage} />
-        <Route path="/verify" component={VerifyScreen} />
+        <Route path="/provider-auth"><Redirect to="/auth" /></Route>
+        <Route path="/verify"><Redirect to="/auth" /></Route>
         <Route path="/onboarding/name" component={OnboardingNameScreen} />
         <Route path="/onboarding/address" component={AddressScreen} />
         <Route path="/onboarding/car-profile" component={CarProfileScreen} />
