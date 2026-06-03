@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import App from "./App";
 import { SplashScreen } from "./components/splash-screen";
+import { IosDebugOverlay } from "./components/ios-debug-overlay";
 import { setClerkTokenGetter } from "@/lib/queryClient";
+import { setBootStage } from "@/lib/boot-debug";
 import "./index.css";
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -59,10 +61,7 @@ try {
 }
 
 // ── Boot instrumentation ────────────────────────────────────────────────────
-console.log('[AuthInit] app boot started');
-console.log('[AuthInit] protocol:', typeof window !== 'undefined' ? window.location.protocol : 'ssr');
-console.log('[AuthInit] CLERK_PUBLISHABLE_KEY present:', !!CLERK_PUBLISHABLE_KEY);
-console.log('[AuthInit] proxyUrl:', CLERK_PROXY_URL);
+setBootStage('booting', `protocol=${typeof window !== 'undefined' ? window.location.protocol : 'ssr'} key=${!!CLERK_PUBLISHABLE_KEY} proxy=${CLERK_PROXY_URL}`);
 
 
 // Registers the Clerk token getter with queryClient so native API calls
@@ -92,8 +91,10 @@ function Root() {
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
+  setBootStage('clerk-init', `proxyUrl=${CLERK_PROXY_URL}`);
   createRoot(rootElement).render(
     <StrictMode>
+      <IosDebugOverlay />
       {CLERK_PUBLISHABLE_KEY ? (
         <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL}>
           <ClerkTokenBridge />

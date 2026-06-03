@@ -37,8 +37,9 @@ import ServicesOverview from "@/pages/services-overview";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { setBootStage } from "@/lib/boot-debug";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -209,52 +210,101 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
   const { user: localUser, isLoading: isLocalLoading } = useAuth();
   const syncingRef = useRef(false);
   const [syncComplete, setSyncComplete] = useState(false);
+  const [failedAt, setFailedAt] = useState<string | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const finishSync = useCallback((ok: boolean, reason?: string) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    syncingRef.current = false;
+    if (ok) {
+      setBootStage('ready');
+      setSyncComplete(true);
+    } else {
+      setBootStage('failed', reason);
+      setFailedAt(reason ?? 'unknown');
+    }
+  }, []);
 
   useEffect(() => {
     async function doSync() {
       if (syncingRef.current) return;
       if (!isAuthLoaded) return;
+
+      setBootStage('clerk-loaded', `isSignedIn=${isSignedIn}`);
+
       if (!isSignedIn) {
+        setBootStage('signed-out');
         setSyncComplete(true);
         return;
       }
       if (localUser) {
-        setSyncComplete(true);
+        setBootStage('loading-user', 'already cached');
+        finishSync(true);
         return;
       }
       if (isLocalLoading) return;
 
       syncingRef.current = true;
+
+      // Hard 15-second timeout — prevents eternal spinner
+      timeoutRef.current = setTimeout(() => {
+        setBootStage('timeout', 'sync did not complete within 15s');
+        setFailedAt('Timed out after 15s');
+      }, 15000);
+
       try {
+        setBootStage('getting-token');
         const token = await getToken();
         if (!token) {
-          setSyncComplete(true);
+          finishSync(false, 'getToken() returned null');
           return;
         }
+        setBootStage('token-ok', `len=${token.length}`);
 
+        setBootStage('syncing', resolveUrl('/api/auth/clerk-sync'));
         const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          credentials: 'include'
+          credentials: 'include',
         });
+
+        setBootStage('sync-ok', `status=${res.status}`);
 
         if (res.ok) {
           const userData = await res.json();
+          setBootStage('loading-user', `id=${userData?.id}`);
           queryClient.setQueryData(['/api/user'], userData);
+          finishSync(true);
+        } else {
+          const body = await res.text().catch(() => '');
+          finishSync(false, `clerk-sync ${res.status}: ${body.slice(0, 120)}`);
         }
-      } catch (error) {
-        console.error('Clerk sync error:', error);
-      } finally {
-        syncingRef.current = false;
-        setSyncComplete(true);
+      } catch (err: any) {
+        finishSync(false, String(err?.message ?? err));
       }
     }
 
     doSync();
-  }, [isAuthLoaded, isSignedIn, localUser, isLocalLoading, getToken]);
+  }, [isAuthLoaded, isSignedIn, localUser, isLocalLoading, getToken, finishSync]);
+
+  // Timeout / failure: show error + retry instead of hanging forever
+  if (failedAt) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-8 text-center">
+        <p className="text-red-500 font-medium">Something went wrong loading your account</p>
+        <p className="text-sm text-muted-foreground font-mono break-all">{failedAt}</p>
+        <button
+          className="mt-2 px-6 py-2 rounded-full bg-[#8c52ff] text-white text-sm font-medium"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (!syncComplete && isSignedIn && !localUser) {
     return (
