@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import App from "./App";
 import { SplashScreen } from "./components/splash-screen";
-import { IosDebugOverlay } from "./components/ios-debug-overlay";
 import { setClerkTokenGetter } from "@/lib/queryClient";
 import { setBootStage } from "@/lib/boot-debug";
 import "./index.css";
@@ -94,7 +93,6 @@ if (rootElement) {
   setBootStage('clerk-init', `proxyUrl=${CLERK_PROXY_URL}`);
   createRoot(rootElement).render(
     <StrictMode>
-      <IosDebugOverlay />
       {CLERK_PUBLISHABLE_KEY ? (
         <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL}>
           <ClerkTokenBridge />
