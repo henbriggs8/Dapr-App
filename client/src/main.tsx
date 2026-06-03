@@ -7,6 +7,26 @@ import { setClerkTokenGetter } from "@/lib/queryClient";
 import { setBootStage } from "@/lib/boot-debug";
 import "./index.css";
 
+// ── iOS crash catcher ─────────────────────────────────────────────────────────
+// Writes uncaught JS errors to the screen using raw DOM (no React needed),
+// so they're visible in Xcode AND on the device screen before React boots.
+(function installCrashCatcher() {
+  function showError(msg: string) {
+    console.error('[CRASH]', msg);
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;inset:0;background:#fff;color:#c00;font:14px/1.4 monospace;padding:40px 20px;z-index:99999;overflow:auto;white-space:pre-wrap;word-break:break-all;';
+    el.textContent = '[CRASH]\n' + msg;
+    document.body?.appendChild(el);
+  }
+  window.addEventListener('error', (e) => {
+    showError((e.error?.stack ?? e.message) + '\n\n' + e.filename + ':' + e.lineno);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e.reason;
+    showError(r?.stack ?? String(r));
+  });
+})();
+
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 // Production Clerk keys need clerk.<domain> subdomain. Instead, proxy through
