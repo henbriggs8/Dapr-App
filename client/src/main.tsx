@@ -27,25 +27,35 @@ const CLERK_PROXY_URL = (() => {
 //  2. Monkey-patching window.fetch to add X-Proxy-Session to every /clerk-proxy/ call.
 //  3. The server maintains a cookie jar keyed by session ID, injecting Clerk
 //     cookies into upstream requests so Clerk sees a consistent client identity.
-if (typeof window !== 'undefined' && window.location.protocol === 'capacitor:') {
-  const SID_KEY = 'clerk_proxy_session_id';
-  let sid = localStorage.getItem(SID_KEY);
-  if (!sid) {
-    sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem(SID_KEY, sid);
-  }
-  const proxyBase = import.meta.env.VITE_API_BASE_URL || 'https://dapper-pros.replit.app';
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
-    if (url.includes(proxyBase + '/clerk-proxy/') || url.includes('/clerk-proxy/')) {
-      const headers = new Headers((init?.headers as HeadersInit) || {});
-      headers.set('X-Proxy-Session', sid!);
-      return nativeFetch(input, { ...init, headers });
+try {
+  if (typeof window !== 'undefined' && window.location.protocol === 'capacitor:') {
+    const SID_KEY = 'clerk_proxy_session_id';
+    let sid = localStorage.getItem(SID_KEY);
+    if (!sid) {
+      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(SID_KEY, sid);
     }
-    return nativeFetch(input, init);
-  };
-  console.log('[AuthInit] iOS fetch patch applied, proxy session:', sid);
+    const proxyBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      try {
+        const url = typeof input === 'string'
+          ? input
+          : (input instanceof URL ? input.href : (input as Request).url);
+        if (url && (url.includes(proxyBase + '/clerk-proxy/') || url.includes('/clerk-proxy/'))) {
+          const headers = new Headers((init?.headers as HeadersInit | undefined) ?? {});
+          headers.set('X-Proxy-Session', sid as string);
+          return nativeFetch(input, { ...init, headers });
+        }
+      } catch (_) {
+        // fall through to native fetch on any URL-parsing error
+      }
+      return nativeFetch(input, init);
+    };
+    console.log('[AuthInit] iOS fetch patch applied, proxy session:', sid);
+  }
+} catch (patchErr) {
+  console.error('[AuthInit] fetch patch failed (non-fatal):', patchErr);
 }
 
 // ── Boot instrumentation ────────────────────────────────────────────────────

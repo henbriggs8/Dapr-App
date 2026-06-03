@@ -76,7 +76,7 @@ title = "Sparkling clean car"
 id = "6lu9UXw7zDs4o5tOwWkbk"
 uri = "file://dist_public.tar.gz"
 type = "unspecified"
-title = "iOS Bundle (session fix — built Jun 2)"
+title = "iOS Bundle (crash-safe, Jun 3)"
 
 [[outputs]]
 id = "Sbjeha-fFK-cSiTZ4B5ik"
