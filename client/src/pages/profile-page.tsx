@@ -948,15 +948,18 @@ export default function ProfilePage() {
                 </div>
                 <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
               </button>
-              <div className="flex items-center gap-3 px-4 py-4 opacity-50 cursor-not-allowed">
+              <button
+                onClick={() => setLocation('/terms')}
+                className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
                 <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
                   <Icon icon={Hash} size="sm" className="text-gray-500" />
                 </div>
-                <div>
+                <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-black">Terms of service</p>
-                  <p className="text-xs text-gray-500">Coming soon</p>
                 </div>
-              </div>
+                <Icon icon={ChevronRight} size="sm" className="text-gray-400" />
+              </button>
             </div>
           </div>
 
