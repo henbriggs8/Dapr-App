@@ -152,15 +152,22 @@ function LandingScreen({
 }: {
   phone: string;
   setPhone: (v: string) => void;
-  onNext: () => void;
+  onNext: (identifier: string) => void;
   onGoogle: () => void;
   onApple: () => void;
   loading: boolean;
   error: string;
   isProviderMode?: boolean;
 }) {
+  const [inputMode, setInputMode] = useState<'phone' | 'email'>('phone');
+  const [email, setEmail] = useState('');
+
   const digits = phone.replace(/\D/g, '');
-  const canSubmit = digits.length >= 10;
+  const e164Local = `+1${digits}`;
+  const phoneReady = digits.length >= 10;
+  const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = inputMode === 'phone' ? phoneReady : emailReady;
+  const identifier = inputMode === 'phone' ? e164Local : email.trim();
 
   const formatDisplay = (raw: string) => {
     const d = raw.replace(/\D/g, '').slice(0, 10);
@@ -189,31 +196,68 @@ function LandingScreen({
         )}
       </div>
 
-      {/* Phone input */}
+      {/* Phone / Email toggle */}
+      <div className="flex mb-4 rounded-lg bg-[#f2f2f2] p-1 gap-1">
+        <button
+          type="button"
+          onClick={() => setInputMode('phone')}
+          className={`flex-1 h-[36px] rounded-md text-[13px] font-medium transition-all ${inputMode === 'phone' ? 'bg-white text-[#111] shadow-sm' : 'text-[#888]'}`}
+        >
+          Phone
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputMode('email')}
+          className={`flex-1 h-[36px] rounded-md text-[13px] font-medium transition-all ${inputMode === 'email' ? 'bg-white text-[#111] shadow-sm' : 'text-[#888]'}`}
+        >
+          Email
+        </button>
+      </div>
+
+      {/* Input */}
       <div className="mb-1">
-        <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
-        <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden">
-          <div className="flex h-full items-center gap-1.5 px-3 border-r border-[#d8d8d8] shrink-0">
-            <span className="text-[18px] leading-none">🇺🇸</span>
-            <svg className="w-3 h-3 text-[#666]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          <div className="flex h-full flex-1 items-center">
-            <span className="pl-3 text-[14px] text-[#111] font-medium select-none">+1</span>
+        {inputMode === 'phone' ? (
+          <>
+            <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
+            <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden">
+              <div className="flex h-full items-center gap-1.5 px-3 border-r border-[#d8d8d8] shrink-0">
+                <span className="text-[18px] leading-none">🇺🇸</span>
+                <svg className="w-3 h-3 text-[#666]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              <div className="flex h-full flex-1 items-center">
+                <span className="pl-3 text-[14px] text-[#111] font-medium select-none">+1</span>
+                <input
+                  value={formatDisplay(phone)}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext(identifier)}
+                  placeholder="(201) 555-0123"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  autoFocus
+                  className="h-full flex-1 bg-transparent px-2 text-[14px] text-[#111] outline-none placeholder:text-[#b0b0b0]"
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] font-medium text-[#111] mb-2">Email address</p>
             <input
-              value={formatDisplay(phone)}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext()}
-              placeholder="(201) 555-0123"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext(identifier)}
+              placeholder="you@example.com"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
               autoFocus
-              className="h-full flex-1 bg-transparent px-2 text-[14px] text-[#111] outline-none placeholder:text-[#b0b0b0]"
+              className="w-full h-[52px] border border-[#d8d8d8] rounded-lg px-4 text-[14px] text-[#111] outline-none focus:border-[#8c52ff] placeholder:text-[#b0b0b0]"
             />
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {error && <ErrorBanner msg={error} />}
@@ -221,7 +265,7 @@ function LandingScreen({
       {/* Continue button */}
       <button
         type="button"
-        onClick={onNext}
+        onClick={() => onNext(identifier)}
         disabled={!canSubmit || loading}
         className="mt-4 inline-flex h-[52px] w-full items-center justify-center rounded-lg bg-[#111] text-[15px] font-semibold text-white transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
       >
@@ -1032,11 +1076,11 @@ function AuthFlow() {
 
   // ── Step handlers ──────────────────────────────────────────────────────────
 
-  const handleEmailNext = async () => {
+  const handleIdentifierNext = async (id: string) => {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn!.create({ identifier: e164 });
+      const result = await signIn!.create({ identifier: id });
 
       // Determine which first factor to use — prefer password, then phone OTP, then email OTP
       const factors = result.supportedFirstFactors ?? [];
@@ -1403,7 +1447,7 @@ function AuthFlow() {
       <LandingScreen
         phone={landingPhone}
         setPhone={setLandingPhone}
-        onNext={handleEmailNext}
+        onNext={handleIdentifierNext}
         onGoogle={handleGoogleSignIn}
         onApple={handleAppleSignIn}
         loading={loading}
