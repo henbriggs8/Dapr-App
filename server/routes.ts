@@ -2235,6 +2235,7 @@ export function registerRoutes(app: Express): Server {
       // Check if we already have a user with this Clerk ID (stored in username for now)
       const clerkUsername = `clerk_${clerkUserId}`;
       let user = await storage.getUserByUsername(clerkUsername);
+      const wantsProvider = req.body?.isProvider === true;
       
       if (!user) {
         // Create a new user in our database
@@ -2245,12 +2246,15 @@ export function registerRoutes(app: Express): Server {
         user = await storage.createUser({
           username: clerkUsername,
           password: Math.random().toString(36), // Random password, won't be used
-          isProvider: false,
+          isProvider: wantsProvider,
           isAdmin: false,
           name: name || 'User',
           email: email || null,
           phone: phone || null
         });
+      } else if (wantsProvider && !user.isProvider) {
+        // Existing user signing in via provider portal — upgrade them to provider
+        user = await storage.updateUser(user.id, { isProvider: true });
       }
       
       // Establish passport session for this user

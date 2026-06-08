@@ -54,6 +54,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
+  updateUser(id: number, updates: Partial<Pick<User, 'isProvider' | 'isAdmin'>>): Promise<User>;
   updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void>;
   deleteUser(id: number): Promise<void>;
   getProviders(): Promise<User[]>;
@@ -435,6 +436,14 @@ export class MemStorage implements IStorage {
     
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUser(id: number, updates: Partial<Pick<User, 'isProvider' | 'isAdmin'>>): Promise<User> {
+    const user = await this.getUser(id);
+    if (!user) throw new Error('User not found');
+    const updated = { ...user, ...updates };
+    this.users.set(id, updated);
+    return updated;
   }
 
   async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void> {
@@ -1621,6 +1630,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(users.id, id))
       .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<Pick<User, 'isProvider' | 'isAdmin'>>): Promise<User> {
+    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
     return user;
   }
 

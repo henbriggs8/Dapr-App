@@ -849,8 +849,9 @@ function AuthFlow() {
           console.log(`[Auth] calling ${syncUrl}`);
           const syncRes = await fetch(syncUrl, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             credentials: 'include',
+            body: JSON.stringify({ isProvider: isProviderMode }),
           });
           const syncBody = await syncRes.text();
           console.log(`[Auth] /api/auth/clerk-sync response status=${syncRes.status} body=${syncBody}`);
@@ -958,6 +959,7 @@ function AuthFlow() {
   // Demo mode: ?demo=1 in URL lets you preview sign-up screens without Clerk
   const params = new URLSearchParams(window.location.search);
   const isDemo = params.get('demo') === '1';
+  const isProviderMode = params.get('provider') === '1';
   const rawRedirect = params.get('redirect') || '';
   // Only allow same-origin in-app paths to avoid open-redirect; keep query string.
   const safeRedirect =
