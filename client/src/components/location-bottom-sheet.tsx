@@ -1119,36 +1119,6 @@ function ConfirmStep({
         return;
       }
 
-      // On iOS native, open a Stripe Checkout Session in Safari View Controller
-      // so Apple Pay / Google Pay work natively (WKWebView blocks web Payment Request API).
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const { Browser } = await import("@capacitor/browser");
-          const headers: Record<string, string> = { "Content-Type": "application/json" };
-          const token = await getToken().catch(() => null);
-          if (token) headers["Authorization"] = `Bearer ${token}`;
-          const checkoutRes = await fetch(resolveUrl(`/api/bookings/${payData.bookingId}/ios-checkout`), {
-            method: "POST",
-            headers,
-            credentials: "include",
-            body: JSON.stringify(appliedPromo ? { promoCode: appliedPromo.code } : {}),
-          });
-          if (!checkoutRes.ok) throw new Error(`Checkout session failed (${checkoutRes.status})`);
-          const { url } = await checkoutRes.json();
-          try { sessionStorage.setItem("pendingPaymentBookingId", String(payData.bookingId)); } catch {}
-          await Browser.open({ url });
-        } catch (err: any) {
-          console.error("[iOS Checkout] error:", err);
-          // Fall back to embedded card form if something goes wrong
-          if (payData.clientSecret) {
-            setStripeClientSecret(payData.clientSecret);
-            setStripeBookingId(payData.bookingId);
-            setStripeAmountCents(payData.amountInCents ?? Math.round(discountedPrice * 100));
-          }
-        }
-        return;
-      }
-
       if (!payData.clientSecret) throw new Error("Missing payment client secret.");
 
       // Web: show embedded Stripe card form

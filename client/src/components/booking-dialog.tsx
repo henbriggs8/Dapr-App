@@ -6,8 +6,8 @@ import { apiRequest, queryClient, resolveUrl } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,79 @@ import { useState, useEffect, useMemo } from "react";
 import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-size-detector";
 import { ADD_ONS, getSelectedAddOnIds, clearSelectedAddOns } from "@/utils/add-ons";
 import { useLocation } from "wouter";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
+function InlinePaymentForm({
+  clientSecret,
+  amountCents,
+  bookingId,
+  onSuccess,
+  onCancel,
+}: {
+  clientSecret: string;
+  amountCents: number;
+  bookingId: number;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [paying, setPaying] = useState(false);
+
+  const handlePay = async () => {
+    if (!stripe || !elements) return;
+    setPaying(true);
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) { setPaying(false); return; }
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement },
+    });
+    setPaying(false);
+    if (error) {
+      toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <p className="text-2xl font-bold text-[#8c52ff]">${(amountCents / 100).toFixed(2)}</p>
+        <p className="text-sm text-gray-500 mt-1">Secure payment via Stripe</p>
+      </div>
+      <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: "16px",
+                color: "#1a1a1a",
+                "::placeholder": { color: "#9ca3af" },
+              },
+            },
+          }}
+        />
+      </div>
+      <Button
+        className="w-full bg-[#8c52ff] hover:bg-[#7a3fe0] text-white h-12 text-base font-semibold"
+        onClick={handlePay}
+        disabled={paying}
+      >
+        {paying ? (
+          <><Icon icon={Loader2} size="sm" className="mr-2 animate-spin" />Processing…</>
+        ) : (
+          `Pay $${(amountCents / 100).toFixed(2)}`
+        )}
+      </Button>
+      <button onClick={onCancel} className="w-full text-sm text-gray-500 py-1">
+        Cancel
+      </button>
+    </div>
+  );
+}
 
 interface PrefillData {
   selectedVehicle?: any;
@@ -91,6 +164,11 @@ export default function BookingDialog({
     () => selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0),
     [selectedAddOns],
   );
+
+  // Stripe embedded payment state
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripeBookingId, setStripeBookingId] = useState<number | null>(null);
+  const [stripeAmountCents, setStripeAmountCents] = useState<number>(0);
 
   // Track total price
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -163,25 +241,16 @@ export default function BookingDialog({
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-      const parsed = await res.json() as { paymentUrl: string };
-      if (!parsed.paymentUrl) throw new Error("Server response missing paymentUrl");
-      return parsed;
+      const parsed = await res.json() as { paymentUrl?: string; clientSecret?: string; amountInCents?: number };
+      return { ...parsed, bookingId };
     },
-    onSuccess: async (data, bookingId) => {
-      try { sessionStorage.setItem("pendingPaymentBookingId", String(bookingId)); } catch {}
-      onClose();
-
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await Browser.open({ url: data.paymentUrl });
-        } catch (e) {
-          toast({
-            title: "Could not open payment page",
-            description: String((e as Error)?.message || e),
-            variant: "destructive",
-          });
-        }
-      } else {
+    onSuccess: (data) => {
+      try { sessionStorage.setItem("pendingPaymentBookingId", String(data.bookingId)); } catch {}
+      if (data.clientSecret) {
+        setStripeClientSecret(data.clientSecret);
+        setStripeBookingId(data.bookingId);
+        setStripeAmountCents(data.amountInCents ?? Math.round(totalPrice * 100));
+      } else if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       }
     },
@@ -452,6 +521,35 @@ export default function BookingDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
+        {stripeClientSecret && stripeBookingId ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Complete Payment</DialogTitle>
+              <DialogDescription>Enter your card details to confirm the booking.</DialogDescription>
+            </DialogHeader>
+            <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret, appearance: { theme: "stripe" } }}>
+              <InlinePaymentForm
+                clientSecret={stripeClientSecret}
+                amountCents={stripeAmountCents}
+                bookingId={stripeBookingId}
+                onSuccess={() => {
+                  const id = stripeBookingId;
+                  setStripeClientSecret(null);
+                  setStripeBookingId(null);
+                  setStripeAmountCents(0);
+                  onClose();
+                  navigate(`/matching?booking=${id}`);
+                }}
+                onCancel={() => {
+                  setStripeClientSecret(null);
+                  setStripeBookingId(null);
+                  setStripeAmountCents(0);
+                }}
+              />
+            </Elements>
+          </>
+        ) : (
+          <>
         <DialogHeader>
           <DialogTitle>{provider ? `Book with ${provider.name}` : "Book Your Service"}</DialogTitle>
           <DialogDescription>
@@ -828,6 +926,8 @@ export default function BookingDialog({
             </Button>
           </form>
         </Form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
