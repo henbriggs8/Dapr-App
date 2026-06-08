@@ -1128,6 +1128,7 @@ function ConfirmStep({
       if (Capacitor.isNativePlatform()) {
         try {
           await StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" });
+          await StripeNative.isApplePayAvailable(); // throws if Apple Pay not available
           await StripeNative.createApplePay({
             paymentIntentClientSecret: payData.clientSecret,
             paymentSummaryItems: [{ label: "Dapr Car Wash", amount: amountCents / 100 }],
