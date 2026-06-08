@@ -148,6 +148,7 @@ function LandingScreen({
   onApple,
   loading,
   error,
+  isProviderMode,
 }: {
   phone: string;
   setPhone: (v: string) => void;
@@ -156,6 +157,7 @@ function LandingScreen({
   onApple: () => void;
   loading: boolean;
   error: string;
+  isProviderMode?: boolean;
 }) {
   const digits = phone.replace(/\D/g, '');
   const canSubmit = digits.length >= 10;
@@ -177,7 +179,14 @@ function LandingScreen({
           className="w-[72px] h-[72px] mb-6"
           style={{ borderRadius: "18px" }}
         />
-        <AnimatedWordCycler />
+        {isProviderMode ? (
+          <div className="text-center">
+            <p className="text-[22px] font-bold text-[#111] leading-tight">Detail Pro Portal</p>
+            <p className="text-[13px] text-[#888] mt-1">Sign in to your provider account</p>
+          </div>
+        ) : (
+          <AnimatedWordCycler />
+        )}
       </div>
 
       {/* Phone input */}
@@ -254,14 +263,29 @@ function LandingScreen({
 
       {/* Detail Pro link */}
       <p className="text-center text-[12px] text-[#aaa] mt-6">
-        A detail pro?{" "}
-        <button
-          type="button"
-          onClick={() => window.location.href = "/provider-auth"}
-          className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
-        >
-          Sign in as a Detail Pro
-        </button>
+        {isProviderMode ? (
+          <>
+            Not a provider?{" "}
+            <button
+              type="button"
+              onClick={() => window.location.href = "/auth"}
+              className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+            >
+              Sign in as a customer
+            </button>
+          </>
+        ) : (
+          <>
+            A detail pro?{" "}
+            <button
+              type="button"
+              onClick={() => window.location.href = "/auth?provider=1"}
+              className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+            >
+              Sign in as a Detail Pro
+            </button>
+          </>
+        )}
       </p>
     </div>
   );
@@ -1384,6 +1408,7 @@ function AuthFlow() {
         onApple={handleAppleSignIn}
         loading={loading}
         error={error}
+        isProviderMode={params.get('provider') === '1'}
       />
     );
   }
