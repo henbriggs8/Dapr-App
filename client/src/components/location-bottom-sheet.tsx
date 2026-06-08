@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
+import { Stripe as StripeNative, ApplePayEventsEnum } from "@capacitor-community/stripe";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -1121,10 +1122,35 @@ function ConfirmStep({
 
       if (!payData.clientSecret) throw new Error("Missing payment client secret.");
 
-      // Web: show embedded Stripe card form
+      const amountCents = payData.amountInCents ?? Math.round(discountedPrice * 100);
+
+      // On iOS native: try Apple Pay via the native Stripe SDK first
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" });
+          await StripeNative.createApplePay({
+            paymentIntentClientSecret: payData.clientSecret,
+            paymentSummaryItems: [{ label: "Dapr Car Wash", amount: amountCents / 100 }],
+            merchantIdentifier: "merchant.com.autodapper.app",
+            countryCode: "US",
+            currency: "USD",
+          });
+          const result = await StripeNative.presentApplePay();
+          if (result.paymentResult === ApplePayEventsEnum.Completed) {
+            queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+            setLocation(`/matching?booking=${payData.bookingId}`);
+            return;
+          }
+          // User cancelled Apple Pay — fall through to card form
+        } catch (err) {
+          console.log("[Apple Pay] not available, falling back to card form:", err);
+        }
+      }
+
+      // Web or iOS fallback: show embedded Stripe card form
       setStripeClientSecret(payData.clientSecret);
       setStripeBookingId(payData.bookingId);
-      setStripeAmountCents(payData.amountInCents ?? Math.round(discountedPrice * 100));
+      setStripeAmountCents(amountCents);
     },
   });
 
