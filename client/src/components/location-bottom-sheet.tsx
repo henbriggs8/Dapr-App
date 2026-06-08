@@ -70,6 +70,38 @@ function StripePaymentForm({
   const [googlePayAvailable, setGooglePayAvailable] = useState(false);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+  const [nativeApplePayAvailable, setNativeApplePayAvailable] = useState(false);
+  const [payingAppleNative, setPayingAppleNative] = useState(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" })
+      .then(() => StripeNative.isApplePayAvailable())
+      .then(() => setNativeApplePayAvailable(true))
+      .catch(() => setNativeApplePayAvailable(false));
+  }, []);
+
+  const handleNativeApplePay = async () => {
+    if (payingAppleNative) return;
+    setPayingAppleNative(true);
+    try {
+      await StripeNative.createApplePay({
+        paymentIntentClientSecret: clientSecret,
+        paymentSummaryItems: [{ label: "Dapr Car Wash", amount: amountCents / 100 }],
+        merchantIdentifier: "merchant.com.autodapper.app",
+        countryCode: "US",
+        currency: "USD",
+      });
+      const result = await StripeNative.presentApplePay();
+      if (result.paymentResult === ApplePayEventsEnum.Completed) {
+        onSuccess();
+      }
+    } catch (err) {
+      console.log("[Native Apple Pay] error:", err);
+    } finally {
+      setPayingAppleNative(false);
+    }
+  };
 
   useEffect(() => {
     if (!stripe || !amountCents) return;
@@ -255,6 +287,34 @@ function StripePaymentForm({
           <div className="flex items-center gap-3 pt-1">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-[12px] text-gray-400 font-medium">or enter new card</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+        </div>
+      )}
+
+      {/* Native Apple Pay button — iOS only, shown when available */}
+      {nativeApplePayAvailable && (
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleNativeApplePay}
+            disabled={payingAppleNative || paying}
+            className="w-full h-[52px] rounded-lg flex items-center justify-center gap-2 font-semibold text-[16px] transition disabled:opacity-60"
+            style={{ background: "#000", color: "#fff" }}
+          >
+            {payingAppleNative ? (
+              <Icon icon={Loader2} size="sm" className="animate-spin text-white" />
+            ) : (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.38.07 2.34.74 3.15.8 1.2-.24 2.35-.93 3.63-.84 1.54.12 2.7.71 3.46 1.81-3.17 1.89-2.42 6.02.77 7.17-.59 1.56-1.37 3.1-3.01 3.94zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+                Pay
+              </>
+            )}
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[12px] text-gray-400 font-medium">or pay another way</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
         </div>
@@ -1124,31 +1184,7 @@ function ConfirmStep({
 
       const amountCents = payData.amountInCents ?? Math.round(discountedPrice * 100);
 
-      // On iOS native: try Apple Pay via the native Stripe SDK first
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" });
-          await StripeNative.isApplePayAvailable(); // throws if Apple Pay not available
-          await StripeNative.createApplePay({
-            paymentIntentClientSecret: payData.clientSecret,
-            paymentSummaryItems: [{ label: "Dapr Car Wash", amount: amountCents / 100 }],
-            merchantIdentifier: "merchant.com.autodapper.app",
-            countryCode: "US",
-            currency: "USD",
-          });
-          const result = await StripeNative.presentApplePay();
-          if (result.paymentResult === ApplePayEventsEnum.Completed) {
-            queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
-            setLocation(`/matching?booking=${payData.bookingId}`);
-            return;
-          }
-          // User cancelled Apple Pay — fall through to card form
-        } catch (err) {
-          console.log("[Apple Pay] not available, falling back to card form:", err);
-        }
-      }
-
-      // Web or iOS fallback: show embedded Stripe card form
+      // Show the embedded payment form (Apple Pay button is inside it on iOS)
       setStripeClientSecret(payData.clientSecret);
       setStripeBookingId(payData.bookingId);
       setStripeAmountCents(amountCents);
