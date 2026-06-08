@@ -84,6 +84,7 @@ function StripePaymentForm({
   const handleNativeApplePay = async () => {
     if (payingAppleNative) return;
     setPayingAppleNative(true);
+    setPayError(null);
     try {
       await StripeNative.createApplePay({
         paymentIntentClientSecret: clientSecret,
@@ -96,7 +97,12 @@ function StripePaymentForm({
       if (result.paymentResult === ApplePayEventsEnum.Completed) {
         onSuccess();
       }
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      // Don't show anything for user-cancelled
+      if (!msg.toLowerCase().includes("cancel")) {
+        setPayError("Apple Pay isn't set up for this app yet. Please pay with a card below.");
+      }
       console.log("[Native Apple Pay] error:", err);
     } finally {
       setPayingAppleNative(false);
