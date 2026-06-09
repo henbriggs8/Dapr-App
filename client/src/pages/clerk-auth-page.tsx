@@ -306,20 +306,32 @@ function LandingScreen({
       </div>
 
       {/* Detail Pro link */}
-      <p className="text-center text-[12px] text-[#aaa] mt-6">
+      <div className="mt-6 flex flex-col items-center gap-2">
         {isProviderMode ? (
           <>
-            Not a provider?{" "}
-            <button
-              type="button"
-              onClick={() => window.location.href = "/auth"}
-              className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
-            >
-              Sign in as a customer
-            </button>
+            <p className="text-center text-[12px] text-[#aaa]">
+              New to Dapr?{" "}
+              <button
+                type="button"
+                onClick={() => window.location.href = "/auth?provider=1&mode=signup"}
+                className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+              >
+                Become a Detail Pro
+              </button>
+            </p>
+            <p className="text-center text-[12px] text-[#aaa]">
+              Not a provider?{" "}
+              <button
+                type="button"
+                onClick={() => window.location.href = "/auth"}
+                className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+              >
+                Sign in as a customer
+              </button>
+            </p>
           </>
         ) : (
-          <>
+          <p className="text-center text-[12px] text-[#aaa]">
             A detail pro?{" "}
             <button
               type="button"
@@ -328,9 +340,9 @@ function LandingScreen({
             >
               Sign in as a Detail Pro
             </button>
-          </>
+          </p>
         )}
-      </p>
+      </div>
     </div>
   );
 }
