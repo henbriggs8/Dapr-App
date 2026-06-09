@@ -556,8 +556,15 @@ export function registerRoutes(app: Express): Server {
         !req.user.isAdmin) {
       return res.status(403).send("Access denied");
     }
+
+    // Enrich with provider name so the tracking screen can show the real name
+    let providerName: string | null = null;
+    if (booking.providerId) {
+      const provider = await storage.getUser(booking.providerId);
+      providerName = provider?.name || provider?.username || null;
+    }
     
-    res.json(booking);
+    res.json({ ...booking, providerName });
   });
   
   app.get("/api/provider/active-bookings", async (req, res) => {

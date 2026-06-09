@@ -463,8 +463,10 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
     if (bookingPoll?.currentStage) setCurrentStage(bookingPoll.currentStage);
   }, [bookingPoll?.status, bookingPoll?.arrivalTime, bookingPoll?.currentStage]);
 
-  // Mock provider info (real data would come from booking/assignment API)
-  const providerName = "Marcus T.";
+  // Real provider info from the booking
+  const providerName: string =
+    (bookingPoll as any)?.providerName ||
+    (bookingPoll?.providerId ? `Pro #${bookingPoll.providerId}` : "Your Detail Pro");
   const providerRating = 4.9;
 
   // WebSocket
