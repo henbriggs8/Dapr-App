@@ -562,6 +562,25 @@ export default function ProviderDashboard() {
 
                   {booking.status === 'assigned' && (
                     <div className="space-y-2">
+                      {/* Get Directions */}
+                      {booking.serviceLocation && (
+                        <button
+                          onClick={() => {
+                            const addr = encodeURIComponent(booking.serviceLocation!);
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                            const url = isIOS
+                              ? `maps://maps.apple.com/?daddr=${addr}`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${addr}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-[#e8f5e9] text-[#1b5e20] text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        >
+                          <Icon icon={Navigation} size="sm" className="text-green-700" />
+                          Get Directions
+                        </button>
+                      )}
+
                       {!(booking as any).arrivalTime && (
                         <button
                           onClick={() => markArrivedMutation.mutate(booking.id)}
