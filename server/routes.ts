@@ -2259,10 +2259,9 @@ export function registerRoutes(app: Express): Server {
           email: email || null,
           phone: phone || null
         });
-      } else if (wantsProvider && !user.isProvider) {
-        // Existing user signing in via provider portal — upgrade them to provider
-        user = await storage.updateUser(user.id, { isProvider: true });
       }
+      // Note: never auto-upgrade existing accounts to provider — that must be done
+      // explicitly (e.g. admin panel) to avoid accidentally flipping customer accounts.
       
       // Establish passport session for this user
       await new Promise<void>((resolve, reject) => {
