@@ -29,14 +29,24 @@ import "./index.css";
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-// Production Clerk keys need clerk.<domain> subdomain. Instead, proxy through
-// our own server so this works on any domain (Replit dev, iOS, production).
-// Must be an absolute URL — Clerk uses it to construct the clerk.browser.js script src.
+// The Clerk proxy is used for:
+//   • Native iOS (Capacitor) — WKWebView can't handle cross-origin cookies.
+//   • Dev/Replit preview — *.replit.dev isn't registered in Clerk Production.
+// On the PRODUCTION domain (autodapper.com) we skip the proxy entirely.
+// This is critical for OAuth (Google/Apple Sign In): Clerk stores the OAuth
+// state cookie on clerk.autodapper.com, and Apple/Google redirect back there.
+// If we proxied through www.autodapper.com, those cookies would be on the
+// wrong domain and Clerk would return authorization_invalid at callback time.
 const CLERK_PROXY_URL = (() => {
-  if (typeof window === 'undefined') return '/clerk-proxy';
+  if (typeof window === 'undefined') return undefined;
   if (window.location.protocol === 'capacitor:') {
     return `${import.meta.env.VITE_API_BASE_URL || 'https://dapper-pros.replit.app'}/clerk-proxy`;
   }
+  // Production web: talk directly to clerk.autodapper.com (no proxy).
+  if (window.location.hostname.endsWith('autodapper.com')) {
+    return undefined;
+  }
+  // Dev/Replit preview: proxy is needed to reach Clerk from an unregistered domain.
   return `${window.location.origin}/clerk-proxy`;
 })();
 
@@ -114,7 +124,7 @@ if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
       {CLERK_PUBLISHABLE_KEY ? (
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} proxyUrl={CLERK_PROXY_URL}>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} {...(CLERK_PROXY_URL ? { proxyUrl: CLERK_PROXY_URL } : {})}>
           <ClerkTokenBridge />
           <Root />
         </ClerkProvider>
