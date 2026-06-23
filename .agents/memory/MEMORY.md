@@ -1,3 +1,1 @@
-- [Clerk iOS proxy bugs](clerk-ios-proxy.md) — three bugs (CORS order, npm.clerk.io DNS, jsDelivr gzip) that prevent Clerk initializing in WKWebView; fix details inside.
-- [Clerk 2FA bug](clerk-2fa-bug.md) — after password→needs_second_factor, must call attemptSecondFactor not attemptFirstFactor for the OTP step.
-- [Clerk iOS cookie workaround](clerk-ios-proxy.md) — WKWebView never sends cross-origin cookies; server-side session store keyed by X-Proxy-Session header (localStorage UUID) is the fix.
+- [Clerk OAuth + Proxy cookie conflict](clerk-oauth-proxy.md) — removing the proxy on autodapper.com fixes authorization_invalid for Google/Apple Sign In
