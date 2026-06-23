@@ -22,7 +22,9 @@ import {
 } from "@stripe/react-stripe-js";
 import type { PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+const stripePromise = Capacitor.isNativePlatform()
+  ? Promise.resolve(null)
+  : loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 // ── Saved card type ────────────────────────────────────────────────────────────
 interface SavedCard {

@@ -31,7 +31,11 @@ import { getVehicleSizeFromStorage, type VehicleSize } from "@/utils/vehicle-siz
 import { ADD_ONS, getSelectedAddOnIds, clearSelectedAddOns } from "@/utils/add-ons";
 import { useLocation } from "wouter";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+import { Capacitor } from "@capacitor/core";
+
+const stripePromise = Capacitor.isNativePlatform()
+  ? Promise.resolve(null)
+  : loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 function InlinePaymentForm({
   clientSecret,
