@@ -277,6 +277,13 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/download/dapr-ios', (req, res) => {
+  const file = `${process.cwd()}/dist/public/dapr-ios.zip`;
+  res.download(file, 'dapr-ios.zip', (err) => {
+    if (err) res.status(404).send('File not ready — please ask to regenerate it.');
+  });
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
