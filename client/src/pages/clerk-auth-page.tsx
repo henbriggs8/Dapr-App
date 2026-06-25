@@ -1346,17 +1346,50 @@ function AuthFlow() {
     setError('');
     try {
       if (Capacitor.isNativePlatform()) {
-        const { Browser } = await import('@capacitor/browser');
-        // Use Clerk's Account Portal (accounts.autodapper.com) — a live Clerk-managed
-        // server. This avoids all proxy cookie-domain issues: Clerk sets __client on
-        // clerk.autodapper.com in the system cookie store directly, so the OAuth flow
-        // can validate state without a domain mismatch → no authorization_invalid.
-        // After the user signs in, Clerk redirects to native-sso-callback with a
-        // __clerk_ticket the app exchanges for a session via handleRedirectCallback().
-        const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
-        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
-        console.log('[Auth] Apple OAuth: opening Clerk Account Portal');
-        await Browser.open({ url: portalUrl });
+        // Native Apple Sign-In: no browser, no redirects, no cookie issues.
+        // 1. iOS presents the native Apple sheet → get identityToken
+        // 2. Exchange directly with Clerk via proxy (Origin: autodapper.com)
+        // 3. Activate session — done.
+        const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+        console.log('[Auth] Native Apple Sign-In: requesting credential…');
+        const appleResult = await SignInWithApple.authorize({
+          clientId: 'com.autodapper.app',
+          redirectURI: 'https://dapper-pros.replit.app',
+          scopes: 'email name',
+          state: '',
+          nonce: '',
+        });
+        const { identityToken } = appleResult.response;
+        if (!identityToken) throw new Error('Apple did not return an identity token');
+        console.log('[Auth] Apple identity token received, exchanging with Clerk…');
+
+        // Try sign-in first; fall back to sign-up for brand-new Apple accounts.
+        let sessionId: string | null = null;
+        try {
+          const result = await signIn!.create({
+            strategy: 'oauth_apple',
+            token: identityToken,
+          } as any);
+          sessionId = result.createdSessionId;
+        } catch (signInErr: any) {
+          // If user doesn't exist yet, create account via sign-up
+          const code = signInErr?.errors?.[0]?.code ?? '';
+          if (code === 'form_identifier_not_found' || code === 'external_account_not_found') {
+            console.log('[Auth] No existing account — creating new user via sign-up…');
+            const upResult = await signUp!.create({
+              strategy: 'oauth_apple',
+              token: identityToken,
+            } as any);
+            sessionId = upResult.createdSessionId;
+          } else {
+            throw signInErr;
+          }
+        }
+        if (sessionId) {
+          await setSignInActive!({ session: sessionId });
+          await queryClient.invalidateQueries();
+          navigate('/');
+        }
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
