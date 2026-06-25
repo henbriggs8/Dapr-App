@@ -790,7 +790,7 @@ function ProfileInfoScreen({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Step = 'landing' | 'profileInfo' | 'password' | 'phoneOtp' | 'emailOtp' | 'emailCollect' | 'setPassword' | 'welcome';
+type Step = 'landing' | 'profileInfo' | 'password' | 'phoneOtp' | 'emailOtp' | 'emailCollect' | 'setPassword' | 'welcome' | 'applePhoneCollect' | 'applePhoneOtp';
 
 export default function ClerkAuthPage() {
   const CLERK_AVAILABLE = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -1004,6 +1004,8 @@ function AuthFlow() {
   const [signUpLastName, setSignUpLastName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
+  // Apple Sign-In: phone collection step
+  const [appleSignUpPhone, setAppleSignUpPhone] = useState('');
 
   // Navigate to redirect destination (or home) once local user is synced.
   // Must be in effect, not render.
@@ -1415,8 +1417,13 @@ function AuthFlow() {
           await queryClient.invalidateQueries();
           setLoading(false);
           navigate('/');
+        } else if (clerkStatus === 'missing_requirements') {
+          // Clerk created the external account but needs a phone number to complete sign-up.
+          // Collect it now then verify via SMS OTP.
+          setLoading(false);
+          setError('');
+          setStep('applePhoneCollect');
         } else {
-          // Surface the status so we can debug unexpected flows
           throw new Error(`Apple sign-in incomplete (status: ${clerkStatus || 'unknown'}). Please try again.`);
         }
       } else {
@@ -1431,6 +1438,45 @@ function AuthFlow() {
       const msg = clerkError(err);
       console.error('[Auth] Apple sign-in error:', msg, err);
       setError(msg);
+    }
+  };
+
+  // ── Apple phone-collection handler ──────────────────────────────────────
+  const handleApplePhoneNext = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const digits = appleSignUpPhone.replace(/\D/g, '');
+      const e164 = `+1${digits}`;
+      await signUp!.update({ phoneNumber: e164 } as any);
+      await signUp!.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      setOtpPhoneHint(e164);
+      setOtpCode('');
+      setStep('applePhoneOtp');
+    } catch (err: any) {
+      setError(clerkError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplePhoneOtpNext = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
+      const sid = result.createdSessionId;
+      if (sid) {
+        await setSignUpActive!({ session: sid });
+        await queryClient.invalidateQueries();
+        navigate('/');
+      } else {
+        setError('Verification failed — please try again.');
+      }
+    } catch (err: any) {
+      setError(clerkError(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1642,6 +1688,71 @@ function AuthFlow() {
 
   if (step === 'welcome') {
     return <WelcomeScreen onContinue={() => navigate('/')} />;
+  }
+
+  if (step === 'applePhoneCollect') {
+    const digits = appleSignUpPhone.replace(/\D/g, '');
+    const ready = digits.length >= 10;
+    const formatDisplay = (raw: string) => {
+      const d = raw.replace(/\D/g, '').slice(0, 10);
+      if (d.length <= 3) return d;
+      if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+      return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+    };
+    return (
+      <div className="flex flex-col min-h-screen bg-white px-6 pt-16 pb-10">
+        <BackButton onBack={() => { setStep('landing'); setError(''); }} />
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mb-5">
+            <SiApple className="w-7 h-7 text-white" />
+          </div>
+          <p className="text-[22px] font-bold text-[#111] text-center leading-tight">One more step</p>
+          <p className="text-[13px] text-[#888] text-center mt-2">Enter your mobile number to finish creating your account with Apple.</p>
+        </div>
+        <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
+        <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden mb-1">
+          <div className="flex h-full items-center gap-1.5 px-3 border-r border-[#d8d8d8] shrink-0">
+            <span className="text-[18px] leading-none">🇺🇸</span>
+          </div>
+          <span className="pl-3 text-[14px] text-[#111] font-medium select-none">+1</span>
+          <input
+            value={formatDisplay(appleSignUpPhone)}
+            onChange={(e) => setAppleSignUpPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            onKeyDown={(e) => e.key === 'Enter' && ready && handleApplePhoneNext()}
+            placeholder="(201) 555-0123"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            autoFocus
+            className="h-full flex-1 bg-transparent px-2 text-[14px] text-[#111] outline-none placeholder:text-[#b0b0b0]"
+          />
+        </div>
+        {error && <ErrorBanner msg={error} />}
+        <button
+          className={`${primaryBtn} mt-5`}
+          disabled={!ready || loading}
+          onClick={handleApplePhoneNext}
+        >
+          {loading ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : 'Send verification code'}
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'applePhoneOtp') {
+    return (
+      <OtpScreen
+        title="Enter the code"
+        subtitle={`We sent a 6-digit code to ${otpPhoneHint || 'your phone'}. It may take a moment to arrive.`}
+        code={otpCode}
+        setCode={setOtpCode}
+        prefix="apple-phone"
+        onBack={() => { setStep('applePhoneCollect'); setError(''); setOtpCode(''); }}
+        onNext={handleApplePhoneOtpNext}
+        loading={loading}
+        error={error}
+      />
+    );
   }
 
   return null;
