@@ -757,7 +757,9 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {bookings.map((booking) => (
+              {bookings.map((booking) => {
+                const isActive = booking.status === "assigned" || booking.status === "in_progress";
+                return (
                 <div key={booking.id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
                   <div>
                     <h3 className="text-sm font-semibold text-black capitalize">
@@ -781,11 +783,23 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  <Badge className={`text-xs border-0 ${statusColor(booking.status)}`}>
-                    {booking.status.replace("_", " ")}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={`text-xs border-0 ${statusColor(booking.status)}`}>
+                      {booking.status.replace("_", " ")}
+                    </Badge>
+                    {isActive && (
+                      <button
+                        onClick={() => setLocation(`/tracking?booking=${booking.id}`)}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-[#8c52ff] bg-[#f3eeff] px-2.5 py-1 rounded-full active:opacity-70 transition"
+                      >
+                        <Icon icon={MapPin} size="xs" className="text-[#8c52ff]" />
+                        Track
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import {
   Bell, MoreHorizontal, Clock, Heart, Loader2, Droplets,
   Gauge, CarFront, Sparkles, Search, Home, Navigation,
-  ChevronRight, ChevronDown, CheckCircle2, Gift, type LucideIcon,
+  ChevronRight, ChevronDown, CheckCircle2, Gift, MapPin, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import React, { useEffect, useRef, useState } from "react";
@@ -76,7 +76,7 @@ export default function HomeScreen() {
     },
   });
 
-  const { data: bookings } = useQuery<{ serviceLocation: string; scheduledDate: string }[]>({
+  const { data: bookings } = useQuery<{ id: number; status: string; providerId?: number | null; serviceLocation: string; scheduledDate: string }[]>({
     queryKey: ["/api/bookings"],
     queryFn: async () => {
       const token = await getToken();
@@ -86,7 +86,13 @@ export default function HomeScreen() {
       if (!res.ok) return [];
       return res.json();
     },
+    refetchInterval: 10000,
+    staleTime: 0,
   });
+
+  const activeBooking = bookings?.find(
+    (b) => b.status === "assigned" || b.status === "in_progress"
+  ) ?? null;
 
   const { data: savedAddresses = [] } = useQuery<Array<{ id: number; label: string; address: string; isDefault: boolean }>>({
     queryKey: ["/api/addresses"],
@@ -222,6 +228,28 @@ export default function HomeScreen() {
             {full ? street : "Search address or vehicle location"}
           </span>
         </button>
+
+        {/* ── Active booking banner ────────────────────────────────────── */}
+        {activeBooking && (
+          <button
+            onClick={() => setLocation(`/tracking?booking=${activeBooking.id}`)}
+            className="w-full flex items-center gap-3 mt-2.5 rounded-2xl px-4 py-3.5 active:scale-[0.99] transition-all"
+            style={{ background: "linear-gradient(135deg, #8c52ff 0%, #6c3fcc 100%)" }}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Icon icon={MapPin} size="sm" className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-[12px] font-bold text-white/80 uppercase tracking-wide leading-none mb-0.5">
+                {activeBooking.status === "in_progress" ? "In Progress" : "Pro Matched"}
+              </p>
+              <p className="text-[14px] font-semibold text-white leading-tight">
+                {activeBooking.status === "in_progress" ? "Your wash is underway" : "Your detail pro is on the way"}
+              </p>
+            </div>
+            <Icon icon={ChevronRight} size="sm" className="text-white/70 shrink-0" />
+          </button>
+        )}
 
         {/* ── Mode row: time chip + Personal/Fleet toggle ──────────────── */}
         <div className="flex items-center gap-2 mt-2.5">
