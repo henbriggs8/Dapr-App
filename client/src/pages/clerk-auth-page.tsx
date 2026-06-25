@@ -797,8 +797,11 @@ export default function ClerkAuthPage() {
 
   if (!CLERK_AVAILABLE) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <p className="text-sm text-gray-500">Authentication not configured.</p>
+      <div className="min-h-screen flex items-center justify-center p-6 text-center">
+        <div>
+          <p className="text-sm font-medium text-gray-800 mb-2">Missing environment variables</p>
+          <p className="text-xs text-gray-500">Create a <code>.env.local</code> file with<br/><code>VITE_CLERK_PUBLISHABLE_KEY=pk_live_…</code><br/>then run <code>npm run build</code> and <code>npx cap sync ios</code></p>
+        </div>
       </div>
     );
   }
