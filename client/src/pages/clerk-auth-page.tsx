@@ -1346,10 +1346,9 @@ function AuthFlow() {
     setError('');
     try {
       if (Capacitor.isNativePlatform()) {
-        // Native Apple Sign-In: no browser, no redirects, no cookie issues.
-        // 1. iOS presents the native Apple sheet → get identityToken
-        // 2. Exchange directly with Clerk via proxy (Origin: autodapper.com)
-        // 3. Activate session — done.
+        // Native Apple Sign-In: iOS sheet → Apple identity token → Clerk token exchange.
+        // No browser, no redirects, no cookie domain issues.
+        setLoading(true);
         const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
         console.log('[Auth] Native Apple Sign-In: requesting credential…');
         const appleResult = await SignInWithApple.authorize({
@@ -1359,41 +1358,59 @@ function AuthFlow() {
           state: '',
           nonce: '',
         });
-        const { identityToken } = appleResult.response;
+        const { identityToken, email, givenName, familyName } = appleResult.response;
         if (!identityToken) throw new Error('Apple did not return an identity token');
-        console.log('[Auth] Apple identity token received, exchanging with Clerk…');
+        console.log('[Auth] Apple token received, exchanging with Clerk…');
 
-        // Try sign-in first; fall back to sign-up for brand-new Apple accounts.
-        // redirect_url is required by Clerk's API even for native token exchange
-        // (it's validated but never followed since the session is created directly).
+        // redirect_url is required by Clerk even for native token exchange
+        // (validated server-side but never followed — session is returned directly).
         const nativeRedirect = 'https://dapper-pros.replit.app/sso-callback';
         let sessionId: string | null = null;
+        let clerkStatus: string = '';
+
         try {
           const result = await signIn!.create({
             strategy: 'oauth_apple',
             token: identityToken,
             redirectUrl: nativeRedirect,
           } as any);
+          clerkStatus = result.status ?? '';
           sessionId = result.createdSessionId;
+          console.log('[Auth] signIn.create status:', clerkStatus, 'sessionId:', sessionId);
         } catch (signInErr: any) {
-          // If user doesn't exist yet, create account via sign-up
           const code = signInErr?.errors?.[0]?.code ?? '';
-          if (code === 'form_identifier_not_found' || code === 'external_account_not_found') {
-            console.log('[Auth] No existing account — creating new user via sign-up…');
+          console.log('[Auth] signIn.create error code:', code, signInErr?.errors?.[0]?.message);
+          // New user — fall back to sign-up
+          if (
+            code === 'form_identifier_not_found' ||
+            code === 'external_account_not_found' ||
+            code === 'account_not_found'
+          ) {
+            console.log('[Auth] New Apple user — creating account via sign-up…');
             const upResult = await signUp!.create({
               strategy: 'oauth_apple',
               token: identityToken,
               redirectUrl: nativeRedirect,
+              ...(email ? { emailAddress: email } : {}),
+              ...(givenName ? { firstName: givenName } : {}),
+              ...(familyName ? { lastName: familyName } : {}),
             } as any);
+            clerkStatus = upResult.status ?? '';
             sessionId = upResult.createdSessionId;
+            console.log('[Auth] signUp.create status:', clerkStatus, 'sessionId:', sessionId);
           } else {
             throw signInErr;
           }
         }
+
         if (sessionId) {
           await setSignInActive!({ session: sessionId });
           await queryClient.invalidateQueries();
+          setLoading(false);
           navigate('/');
+        } else {
+          // Surface the status so we can debug unexpected flows
+          throw new Error(`Apple sign-in incomplete (status: ${clerkStatus || 'unknown'}). Please try again.`);
         }
       } else {
         await clerkSignOut();
