@@ -1485,16 +1485,48 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        // Use Clerk's Account Portal (accounts.autodapper.com) — a live Clerk-managed
-        // server. This avoids all proxy cookie-domain issues: Clerk sets __client on
-        // clerk.autodapper.com in the system cookie store directly, so the OAuth flow
-        // can validate state without a domain mismatch → no authorization_invalid.
-        // After the user signs in, Clerk redirects to native-sso-callback with a
-        // __clerk_ticket the app exchanges for a session via handleRedirectCallback().
-        const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
+
+        // Generate a unique state key so the server can match the callback to this poll.
+        const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        const callbackUrl = `https://dapper-pros.replit.app/native-sso-callback?state=${state}`;
         const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
-        console.log('[Auth] Google OAuth: opening Clerk Account Portal');
+
+        // Stop polling if the user manually closes the browser without signing in.
+        let cancelled = false;
+        const browserHandle = await Browser.addListener('browserFinished', () => {
+          cancelled = true;
+        });
+
+        console.log('[Auth] Google OAuth: opening Clerk Account Portal, polling state=', state);
         await Browser.open({ url: portalUrl });
+        setLoading(true);
+
+        try {
+          // Poll every 2 s for up to 3 min for the Clerk callback params.
+          // SFSafariViewController blocks JS custom-scheme redirects on iOS 14+,
+          // so the server stores the params and we retrieve them here.
+          for (let i = 0; i < 90 && !cancelled; i++) {
+            await new Promise(r => setTimeout(r, 2000));
+            if (cancelled) break;
+            try {
+              const resp = await fetch(`/api/native-sso-poll/${state}`);
+              if (resp.ok) {
+                const { params } = await resp.json();
+                console.log('[Auth] Google SSO params received, navigating to /sso-callback');
+                browserHandle.remove();
+                try { await Browser.close(); } catch {}
+                // Let Clerk's AuthenticateWithRedirectCallback handle the ticket
+                window.location.href = '/sso-callback' + (params || '');
+                return;
+              }
+            } catch {}
+          }
+        } finally {
+          browserHandle.remove();
+        }
+
+        setLoading(false);
+        if (!cancelled) setError('Sign-in timed out. Please try again.');
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
@@ -1504,6 +1536,7 @@ function AuthFlow() {
         });
       }
     } catch (err: any) {
+      setLoading(false);
       const msg = clerkError(err);
       console.error('[Auth] Google sign-in error:', msg, err);
       setError(msg);

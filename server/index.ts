@@ -379,35 +379,72 @@ font-family:-apple-system,sans-serif;background:#fff;color:#555;text-align:cente
 });
 
 // ── Native iOS OAuth callback bridge ──────────────────────────────────────
-// Clerk can only redirect to HTTPS URLs in its allowlist. After the user
-// authenticates with Google/Apple in SFSafariViewController, Clerk redirects
-// to this HTTPS endpoint. This page fires the com.autodapper.app:// custom
-// scheme so iOS routes back to the native app with the Clerk callback params.
+// SFSafariViewController (Capacitor Browser) blocks JS-initiated custom-scheme
+// redirects on iOS 14+. Instead we use server-side session polling:
+//   1. The native app generates a unique `state` and opens the Account Portal
+//      with redirect_url=.../native-sso-callback?state={uuid}
+//   2. Clerk redirects here after Google auth; we store the Clerk params by state
+//   3. The native app polls /api/native-sso-poll/:state every 2 s
+//   4. On hit, the app navigates its WKWebView to /sso-callback?{params}
+//      and Clerk's AuthenticateWithRedirectCallback takes over
+
+const nativeSsoSessions = new Map<string, { params: string; expires: number }>();
+// Clean up expired sessions every 5 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of nativeSsoSessions) {
+    if (val.expires < now) nativeSsoSessions.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 app.get('/native-sso-callback', (req, res) => {
-  const qs = Object.keys(req.query).length
-    ? '?' + new URLSearchParams(req.query as Record<string, string>).toString()
-    : '';
-  const deepLink = `com.autodapper.app://sso-callback${qs}`;
+  const state = req.query.state as string | undefined;
+  const allParams = new URLSearchParams(req.query as Record<string, string>);
+  allParams.delete('state');
+  const clerkParams = allParams.toString();
+
+  if (state) {
+    nativeSsoSessions.set(state, {
+      params: clerkParams ? '?' + clerkParams : '',
+      expires: Date.now() + 10 * 60 * 1000,
+    });
+    console.log(`[SSO] stored params for state=${state}`);
+  }
+
+  // Also try the custom-scheme deep link as a best-effort fallback
+  // (works on iOS <14 and some configurations; polling is the reliable path)
+  const deepLink = `com.autodapper.app://sso-callback${clerkParams ? '?' + clerkParams : ''}`;
+
   res.setHeader('Content-Type', 'text/html');
   res.send(`<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Signing in…</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif;background:#fff;color:#666;font-size:15px;}</style>
+<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif;background:#fff;color:#888;font-size:15px;text-align:center;padding:24px;}</style>
 </head>
 <body>
-<p>Completing sign-in…</p>
+<div>
+  <p style="font-size:17px;font-weight:600;color:#111;margin-bottom:8px;">Signing you in…</p>
+  <p>You can close this window and return to the app.</p>
+</div>
 <script>
 (function(){
-  var link = ${JSON.stringify(deepLink)};
-  // Fire the deep link immediately — iOS will open the app and dismiss this page
-  window.location.replace(link);
-  // Fallback: try again after a short delay in case the first attempt races
-  setTimeout(function(){ window.location.replace(link); }, 400);
+  try { window.location.replace(${JSON.stringify(deepLink)}); } catch(e){}
+  setTimeout(function(){ try { window.location.replace(${JSON.stringify(deepLink)}); } catch(e){} }, 500);
 })();
 </script>
 </body>
 </html>`);
+});
+
+// Polling endpoint — native app calls this every 2 s after opening browser
+app.get('/api/native-sso-poll/:state', (req, res) => {
+  const session = nativeSsoSessions.get(req.params.state);
+  if (session && session.expires > Date.now()) {
+    nativeSsoSessions.delete(req.params.state);
+    return res.json({ params: session.params });
+  }
+  res.status(202).json({ waiting: true });
 });
 
 app.use((req, res, next) => {
