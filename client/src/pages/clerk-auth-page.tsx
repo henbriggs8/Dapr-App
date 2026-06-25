@@ -1750,7 +1750,7 @@ function AuthFlow() {
             <SiApple className="w-7 h-7 text-white" />
           </div>
           <p className="text-[22px] font-bold text-[#111] text-center leading-tight">One more step</p>
-          <p className="text-[13px] text-[#888] text-center mt-2">Enter your mobile number to finish creating your account with Apple.</p>
+          <p className="text-[13px] text-[#888] text-center mt-2">We need your mobile number to send booking confirmations and connect you with your detailer.</p>
         </div>
         <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
         <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden mb-1">
