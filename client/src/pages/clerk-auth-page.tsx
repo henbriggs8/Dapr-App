@@ -661,6 +661,8 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
 
 function ProfileInfoScreen({
   phone,
+  setPhone,
+  needsPhone,
   email,
   setEmail,
   firstName,
@@ -675,6 +677,8 @@ function ProfileInfoScreen({
   error,
 }: {
   phone: string;
+  setPhone?: (v: string) => void;
+  needsPhone?: boolean;
   email: string;
   setEmail: (v: string) => void;
   firstName: string;
@@ -694,6 +698,10 @@ function ProfileInfoScreen({
 
   const handleNext = () => {
     setLocalError('');
+    if (needsPhone && phone.replace(/\D/g, '').length < 10) {
+      setLocalError('Please enter a valid 10-digit phone number.');
+      return;
+    }
     if (password.length < 8) { setLocalError('Password must be at least 8 characters.'); return; }
     if (password !== confirmPw) { setLocalError('Passwords do not match.'); return; }
     onNext();
@@ -704,7 +712,8 @@ function ProfileInfoScreen({
     ? `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
     : phone;
 
-  const canSubmit = firstName.trim() && lastName.trim() && password.length >= 8;
+  const phoneValid = !needsPhone || digits.length >= 10;
+  const canSubmit = firstName.trim() && lastName.trim() && password.length >= 8 && phoneValid;
 
   return (
     <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
@@ -741,6 +750,19 @@ function ProfileInfoScreen({
           autoComplete="email"
           className={inputCls}
         />
+
+        {/* Phone number — shown when the user signed up via email */}
+        {needsPhone && (
+          <input
+            value={phone}
+            onChange={(e) => setPhone?.(e.target.value)}
+            placeholder="Phone number (10 digits)"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            className={inputCls}
+          />
+        )}
 
         {/* Password */}
         <div className="relative">
@@ -1692,6 +1714,8 @@ function AuthFlow() {
     return (
       <ProfileInfoScreen
         phone={landingPhone}
+        setPhone={setLandingPhone}
+        needsPhone={landingPhone.replace(/\D/g, '').length < 10}
         email={signUpEmail}
         setEmail={setSignUpEmail}
         firstName={signUpFirstName}
