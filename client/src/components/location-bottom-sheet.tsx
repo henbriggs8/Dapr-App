@@ -233,15 +233,6 @@ function StripePaymentForm({
     // On success, Stripe redirects to returnUrl — no further action needed here
   }
 
-  if (!stripeLoaded) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <Icon icon={Loader2} size="lg" className="animate-spin" style={{ color: "#8c52ff" }} />
-        <p className="text-[13px] text-gray-400">Loading payment options…</p>
-      </div>
-    );
-  }
-
   const dollarAmount = (amountCents / 100).toFixed(2);
   const showNewCardSection = !selectedSavedId;
 
@@ -333,7 +324,7 @@ function StripePaymentForm({
         <div className="flex flex-col gap-3">
           <button
             onClick={handlePayPalPay}
-            disabled={payingPayPal || paying}
+            disabled={payingPayPal || paying || !stripeLoaded}
             className="w-full h-[52px] rounded-lg flex items-center justify-center gap-2 font-bold text-[15px] transition disabled:opacity-60"
             style={{ background: "#FFC439", color: "#003087" }}
           >
@@ -495,7 +486,7 @@ function StripePaymentForm({
       {selectedSavedId && (
         <button
           onClick={handleSavedCardPay}
-          disabled={paying}
+          disabled={paying || !stripeLoaded}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
           style={{ background: "#8c52ff" }}
         >
@@ -510,7 +501,7 @@ function StripePaymentForm({
       {showNewCardSection && method && cardReady && (
         <button
           onClick={handleCardPay}
-          disabled={paying}
+          disabled={paying || !stripeLoaded}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
           style={{ background: "#8c52ff" }}
         >
