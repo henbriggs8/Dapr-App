@@ -165,7 +165,7 @@ function LandingScreen({
   const digits = phone.replace(/\D/g, '');
   const e164Local = `+1${digits}`;
   const phoneReady = digits.length >= 10;
-  const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const emailReady = isProviderMode ? email.trim().length > 0 : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const canSubmit = inputMode === 'phone' ? phoneReady : emailReady;
   const identifier = inputMode === 'phone' ? e164Local : email.trim();
 
@@ -210,7 +210,7 @@ function LandingScreen({
           onClick={() => setInputMode('email')}
           className={`flex-1 h-[36px] rounded-md text-[13px] font-medium transition-all ${inputMode === 'email' ? 'bg-white text-[#111] shadow-sm' : 'text-[#888]'}`}
         >
-          Email
+          {isProviderMode ? 'Email / Username' : 'Email'}
         </button>
       </div>
 
@@ -244,15 +244,17 @@ function LandingScreen({
           </>
         ) : (
           <>
-            <p className="text-[13px] font-medium text-[#111] mb-2">Email address</p>
+            <p className="text-[13px] font-medium text-[#111] mb-2">
+              {isProviderMode ? 'Email or username' : 'Email address'}
+            </p>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext(identifier)}
-              placeholder="you@example.com"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
+              placeholder={isProviderMode ? 'email or username' : 'you@example.com'}
+              type={isProviderMode ? 'text' : 'email'}
+              inputMode={isProviderMode ? 'text' : 'email'}
+              autoComplete={isProviderMode ? 'username' : 'email'}
               autoFocus
               className="w-full h-[52px] border border-[#d8d8d8] rounded-lg px-4 text-[14px] text-[#111] outline-none focus:border-[#8c52ff] placeholder:text-[#b0b0b0]"
             />
