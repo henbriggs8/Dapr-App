@@ -511,6 +511,31 @@ app.use((req, res, next) => {
         process.exit(1);
       }
     });
+
+    // Register native OAuth callback URL with Clerk's allowed redirect URL list.
+    // This enables the Clerk Account Portal (accounts.autodapper.com) to redirect
+    // back to our server after Google Sign-In — without needing a dashboard change.
+    const clerkSk = process.env.CLERK_SECRET_KEY;
+    if (clerkSk) {
+      const nativeCallback = 'https://dapper-pros.replit.app/native-sso-callback';
+      fetch('https://api.clerk.com/v1/redirect_urls', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${clerkSk}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: nativeCallback }),
+      })
+        .then(r => r.json())
+        .then((data: any) => {
+          if (data?.errors?.length) {
+            console.log('[Clerk] redirect URL already registered or skipped:', data.errors[0]?.long_message ?? data.errors[0]?.message);
+          } else {
+            console.log('[Clerk] ✓ Registered native-sso-callback as allowed redirect URL');
+          }
+        })
+        .catch((e: any) => console.log('[Clerk] Could not register redirect URL:', e.message));
+    }
   });
 })().catch(error => {
   console.error('Failed to start server:', error);
