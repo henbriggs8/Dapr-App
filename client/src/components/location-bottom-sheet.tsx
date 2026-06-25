@@ -1156,6 +1156,21 @@ function ConfirmStep({
       const booking = await bookingRes.json();
 
       // 3. Create payment (or redeem free wash credit)
+      // On iOS, use Stripe Checkout URL opened in Safari View Controller.
+      // The native PaymentSheet SDK hangs on initialization — this approach is proven reliable.
+      if (!useFreeCredit && Capacitor.isNativePlatform()) {
+        const payRes = await fetch(resolveUrl(`/api/bookings/${booking.id}/ios-checkout`), {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: JSON.stringify(appliedPromo ? { promoCode: appliedPromo.code } : {}),
+        });
+        if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
+        const { url, amountInCents } = await payRes.json();
+        queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+        return { url, clientSecret: null, bookingId: booking.id, amountInCents, isCheckoutUrl: true as const };
+      }
+
       const payRes = await fetch(resolveUrl(`/api/bookings/${booking.id}/create-payment`), {
         method: "POST",
         headers,
@@ -1173,7 +1188,7 @@ function ConfirmStep({
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
 
-      return { ...payData, bookingId: booking.id };
+      return { ...payData, bookingId: booking.id, isCheckoutUrl: false as const };
     },
     onSuccess: async (payData) => {
       if (payData.free) {
@@ -1181,72 +1196,22 @@ function ConfirmStep({
         return;
       }
 
+      // iOS: open Stripe Checkout in Safari View Controller
+      if (payData.isCheckoutUrl && payData.url) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: payData.url });
+        return;
+      }
+
       if (!payData.clientSecret) throw new Error("Missing payment client secret.");
 
       const amountCents = payData.amountInCents ?? Math.round(discountedPrice * 100);
 
-      // Show the embedded payment form (Apple Pay button is inside it on iOS)
       setStripeClientSecret(payData.clientSecret);
       setStripeBookingId(payData.bookingId);
       setStripeAmountCents(amountCents);
     },
   });
-
-  // ── iOS native payment sheet ─────────────────────────────────────────────────
-  // When we have a clientSecret on iOS, present the native Stripe payment sheet
-  // (web Stripe.js Elements don't work inside WKWebView — stripePromise is null).
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    if (!stripeClientSecret || !stripeBookingId) return;
-
-    let cancelled = false;
-    const present = async () => {
-      setNativePaymentPending(true);
-      setNativePaymentError(null);
-      try {
-        await StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" });
-        await StripeNative.createPaymentSheet({
-          paymentIntentClientSecret: stripeClientSecret,
-          merchantDisplayName: "Dapr",
-          style: "automatic",
-        });
-        // Race against a 30-second timeout so the sheet never hangs forever
-        const result = await Promise.race([
-          StripeNative.presentPaymentSheet(),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("timeout")), 30000)
-          ),
-        ]);
-        if (cancelled) return;
-        if (result.paymentResult === PaymentSheetEventsEnum.Completed) {
-          queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-          setLocation(`/matching?booking=${stripeBookingId}`);
-        } else {
-          // Cancelled — reset so user can try again
-          setStripeClientSecret(null);
-          setStripeBookingId(null);
-          setStripeAmountCents(0);
-        }
-      } catch (err: any) {
-        if (cancelled) return;
-        const msg = (err?.message ?? String(err)).toLowerCase();
-        if (msg.includes("cancel") || msg.includes("dismiss")) {
-          setStripeClientSecret(null);
-          setStripeBookingId(null);
-          setStripeAmountCents(0);
-        } else {
-          setNativePaymentError("Payment failed. Please try again.");
-          setStripeClientSecret(null);
-          setStripeBookingId(null);
-          setStripeAmountCents(0);
-        }
-      } finally {
-        if (!cancelled) setNativePaymentPending(false);
-      }
-    };
-    present();
-    return () => { cancelled = true; };
-  }, [stripeClientSecret, stripeBookingId]);
 
   // ── Embedded Stripe Checkout overlay (web only) ──────────────────────────────
   if (stripeClientSecret && stripeBookingId && !Capacitor.isNativePlatform()) {
