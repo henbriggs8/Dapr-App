@@ -2218,20 +2218,22 @@ export function registerRoutes(app: Express): Server {
     try {
       const { email, phoneNumber, firstName, lastName, password } = req.body as {
         email?: string;
-        phoneNumber: string;
+        phoneNumber?: string;
         firstName: string;
         lastName: string;
         password?: string;
       };
-      if (!phoneNumber) return res.status(400).json({ error: 'phoneNumber required' });
+      if (!phoneNumber && !email) return res.status(400).json({ error: 'Email or phone number required' });
 
       // Check if user already exists by phone (primary identifier)
       let clerkUser: any = null;
-      try {
-        const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
-        const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
-        clerkUser = byPhoneArr[0] ?? null;
-      } catch { /* fall through */ }
+      if (phoneNumber) {
+        try {
+          const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
+          const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
+          clerkUser = byPhoneArr[0] ?? null;
+        } catch { /* fall through */ }
+      }
 
       // Also check by email if provided and not found by phone
       if (!clerkUser && email) {
@@ -2244,12 +2246,12 @@ export function registerRoutes(app: Express): Server {
 
       if (!clerkUser) {
         const createParams: any = {
-          phoneNumber: [phoneNumber],
           firstName: firstName || 'New',
           lastName: lastName || 'User',
           skipPasswordChecks: true,
           skipPasswordRequirement: true,
         };
+        if (phoneNumber) createParams.phoneNumber = [phoneNumber];
         if (email) createParams.emailAddress = [email];
         if (password) createParams.password = password;
         clerkUser = await clerkClient.users.createUser(createParams);
@@ -2261,7 +2263,17 @@ export function registerRoutes(app: Express): Server {
       return res.json({ userId: clerkUser.id });
     } catch (err: any) {
       console.error('clerk/complete-signup error:', err);
-      return res.status(500).json({ error: err.message ?? 'Failed to complete sign-up' });
+      // Extract the most useful message from a Clerk API error
+      const clerkMsg: string =
+        err?.errors?.[0]?.longMessage ??
+        err?.errors?.[0]?.message ??
+        err?.message ??
+        'Failed to complete sign-up';
+      // Surface "already exists" as a friendly message
+      const friendly = /already.*exist|taken|duplicate/i.test(clerkMsg)
+        ? 'An account with that email already exists. Please sign in instead.'
+        : clerkMsg;
+      return res.status(500).json({ error: friendly });
     }
   });
 

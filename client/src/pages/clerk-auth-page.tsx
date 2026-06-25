@@ -1169,14 +1169,23 @@ function AuthFlow() {
         localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
       }
 
-      // Create the user via our backend admin API with phone + password + optional email.
-      // This completely bypasses Clerk's sign-up flow.
+      // Determine whether we have a valid phone (≥10 digits) or are using email only.
+      const phoneDigits = landingPhone.replace(/\D/g, '');
+      const hasValidPhone = phoneDigits.length >= 10;
+      const validE164 = hasValidPhone ? `+1${phoneDigits}` : undefined;
+      // Use email as sign-in identifier when no valid phone was entered.
+      const signInIdentifier = validE164 ?? signUpEmail.trim();
+      if (!signInIdentifier) {
+        throw new Error('Please enter a valid email address to continue.');
+      }
+
+      // Create the user via our backend admin API — phone is optional when email is provided.
       const resp = await fetch(resolveUrl('/api/auth/clerk/complete-signup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: signUpEmail.trim() || undefined,
-          phoneNumber: e164,
+          phoneNumber: validE164,
           firstName: signUpFirstName.trim() || 'New',
           lastName: signUpLastName.trim() || 'User',
           password: signUpPassword,
@@ -1187,9 +1196,9 @@ function AuthFlow() {
         throw new Error(body.error ?? 'Could not create account. Please try again.');
       }
 
-      // Sign in directly with email + password — no OTP needed.
+      // Sign in directly with the right identifier + password — no OTP needed.
       const result = await signIn!.create({
-        identifier: e164,
+        identifier: signInIdentifier,
         password: signUpPassword,
       });
       if (result.status === 'complete') {
