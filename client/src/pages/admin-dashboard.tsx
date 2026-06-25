@@ -522,16 +522,16 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Manage users, bookings, and analytics</p>
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-xs sm:text-sm text-gray-600 mt-0.5">Manage users, bookings, and analytics</p>
             </div>
-            <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+            <Button onClick={handleLogout} variant="outline" size="sm" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <Icon icon={LogOut} size="sm" />
               Logout
             </Button>
@@ -539,48 +539,50 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="dispatch" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="dispatch" className="flex items-center gap-2">
-              <Icon icon={Radio} size="sm" />
-              Dispatch
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Icon icon={Users} size="sm" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="bookings" className="flex items-center gap-2">
-              <Icon icon={Calendar} size="sm" />
-              Bookings
-            </TabsTrigger>
-            <TabsTrigger value="earnings" className="flex items-center gap-2">
-              <Icon icon={DollarSign} size="sm" />
-              Earnings
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <Icon icon={BarChart3} size="sm" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="pricing" className="flex items-center gap-2">
-              <Icon icon={Tag} size="sm" />
-              Pricing
-            </TabsTrigger>
-            <TabsTrigger value="support" className="flex items-center gap-2">
-              <Icon icon={MessageSquare} size="sm" />
-              Support
-              {contactMessages.filter(m => {
-                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                return !m.resolved && m.submittedAt >= oneDayAgo;
-              }).length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
-                  {contactMessages.filter(m => {
-                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                    return !m.resolved && m.submittedAt >= oneDayAgo;
-                  }).length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="dispatch" className="space-y-4">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-7 h-auto">
+              <TabsTrigger value="dispatch" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={Radio} size="sm" />
+                Dispatch
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={Users} size="sm" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="bookings" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={Calendar} size="sm" />
+                Bookings
+              </TabsTrigger>
+              <TabsTrigger value="earnings" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={DollarSign} size="sm" />
+                Earnings
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={BarChart3} size="sm" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={Tag} size="sm" />
+                Pricing
+              </TabsTrigger>
+              <TabsTrigger value="support" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={MessageSquare} size="sm" />
+                Support
+                {contactMessages.filter(m => {
+                  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                  return !m.resolved && m.submittedAt >= oneDayAgo;
+                }).length > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
+                    {contactMessages.filter(m => {
+                      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                      return !m.resolved && m.submittedAt >= oneDayAgo;
+                    }).length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Dispatch Tab */}
           <TabsContent value="dispatch" className="space-y-4">
@@ -596,62 +598,39 @@ export default function AdminDashboard() {
 
               return (
                 <>
-                  <div className="grid grid-cols-5 gap-4">
-                    <Card className="border-red-100 bg-red-50">
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Unassigned</p>
-                            <p className="text-3xl font-bold text-red-700">{unassigned.length}</p>
-                          </div>
-                          <Icon icon={AlertCircle} size="xl" className="text-red-400" />
-                        </div>
+                  <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+                    <div className="flex gap-2 sm:grid sm:grid-cols-5 sm:gap-4" style={{ minWidth: 'max-content' }}>
+                    <Card className="border-red-100 bg-red-50 w-[120px] sm:w-auto shrink-0">
+                      <CardContent className="pt-3 pb-2 px-3">
+                        <p className="text-[10px] font-medium text-red-600 uppercase tracking-wide">Unassigned</p>
+                        <p className="text-2xl font-bold text-red-700">{unassigned.length}</p>
                       </CardContent>
                     </Card>
-                    <Card className="border-blue-100 bg-blue-50">
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Active Jobs</p>
-                            <p className="text-3xl font-bold text-blue-700">{active.length}</p>
-                          </div>
-                          <Icon icon={Zap} size="xl" className="text-blue-400" />
-                        </div>
+                    <Card className="border-blue-100 bg-blue-50 w-[120px] sm:w-auto shrink-0">
+                      <CardContent className="pt-3 pb-2 px-3">
+                        <p className="text-[10px] font-medium text-blue-600 uppercase tracking-wide">Active Jobs</p>
+                        <p className="text-2xl font-bold text-blue-700">{active.length}</p>
                       </CardContent>
                     </Card>
-                    <Card className="border-orange-100 bg-orange-50">
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Passed</p>
-                            <p className="text-3xl font-bold text-orange-700">{passedJobs.length}</p>
-                          </div>
-                          <Icon icon={RotateCcw} size="xl" className="text-orange-400" />
-                        </div>
+                    <Card className="border-orange-100 bg-orange-50 w-[120px] sm:w-auto shrink-0">
+                      <CardContent className="pt-3 pb-2 px-3">
+                        <p className="text-[10px] font-medium text-orange-600 uppercase tracking-wide">Passed</p>
+                        <p className="text-2xl font-bold text-orange-700">{passedJobs.length}</p>
                       </CardContent>
                     </Card>
-                    <Card className="border-green-100 bg-green-50">
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Pros Online</p>
-                            <p className="text-3xl font-bold text-green-700">{onlineProviders.length}</p>
-                          </div>
-                          <Icon icon={Car} size="xl" className="text-green-400" />
-                        </div>
+                    <Card className="border-green-100 bg-green-50 w-[120px] sm:w-auto shrink-0">
+                      <CardContent className="pt-3 pb-2 px-3">
+                        <p className="text-[10px] font-medium text-green-600 uppercase tracking-wide">Pros Online</p>
+                        <p className="text-2xl font-bold text-green-700">{onlineProviders.length}</p>
                       </CardContent>
                     </Card>
-                    <Card>
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Done Today</p>
-                            <p className="text-3xl font-bold text-gray-800">{todayCompleted.length}</p>
-                          </div>
-                          <Icon icon={CheckCircle2} size="xl" className="text-gray-400" />
-                        </div>
+                    <Card className="w-[120px] sm:w-auto shrink-0">
+                      <CardContent className="pt-3 pb-2 px-3">
+                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Done Today</p>
+                        <p className="text-2xl font-bold text-gray-800">{todayCompleted.length}</p>
                       </CardContent>
                     </Card>
+                    </div>
                   </div>
 
                   {/* Auto-refresh indicator */}
@@ -661,9 +640,9 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Main dispatch layout */}
-                  <div className="grid grid-cols-3 gap-4 items-start">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                     {/* Job Queue — 2/3 */}
-                    <div className="col-span-2 space-y-4">
+                    <div className="md:col-span-2 space-y-4">
                       {/* Unassigned Jobs */}
                       <Card>
                         <CardHeader className="pb-3">
