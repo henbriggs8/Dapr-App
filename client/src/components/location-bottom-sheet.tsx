@@ -13,7 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { resolveUrl } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
-import { Stripe as StripeNative, ApplePayEventsEnum } from "@capacitor-community/stripe";
+import { Stripe as StripeNative, ApplePayEventsEnum, PaymentSheetEventsEnum } from "@capacitor-community/stripe";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -1073,6 +1073,8 @@ function ConfirmStep({
   const [stripeBookingId, setStripeBookingId] = useState<number | null>(null);
   const [stripeAmountCents, setStripeAmountCents] = useState<number>(0);
   const [saveCard, setSaveCard] = useState(false);
+  const [nativePaymentPending, setNativePaymentPending] = useState(false);
+  const [nativePaymentError, setNativePaymentError] = useState<string | null>(null);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -1199,8 +1201,62 @@ function ConfirmStep({
     },
   });
 
-  // ── Embedded Stripe Checkout overlay ────────────────────────────────────────
-  if (stripeClientSecret && stripeBookingId) {
+  // ── iOS native payment sheet ─────────────────────────────────────────────────
+  // When we have a clientSecret on iOS, present the native Stripe payment sheet
+  // (web Stripe.js Elements don't work inside WKWebView — stripePromise is null).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!stripeClientSecret || !stripeBookingId) return;
+
+    let cancelled = false;
+    const present = async () => {
+      setNativePaymentPending(true);
+      setNativePaymentError(null);
+      try {
+        await StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" });
+        await StripeNative.createPaymentSheet({
+          paymentIntentClientSecret: stripeClientSecret,
+          merchantDisplayName: "Dapr",
+          enableApplePay: true,
+          applePayMerchantId: "merchant.com.autodapper.app",
+          countryCode: "US",
+          currency: "USD",
+          style: "automatic",
+        });
+        const result = await StripeNative.presentPaymentSheet();
+        if (cancelled) return;
+        if (result.paymentResult === PaymentSheetEventsEnum.Completed) {
+          queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+          setLocation(`/matching?booking=${stripeBookingId}`);
+        } else {
+          // Cancelled — reset so user can try again
+          setStripeClientSecret(null);
+          setStripeBookingId(null);
+          setStripeAmountCents(0);
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        const msg = (err?.message ?? String(err)).toLowerCase();
+        if (msg.includes("cancel") || msg.includes("dismiss")) {
+          setStripeClientSecret(null);
+          setStripeBookingId(null);
+          setStripeAmountCents(0);
+        } else {
+          setNativePaymentError("Payment failed. Please try again.");
+          setStripeClientSecret(null);
+          setStripeBookingId(null);
+          setStripeAmountCents(0);
+        }
+      } finally {
+        if (!cancelled) setNativePaymentPending(false);
+      }
+    };
+    present();
+    return () => { cancelled = true; };
+  }, [stripeClientSecret, stripeBookingId]);
+
+  // ── Embedded Stripe Checkout overlay (web only) ──────────────────────────────
+  if (stripeClientSecret && stripeBookingId && !Capacitor.isNativePlatform()) {
     return (
       <div className="flex flex-col min-h-0 h-full">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
@@ -1413,9 +1469,9 @@ function ConfirmStep({
         )}
 
         {/* Error */}
-        {mutation.isError && (
+        {(mutation.isError || nativePaymentError) && (
           <div className="rounded-xl bg-red-50 px-4 py-3">
-            <p className="text-[13px] text-red-600">{(mutation.error as Error)?.message || "Something went wrong."}</p>
+            <p className="text-[13px] text-red-600">{nativePaymentError || (mutation.error as Error)?.message || "Something went wrong."}</p>
           </div>
         )}
 
@@ -1441,13 +1497,13 @@ function ConfirmStep({
           )}
         </div>
         <button
-          onClick={() => { if (!mutation.isPending) mutation.mutate(); }}
-          disabled={mutation.isPending}
+          onClick={() => { if (!mutation.isPending && !nativePaymentPending) mutation.mutate(); }}
+          disabled={mutation.isPending || nativePaymentPending}
           className="w-full py-4 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
           style={{ background: useFreeCredit ? "#16a34a" : "#8c52ff" }}
         >
-          {mutation.isPending ? (
-            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> {useFreeCredit ? "Redeeming…" : "Setting up payment…"}</>
+          {(mutation.isPending || nativePaymentPending) ? (
+            <><Icon icon={Loader2} size="sm" className="text-white animate-spin" /> {useFreeCredit ? "Redeeming…" : "Opening payment…"}</>
           ) : useFreeCredit ? (
             <><Icon icon={Gift} size="sm" className="text-white" /> Redeem Free Wash</>
           ) : (
