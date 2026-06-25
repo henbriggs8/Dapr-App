@@ -1347,13 +1347,14 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        // Use HTTPS server bridge so the redirect URL is in Clerk's allowlist.
-        // Server at /native-sso-callback fires com.autodapper.app://sso-callback with the same params.
+        // Open the server-side OAuth bridge page in SFSafariViewController.
+        // That page loads Clerk JS directly (NO proxy) so Clerk sets its __client
+        // cookie on clerk.autodapper.com in the SYSTEM cookie store — which is
+        // exactly the context the OAuth callback returns to. Using the proxy here
+        // causes __client to land on the wrong domain → authorization_invalid.
         const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
-        const callbackUrl = `${apiBase}/native-sso-callback`;
-        console.log('[Auth] Apple OAuth starting, callbackUrl:', callbackUrl);
-        const oauthUrl = await getOAuthUrl('oauth_apple', callbackUrl);
-        await Browser.open({ url: oauthUrl });
+        console.log('[Auth] Apple OAuth: opening bridge page');
+        await Browser.open({ url: `${apiBase}/native-oauth-start?strategy=apple` });
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
@@ -1374,13 +1375,14 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        // Use HTTPS server bridge so the redirect URL is in Clerk's allowlist.
-        // Server at /native-sso-callback fires com.autodapper.app://sso-callback with the same params.
+        // Open the server-side OAuth bridge page in SFSafariViewController.
+        // That page loads Clerk JS directly (NO proxy) so Clerk sets its __client
+        // cookie on clerk.autodapper.com in the SYSTEM cookie store — which is
+        // exactly the context the OAuth callback returns to. Using the proxy here
+        // causes __client to land on the wrong domain → authorization_invalid.
         const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
-        const callbackUrl = `${apiBase}/native-sso-callback`;
-        console.log('[Auth] Google OAuth starting, callbackUrl:', callbackUrl);
-        const oauthUrl = await getOAuthUrl('oauth_google', callbackUrl);
-        await Browser.open({ url: oauthUrl });
+        console.log('[Auth] Google OAuth: opening bridge page');
+        await Browser.open({ url: `${apiBase}/native-oauth-start?strategy=google` });
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({

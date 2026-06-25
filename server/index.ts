@@ -284,7 +284,89 @@ app.get('/download/dapr-ios', (req, res) => {
   });
 });
 
-// ── Native iOS OAuth bridge ────────────────────────────────────────────────
+// ── Native iOS OAuth start page ───────────────────────────────────────────
+// Opens in SFSafariViewController (system browser). Loads Clerk JS DIRECTLY
+// (no proxy) so Clerk sets its __client cookie on clerk.autodapper.com in the
+// SYSTEM cookie store. Without this, the proxy puts __client on the wrong domain
+// and Clerk returns authorization_invalid when the OAuth callback arrives.
+app.get('/native-oauth-start', (req, res) => {
+  const strategy = req.query.strategy === 'apple' ? 'oauth_apple' : 'oauth_google';
+  const providerName = strategy === 'oauth_apple' ? 'Apple' : 'Google';
+  const pk = clerkPk;
+  const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
+
+  if (!pk) {
+    res.status(500).send('<p>Clerk not configured on server</p>');
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signing in with ${providerName}…</title>
+<style>
+body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;
+font-family:-apple-system,sans-serif;background:#fff;color:#555;text-align:center;padding:24px;}
+#msg{font-size:16px;margin-bottom:8px;}
+#sub{font-size:13px;color:#999;}
+</style>
+</head>
+<body>
+<div>
+  <p id="msg">Signing in with ${providerName}…</p>
+  <p id="sub"></p>
+</div>
+<script>
+(async function() {
+  var msg = document.getElementById('msg');
+  var sub = document.getElementById('sub');
+  function err(e) {
+    msg.textContent = 'Sign-in failed';
+    sub.textContent = e && e.message ? e.message : String(e);
+  }
+  try {
+    sub.textContent = 'Loading…';
+    // Load Clerk JS directly — NO proxy. This ensures Clerk's __client cookie
+    // is set on clerk.autodapper.com in the SYSTEM Safari cookie store, which
+    // is accessible when the OAuth callback returns to clerk.autodapper.com.
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = res;
+      s.onerror = function() { rej(new Error('Failed to load Clerk JS from CDN')); };
+      document.head.appendChild(s);
+    });
+
+    sub.textContent = 'Initialising…';
+    var clerk = new window.Clerk(${JSON.stringify(pk)});
+    await clerk.load();
+
+    sub.textContent = 'Redirecting to ${providerName}…';
+    var si = await clerk.client.signIn.create({
+      strategy: ${JSON.stringify(strategy)},
+      redirectUrl: ${JSON.stringify(callbackUrl)},
+      actionCompleteRedirectUrl: ${JSON.stringify(callbackUrl)},
+    });
+    var oauthUrl = si.firstFactorVerification
+      && si.firstFactorVerification.externalVerificationRedirectURL
+      ? si.firstFactorVerification.externalVerificationRedirectURL.toString()
+      : null;
+    if (!oauthUrl) throw new Error('Clerk did not return an OAuth URL');
+    window.location.href = oauthUrl;
+  } catch(e) {
+    err(e);
+  }
+})();
+</script>
+</body>
+</html>`);
+});
+
+// ── Native iOS OAuth callback bridge ──────────────────────────────────────
 // Clerk can only redirect to HTTPS URLs in its allowlist. After the user
 // authenticates with Google/Apple in SFSafariViewController, Clerk redirects
 // to this HTTPS endpoint. This page fires the com.autodapper.app:// custom
