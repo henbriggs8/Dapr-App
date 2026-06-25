@@ -1364,11 +1364,15 @@ function AuthFlow() {
         console.log('[Auth] Apple identity token received, exchanging with Clerk…');
 
         // Try sign-in first; fall back to sign-up for brand-new Apple accounts.
+        // redirect_url is required by Clerk's API even for native token exchange
+        // (it's validated but never followed since the session is created directly).
+        const nativeRedirect = 'https://dapper-pros.replit.app/sso-callback';
         let sessionId: string | null = null;
         try {
           const result = await signIn!.create({
             strategy: 'oauth_apple',
             token: identityToken,
+            redirectUrl: nativeRedirect,
           } as any);
           sessionId = result.createdSessionId;
         } catch (signInErr: any) {
@@ -1379,6 +1383,7 @@ function AuthFlow() {
             const upResult = await signUp!.create({
               strategy: 'oauth_apple',
               token: identityToken,
+              redirectUrl: nativeRedirect,
             } as any);
             sessionId = upResult.createdSessionId;
           } else {
