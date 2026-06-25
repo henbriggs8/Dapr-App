@@ -1347,7 +1347,7 @@ function ConfirmStep({
                 className="w-full rounded-2xl py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity bg-black text-white"
               >
                 {iosApplePayPending
-                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  ? <Icon icon={Loader2} size="sm" className="animate-spin" />
                   : <SiApple className="w-5 h-5" />}
                 {iosApplePayPending ? 'Processing…' : 'Pay'}
               </button>
@@ -1413,7 +1413,7 @@ function ConfirmStep({
             className="w-full rounded-2xl py-4 text-[16px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
             style={{ backgroundColor: ACCENT }}
           >
-            {iosCardSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+            {iosCardSubmitting && <Icon icon={Loader2} size="sm" className="animate-spin" />}
             {iosCardSubmitting ? 'Processing…' : `Pay $${dollarAmount}`}
           </button>
         </div>
