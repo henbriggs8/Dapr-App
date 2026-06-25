@@ -270,6 +270,9 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
         setBootStage('token-ok', `len=${token.length}`);
 
         setBootStage('syncing', resolveUrl('/api/auth/clerk-sync'));
+        // Read provider intent set during signup (localStorage flag cleared after use)
+        const pendingIsProvider = localStorage.getItem('pendingIsProvider') === '1';
+        if (pendingIsProvider) localStorage.removeItem('pendingIsProvider');
         const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
           method: 'POST',
           headers: {
@@ -277,6 +280,7 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
             'Content-Type': 'application/json',
           },
           credentials: 'include',
+          body: JSON.stringify({ isProvider: pendingIsProvider }),
         });
 
         setBootStage('sync-ok', `status=${res.status}`);

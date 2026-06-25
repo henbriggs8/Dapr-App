@@ -1191,6 +1191,9 @@ function AuthFlow() {
         localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
       }
 
+      // Mark provider intent so App.tsx ClerkSyncInner passes isProvider:true on first sync
+      if (isProviderMode) localStorage.setItem('pendingIsProvider', '1');
+
       // Determine whether we have a valid phone (≥10 digits) or are using email only.
       const phoneDigits = landingPhone.replace(/\D/g, '');
       const hasValidPhone = phoneDigits.length >= 10;
