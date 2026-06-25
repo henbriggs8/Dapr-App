@@ -1367,6 +1367,7 @@ function AuthFlow() {
         const nativeRedirect = 'https://dapper-pros.replit.app/sso-callback';
         let sessionId: string | null = null;
         let clerkStatus: string = '';
+        let needsSignUp = false;
 
         try {
           const result = await signIn!.create({
@@ -1377,30 +1378,36 @@ function AuthFlow() {
           clerkStatus = result.status ?? '';
           sessionId = result.createdSessionId;
           console.log('[Auth] signIn.create status:', clerkStatus, 'sessionId:', sessionId);
+          // needs_identifier = Clerk accepted the token but can't find an existing account
+          // → user is new, fall through to sign-up
+          if (clerkStatus === 'needs_identifier') needsSignUp = true;
         } catch (signInErr: any) {
           const code = signInErr?.errors?.[0]?.code ?? '';
           console.log('[Auth] signIn.create error code:', code, signInErr?.errors?.[0]?.message);
-          // New user — fall back to sign-up
           if (
             code === 'form_identifier_not_found' ||
             code === 'external_account_not_found' ||
             code === 'account_not_found'
           ) {
-            console.log('[Auth] New Apple user — creating account via sign-up…');
-            const upResult = await signUp!.create({
-              strategy: 'oauth_apple',
-              token: identityToken,
-              redirectUrl: nativeRedirect,
-              ...(email ? { emailAddress: email } : {}),
-              ...(givenName ? { firstName: givenName } : {}),
-              ...(familyName ? { lastName: familyName } : {}),
-            } as any);
-            clerkStatus = upResult.status ?? '';
-            sessionId = upResult.createdSessionId;
-            console.log('[Auth] signUp.create status:', clerkStatus, 'sessionId:', sessionId);
+            needsSignUp = true;
           } else {
             throw signInErr;
           }
+        }
+
+        if (needsSignUp) {
+          console.log('[Auth] New Apple user — creating account via sign-up…');
+          const upResult = await signUp!.create({
+            strategy: 'oauth_apple',
+            token: identityToken,
+            redirectUrl: nativeRedirect,
+            ...(email ? { emailAddress: email } : {}),
+            ...(givenName ? { firstName: givenName } : {}),
+            ...(familyName ? { lastName: familyName } : {}),
+          } as any);
+          clerkStatus = upResult.status ?? '';
+          sessionId = upResult.createdSessionId;
+          console.log('[Auth] signUp.create status:', clerkStatus, 'sessionId:', sessionId);
         }
 
         if (sessionId) {
