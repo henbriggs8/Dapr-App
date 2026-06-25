@@ -290,10 +290,23 @@ app.get('/download/dapr-ios', (req, res) => {
 // SYSTEM cookie store. Without this, the proxy puts __client on the wrong domain
 // and Clerk returns authorization_invalid when the OAuth callback arrives.
 app.get('/native-oauth-start', (req, res) => {
+  // Clerk production keys are restricted to the registered domain (autodapper.com).
+  // If this request arrived on any other host (e.g. dapper-pros.replit.app), redirect
+  // to autodapper.com so that Clerk JS runs with the correct Origin header.
+  const host = req.hostname;
+  if (host !== 'autodapper.com' && host !== 'www.autodapper.com') {
+    const qs = Object.keys(req.query).length
+      ? '?' + new URLSearchParams(req.query as Record<string, string>).toString()
+      : '';
+    res.redirect(302, `https://autodapper.com/native-oauth-start${qs}`);
+    return;
+  }
+
   const strategy = req.query.strategy === 'apple' ? 'oauth_apple' : 'oauth_google';
   const providerName = strategy === 'oauth_apple' ? 'Apple' : 'Google';
   const pk = clerkPk;
-  const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
+  // Callback must also be on autodapper.com so the URL is in Clerk's allowlist.
+  const callbackUrl = 'https://autodapper.com/native-sso-callback';
 
   if (!pk) {
     res.status(500).send('<p>Clerk not configured on server</p>');
