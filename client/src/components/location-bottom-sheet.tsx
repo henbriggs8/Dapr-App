@@ -8,6 +8,7 @@ import {
   Check, CheckCircle2, Gift, Car, Plus, Tag, CreditCard, type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
+import { SiApple } from "react-icons/si";
 import { WalletLogo } from "@/components/wallet-logo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
@@ -1331,7 +1332,7 @@ function ConfirmStep({
               >
                 {iosApplePayPending
                   ? <Loader2 className="w-5 h-5 animate-spin" />
-                  : <span className="text-[17px] tracking-tight"></span>}
+                  : <SiApple className="w-5 h-5" />}
                 {iosApplePayPending ? 'Processing…' : 'Pay'}
               </button>
               <div className="flex items-center gap-3">
