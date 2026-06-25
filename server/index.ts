@@ -319,47 +319,46 @@ font-family:-apple-system,sans-serif;background:#fff;color:#555;text-align:cente
   <p id="msg">Signing in with ${providerName}…</p>
   <p id="sub"></p>
 </div>
+<!-- Clerk JS v5 CDN: pass publishable key via data attribute so window.Clerk is
+     auto-instantiated. Do NOT use "new window.Clerk(pk)" — that was v4 only. -->
+<script
+  data-clerk-publishable-key=${JSON.stringify(pk)}
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
 <script>
-(async function() {
+(function() {
   var msg = document.getElementById('msg');
   var sub = document.getElementById('sub');
-  function err(e) {
+  function showErr(e) {
     msg.textContent = 'Sign-in failed';
     sub.textContent = e && e.message ? e.message : String(e);
   }
-  try {
-    sub.textContent = 'Loading…';
-    // Load Clerk JS directly — NO proxy. This ensures Clerk's __client cookie
-    // is set on clerk.autodapper.com in the SYSTEM Safari cookie store, which
-    // is accessible when the OAuth callback returns to clerk.autodapper.com.
-    await new Promise(function(res, rej) {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
-      s.crossOrigin = 'anonymous';
-      s.onload = res;
-      s.onerror = function() { rej(new Error('Failed to load Clerk JS from CDN')); };
-      document.head.appendChild(s);
-    });
 
-    sub.textContent = 'Initialising…';
-    var clerk = new window.Clerk(${JSON.stringify(pk)});
-    await clerk.load();
+  // window.Clerk is created by the script above; wait for the page load event
+  // so Clerk has had a chance to self-initialise from data-clerk-publishable-key.
+  window.addEventListener('load', async function() {
+    try {
+      sub.textContent = 'Initialising…';
+      // Clerk v5 CDN: window.Clerk is already constructed; just call .load()
+      await window.Clerk.load();
 
-    sub.textContent = 'Redirecting to ${providerName}…';
-    var si = await clerk.client.signIn.create({
-      strategy: ${JSON.stringify(strategy)},
-      redirectUrl: ${JSON.stringify(callbackUrl)},
-      actionCompleteRedirectUrl: ${JSON.stringify(callbackUrl)},
-    });
-    var oauthUrl = si.firstFactorVerification
-      && si.firstFactorVerification.externalVerificationRedirectURL
-      ? si.firstFactorVerification.externalVerificationRedirectURL.toString()
-      : null;
-    if (!oauthUrl) throw new Error('Clerk did not return an OAuth URL');
-    window.location.href = oauthUrl;
-  } catch(e) {
-    err(e);
-  }
+      sub.textContent = 'Redirecting to ${providerName}…';
+      var si = await window.Clerk.client.signIn.create({
+        strategy: ${JSON.stringify(strategy)},
+        redirectUrl: ${JSON.stringify(callbackUrl)},
+        actionCompleteRedirectUrl: ${JSON.stringify(callbackUrl)},
+      });
+      var oauthUrl = si.firstFactorVerification
+        && si.firstFactorVerification.externalVerificationRedirectURL
+        ? si.firstFactorVerification.externalVerificationRedirectURL.toString()
+        : null;
+      if (!oauthUrl) throw new Error('Clerk did not return an OAuth URL');
+      window.location.href = oauthUrl;
+    } catch(e) {
+      showErr(e);
+    }
+  });
 })();
 </script>
 </body>
