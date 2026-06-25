@@ -992,6 +992,8 @@ function AuthFlow() {
   const [landingPhone, setLandingPhone] = useState(isDemo ? '5550000000' : '');
   // Sign-in password screen
   const [password, setPassword] = useState('');
+  // Set when user typed a plain username (not email/phone) — uses legacy /api/login
+  const [legacyUsername, setLegacyUsername] = useState('');
   // OTP code
   const [otpCode, setOtpCode] = useState('');
   // OTP subtitle phone hint (set when sign-in returns phone factor)
@@ -1101,6 +1103,14 @@ function AuthFlow() {
 
   const handleIdentifierNext = async (id: string) => {
     setError('');
+    // Plain username (no @ and doesn't start with +) → legacy Passport login
+    const isUsername = !id.includes('@') && !id.startsWith('+') && !/^\d{10,}$/.test(id.replace(/\D/g, ''));
+    if (isUsername) {
+      setLegacyUsername(id);
+      setStep('password');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const result = await signIn!.create({ identifier: id });
@@ -1200,6 +1210,30 @@ function AuthFlow() {
   const handlePasswordNext = async () => {
     setError('');
     setLoading(true);
+    // Legacy username login — bypass Clerk, use Passport /api/login
+    if (legacyUsername) {
+      try {
+        const res = await fetch(resolveUrl('/api/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: legacyUsername, password }),
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(body.message ?? 'Incorrect username or password.');
+          return;
+        }
+        const userData = await res.json();
+        queryClient.setQueryData(['/api/user'], userData);
+        setStep('welcome');
+      } catch {
+        setError('Could not connect. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     console.log('[Auth] password submit started');
     try {
       const result = await signIn!.attemptFirstFactor({
