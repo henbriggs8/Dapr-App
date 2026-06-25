@@ -13,8 +13,6 @@ import { WalletLogo } from "@/components/wallet-logo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { resolveUrl } from "@/lib/queryClient";
-import { Capacitor } from "@capacitor/core";
-import { Stripe as StripeNative, ApplePayEventsEnum, PaymentSheetEventsEnum } from "@capacitor-community/stripe";
 import { type Service, type TimeSlot, type Vehicle } from "@shared/schema";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -23,9 +21,21 @@ import {
 } from "@stripe/react-stripe-js";
 import type { PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
 
-const stripePromise = Capacitor.isNativePlatform()
-  ? Promise.resolve(null)
-  : loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+// Use protocol check instead of eagerly importing @capacitor/core
+const IS_NATIVE = typeof window !== "undefined" && window.location.protocol === "capacitor:";
+
+// Lazy Stripe init — only calls loadStripe() when the payment step is first
+// reached, not at module parse time. This saves ~80 KB + a network request
+// on every cold start for users who never open the booking sheet.
+let _stripePromise: ReturnType<typeof loadStripe> | null = null;
+function getStripePromise() {
+  if (_stripePromise === null) {
+    _stripePromise = IS_NATIVE
+      ? Promise.resolve(null)
+      : loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+  }
+  return _stripePromise;
+}
 
 // ── Saved card type ────────────────────────────────────────────────────────────
 interface SavedCard {
@@ -77,11 +87,13 @@ function StripePaymentForm({
   const [payingAppleNative, setPayingAppleNative] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" })
-      .then(() => StripeNative.isApplePayAvailable())
-      .then(() => setNativeApplePayAvailable(true))
-      .catch(() => setNativeApplePayAvailable(false));
+    if (!IS_NATIVE) return;
+    import("@capacitor-community/stripe").then(({ Stripe: StripeNative }) => {
+      StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "" })
+        .then(() => StripeNative.isApplePayAvailable())
+        .then(() => setNativeApplePayAvailable(true))
+        .catch(() => setNativeApplePayAvailable(false));
+    });
   }, []);
 
   const handleNativeApplePay = async () => {
@@ -89,6 +101,7 @@ function StripePaymentForm({
     setPayingAppleNative(true);
     setPayError(null);
     try {
+      const { Stripe: StripeNative, ApplePayEventsEnum } = await import("@capacitor-community/stripe");
       await StripeNative.createApplePay({
         paymentIntentClientSecret: clientSecret,
         paymentSummaryItems: [{ label: "Dapr Car Wash", amount: amountCents / 100 }],
@@ -1076,11 +1089,13 @@ function ConfirmStep({
   const [iosApplePayPending, setIosApplePayPending] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '' })
-      .then(() => StripeNative.isApplePayAvailable())
-      .then(() => setIosApplePayAvailable(true))
-      .catch(() => setIosApplePayAvailable(false));
+    if (!IS_NATIVE) return;
+    import("@capacitor-community/stripe").then(({ Stripe: StripeNative }) => {
+      StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '' })
+        .then(() => StripeNative.isApplePayAvailable())
+        .then(() => setIosApplePayAvailable(true))
+        .catch(() => setIosApplePayAvailable(false));
+    });
   }, []);
 
   const windows = getArrivalWindows();
@@ -1210,7 +1225,7 @@ function ConfirmStep({
   });
 
   // ── iOS inline card form (no Stripe.js / no popup) ───────────────────────────
-  if (stripeClientSecret && stripeBookingId && Capacitor.isNativePlatform()) {
+  if (stripeClientSecret && stripeBookingId && IS_NATIVE) {
     const dollarAmount = (stripeAmountCents / 100).toFixed(2);
     const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
@@ -1219,6 +1234,7 @@ function ConfirmStep({
       setIosApplePayPending(true);
       setIosCardError(null);
       try {
+        const { Stripe: StripeNative, ApplePayEventsEnum } = await import("@capacitor-community/stripe");
         await StripeNative.createApplePay({
           paymentIntentClientSecret: stripeClientSecret,
           paymentSummaryItems: [{ label: 'Dapr Car Wash', amount: stripeAmountCents / 100 }],
@@ -1406,7 +1422,7 @@ function ConfirmStep({
   }
 
   // ── Embedded Stripe Checkout overlay (web only) ──────────────────────────────
-  if (stripeClientSecret && stripeBookingId && !Capacitor.isNativePlatform()) {
+  if (stripeClientSecret && stripeBookingId && !IS_NATIVE) {
     return (
       <div className="flex flex-col min-h-0 h-full">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
@@ -1421,7 +1437,7 @@ function ConfirmStep({
         </div>
         <div className="overflow-y-auto flex-1 px-4 py-4">
           <Elements
-            stripe={stripePromise}
+            stripe={getStripePromise()}
             options={{ clientSecret: stripeClientSecret, appearance: { theme: "night", variables: { colorPrimary: "#8c52ff" } } }}
           >
             <StripePaymentForm

@@ -20,5 +20,17 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("@stripe/")) return "vendor-stripe";
+          if (id.includes("framer-motion")) return "vendor-framer";
+          if (id.includes("@capacitor")) return "vendor-capacitor";
+          if (id.includes("@clerk/")) return "vendor-clerk";
+          if (id.includes("react-icons")) return "vendor-icons";
+          if (id.includes("node_modules")) return "vendor";
+        },
+      },
+    },
   },
 });

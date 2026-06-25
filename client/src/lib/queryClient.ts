@@ -1,11 +1,13 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { Capacitor } from "@capacitor/core";
 
 // ─── Native API routing ────────────────────────────────────────────────────
 // When running in a Capacitor native app the frontend bundle is served from
 // capacitor://localhost which has no Express backend.  All /api/* calls must
 // go to the deployed production server instead.
-const IS_NATIVE = Capacitor.isNativePlatform();
+// Using protocol check instead of importing @capacitor/core keeps this module
+// off the critical parse path on every cold start.
+const IS_NATIVE =
+  typeof window !== "undefined" && window.location.protocol === "capacitor:";
 
 // Set VITE_API_BASE_URL in your .env.local before running `npm run build`
 // for an iOS release build (e.g. https://yourapp.replit.app).

@@ -3,39 +3,7 @@ import { queryClient, resolveUrl } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
-import NotFound from "@/pages/not-found";
-import IdVerificationPage from "@/pages/provider-onboarding/id-verification";
-import VehicleSetupPage from "@/pages/provider-onboarding/vehicle-setup";
-import BankInfoPage from "@/pages/provider-onboarding/bank-info";
-import ClerkAuthPage from "@/pages/clerk-auth-page";
-import HomeScreen from "@/pages/home-screen";
-import OnboardingNameScreen from "@/pages/onboarding-name-screen";
-import AddressScreen from "@/pages/address-screen";
-import CarProfileScreen from "@/pages/car-profile-screen";
-import FirstWashOffer from "@/pages/first-wash-offer";
-import ReferralPage from "@/pages/referral";
-import ProfilePage from "@/pages/profile-page";
-import ActivityPage from "@/pages/activity-page";
-import BookingDetails from "@/pages/booking-details";
-import BookingConfirmation from "@/pages/booking-confirmation";
-import ServiceProgress from "@/pages/service-progress";
-import PaymentSuccessPage from "@/pages/payment-success";
-import MatchingScreen from "@/pages/matching-screen";
-import PostServiceReview from "@/pages/post-service-review";
-import AdminDashboard from "@/pages/admin-dashboard";
-import ProviderDashboard from "@/pages/provider-dashboard";
-import TrackingPage from "@/pages/tracking-page";
-import HowItWorks from "@/pages/how-it-works";
-import InteriorCleaning from "@/pages/interior-cleaning";
-import ExteriorCleaning from "@/pages/exterior-cleaning";
-import CarSeatCleaning from "@/pages/car-seat-cleaning";
-import FAQ from "@/pages/faq";
-import Corporate from "@/pages/corporate";
-import ServicesOverview from "@/pages/services-overview";
-import PrivacyPolicy from "@/pages/privacy-policy";
-import TermsOfService from "@/pages/terms-of-service";
-
-import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
+import { lazy, Suspense, ReactNode, useEffect, useRef, useState, useCallback } from "react";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { setBootStage } from "@/lib/boot-debug";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
@@ -47,21 +15,61 @@ import TabNavigation from "@/components/tab-navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthGate } from "./components/auth-gate";
 
+// ── Lazy-loaded pages ─────────────────────────────────────────────────────────
+// Each page is only downloaded when the user actually navigates there,
+// keeping the initial JS bundle under ~300 KB instead of 1.5 MB.
+const NotFound = lazy(() => import("@/pages/not-found"));
+const ClerkAuthPage = lazy(() => import("@/pages/clerk-auth-page"));
+const OnboardingNameScreen = lazy(() => import("@/pages/onboarding-name-screen"));
+const AddressScreen = lazy(() => import("@/pages/address-screen"));
+const CarProfileScreen = lazy(() => import("@/pages/car-profile-screen"));
+const FirstWashOffer = lazy(() => import("@/pages/first-wash-offer"));
+const ReferralPage = lazy(() => import("@/pages/referral"));
+const ProfilePage = lazy(() => import("@/pages/profile-page"));
+const ActivityPage = lazy(() => import("@/pages/activity-page"));
+const BookingDetails = lazy(() => import("@/pages/booking-details"));
+const BookingConfirmation = lazy(() => import("@/pages/booking-confirmation"));
+const ServiceProgress = lazy(() => import("@/pages/service-progress"));
+const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
+const MatchingScreen = lazy(() => import("@/pages/matching-screen"));
+const PostServiceReview = lazy(() => import("@/pages/post-service-review"));
+const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
+const ProviderDashboard = lazy(() => import("@/pages/provider-dashboard"));
+const TrackingPage = lazy(() => import("@/pages/tracking-page"));
+const HowItWorks = lazy(() => import("@/pages/how-it-works"));
+const InteriorCleaning = lazy(() => import("@/pages/interior-cleaning"));
+const ExteriorCleaning = lazy(() => import("@/pages/exterior-cleaning"));
+const CarSeatCleaning = lazy(() => import("@/pages/car-seat-cleaning"));
+const FAQ = lazy(() => import("@/pages/faq"));
+const Corporate = lazy(() => import("@/pages/corporate"));
+const ServicesOverview = lazy(() => import("@/pages/services-overview"));
+const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
+const IdVerificationPage = lazy(() => import("@/pages/provider-onboarding/id-verification"));
+const VehicleSetupPage = lazy(() => import("@/pages/provider-onboarding/vehicle-setup"));
+const BankInfoPage = lazy(() => import("@/pages/provider-onboarding/bank-info"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="lg" />
+    </div>
+  );
+}
+
 function AdminRoute({
   path,
   component: Component,
 }: {
   path: string;
-  component: () => React.JSX.Element;
+  component: React.LazyExoticComponent<() => React.JSX.Element> | (() => React.JSX.Element);
 }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader size="lg" />
-        </div>
+        <PageLoader />
       </Route>
     );
   }
@@ -86,16 +94,14 @@ function ProviderRoute({
   component: Component,
 }: {
   path: string;
-  component: () => React.JSX.Element;
+  component: React.LazyExoticComponent<() => React.JSX.Element> | (() => React.JSX.Element);
 }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader size="lg" />
-        </div>
+        <PageLoader />
       </Route>
     );
   }
@@ -121,63 +127,65 @@ function Router() {
 
   return (
     <>
-      <Switch>
-        {/* Public routes first */}
-        <Route path="/sso-callback" component={() => (
-          <AuthenticateWithRedirectCallback
-            afterSignUpUrl="/onboarding/name"
-            afterSignInUrl="/"
-          />
-        )} />
-        <Route path="/auth" component={ClerkAuthPage} />
-        <Route path="/auth/:rest*" component={ClerkAuthPage} />
-        <Route path="/provider-auth"><Redirect to="/auth" /></Route>
-        <Route path="/verify"><Redirect to="/auth" /></Route>
-        <Route path="/onboarding/name" component={OnboardingNameScreen} />
-        <Route path="/onboarding/address" component={AddressScreen} />
-        <Route path="/onboarding/car-profile" component={CarProfileScreen} />
-        <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
-        <Route path="/referral" component={ReferralPage} />
-        <Route path="/how-it-works" component={HowItWorks} />
-        <Route path="/interior-cleaning" component={InteriorCleaning} />
-        <Route path="/exterior-cleaning" component={ExteriorCleaning} />
-        <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
-        <Route path="/faq" component={FAQ} />
-        <Route path="/corporate" component={Corporate} />
-        <Route path="/privacy" component={PrivacyPolicy} />
-        <Route path="/terms" component={TermsOfService} />
-        
-        {/* Provider onboarding routes */}
-        <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
-        <Route path="/provider-onboarding/vehicle-setup" component={VehicleSetupPage} />
-        <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
-        
-        {/* Protected routes */}
-        <Route path="/services" component={ServicesOverview} />
-        <ProtectedRoute path="/activity" component={ActivityPage} />
-        <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
-        <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
-        <ProtectedRoute path="/service-progress" component={ServiceProgress} />
-        <ProtectedRoute path="/tracking" component={TrackingPage} />
-        <ProtectedRoute path="/matching" component={MatchingScreen} />
-        <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
-        <ProtectedRoute path="/review/:bookingId" component={PostServiceReview} />
-        
-        {/* Admin route */}
-        <AdminRoute path="/admin" component={AdminDashboard} />
-        
-        {/* Home route - must come after all specific routes */}
-        {user?.isProvider ? (
-          <ProviderRoute path="/" component={ProviderDashboard} />
-        ) : (
-          <Route path="/" component={HomeWithOnboarding} />
-        )}
-        
-        {/* Catch-all route for 404 */}
-        <Route component={NotFound} />
-      </Switch>
-      
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          {/* Public routes first */}
+          <Route path="/sso-callback" component={() => (
+            <AuthenticateWithRedirectCallback
+              afterSignUpUrl="/onboarding/name"
+              afterSignInUrl="/"
+            />
+          )} />
+          <Route path="/auth" component={ClerkAuthPage} />
+          <Route path="/auth/:rest*" component={ClerkAuthPage} />
+          <Route path="/provider-auth"><Redirect to="/auth" /></Route>
+          <Route path="/verify"><Redirect to="/auth" /></Route>
+          <Route path="/onboarding/name" component={OnboardingNameScreen} />
+          <Route path="/onboarding/address" component={AddressScreen} />
+          <Route path="/onboarding/car-profile" component={CarProfileScreen} />
+          <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
+          <Route path="/referral" component={ReferralPage} />
+          <Route path="/how-it-works" component={HowItWorks} />
+          <Route path="/interior-cleaning" component={InteriorCleaning} />
+          <Route path="/exterior-cleaning" component={ExteriorCleaning} />
+          <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
+          <Route path="/faq" component={FAQ} />
+          <Route path="/corporate" component={Corporate} />
+          <Route path="/privacy" component={PrivacyPolicy} />
+          <Route path="/terms" component={TermsOfService} />
+
+          {/* Provider onboarding routes */}
+          <Route path="/provider-onboarding/id-verification" component={IdVerificationPage} />
+          <Route path="/provider-onboarding/vehicle-setup" component={VehicleSetupPage} />
+          <Route path="/provider-onboarding/bank-info" component={BankInfoPage} />
+
+          {/* Protected routes */}
+          <Route path="/services" component={ServicesOverview} />
+          <ProtectedRoute path="/activity" component={ActivityPage} />
+          <ProtectedRoute path="/profile" component={ProfilePage} />
+          <ProtectedRoute path="/booking-details/:id" component={BookingDetails} />
+          <ProtectedRoute path="/booking-confirmation" component={BookingConfirmation} />
+          <ProtectedRoute path="/service-progress" component={ServiceProgress} />
+          <ProtectedRoute path="/tracking" component={TrackingPage} />
+          <ProtectedRoute path="/matching" component={MatchingScreen} />
+          <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
+          <ProtectedRoute path="/review/:bookingId" component={PostServiceReview} />
+
+          {/* Admin route */}
+          <AdminRoute path="/admin" component={AdminDashboard} />
+
+          {/* Home route - must come after all specific routes */}
+          {user?.isProvider ? (
+            <ProviderRoute path="/" component={ProviderDashboard} />
+          ) : (
+            <Route path="/" component={HomeWithOnboarding} />
+          )}
+
+          {/* Catch-all route for 404 */}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+
       {/* Show tab navigation for regular users on mobile only, not during onboarding */}
       <MobileTabNavigation location={location} />
     </>
