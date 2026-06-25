@@ -1106,7 +1106,7 @@ function AuthFlow() {
     // Plain username (no @ and doesn't start with +) → legacy Passport login
     const isUsername = !id.includes('@') && !id.startsWith('+') && !/^\d{10,}$/.test(id.replace(/\D/g, ''));
     if (isUsername) {
-      setLegacyUsername(id);
+      setLegacyUsername(id.trim().toLowerCase());
       setStep('password');
       setLoading(false);
       return;
@@ -1213,21 +1213,25 @@ function AuthFlow() {
     // Legacy username login — bypass Clerk, use Passport /api/login
     if (legacyUsername) {
       try {
+        console.log('[LegacyLogin] POST /api/login username=', legacyUsername, 'pwLen=', password.length);
         const res = await fetch(resolveUrl('/api/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: legacyUsername, password }),
           credentials: 'include',
         });
+        console.log('[LegacyLogin] response status=', res.status, 'ok=', res.ok);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          setError(body.message ?? 'Incorrect username or password.');
+          setError(body.message ?? `Incorrect username or password. (${res.status})`);
           return;
         }
         const userData = await res.json();
+        console.log('[LegacyLogin] success userId=', userData?.id);
         queryClient.setQueryData(['/api/user'], userData);
         setStep('welcome');
-      } catch {
+      } catch (err: any) {
+        console.error('[LegacyLogin] fetch error', err);
         setError('Could not connect. Please try again.');
       } finally {
         setLoading(false);
