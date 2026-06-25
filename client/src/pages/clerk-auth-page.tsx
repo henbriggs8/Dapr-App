@@ -1347,14 +1347,16 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        // Open the server-side OAuth bridge page in SFSafariViewController.
-        // That page loads Clerk JS directly (NO proxy) so Clerk sets its __client
-        // cookie on clerk.autodapper.com in the SYSTEM cookie store — which is
-        // exactly the context the OAuth callback returns to. Using the proxy here
-        // causes __client to land on the wrong domain → authorization_invalid.
-        const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
-        console.log('[Auth] Apple OAuth: opening bridge page');
-        await Browser.open({ url: `${apiBase}/native-oauth-start?strategy=apple` });
+        // Use Clerk's Account Portal (accounts.autodapper.com) — a live Clerk-managed
+        // server. This avoids all proxy cookie-domain issues: Clerk sets __client on
+        // clerk.autodapper.com in the system cookie store directly, so the OAuth flow
+        // can validate state without a domain mismatch → no authorization_invalid.
+        // After the user signs in, Clerk redirects to native-sso-callback with a
+        // __clerk_ticket the app exchanges for a session via handleRedirectCallback().
+        const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
+        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
+        console.log('[Auth] Apple OAuth: opening Clerk Account Portal');
+        await Browser.open({ url: portalUrl });
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
@@ -1375,14 +1377,16 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        // Open the server-side OAuth bridge page in SFSafariViewController.
-        // That page loads Clerk JS directly (NO proxy) so Clerk sets its __client
-        // cookie on clerk.autodapper.com in the SYSTEM cookie store — which is
-        // exactly the context the OAuth callback returns to. Using the proxy here
-        // causes __client to land on the wrong domain → authorization_invalid.
-        const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
-        console.log('[Auth] Google OAuth: opening bridge page');
-        await Browser.open({ url: `${apiBase}/native-oauth-start?strategy=google` });
+        // Use Clerk's Account Portal (accounts.autodapper.com) — a live Clerk-managed
+        // server. This avoids all proxy cookie-domain issues: Clerk sets __client on
+        // clerk.autodapper.com in the system cookie store directly, so the OAuth flow
+        // can validate state without a domain mismatch → no authorization_invalid.
+        // After the user signs in, Clerk redirects to native-sso-callback with a
+        // __clerk_ticket the app exchanges for a session via handleRedirectCallback().
+        const callbackUrl = 'https://dapper-pros.replit.app/native-sso-callback';
+        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
+        console.log('[Auth] Google OAuth: opening Clerk Account Portal');
+        await Browser.open({ url: portalUrl });
       } else {
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
