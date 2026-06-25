@@ -1071,6 +1071,17 @@ function ConfirmStep({
   const [iosCvc, setIosCvc] = useState('');
   const [iosCardSubmitting, setIosCardSubmitting] = useState(false);
   const [iosCardError, setIosCardError] = useState<string | null>(null);
+  const [iosApplePayAvailable, setIosApplePayAvailable] = useState(false);
+  const [iosApplePayPending, setIosApplePayPending] = useState(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    StripeNative.initialize({ publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '' })
+      .then(() => StripeNative.isApplePayAvailable())
+      .then(() => setIosApplePayAvailable(true))
+      .catch(() => setIosApplePayAvailable(false));
+  }, []);
+
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -1202,6 +1213,35 @@ function ConfirmStep({
     const dollarAmount = (stripeAmountCents / 100).toFixed(2);
     const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
+    const handleIosApplePay = async () => {
+      if (iosApplePayPending) return;
+      setIosApplePayPending(true);
+      setIosCardError(null);
+      try {
+        await StripeNative.createApplePay({
+          paymentIntentClientSecret: stripeClientSecret,
+          paymentSummaryItems: [{ label: 'Dapr Car Wash', amount: stripeAmountCents / 100 }],
+          merchantIdentifier: 'merchant.com.autodapper.app',
+          countryCode: 'US',
+          currency: 'USD',
+        });
+        const result = await StripeNative.presentApplePay();
+        if (result.paymentResult === ApplePayEventsEnum.Completed) {
+          queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+          const id = stripeBookingId;
+          setStripeClientSecret(null); setStripeBookingId(null); setStripeAmountCents(0);
+          setLocation(`/matching?booking=${id}`);
+        }
+      } catch (err: any) {
+        const msg = (err?.message ?? String(err)).toLowerCase();
+        if (!msg.includes('cancel')) {
+          setIosCardError("Apple Pay failed. Please pay with your card below.");
+        }
+      } finally {
+        setIosApplePayPending(false);
+      }
+    };
+
     const handleIosPay = async () => {
       setIosCardSubmitting(true);
       setIosCardError(null);
@@ -1281,6 +1321,27 @@ function ConfirmStep({
         </div>
 
         <div className="overflow-y-auto flex-1 px-4 py-5 space-y-4">
+          {/* Apple Pay button (shown when available) */}
+          {iosApplePayAvailable && (
+            <>
+              <button
+                onClick={handleIosApplePay}
+                disabled={iosApplePayPending || iosCardSubmitting}
+                className="w-full rounded-2xl py-3.5 text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity bg-black text-white"
+              >
+                {iosApplePayPending
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <span className="text-[17px] tracking-tight"></span>}
+                {iosApplePayPending ? 'Processing…' : 'Pay'}
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">or pay with card</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            </>
+          )}
+
           {/* Card number */}
           <div>
             <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Card number</label>
