@@ -24,13 +24,10 @@ export async function createPaymentLink(
   const chargeAmount = Math.max(baseAmount * (1 - discount / 100), 0.50);
   const amountInCents = Math.round(chargeAmount * 100);
 
-  // PayPal is not activated on this Stripe account — use card only.
-  const paymentMethodTypes = ['card'];
-
   const intent = await stripe.paymentIntents.create({
     amount: amountInCents,
     currency: 'usd',
-    payment_method_types: paymentMethodTypes,
+    automatic_payment_methods: { enabled: true },
     metadata: { bookingId: String(booking.id) },
     ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
     ...(saveCard && stripeCustomerId ? { setup_future_usage: 'on_session' } : {}),
