@@ -1066,6 +1066,11 @@ function ConfirmStep({
   const [saveCard, setSaveCard] = useState(false);
   const [nativePaymentPending, setNativePaymentPending] = useState(false);
   const [nativePaymentError, setNativePaymentError] = useState<string | null>(null);
+  const [iosCardNumber, setIosCardNumber] = useState('');
+  const [iosCardExpiry, setIosCardExpiry] = useState('');
+  const [iosCvc, setIosCvc] = useState('');
+  const [iosCardSubmitting, setIosCardSubmitting] = useState(false);
+  const [iosCardError, setIosCardError] = useState<string | null>(null);
   const windows = getArrivalWindows();
 
   const KNOWN_PROMOS: Record<string, number> = { DAPR99: 99, TEST99: 99 };
@@ -1156,21 +1161,6 @@ function ConfirmStep({
       const booking = await bookingRes.json();
 
       // 3. Create payment (or redeem free wash credit)
-      // On iOS, use Stripe Checkout URL opened in Safari View Controller.
-      // The native PaymentSheet SDK hangs on initialization — this approach is proven reliable.
-      if (!useFreeCredit && Capacitor.isNativePlatform()) {
-        const payRes = await fetch(resolveUrl(`/api/bookings/${booking.id}/ios-checkout`), {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify(appliedPromo ? { promoCode: appliedPromo.code } : {}),
-        });
-        if (!payRes.ok) throw new Error(`Payment setup failed (${payRes.status})`);
-        const { url, amountInCents } = await payRes.json();
-        queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-        return { url, clientSecret: null, bookingId: booking.id, amountInCents, isCheckoutUrl: true as const };
-      }
-
       const payRes = await fetch(resolveUrl(`/api/bookings/${booking.id}/create-payment`), {
         method: "POST",
         headers,
@@ -1188,30 +1178,170 @@ function ConfirmStep({
       queryClient.invalidateQueries({ queryKey: ["/api/referral/my-code"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
 
-      return { ...payData, bookingId: booking.id, isCheckoutUrl: false as const };
+      return { ...payData, bookingId: booking.id };
     },
     onSuccess: async (payData) => {
       if (payData.free) {
         setLocation(`/matching?booking=${payData.bookingId}`);
         return;
       }
-
-      // iOS: open Stripe Checkout in Safari View Controller
-      if (payData.isCheckoutUrl && payData.url) {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: payData.url });
-        return;
-      }
-
       if (!payData.clientSecret) throw new Error("Missing payment client secret.");
-
       const amountCents = payData.amountInCents ?? Math.round(discountedPrice * 100);
-
+      setIosCardNumber('');
+      setIosCardExpiry('');
+      setIosCvc('');
+      setIosCardError(null);
       setStripeClientSecret(payData.clientSecret);
       setStripeBookingId(payData.bookingId);
       setStripeAmountCents(amountCents);
     },
   });
+
+  // ── iOS inline card form (no Stripe.js / no popup) ───────────────────────────
+  if (stripeClientSecret && stripeBookingId && Capacitor.isNativePlatform()) {
+    const dollarAmount = (stripeAmountCents / 100).toFixed(2);
+    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+
+    const handleIosPay = async () => {
+      setIosCardSubmitting(true);
+      setIosCardError(null);
+      try {
+        const digits = iosCardNumber.replace(/\s/g, '');
+        const parts = iosCardExpiry.split('/');
+        const expMonth = parts[0]?.trim() ?? '';
+        const expYearRaw = parts[1]?.trim() ?? '';
+        const expYear = expYearRaw.length === 2 ? `20${expYearRaw}` : expYearRaw;
+
+        // 1. Tokenize card via Stripe REST API (publishable key — no SDK needed)
+        const pmRes = await fetch('https://api.stripe.com/v1/payment_methods', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${publishableKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            type: 'card',
+            'card[number]': digits,
+            'card[exp_month]': expMonth,
+            'card[exp_year]': expYear,
+            'card[cvc]': iosCvc,
+          }).toString(),
+        });
+        const pmData = await pmRes.json();
+        if (pmData.error) throw new Error(pmData.error.message);
+
+        // 2. Confirm PaymentIntent on the server
+        const token = await getToken().catch(() => null);
+        const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) hdrs['Authorization'] = `Bearer ${token}`;
+
+        const confirmRes = await fetch(resolveUrl(`/api/bookings/${stripeBookingId}/confirm-payment`), {
+          method: 'POST',
+          headers: hdrs,
+          credentials: 'include',
+          body: JSON.stringify({ paymentMethodId: pmData.id }),
+        });
+        const confirmData = await confirmRes.json();
+        if (!confirmRes.ok) throw new Error(confirmData.error || 'Payment failed. Please try again.');
+        if (confirmData.requiresAction) throw new Error('This card requires extra verification. Please try a different card.');
+
+        queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+        const id = stripeBookingId;
+        setStripeClientSecret(null); setStripeBookingId(null); setStripeAmountCents(0);
+        setLocation(`/matching?booking=${id}`);
+      } catch (err: any) {
+        setIosCardError(err.message || 'Payment failed. Please try again.');
+      } finally {
+        setIosCardSubmitting(false);
+      }
+    };
+
+    const handleCardNumberInput = (v: string) => {
+      const d = v.replace(/\D/g, '').slice(0, 16);
+      setIosCardNumber(d.replace(/(.{4})/g, '$1 ').trim());
+    };
+    const handleExpiryInput = (v: string) => {
+      const d = v.replace(/\D/g, '').slice(0, 4);
+      setIosCardExpiry(d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d);
+    };
+
+    const cardReady = iosCardNumber.replace(/\s/g, '').length >= 13 && iosCardExpiry.length >= 5 && iosCvc.length >= 3;
+
+    return (
+      <div className="flex flex-col min-h-0 h-full">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+          <button
+            onClick={() => { setStripeClientSecret(null); setStripeBookingId(null); setStripeAmountCents(0); }}
+            className="flex items-center gap-1 text-[13px] text-gray-500"
+          >
+            <Icon icon={ArrowLeft} size="sm" /> Back
+          </button>
+          <p className="text-[15px] font-semibold text-gray-900">Enter payment details</p>
+          <div className="w-12" />
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-4 py-5 space-y-4">
+          {/* Card number */}
+          <div>
+            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Card number</label>
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5">
+              <Icon icon={CreditCard} size="sm" className="text-gray-400 shrink-0" />
+              <input
+                className="flex-1 text-[15px] font-medium text-gray-900 bg-transparent outline-none placeholder-gray-300"
+                placeholder="1234 5678 9012 3456"
+                value={iosCardNumber}
+                onChange={e => handleCardNumberInput(e.target.value)}
+                inputMode="numeric"
+                maxLength={19}
+              />
+            </div>
+          </div>
+
+          {/* Expiry + CVC */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Expiry</label>
+              <input
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-[15px] font-medium text-gray-900 outline-none placeholder-gray-300"
+                placeholder="MM/YY"
+                value={iosCardExpiry}
+                onChange={e => handleExpiryInput(e.target.value)}
+                inputMode="numeric"
+                maxLength={5}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">CVC</label>
+              <input
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-[15px] font-medium text-gray-900 outline-none placeholder-gray-300"
+                placeholder="123"
+                value={iosCvc}
+                onChange={e => setIosCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                inputMode="numeric"
+                maxLength={4}
+              />
+            </div>
+          </div>
+
+          {iosCardError && (
+            <p className="text-[13px] text-red-500 text-center">{iosCardError}</p>
+          )}
+        </div>
+
+        <div className="px-4 pb-8 pt-2 shrink-0">
+          <button
+            onClick={handleIosPay}
+            disabled={iosCardSubmitting || !cardReady}
+            className="w-full rounded-2xl py-4 text-[16px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
+            style={{ backgroundColor: ACCENT }}
+          >
+            {iosCardSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+            {iosCardSubmitting ? 'Processing…' : `Pay $${dollarAmount}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Embedded Stripe Checkout overlay (web only) ──────────────────────────────
   if (stripeClientSecret && stripeBookingId && !Capacitor.isNativePlatform()) {

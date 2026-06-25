@@ -1550,6 +1550,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Confirm a PaymentIntent with a payment method tokenized on the client (iOS inline card form)
+  app.post('/api/bookings/:id/confirm-payment', resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
+    const { paymentMethodId } = req.body;
+    if (!paymentMethodId) return res.status(400).json({ error: 'paymentMethodId required' });
+    try {
+      const booking = await storage.getBookingById(id);
+      if (!booking) return res.status(404).json({ error: 'Booking not found' });
+      if (booking.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+      if (booking.isPaid) return res.json({ success: true }); // idempotent
+
+      const piId = booking.stripeSessionId;
+      if (!piId || !piId.startsWith('pi_')) return res.status(400).json({ error: 'No PaymentIntent on this booking' });
+
+      const Stripe = (await import('stripe')).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2026-04-22.dahlia' as any });
+
+      const intent = await stripe.paymentIntents.confirm(piId, {
+        payment_method: paymentMethodId,
+      } as any);
+
+      if (intent.status === 'succeeded') {
+        await storage.updateBookingPaymentInfo(id, { isPaid: true, paymentStatus: 'completed' });
+        return res.json({ success: true });
+      }
+      if (intent.status === 'requires_action') {
+        return res.json({ requiresAction: true });
+      }
+      return res.status(400).json({ error: `Payment status: ${intent.status}` });
+    } catch (err: any) {
+      console.error('confirm-payment error:', err);
+      const msg = err?.raw?.message || err?.message || 'Payment failed';
+      return res.status(400).json({ error: msg });
+    }
+  });
+
   app.post('/api/bookings/:id/verify-payment', async (req, res) => {
     if (!req.user) {
       return res.sendStatus(401);
