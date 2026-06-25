@@ -1490,23 +1490,14 @@ function AuthFlow() {
         const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
         const callbackUrl = `https://dapper-pros.replit.app/native-sso-callback?state=${state}`;
 
-        // Ask Clerk for the direct Google OAuth URL — this skips the Clerk portal entirely
-        // and sends the user straight to Google's sign-in screen.
-        let googleUrl: string | null = null;
-        try {
-          const attempt = await signIn!.create({
-            strategy: 'oauth_google',
-            redirectUrl: callbackUrl,
-          } as any);
-          const redirectUrl = (attempt as any).firstFactorVerification?.externalVerificationRedirectURL;
-          googleUrl = redirectUrl instanceof URL ? redirectUrl.toString() : (typeof redirectUrl === 'string' ? redirectUrl : null);
-          console.log('[Auth] Google OAuth direct URL obtained:', !!googleUrl);
-        } catch (e) {
-          console.warn('[Auth] Could not get direct Google URL, falling back to Account Portal', e);
-        }
-
-        // Fall back to the Clerk Account Portal if direct URL isn't available
-        const portalUrl = googleUrl ?? `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
+        // Use the Clerk Account Portal to start the Google OAuth flow.
+        // We cannot use signIn.create() to get a direct Google URL here because
+        // the OAuth state Clerk generates is tied to the WKWebView cookie session —
+        // when SFSafariViewController (a separate sandbox) picks it up, Clerk's
+        // server rejects the state mismatch with authorization_invalid.
+        // The Account Portal starts the flow from Clerk's own server context,
+        // avoiding that cookie isolation entirely.
+        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
 
         // Stop polling if the user manually closes the browser without signing in.
         let cancelled = false;
@@ -1514,7 +1505,7 @@ function AuthFlow() {
           cancelled = true;
         });
 
-        console.log('[Auth] Google OAuth: opening browser, polling state=', state);
+        console.log('[Auth] Google OAuth: opening Account Portal, polling state=', state);
         await Browser.open({ url: portalUrl });
         setLoading(true);
 
