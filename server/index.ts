@@ -284,6 +284,38 @@ app.get('/download/dapr-ios', (req, res) => {
   });
 });
 
+// ── Native iOS OAuth bridge ────────────────────────────────────────────────
+// Clerk can only redirect to HTTPS URLs in its allowlist. After the user
+// authenticates with Google/Apple in SFSafariViewController, Clerk redirects
+// to this HTTPS endpoint. This page fires the com.autodapper.app:// custom
+// scheme so iOS routes back to the native app with the Clerk callback params.
+app.get('/native-sso-callback', (req, res) => {
+  const qs = Object.keys(req.query).length
+    ? '?' + new URLSearchParams(req.query as Record<string, string>).toString()
+    : '';
+  const deepLink = `com.autodapper.app://sso-callback${qs}`;
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Signing in…</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif;background:#fff;color:#666;font-size:15px;}</style>
+</head>
+<body>
+<p>Completing sign-in…</p>
+<script>
+(function(){
+  var link = ${JSON.stringify(deepLink)};
+  // Fire the deep link immediately — iOS will open the app and dismiss this page
+  window.location.replace(link);
+  // Fallback: try again after a short delay in case the first attempt races
+  setTimeout(function(){ window.location.replace(link); }, 400);
+})();
+</script>
+</body>
+</html>`);
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

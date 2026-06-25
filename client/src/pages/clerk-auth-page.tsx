@@ -1324,20 +1324,21 @@ function AuthFlow() {
     }
   };
 
-  const getOAuthUrl = async (strategy: 'oauth_apple' | 'oauth_google', deepLink: string): Promise<string> => {
+  const getOAuthUrl = async (strategy: 'oauth_apple' | 'oauth_google', callbackUrl: string): Promise<string> => {
     // Try sign-in path first (handles existing users; Clerk auto-transfers new users)
     try {
-      const si = await signIn!.create({ strategy, redirectUrl: deepLink, actionCompleteRedirectUrl: deepLink } as any);
+      const si = await signIn!.create({ strategy, redirectUrl: callbackUrl, actionCompleteRedirectUrl: callbackUrl } as any);
       const url = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
-      if (url) return url;
+      if (url) { console.log('[Auth] OAuth URL from signIn:', url.slice(0, 80)); return url; }
     } catch (e) {
       console.log('[Auth] signIn.create OAuth failed, trying signUp:', e);
     }
     // Fallback: sign-up path (for brand-new users not yet in Clerk)
-    const su = await signUp!.create({ strategy, redirectUrl: deepLink, actionCompleteRedirectUrl: deepLink } as any);
+    const su = await signUp!.create({ strategy, redirectUrl: callbackUrl, actionCompleteRedirectUrl: callbackUrl } as any);
     const url = (su as any).verifications?.externalAccount?.externalVerificationRedirectURL?.toString()
       || (su as any).externalVerificationRedirectURL?.toString();
     if (!url) throw new Error(`Could not get OAuth URL for ${strategy}`);
+    console.log('[Auth] OAuth URL from signUp:', url.slice(0, 80));
     return url;
   };
 
@@ -1346,12 +1347,14 @@ function AuthFlow() {
     try {
       if (Capacitor.isNativePlatform()) {
         const { Browser } = await import('@capacitor/browser');
-        const deepLink = 'com.autodapper.app://sso-callback';
-        const oauthUrl = await getOAuthUrl('oauth_apple', deepLink);
-        // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest
+        // Use HTTPS server bridge so the redirect URL is in Clerk's allowlist.
+        // Server at /native-sso-callback fires com.autodapper.app://sso-callback with the same params.
+        const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
+        const callbackUrl = `${apiBase}/native-sso-callback`;
+        console.log('[Auth] Apple OAuth starting, callbackUrl:', callbackUrl);
+        const oauthUrl = await getOAuthUrl('oauth_apple', callbackUrl);
         await Browser.open({ url: oauthUrl });
       } else {
-        // Clear any stale Clerk session so we don't get session_exists errors
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
           strategy: 'oauth_apple',
@@ -1360,7 +1363,9 @@ function AuthFlow() {
         });
       }
     } catch (err: any) {
-      setError(clerkError(err));
+      const msg = clerkError(err);
+      console.error('[Auth] Apple sign-in error:', msg, err);
+      setError(msg);
     }
   };
 
@@ -1368,14 +1373,15 @@ function AuthFlow() {
     setError('');
     try {
       if (Capacitor.isNativePlatform()) {
-        // Google blocks OAuth inside WKWebView — open in SFSafariViewController.
-        // Global DeepLinkHandler in App.tsx listens for sso-callback and handles the rest.
         const { Browser } = await import('@capacitor/browser');
-        const deepLink = 'com.autodapper.app://sso-callback';
-        const oauthUrl = await getOAuthUrl('oauth_google', deepLink);
+        // Use HTTPS server bridge so the redirect URL is in Clerk's allowlist.
+        // Server at /native-sso-callback fires com.autodapper.app://sso-callback with the same params.
+        const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || 'https://dapper-pros.replit.app';
+        const callbackUrl = `${apiBase}/native-sso-callback`;
+        console.log('[Auth] Google OAuth starting, callbackUrl:', callbackUrl);
+        const oauthUrl = await getOAuthUrl('oauth_google', callbackUrl);
         await Browser.open({ url: oauthUrl });
       } else {
-        // Clear any stale Clerk session so we don't get session_exists errors
         await clerkSignOut();
         await signIn!.authenticateWithRedirect({
           strategy: 'oauth_google',
@@ -1384,7 +1390,9 @@ function AuthFlow() {
         });
       }
     } catch (err: any) {
-      setError(clerkError(err));
+      const msg = clerkError(err);
+      console.error('[Auth] Google sign-in error:', msg, err);
+      setError(msg);
     }
   };
 
