@@ -1489,7 +1489,24 @@ function AuthFlow() {
         // Generate a unique state key so the server can match the callback to this poll.
         const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
         const callbackUrl = `https://dapper-pros.replit.app/native-sso-callback?state=${state}`;
-        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
+
+        // Ask Clerk for the direct Google OAuth URL — this skips the Clerk portal entirely
+        // and sends the user straight to Google's sign-in screen.
+        let googleUrl: string | null = null;
+        try {
+          const attempt = await signIn!.create({
+            strategy: 'oauth_google',
+            redirectUrl: callbackUrl,
+          } as any);
+          const redirectUrl = (attempt as any).firstFactorVerification?.externalVerificationRedirectURL;
+          googleUrl = redirectUrl instanceof URL ? redirectUrl.toString() : (typeof redirectUrl === 'string' ? redirectUrl : null);
+          console.log('[Auth] Google OAuth direct URL obtained:', !!googleUrl);
+        } catch (e) {
+          console.warn('[Auth] Could not get direct Google URL, falling back to Account Portal', e);
+        }
+
+        // Fall back to the Clerk Account Portal if direct URL isn't available
+        const portalUrl = googleUrl ?? `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
 
         // Stop polling if the user manually closes the browser without signing in.
         let cancelled = false;
@@ -1497,7 +1514,7 @@ function AuthFlow() {
           cancelled = true;
         });
 
-        console.log('[Auth] Google OAuth: opening Clerk Account Portal, polling state=', state);
+        console.log('[Auth] Google OAuth: opening browser, polling state=', state);
         await Browser.open({ url: portalUrl });
         setLoading(true);
 
