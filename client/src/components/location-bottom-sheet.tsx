@@ -1208,13 +1208,15 @@ function ConfirmStep({
         await StripeNative.createPaymentSheet({
           paymentIntentClientSecret: stripeClientSecret,
           merchantDisplayName: "Dapr",
-          enableApplePay: true,
-          applePayMerchantId: "merchant.com.autodapper.app",
-          countryCode: "US",
-          currency: "USD",
           style: "automatic",
         });
-        const result = await StripeNative.presentPaymentSheet();
+        // Race against a 30-second timeout so the sheet never hangs forever
+        const result = await Promise.race([
+          StripeNative.presentPaymentSheet(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 30000)
+          ),
+        ]);
         if (cancelled) return;
         if (result.paymentResult === PaymentSheetEventsEnum.Completed) {
           queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
