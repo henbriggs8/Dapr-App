@@ -270,9 +270,11 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
         setBootStage('token-ok', `len=${token.length}`);
 
         setBootStage('syncing', resolveUrl('/api/auth/clerk-sync'));
-        // Read provider intent set during signup (localStorage flag cleared after use)
+        // Read provider intent set during signup, then ALWAYS clear it so a
+        // stale flag from an abandoned provider-signup session on this device
+        // cannot accidentally tag a returning customer as a provider.
         const pendingIsProvider = localStorage.getItem('pendingIsProvider') === '1';
-        if (pendingIsProvider) localStorage.removeItem('pendingIsProvider');
+        localStorage.removeItem('pendingIsProvider');
         const res = await fetch(resolveUrl('/api/auth/clerk-sync'), {
           method: 'POST',
           headers: {

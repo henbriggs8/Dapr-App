@@ -2309,10 +2309,12 @@ export function registerRoutes(app: Express): Server {
           email: email || null,
           phone: phone || null
         });
-      } else if (wantsProvider && !user.isProvider) {
-        // Upgrade to provider when the intent was explicitly set during signup
-        user = await storage.updateUser(user.id, { isProvider: true });
       }
+      // NOTE: We intentionally do NOT upgrade an existing user to provider
+      // based on the pendingIsProvider localStorage flag. That flag can be
+      // stale from a previous abandoned provider-signup session on the same
+      // device. Provider status for returning users is determined solely by
+      // their DB record, never by client-side state.
       
       // Establish passport session for this user
       await new Promise<void>((resolve, reject) => {
