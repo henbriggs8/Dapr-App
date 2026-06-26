@@ -95,3 +95,9 @@ id = "Da4sMPQWCYO8WyRhVe1Q_"
 uri = "file://dapr-ios-bundle.tar.gz"
 type = "unspecified"
 title = "Dapr iOS Bundle (latest)"
+
+[[outputs]]
+id = "f56MuZpNKHUIPbjbxUX8Z"
+uri = "file://dapr-ios.zip"
+type = "unspecified"
+title = "dapr-ios.zip"
