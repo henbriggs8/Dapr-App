@@ -194,11 +194,12 @@ export default function MatchingScreen() {
             animate={{ scale: [1, 1.045, 1] }}
             transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5" />
-              <circle cx="16" cy="17" r="2" />
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 11l1.5-4h11L19 11" />
+              <path d="M2 11h20v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5z" />
               <circle cx="7" cy="17" r="2" />
-              <path d="M3 9h4M3 7h9l2 5" />
+              <circle cx="17" cy="17" r="2" />
+              <path d="M2 13h20" />
             </svg>
           </motion.div>
         </div>
