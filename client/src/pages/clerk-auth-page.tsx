@@ -67,11 +67,21 @@ function OtpGrid({
   };
 
   const update = (i: number, val: string) => {
-    const clean = val.replace(/\D/g, '').slice(-1);
-    const next = [...digits];
-    next[i] = clean;
-    setCode(next.join(''));
-    if (clean) focus(i + 1);
+    const clean = val.replace(/\D/g, '');
+    if (clean.length > 1) {
+      // Auto-fill / paste: spread digits across boxes starting at position i
+      const next = [...digits];
+      clean.slice(0, length).split('').forEach((d, j) => {
+        if (i + j < length) next[i + j] = d;
+      });
+      setCode(next.join(''));
+      focus(Math.min(i + clean.length, length - 1));
+    } else {
+      const next = [...digits];
+      next[i] = clean;
+      setCode(next.join(''));
+      if (clean) focus(i + 1);
+    }
   };
 
   const onKey = (i: number, e: React.KeyboardEvent) => {
@@ -89,7 +99,8 @@ function OtpGrid({
           onKeyDown={(e) => onKey(i, e)}
           className={otpInputCls}
           inputMode="numeric"
-          maxLength={1}
+          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+          maxLength={6}
         />
       ))}
     </div>
