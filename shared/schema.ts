@@ -25,7 +25,8 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(),
   freeWashCredits: integer("free_wash_credits").default(0),
   referredByCode: text("referred_by_code"),
-  stripeCustomerId: text("stripe_customer_id")
+  stripeCustomerId: text("stripe_customer_id"),
+  pushToken: text("push_token")
 });
 
 export const pricingConfig = pgTable("pricing_config", {

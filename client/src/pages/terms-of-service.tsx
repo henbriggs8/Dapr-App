@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 
 const EFFECTIVE_DATE = "May 1, 2026";
-const COMPANY_NAME = "DAPR Enterprises LLC";
+const COMPANY_NAME = "Dapr Services LLC";
 const SUPPORT_EMAIL = "support@autodapr.com";
 
 interface SectionProps {

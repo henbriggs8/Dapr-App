@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   MapPin, 
   Clock, 
@@ -115,11 +115,31 @@ export default function ServiceProgress() {
   const [currentStage, setCurrentStage] = useState("dispatched");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [estimatedCompletion, setEstimatedCompletion] = useState(45);
-  const [recentUpdates, setRecentUpdates] = useState([
-    { time: "Just now", message: "Service has been dispatched", type: "info" },
-    { time: "2 min ago", message: "Marcus is gathering equipment", type: "progress" },
-    { time: "5 min ago", message: "Booking confirmed", type: "success" }
+  const [recentUpdates, setRecentUpdates] = useState<{ time: string; message: string; type: string }[]>([
+    { time: "Just now", message: "Booking confirmed", type: "success" },
   ]);
+
+  // Fetch the booking so we can show real provider details
+  const { data: booking } = useQuery<any>({
+    queryKey: ["/api/bookings", numericBookingId],
+    queryFn: async () => {
+      const res = await fetch(`/api/bookings/${numericBookingId}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!numericBookingId,
+    refetchInterval: 10000,
+  });
+
+  // Append a live-update entry whenever the active stage changes
+  useEffect(() => {
+    const stageData = DETAILED_SERVICE_STAGES.find(s => s.key === currentStage);
+    if (!stageData) return;
+    setRecentUpdates(prev => [
+      { time: "Just now", message: stageData.label + " — " + stageData.description, type: "progress" },
+      ...prev.map(u => ({ ...u, time: u.time === "Just now" ? "A moment ago" : u.time })),
+    ]);
+  }, [currentStage]);
 
   // Auto-navigate to review when the backend marks this booking complete via WebSocket
   useEffect(() => {
@@ -131,39 +151,13 @@ export default function ServiceProgress() {
     });
   }, [numericBookingId, subscribeToBookingCompletion, setLocation]);
 
-  // Simulate real-time progress updates (demo only — no auto-navigate on timer)
+  // Track elapsed time for display
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
     }, 1000);
-
-    // Simulate stage progression for demo
-    const stageTimer = setInterval(() => {
-      const currentIndex = DETAILED_SERVICE_STAGES.findIndex(stage => stage.key === currentStage);
-      if (currentIndex < DETAILED_SERVICE_STAGES.length - 1) {
-        const nextStage = DETAILED_SERVICE_STAGES[currentIndex + 1];
-        setCurrentStage(nextStage.key);
-        
-        // Add update message
-        setRecentUpdates(prev => [
-          { 
-            time: "Just now", 
-            message: `${nextStage.label}: ${nextStage.description}`, 
-            type: "progress" 
-          },
-          ...prev.slice(0, 4)
-        ]);
-        
-        // Update estimated completion time
-        setEstimatedCompletion(prev => Math.max(0, prev - 8));
-      }
-    }, 15000); // Change stage every 15 seconds for demo
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(stageTimer);
-    };
-  }, [currentStage]);
+    return () => clearInterval(timer);
+  }, []);
 
   const getCurrentStageData = () => {
     return DETAILED_SERVICE_STAGES.find(stage => stage.key === currentStage) || DETAILED_SERVICE_STAGES[0];
@@ -213,16 +207,19 @@ export default function ServiceProgress() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src="/placeholder-avatar.jpg" />
                   <AvatarFallback className="bg-purple-100 text-purple-600">
-                    MJ
+                    {booking?.providerName
+                      ? booking.providerName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                      : "DP"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">Marcus Johnson</div>
+                  <div className="font-medium">
+                    {booking?.providerName ?? "Your Dapr Pro"}
+                  </div>
                   <div className="text-sm text-muted-foreground flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    Dapr Pro • 4.9★ • 2.1 mi away
+                    Dapr Pro • Service in progress
                   </div>
                 </div>
               </div>

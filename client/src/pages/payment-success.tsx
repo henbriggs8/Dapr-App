@@ -3,18 +3,13 @@ import { useLocation } from "wouter";
 import { Capacitor } from "@capacitor/core";
 import { resolveUrl, queryClient } from "@/lib/queryClient";
 import { CarWashSpinner } from "@/components/car-wash-spinner";
-
-// This page is the redirect target for Stripe after checkout.
-//
-// On iOS native:  fires the custom-scheme deep link so the DeepLinkHandler
-//                 in App.tsx can close the in-app browser and route to /matching.
-//                 The page content is never visible to the user.
-//
-// On web:         verifies payment server-side, then navigates in-app to /matching.
+import { AlertCircle } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 
 export default function PaymentSuccessPage() {
   const [, navigate] = useLocation();
   const [statusMsg, setStatusMsg] = useState("Confirming your payment…");
+  const [error, setError] = useState(false);
 
   const bookingId = (() => {
     try {
@@ -28,22 +23,16 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const run = async () => {
       if (!bookingId) {
-        navigate("/");
+        setError(true);
         return;
       }
 
-      // ── iOS native ────────────────────────────────────────────────────────
-      // Fire the deep link immediately. DeepLinkHandler closes the browser and
-      // pushes /matching?booking=X into the in-app router.
       if (Capacitor.isNativePlatform()) {
         const deepLink = `com.autodapper.app://payment-success?bookingId=${bookingId}`;
-        console.log("[PaymentSuccess] iOS — firing deep link:", deepLink);
         window.location.href = deepLink;
         return;
       }
 
-      // ── Web ───────────────────────────────────────────────────────────────
-      // Verify payment with the server, then route to /matching in-app.
       try {
         setStatusMsg("Verifying payment…");
         const res = await fetch(resolveUrl(`/api/bookings/${bookingId}/verify-payment`), {
@@ -66,7 +55,36 @@ export default function PaymentSuccessPage() {
     run();
   }, []);
 
-  // Shown on web for < 1 second while we verify + redirect
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 px-6">
+        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+          <Icon icon={AlertCircle} size="xl" className="text-red-500" />
+        </div>
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">We couldn't confirm your booking</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Your payment may have gone through. Please contact support and we'll sort it out.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button
+            onClick={() => navigate("/activity")}
+            className="w-full py-3 bg-[#8c52ff] text-white rounded-xl text-sm font-semibold"
+          >
+            View My Bookings
+          </button>
+          <button
+            onClick={() => navigate("/faq")}
+            className="w-full py-3 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold"
+          >
+            Contact Support
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
       <CarWashSpinner size="lg" showText={false} />

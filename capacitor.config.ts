@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.autodapper.app',
-  appName: 'Dapper',
+  appName: 'Dapr',
   webDir: 'dist/public',
   ios: {
     contentInset: 'automatic',
@@ -23,6 +23,9 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'DEFAULT',
       backgroundColor: '#ffffff',
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
 };

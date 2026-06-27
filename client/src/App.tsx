@@ -7,6 +7,7 @@ import { lazy, Suspense, ReactNode, useEffect, useRef, useState, useCallback } f
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { setBootStage } from "@/lib/boot-debug";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { WebSocketProvider } from "./hooks/use-websocket";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Loader } from "@/components/ui/loader";
@@ -332,6 +333,7 @@ function ClerkSyncInner({ children }: { children: ReactNode }) {
 }
 
 function DeepLinkHandler() {
+  const { toast } = useToast();
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     (async () => {
@@ -361,24 +363,26 @@ function DeepLinkHandler() {
                 url.searchParams.get("bookingId") ||
                 url.searchParams.get("booking") ||
                 (() => { try { return sessionStorage.getItem("pendingPaymentBookingId"); } catch { return null; } })();
-              console.log("[Payment] success redirect detected, bookingId=", bookingId);
               try { await Browser.close(); } catch {}
               try { sessionStorage.removeItem("pendingPaymentBookingId"); } catch {}
               if (bookingId) {
-                console.log("[Payment] navigating to Matching for bookingId=", bookingId);
                 window.history.pushState({}, "", `/matching?booking=${bookingId}`);
                 window.dispatchEvent(new PopStateEvent("popstate"));
+              } else {
+                // No bookingId — send user to activity so they can see their bookings
+                window.history.pushState({}, "", "/activity");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                toast({ title: "Payment received", description: "Check your bookings for the latest status.", variant: "default" });
               }
               return;
             }
 
             // ── Payment cancel ─────────────────────────────────────────────
             if (url.protocol.startsWith("com.autodapper.app") && host.includes("payment-cancel")) {
-              console.log("[Payment] cancel redirect detected, returning to booking");
               try { await Browser.close(); } catch {}
             }
           } catch (e) {
-            console.log("[DeepLink] appUrlOpen handler error", e);
+            if (import.meta.env.DEV) console.warn("[DeepLink] appUrlOpen handler error", e);
           }
         });
         cleanup = () => { handle.remove(); };
@@ -389,6 +393,41 @@ function DeepLinkHandler() {
   return null;
 }
 
+function PushNotificationSetup() {
+  const { user } = useAuth();
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    // Store the listener handle so we can remove it in the cleanup function
+    let listenerHandle: { remove: () => void } | null = null;
+
+    (async () => {
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (!Capacitor.isNativePlatform()) return;
+        const { PushNotifications } = await import("@capacitor/push-notifications");
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== "granted") return;
+        await PushNotifications.register();
+        const tokenListener = await PushNotifications.addListener("registration", async (token) => {
+          if (cancelled) return;
+          try {
+            const { apiRequest } = await import("@/lib/queryClient");
+            await apiRequest("POST", "/api/user/push-token", { token: token.value, platform: "ios" });
+          } catch {}
+        });
+        listenerHandle = tokenListener;
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      listenerHandle?.remove();
+    };
+  }, [user?.id]);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -396,6 +435,7 @@ function App() {
         <ClerkSyncWrapper>
           <WebSocketProvider>
             <DeepLinkHandler />
+            <PushNotificationSetup />
             <Router />
             <Toaster />
           </WebSocketProvider>

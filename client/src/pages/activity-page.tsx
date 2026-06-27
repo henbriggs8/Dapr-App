@@ -2,46 +2,13 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, Service, TimeSlot } from "@shared/schema";
-import { Calendar, Clock, Bell, Gift, MessageSquare, ChevronRight, Star } from "lucide-react";
+import { Calendar, Clock, MessageSquare, ChevronRight, Star, X, HelpCircle } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-const notifications = [
-  {
-    id: 1,
-    title: "Booking Reminder",
-    message: "Your car wash appointment is tomorrow at 2:00 PM",
-    time: "2 hours ago",
-    read: false,
-    type: "reminder",
-  },
-  {
-    id: 2,
-    title: "Service Update",
-    message: "Your car wash service has been completed! Rate your experience.",
-    time: "1 day ago",
-    read: true,
-    type: "update",
-  },
-  {
-    id: 3,
-    title: "Special Offer",
-    message: "Get 15% off your next premium detail this week only!",
-    time: "3 days ago",
-    read: true,
-    type: "promotion",
-  },
-];
-
-const loyaltyPoints = 750;
-const nextRewardAt = 1000;
-const loyaltyTier = "Silver";
-
-const loyaltyBenefits = [
-  { emoji: "🎁", title: "Free Birthday Detail", description: "One free Basic wash during your birthday month" },
-  { emoji: "💰", title: "10% Off Every 5th Wash", description: "Automatic discount applied to qualifying bookings" },
-  { emoji: "⚡", title: "Priority Booking", description: "Access to premium time slots before they're released" },
-];
 
 const statusColors: Record<string, string> = {
   completed: "bg-black",
@@ -69,6 +36,24 @@ export default function ActivityPage() {
       day: "numeric",
     });
   };
+
+  const { toast } = useToast();
+
+  const cancelMutation = useMutation({
+    mutationFn: (bookingId: number) => apiRequest("PATCH", `/api/bookings/${bookingId}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Booking cancelled" });
+    },
+    onError: (err: any) => {
+      const msg = err?.message || "";
+      if (msg.includes("2 hours")) {
+        toast({ title: "Cannot cancel", description: "Please contact support for bookings within 2 hours.", variant: "destructive" });
+      } else {
+        toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+      }
+    },
+  });
 
   const tabs = [
     { id: "bookings" as const, label: "Bookings" },
@@ -170,6 +155,30 @@ export default function ActivityPage() {
                       </div>
                       <Icon icon={ChevronRight} size="md" className="text-[#8c52ff] shrink-0" />
                     </div>
+                    {/* Cancel + Get Help CTAs for actionable bookings */}
+                    {(booking.status === "pending" || booking.status === "confirmed") && (
+                      <div className="flex gap-2 pb-3">
+                        <button
+                          onClick={() => setLocation("/faq")}
+                          className="flex items-center gap-1.5 text-[12px] font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 active:opacity-70"
+                        >
+                          <Icon icon={HelpCircle} size="xs" />
+                          Get Help
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Cancel this booking?")) {
+                              cancelMutation.mutate(booking.id);
+                            }
+                          }}
+                          disabled={cancelMutation.isPending}
+                          className="flex items-center gap-1.5 text-[12px] font-medium text-red-500 border border-red-200 rounded-lg px-3 py-1.5 active:opacity-70 disabled:opacity-40"
+                        >
+                          <Icon icon={X} size="xs" />
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -191,26 +200,9 @@ export default function ActivityPage() {
       {/* Messages Tab */}
       {activeTab === "messages" && (
         <div className="px-6 pt-6">
-          <div className="border-t border-gray-200">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className="flex items-start gap-4 py-5 border-b border-gray-200"
-              >
-                <div className="w-2 h-2 rounded-full mt-2 shrink-0 bg-gray-300">
-                  {!n.read && <div className="w-2 h-2 rounded-full bg-black" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h3 className={`text-sm font-medium ${!n.read ? "text-black" : "text-gray-600"}`}>
-                      {n.title}
-                    </h3>
-                    <span className="text-xs text-gray-400 ml-3 shrink-0">{n.time}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
-                </div>
-              </div>
-            ))}
+          <div className="py-16 text-center border-t border-gray-200">
+            <p className="text-gray-500 mb-2">No messages yet</p>
+            <p className="text-sm text-gray-400">Service updates and notifications will appear here.</p>
           </div>
         </div>
       )}
@@ -218,42 +210,9 @@ export default function ActivityPage() {
       {/* Loyalty Tab */}
       {activeTab === "loyalty" && (
         <div className="px-6 pt-6">
-          {/* Points Block */}
-          <div className="bg-gray-950 text-white p-6 mb-6">
-            <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-3">Dapr Rewards</p>
-            <div className="flex justify-between items-baseline mb-4">
-              <div>
-                <span className="text-4xl font-medium">{loyaltyPoints}</span>
-                <span className="text-gray-400 text-sm ml-2">pts</span>
-              </div>
-              <span className="text-sm text-gray-400">{loyaltyTier} Member</span>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Next reward at {nextRewardAt} points</span>
-                <span>{Math.round((loyaltyPoints / nextRewardAt) * 100)}%</span>
-              </div>
-              <div className="w-full h-1 bg-gray-800 rounded-full">
-                <div
-                  className="h-1 bg-white rounded-full"
-                  style={{ width: `${(loyaltyPoints / nextRewardAt) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Benefits */}
-          <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">Your Benefits</h3>
-          <div className="border-t border-gray-200">
-            {loyaltyBenefits.map((benefit) => (
-              <div key={benefit.title} className="flex items-start gap-4 py-5 border-b border-gray-200">
-                <span className="text-xl mt-0.5">{benefit.emoji}</span>
-                <div>
-                  <h4 className="text-base font-medium text-black">{benefit.title}</h4>
-                  <p className="text-sm text-gray-500 mt-0.5">{benefit.description}</p>
-                </div>
-              </div>
-            ))}
+          <div className="py-16 text-center border-t border-gray-200">
+            <p className="text-gray-500 mb-2">Loyalty rewards coming soon</p>
+            <p className="text-sm text-gray-400">Earn points and unlock perks with every wash.</p>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { StrictMode, useState, useEffect } from "react";
+import { StrictMode, useState, useEffect, Component, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import App from "./App";
@@ -11,11 +11,16 @@ import "./index.css";
 // Writes uncaught JS errors to the screen using raw DOM (no React needed),
 // so they're visible in Xcode AND on the device screen before React boots.
 (function installCrashCatcher() {
+  const isDev = import.meta.env.DEV;
   function showError(msg: string) {
     console.error('[CRASH]', msg);
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0;background:#fff;color:#c00;font:14px/1.4 monospace;padding:40px 20px;z-index:99999;overflow:auto;white-space:pre-wrap;word-break:break-all;';
-    el.textContent = '[CRASH]\n' + msg;
+    el.style.cssText = 'position:fixed;inset:0;background:#fff;color:#c00;font:16px/1.6 system-ui;padding:40px 20px;z-index:99999;overflow:auto;white-space:pre-wrap;word-break:break-all;text-align:center;';
+    if (isDev) {
+      el.textContent = '[CRASH]\n' + msg;
+    } else {
+      el.innerHTML = '<strong>Something went wrong</strong><br><br>Please restart the app. If the problem persists, contact support at <a href="mailto:support@autodapr.com" style="color:#8c52ff">support@autodapr.com</a>';
+    }
     document.body?.appendChild(el);
   }
   window.addEventListener('error', (e) => {
@@ -89,6 +94,37 @@ try {
   console.error('[AuthInit] fetch patch failed (non-fatal):', patchErr);
 }
 
+// ── React ErrorBoundary ───────────────────────────────────────────────────────
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: { componentStack: string }) {
+    console.error('[ErrorBoundary]', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ position: 'fixed', inset: 0, background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '40px 24px', textAlign: 'center' }}>
+          <p style={{ fontSize: 17, fontWeight: 600, color: '#111' }}>Something went wrong</p>
+          <p style={{ fontSize: 14, color: '#555', maxWidth: 280 }}>Please restart the app. If the problem persists, contact us at support@autodapr.com</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ marginTop: 8, padding: '12px 32px', background: '#8c52ff', color: '#fff', border: 'none', borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Restart
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ── Boot instrumentation ────────────────────────────────────────────────────
 setBootStage('booting', `protocol=${typeof window !== 'undefined' ? window.location.protocol : 'ssr'} key=${!!CLERK_PUBLISHABLE_KEY} proxy=${CLERK_PROXY_URL}`);
 
@@ -123,14 +159,16 @@ if (rootElement) {
   setBootStage('clerk-init', `proxyUrl=${CLERK_PROXY_URL}`);
   createRoot(rootElement).render(
     <StrictMode>
-      {CLERK_PUBLISHABLE_KEY ? (
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} {...(CLERK_PROXY_URL ? { proxyUrl: CLERK_PROXY_URL } : {})}>
-          <ClerkTokenBridge />
+      <ErrorBoundary>
+        {CLERK_PUBLISHABLE_KEY ? (
+          <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} {...(CLERK_PROXY_URL ? { proxyUrl: CLERK_PROXY_URL } : {})}>
+            <ClerkTokenBridge />
+            <Root />
+          </ClerkProvider>
+        ) : (
           <Root />
-        </ClerkProvider>
-      ) : (
-        <Root />
-      )}
+        )}
+      </ErrorBoundary>
     </StrictMode>
   );
 }

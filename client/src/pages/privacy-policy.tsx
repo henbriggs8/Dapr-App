@@ -2,8 +2,8 @@ import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 
-const LAST_UPDATED = "April 27, 2025";
-const PRIVACY_EMAIL = "privacy@autodapper.com";
+const LAST_UPDATED = "June 26, 2026";
+const PRIVACY_EMAIL = "privacy@autodapr.com";
 const COMPANY_NAME = "Dapr Services LLC";
 const APP_NAME = "Dapr";
 

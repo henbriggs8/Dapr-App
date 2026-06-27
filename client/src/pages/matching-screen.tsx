@@ -42,8 +42,9 @@ export default function MatchingScreen() {
   const [etaIndex, setEtaIndex] = useState(0);
   const [pollingActive, setPollingActive] = useState(true);
   const [assigned, setAssigned] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const assignedRef = useRef(false);
-  const proCount = useRef(Math.floor(Math.random() * 4) + 3).current;
+  const pollStartRef = useRef(Date.now());
 
   const bookingId = (() => {
     try {
@@ -88,6 +89,18 @@ export default function MatchingScreen() {
   useEffect(() => {
     if (!bookingId) setPollingActive(false);
   }, [bookingId]);
+
+  // Stop polling after 10 minutes and show timeout message
+  useEffect(() => {
+    if (!pollingActive || assigned) return;
+    const t = setInterval(() => {
+      if (Date.now() - pollStartRef.current > 10 * 60 * 1000) {
+        setPollingActive(false);
+        setTimedOut(true);
+      }
+    }, 15000);
+    return () => clearInterval(t);
+  }, [pollingActive, assigned]);
 
   return (
     <div className="min-h-screen bg-[#080810] flex flex-col items-center justify-between overflow-hidden relative select-none">
@@ -153,8 +166,8 @@ export default function MatchingScreen() {
           ))}
 
           {/* Pro dots on radar */}
-          {Array.from({ length: proCount }).map((_, i) => {
-            const angle = (i / proCount) * Math.PI * 2 - Math.PI / 3;
+          {Array.from({ length: 5 }).map((_, i) => {
+            const angle = (i / 5) * Math.PI * 2 - Math.PI / 3;
             const r = i % 2 === 0 ? 130 : 178;
             const x = Math.cos(angle) * r;
             const y = Math.sin(angle) * r;
@@ -237,14 +250,6 @@ export default function MatchingScreen() {
         {/* Stats pills */}
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1.5 bg-white/6 border border-white/8 rounded-full px-4 py-2">
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full bg-green-400"
-              animate={{ opacity: [1, 0.25, 1] }}
-              transition={{ duration: 1.3, repeat: Infinity }}
-            />
-            <span className="text-[13px] text-gray-300 font-medium">{proCount} Pros nearby</span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/6 border border-white/8 rounded-full px-4 py-2">
             <Icon icon={Zap} size="xs" className="text-yellow-400" />
             <AnimatePresence mode="wait">
               <motion.span
@@ -292,6 +297,26 @@ export default function MatchingScreen() {
             </div>
           </motion.div>
         )}
+
+        {/* Timeout message */}
+        <AnimatePresence>
+          {timedOut && !assigned && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-white/8 border border-white/12 px-5 py-4 text-center"
+            >
+              <p className="text-sm font-semibold text-white mb-1">We're still searching for a Detail Pro</p>
+              <p className="text-xs text-gray-400 mb-3">You'll get a notification when one accepts.</p>
+              <button
+                onClick={() => navigate("/activity")}
+                className="text-[13px] font-semibold text-[#8c52ff] underline underline-offset-2"
+              >
+                Go to Activity
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Assigned toast */}
         <AnimatePresence>

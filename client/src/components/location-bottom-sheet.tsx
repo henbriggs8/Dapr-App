@@ -1700,6 +1700,7 @@ export function LocationBottomSheet({
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const { getToken } = useClerkAuth();
   const queryClient = useQueryClient();
+  const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
 
   // Reset when closed
   useEffect(() => {
@@ -1722,6 +1723,7 @@ export function LocationBottomSheet({
   // Save address to profile and move to service step (or navigate to booking)
   const handleAddressSelect = useCallback(async (address: string) => {
     setSelectedAddress(address);
+    setServiceAreaError(null);
     onAddressSaved?.(address);
     // Persist to profile silently
     try {
@@ -1733,6 +1735,26 @@ export function LocationBottomSheet({
         body: JSON.stringify({ address }),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch {}
+    // Service area check — geocode address via Photon, then call /api/service-area/check
+    try {
+      const geoRes = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1&lang=en`);
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        const coords = geoData.features?.[0]?.geometry?.coordinates;
+        if (coords) {
+          const [lng, lat] = coords;
+          const checkRes = await fetch(resolveUrl(`/api/service-area/check?lat=${lat}&lng=${lng}`), { credentials: "include" });
+          if (checkRes.ok) {
+            const { inServiceArea } = await checkRes.json();
+            if (!inServiceArea) {
+              setServiceAreaError("We don't serve this area yet. We're expanding soon — check back or try a nearby address.");
+              setSelectedAddress(""); // Reset so user can re-enter
+              return; // Block advancement to service picker
+            }
+          }
+        }
+      }
     } catch {}
     goTo(1);
   }, [getToken, queryClient, goTo, onAddressSaved]);
@@ -1800,6 +1822,11 @@ export function LocationBottomSheet({
               >
                 {/* Step 0 */}
                 <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+                  {serviceAreaError && (
+                    <div className="mx-4 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[12px] text-amber-700 leading-snug">
+                      {serviceAreaError}
+                    </div>
+                  )}
                   <LocationStep
                     currentAddress={currentAddress}
                     recentAddresses={recentAddresses}

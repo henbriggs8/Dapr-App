@@ -8,6 +8,9 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { resolveUrl, queryClient } from '@/lib/queryClient';
 
+// Dev-only logger — compiled away in production builds
+const devLog = (...args: unknown[]) => { if (import.meta.env.DEV) console.log(...args); };
+
 // ─── Shared style tokens ────────────────────────────────────────────────────
 
 const primaryBtn =
@@ -857,7 +860,7 @@ function AuthFlow() {
 
   // Log every time isSignedIn changes
   useEffect(() => {
-    console.log(`[Auth] isSignedIn changed to ${isSignedIn}`);
+    devLog(`[Auth] isSignedIn changed to ${isSignedIn}`);
   }, [isSignedIn]);
 
   // After Clerk marks the session active, the /api/user TanStack query has
@@ -868,14 +871,14 @@ function AuthFlow() {
   // Hard 15-second timeout ensures the loading screen is never infinite.
   useEffect(() => {
     if (!isSignedIn || localUser) return;
-    console.log('[Auth] isSignedIn=true and no localUser — starting sync');
+    devLog('[Auth] isSignedIn=true and no localUser — starting sync');
     setSyncError(null);
     let cancelled = false;
 
     const hardTimeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true;
-        console.log('[Auth] loading screen timeout/failure path triggered (15 s)');
+        devLog('[Auth] loading screen timeout/failure path triggered (15 s)');
         setSyncError('Account setup timed out. Please check your connection and try again.');
       }
     }, 15000);
@@ -884,11 +887,11 @@ function AuthFlow() {
       // Poll until Clerk SDK has a token (up to 20 × 300 ms = 6 s)
       let token: string | null = null;
       for (let i = 0; i < 20 && !cancelled; i++) {
-        console.log(`[Auth] getToken attempt #${i + 1}`);
+        devLog(`[Auth] getToken attempt #${i + 1}`);
         try { token = await getToken(); } catch (e) {
-          console.log(`[Auth] getToken threw:`, String(e));
+          devLog(`[Auth] getToken threw:`, String(e));
         }
-        console.log(`[Auth] getToken resolved with ${token ? 'token (' + token.slice(0, 20) + '…)' : 'null'}`);
+        devLog(`[Auth] getToken resolved with ${token ? 'token (' + token.slice(0, 20) + '…)' : 'null'}`);
         if (token) break;
         await new Promise<void>(r => setTimeout(r, 300));
       }
@@ -898,7 +901,7 @@ function AuthFlow() {
       if (token) {
         try {
           const syncUrl = resolveUrl('/api/auth/clerk-sync');
-          console.log(`[Auth] calling ${syncUrl}`);
+          devLog(`[Auth] calling ${syncUrl}`);
           const syncRes = await fetch(syncUrl, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -906,16 +909,16 @@ function AuthFlow() {
             body: JSON.stringify({ isProvider: isProviderMode }),
           });
           const syncBody = await syncRes.text();
-          console.log(`[Auth] /api/auth/clerk-sync response status=${syncRes.status} body=${syncBody}`);
+          devLog(`[Auth] /api/auth/clerk-sync response status=${syncRes.status} body=${syncBody}`);
           if (syncRes.ok && !cancelled) {
             clearTimeout(hardTimeout);
             queryClient.setQueryData(['/api/user'], JSON.parse(syncBody));
-            console.log('[Auth] localUser set from clerk-sync — loading screen exit triggered');
+            devLog('[Auth] localUser set from clerk-sync — loading screen exit triggered');
             return;
           }
           // Non-OK from clerk-sync — fall through to /api/user direct call
         } catch (e) {
-          console.log(`[Auth] /api/auth/clerk-sync threw: ${String(e)}`);
+          devLog(`[Auth] /api/auth/clerk-sync threw: ${String(e)}`);
         }
       }
 
@@ -924,27 +927,27 @@ function AuthFlow() {
       // Fallback: direct GET /api/user with whatever auth we have
       try {
         const userUrl = resolveUrl('/api/user');
-        console.log(`[Auth] /api/user request fired (fallback) — ${userUrl}`);
+        devLog(`[Auth] /api/user request fired (fallback) — ${userUrl}`);
         const userRes = await fetch(userUrl, {
           credentials: 'include',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const userBody = await userRes.text();
-        console.log(`[Auth] /api/user response status=${userRes.status} body=${userBody}`);
+        devLog(`[Auth] /api/user response status=${userRes.status} body=${userBody}`);
         if (userRes.ok && !cancelled) {
           clearTimeout(hardTimeout);
           queryClient.setQueryData(['/api/user'], JSON.parse(userBody));
-          console.log('[Auth] localUser set from /api/user fallback — loading screen exit triggered');
+          devLog('[Auth] localUser set from /api/user fallback — loading screen exit triggered');
           return;
         }
       } catch (e) {
-        console.log(`[Auth] /api/user threw: ${String(e)}`);
+        devLog(`[Auth] /api/user threw: ${String(e)}`);
       }
 
       if (cancelled) return;
 
       // Last-resort: let TanStack re-run the query itself
-      console.log('[Auth] invalidating /api/user query (last resort)');
+      devLog('[Auth] invalidating /api/user query (last resort)');
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     };
 
@@ -964,14 +967,14 @@ function AuthFlow() {
   const [clerkTimedOut, setClerkTimedOut] = useState(false);
 
   useEffect(() => {
-    console.log(`[AuthInit] ClerkProvider mounted — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
-    console.log(`[AuthInit] isNative=${isNative}`);
+    devLog(`[AuthInit] ClerkProvider mounted — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
+    devLog(`[AuthInit] isNative=${isNative}`);
   }, []);
 
   useEffect(() => {
-    console.log(`[AuthInit] isLoaded change — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
+    devLog(`[AuthInit] isLoaded change — signInLoaded=${signInLoaded} signUpLoaded=${signUpLoaded}`);
     if (signInLoaded && signUpLoaded) {
-      console.log('[AuthInit] Clerk loaded ✓');
+      devLog('[AuthInit] Clerk loaded ✓');
       setClerkStage('Clerk loaded');
     }
   }, [signInLoaded, signUpLoaded]);
@@ -982,10 +985,10 @@ function AuthFlow() {
   useEffect(() => {
     if (signInLoaded && signUpLoaded) {
       // Clerk just loaded — any pending timers were already cleared by cleanup
-      console.log('[AuthInit] watchdog cancelled — Clerk loaded ✓');
+      devLog('[AuthInit] watchdog cancelled — Clerk loaded ✓');
       return;
     }
-    console.log('[AuthInit] starting 15s Clerk-load watchdog');
+    devLog('[AuthInit] starting 15s Clerk-load watchdog');
     const stages: [number, string][] = [
       [3000, 'Loading Clerk SDK…'],
       [7000, 'Still waiting for Clerk…'],
@@ -994,7 +997,7 @@ function AuthFlow() {
     const timers = stages.map(([ms, label]) =>
       setTimeout(() => {
         setClerkStage(label);
-        console.log(`[AuthInit] stage: ${label}`);
+        devLog(`[AuthInit] stage: ${label}`);
       }, ms)
     );
     const timeout = setTimeout(() => {
@@ -1008,9 +1011,7 @@ function AuthFlow() {
     };
   }, [signInLoaded, signUpLoaded]);
 
-  // Demo mode: ?demo=1 in URL lets you preview sign-up screens without Clerk
   const params = new URLSearchParams(window.location.search);
-  const isDemo = params.get('demo') === '1';
   const isProviderMode = params.get('provider') === '1';
   const rawRedirect = params.get('redirect') || '';
   // Only allow same-origin in-app paths to avoid open-redirect; keep query string.
@@ -1020,9 +1021,9 @@ function AuthFlow() {
       : '';
   const postAuthDest = safeRedirect || '/';
 
-  const [step, setStep] = useState<Step>(isDemo ? 'profileInfo' : 'landing');
+  const [step, setStep] = useState<Step>('landing');
   // Landing: phone identifier
-  const [landingPhone, setLandingPhone] = useState(isDemo ? '5550000000' : '');
+  const [landingPhone, setLandingPhone] = useState('');
   // Sign-in password screen
   const [password, setPassword] = useState('');
   // Set when user typed a plain username (not email/phone) — uses legacy /api/login
@@ -1050,7 +1051,7 @@ function AuthFlow() {
   // Must be in effect, not render.
   useEffect(() => {
     if (localUser) {
-      console.log('[Auth] loading screen exit triggered — navigating to', postAuthDest);
+      devLog('[Auth] loading screen exit triggered — navigating to', postAuthDest);
       navigate(postAuthDest);
     }
   }, [localUser]);
@@ -1063,7 +1064,7 @@ function AuthFlow() {
           <button
             className="px-4 py-2 rounded-lg bg-[#8c52ff] text-white text-sm font-medium"
             onClick={() => {
-              console.log('[Auth] user tapped retry — reloading');
+              devLog('[Auth] user tapped retry — reloading');
               window.location.reload();
             }}
           >
@@ -1191,7 +1192,6 @@ function AuthFlow() {
 
   const handleProfileInfoNext = async () => {
     setError('');
-    if (isDemo) { setStep('phoneOtp'); return; }
     setLoading(true);
     try {
       // Store profile info for onboarding pre-fill
@@ -1258,21 +1258,21 @@ function AuthFlow() {
     // Legacy username login — bypass Clerk, use Passport /api/login
     if (legacyUsername) {
       try {
-        console.log('[LegacyLogin] POST /api/login username=', legacyUsername, 'pwLen=', password.length);
+        devLog('[LegacyLogin] POST /api/login username=', legacyUsername, 'pwLen=', password.length);
         const res = await fetch(resolveUrl('/api/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: legacyUsername, password }),
           credentials: 'include',
         });
-        console.log('[LegacyLogin] response status=', res.status, 'ok=', res.ok);
+        devLog('[LegacyLogin] response status=', res.status, 'ok=', res.ok);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           setError(body.message ?? `Incorrect username or password. (${res.status})`);
           return;
         }
         const userData = await res.json();
-        console.log('[LegacyLogin] success userId=', userData?.id);
+        devLog('[LegacyLogin] success userId=', userData?.id);
         queryClient.setQueryData(['/api/user'], userData);
         setStep('welcome');
       } catch (err: any) {
@@ -1283,18 +1283,18 @@ function AuthFlow() {
       }
       return;
     }
-    console.log('[Auth] password submit started');
+    devLog('[Auth] password submit started');
     try {
       const result = await signIn!.attemptFirstFactor({
         strategy: 'password',
         password,
       });
-      console.log(`[Auth] Clerk sign-in result status=${result.status}`);
+      devLog(`[Auth] Clerk sign-in result status=${result.status}`);
 
       if (result.status === 'complete') {
-        console.log('[Auth] Clerk sign-in success — calling setSignInActive');
+        devLog('[Auth] Clerk sign-in success — calling setSignInActive');
         await setSignInActive!({ session: result.createdSessionId });
-        console.log('[Auth] setSignInActive resolved — setting step to welcome');
+        devLog('[Auth] setSignInActive resolved — setting step to welcome');
         setStep('welcome');
       } else if (result.status === 'needs_second_factor') {
         // Prepare phone second factor
@@ -1318,7 +1318,6 @@ function AuthFlow() {
 
   const handlePhoneOtpNext = async () => {
     setError('');
-    if (isDemo) { setStep('welcome'); return; }
     setLoading(true);
     try {
       if (mode === 'signUp') {
@@ -1418,16 +1417,16 @@ function AuthFlow() {
     try {
       const si = await signIn!.create({ strategy, redirectUrl: callbackUrl, actionCompleteRedirectUrl: callbackUrl } as any);
       const url = (si as any).firstFactorVerification?.externalVerificationRedirectURL?.toString();
-      if (url) { console.log('[Auth] OAuth URL from signIn:', url.slice(0, 80)); return url; }
+      if (url) { devLog('[Auth] OAuth URL from signIn:', url.slice(0, 80)); return url; }
     } catch (e) {
-      console.log('[Auth] signIn.create OAuth failed, trying signUp:', e);
+      devLog('[Auth] signIn.create OAuth failed, trying signUp:', e);
     }
     // Fallback: sign-up path (for brand-new users not yet in Clerk)
     const su = await signUp!.create({ strategy, redirectUrl: callbackUrl, actionCompleteRedirectUrl: callbackUrl } as any);
     const url = (su as any).verifications?.externalAccount?.externalVerificationRedirectURL?.toString()
       || (su as any).externalVerificationRedirectURL?.toString();
     if (!url) throw new Error(`Could not get OAuth URL for ${strategy}`);
-    console.log('[Auth] OAuth URL from signUp:', url.slice(0, 80));
+    devLog('[Auth] OAuth URL from signUp:', url.slice(0, 80));
     return url;
   };
 
@@ -1439,7 +1438,7 @@ function AuthFlow() {
         // No browser, no redirects, no cookie domain issues.
         setLoading(true);
         const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
-        console.log('[Auth] Native Apple Sign-In: requesting credential…');
+        devLog('[Auth] Native Apple Sign-In: requesting credential…');
         const appleResult = await SignInWithApple.authorize({
           clientId: 'com.autodapper.app',
           redirectURI: 'https://dapper-pros.replit.app',
@@ -1449,7 +1448,7 @@ function AuthFlow() {
         });
         const { identityToken, email, givenName, familyName } = appleResult.response;
         if (!identityToken) throw new Error('Apple did not return an identity token');
-        console.log('[Auth] Apple token received, exchanging with Clerk…');
+        devLog('[Auth] Apple token received, exchanging with Clerk…');
 
         // redirect_url is required by Clerk even for native token exchange
         // (validated server-side but never followed — session is returned directly).
@@ -1466,13 +1465,13 @@ function AuthFlow() {
           } as any);
           clerkStatus = result.status ?? '';
           sessionId = result.createdSessionId;
-          console.log('[Auth] signIn.create status:', clerkStatus, 'sessionId:', sessionId);
+          devLog('[Auth] signIn.create status:', clerkStatus, 'sessionId:', sessionId);
           // needs_identifier = Clerk accepted the token but can't find an existing account
           // → user is new, fall through to sign-up
           if (clerkStatus === 'needs_identifier') needsSignUp = true;
         } catch (signInErr: any) {
           const code = signInErr?.errors?.[0]?.code ?? '';
-          console.log('[Auth] signIn.create error code:', code, signInErr?.errors?.[0]?.message);
+          devLog('[Auth] signIn.create error code:', code, signInErr?.errors?.[0]?.message);
           if (
             code === 'form_identifier_not_found' ||
             code === 'external_account_not_found' ||
@@ -1485,7 +1484,7 @@ function AuthFlow() {
         }
 
         if (needsSignUp) {
-          console.log('[Auth] New Apple user — creating account via sign-up…');
+          devLog('[Auth] New Apple user — creating account via sign-up…');
           const upResult = await signUp!.create({
             strategy: 'oauth_apple',
             token: identityToken,
@@ -1496,7 +1495,7 @@ function AuthFlow() {
           } as any);
           clerkStatus = upResult.status ?? '';
           sessionId = upResult.createdSessionId;
-          console.log('[Auth] signUp.create status:', clerkStatus, 'sessionId:', sessionId);
+          devLog('[Auth] signUp.create status:', clerkStatus, 'sessionId:', sessionId);
         }
 
         if (sessionId) {
@@ -1592,7 +1591,7 @@ function AuthFlow() {
           cancelled = true;
         });
 
-        console.log('[Auth] Google OAuth: opening Account Portal, polling state=', state);
+        devLog('[Auth] Google OAuth: opening Account Portal, polling state=', state);
         await Browser.open({ url: portalUrl });
         setLoading(true);
 
@@ -1607,7 +1606,7 @@ function AuthFlow() {
               const resp = await fetch(`/api/native-sso-poll/${state}`);
               if (resp.ok) {
                 const { params } = await resp.json();
-                console.log('[Auth] Google SSO params received, navigating to /sso-callback');
+                devLog('[Auth] Google SSO params received, navigating to /sso-callback');
                 browserHandle.remove();
                 try { await Browser.close(); } catch {}
                 // Let Clerk's AuthenticateWithRedirectCallback handle the ticket

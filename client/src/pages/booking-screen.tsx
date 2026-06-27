@@ -189,7 +189,6 @@ export default function BookingScreen() {
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>("now");
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const whenSectionRef = useRef<HTMLDivElement | null>(null);
 
   const { data: providers, isLoading: providersLoading } = useQuery<User[]>({
@@ -227,15 +226,6 @@ export default function BookingScreen() {
     }, 200);
   }, [services, search]);
 
-  useEffect(() => {
-    if (!servicesError) return;
-    const isNative = Capacitor.isNativePlatform();
-    const apiBase = import.meta.env.VITE_API_BASE_URL || "(not set)";
-    const resolvedUrl = isNative ? `${apiBase}/api/services` : "/api/services";
-    fetch(resolvedUrl)
-      .then(r => setDebugInfo(`native=${isNative} | base=${apiBase} | url=${resolvedUrl} | status=${r.status}`))
-      .catch(e => setDebugInfo(`native=${isNative} | base=${apiBase} | url=${resolvedUrl} | err=${e.message}`));
-  }, [servicesError]);
 
   const packages =
     services
@@ -388,11 +378,6 @@ export default function BookingScreen() {
                 >
                   Try again
                 </button>
-                {debugInfo && (
-                  <div className="mt-5 mx-2 p-3 bg-gray-100 rounded-xl text-left">
-                    <p className="text-[10px] font-mono text-gray-700 break-all leading-relaxed">{debugInfo}</p>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="border-t border-[#ededed] mt-3">

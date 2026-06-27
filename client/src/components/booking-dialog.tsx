@@ -65,7 +65,7 @@ function InlinePaymentForm({
     });
     setPaying(false);
     if (error) {
-      toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+      toast({ title: "Payment failed", description: "Check your card details and try again.", variant: "destructive" });
     } else {
       onSuccess();
     }
@@ -261,7 +261,7 @@ export default function BookingDialog({
     onError: (error, bookingId) => {
       toast({
         title: "Payment setup failed",
-        description: (error as Error)?.message || "Your booking is confirmed — you can pay from the bookings page.",
+        description: "Your booking is confirmed — you can pay from the bookings page.",
         variant: "destructive",
       });
       onClose();
@@ -402,23 +402,17 @@ export default function BookingDialog({
       } else {
         toast({
           title: "Booking Failed",
-          description: error.message || "Unable to create booking. Please try again.",
+          description: "Unable to create booking. Please try again.",
           variant: "destructive",
         });
       }
     },
   });
 
-  const onSubmit = (data: any) => {
-    console.log("🚀 FORM SUBMIT TRIGGERED");
-    console.log("Form submitted with data:", data);
-    console.log("Current user:", user);
-    console.log("Service:", service);
-    console.log("Time slot:", timeSlot);
+  const onSubmit = async (data: any) => {
     
     // Check authentication first
     if (!user) {
-      console.log("❌ User not authenticated");
       toast({
         title: "Login Required",
         description: "Please log in to complete your booking.",
@@ -431,7 +425,6 @@ export default function BookingDialog({
     }
     
     if (!service) {
-      console.log("❌ Service missing");
       toast({
         title: "Error",
         description: "Service information is missing",
@@ -441,7 +434,6 @@ export default function BookingDialog({
     }
     
     if (!timeSlot) {
-      console.log("❌ Time slot missing");
       toast({
         title: "Error", 
         description: "Time slot information is missing",
@@ -454,11 +446,8 @@ export default function BookingDialog({
     if (!data.serviceLocation?.trim()) {
       if (user?.address) {
         data.serviceLocation = user.address;
-        console.log("✅ Using user profile address:", user.address);
       } else {
-        // Set a default address to prevent blocking
         data.serviceLocation = "Customer Address - To be confirmed";
-        console.log("⚠️ No address found, using default");
       }
     }
     
@@ -496,9 +485,34 @@ export default function BookingDialog({
     data.vehicleId = vehicles.length > 0 ? vehicles[0].id : null;
     data.notes = `Service for ${vehicles.map(v => v.details).join(', ')}`;
     
-    console.log("[Payment] Book & Pay tapped");
-    console.log("✅ Final booking data:", data);
-    console.log("🚀 Calling bookingMutation.mutate");
+    // Service-area guard before opening Stripe — block out-of-area bookings
+    const lat = data.serviceLatitude;
+    const lng = data.serviceLongitude;
+    if (lat != null && lng != null) {
+      try {
+        const areaRes = await fetch(resolveUrl(`/api/service-area/check?lat=${lat}&lng=${lng}`), { credentials: "include" });
+        if (areaRes.ok) {
+          const areaData = await areaRes.json();
+          if (!areaData.inServiceArea) {
+            toast({
+              title: "Outside service area",
+              description: "We don't currently serve that location. Try a different address or check back soon.",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        // If check fails, fall through and allow (fail-open)
+      } catch {
+        // Network error — fail open so customers aren't blocked
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.log("[Payment] Book & Pay tapped");
+      console.log("✅ Final booking data:", data);
+      console.log("🚀 Calling bookingMutation.mutate");
+    }
     bookingMutation.mutate(data);
   };
 

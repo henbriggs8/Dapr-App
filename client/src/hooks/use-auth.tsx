@@ -40,10 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
     },
-    onError: (error: Error) => {
+    onError: () => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: "Incorrect email or password. Please try again.",
         variant: "destructive",
       });
     },
@@ -57,10 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
     },
-    onError: (error: Error) => {
+    onError: () => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: "Unable to create account. Please check your details and try again.",
         variant: "destructive",
       });
     },
@@ -73,10 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
     },
-    onError: (error: Error) => {
+    onError: () => {
       toast({
         title: "Logout failed",
-        description: error.message,
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     },

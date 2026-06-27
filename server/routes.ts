@@ -978,6 +978,73 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Customer-facing booking cancellation
+  app.patch("/api/bookings/:id/cancel", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const bookingId = parseInt(req.params.id);
+      if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      const booking = await storage.getBookingById(bookingId);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+      if (booking.userId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (!["pending", "confirmed"].includes(booking.status)) {
+        return res.status(409).json({ error: "Booking cannot be cancelled in its current state" });
+      }
+      // Enforce 2-hour cancellation policy
+      const bookingSlot = booking.timeSlotId ? await storage.getTimeSlotById(booking.timeSlotId) : null;
+      if (bookingSlot?.date && bookingSlot?.startTime) {
+        const slotDateTime = new Date(`${bookingSlot.date}T${bookingSlot.startTime}`);
+        const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+        if (slotDateTime < twoHoursFromNow) {
+          return res.status(422).json({ error: "Cancellations within 2 hours of your appointment cannot be processed here. Please contact support at support@autodapr.com." });
+        }
+      }
+      const updated = await storage.updateBookingStatus(bookingId, "cancelled");
+      res.json(updated);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
+  // Service area pre-check — returns whether a lat/lng falls within our operating radius
+  app.get("/api/service-area/check", async (req, res) => {
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    if (isNaN(lat) || isNaN(lng)) return res.status(400).json({ error: "lat and lng are required" });
+    try {
+      const providers = await storage.getNearbyProviders(lat, lng, 15);
+      // Compute nearest provider distance (haversine, miles)
+      let nearestProviderMiles: number | null = null;
+      for (const p of providers) {
+        if (p.latitude == null || p.longitude == null) continue;
+        const R = 3958.8;
+        const dLat = (p.latitude - lat) * Math.PI / 180;
+        const dLon = (p.longitude - lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        if (nearestProviderMiles === null || d < nearestProviderMiles) nearestProviderMiles = d;
+      }
+      res.json({ inServiceArea: providers.length > 0, providerCount: providers.length, nearestProviderMiles });
+    } catch {
+      // If the check fails, report in-area so we don't block customers
+      res.json({ inServiceArea: true, providerCount: 0, nearestProviderMiles: null });
+    }
+  });
+
+  // Save push notification token for the authenticated user
+  app.post("/api/user/push-token", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    const { token, platform } = req.body || {};
+    if (!token || typeof token !== "string") return res.status(400).json({ error: "token is required" });
+    try {
+      await storage.updateUserPushToken(req.user.id, token);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to store push token" });
+    }
+  });
+
   app.get("/api/admin/revenue-by-location", isAdmin, async (req, res) => {
     const revenueData = await storage.getRevenueByLocation();
     res.json(revenueData);

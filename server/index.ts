@@ -7,6 +7,16 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 
+// ── Startup configuration warnings ────────────────────────────────────────────
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  console.warn(
+    '[WARN] STRIPE_WEBHOOK_SECRET is not set. ' +
+    'The Stripe webhook endpoint (/api/webhooks/stripe) will not verify signatures and will reject all events. ' +
+    'The frontend /api/bookings/:id/verify-payment fallback remains active, but the webhook MUST be set in production ' +
+    'to reliably mark bookings as paid. Set STRIPE_WEBHOOK_SECRET in your environment variables.'
+  );
+}
+
 const app = express();
 // Stripe webhook must receive raw body for signature verification — mount BEFORE express.json()
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
