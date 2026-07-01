@@ -40,6 +40,18 @@ export function resolveUrl(url: string): string {
   return url.startsWith("/") ? `${API_BASE}${url}` : url;
 }
 
+// Resolves a WebSocket URL that works both in-browser (same-origin) and on
+// native (where window.location.host is capacitor://localhost, not the
+// production API host — the socket must point at API_BASE instead).
+export function resolveWsUrl(path: string): string {
+  if (IS_NATIVE) {
+    const wsBase = API_BASE.replace(/^https:/, "wss:").replace(/^http:/, "ws:");
+    return `${wsBase}${path}`;
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}${path}`;
+}
+
 // ─── Core helpers ──────────────────────────────────────────────────────────
 
 async function throwIfResNotOk(res: Response) {

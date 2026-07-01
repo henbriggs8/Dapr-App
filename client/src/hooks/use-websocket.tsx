@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, ReactNode, createContext, useContext } from "react";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, resolveWsUrl } from "@/lib/queryClient";
 
 type WebSocketStatus = "connecting" | "connected" | "disconnected";
 
@@ -35,8 +35,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     
     try {
       setStatus("connecting");
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = resolveWsUrl("/ws");
       
       socketRef.current = new WebSocket(wsUrl);
       
