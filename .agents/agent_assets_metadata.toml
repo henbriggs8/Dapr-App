@@ -100,7 +100,7 @@ title = "Dapr iOS Bundle (latest)"
 id = "f56MuZpNKHUIPbjbxUX8Z"
 uri = "file://dapr-ios.zip"
 type = "unspecified"
-title = "dapr-ios.zip (updated — demo login fix)"
+title = "dapr-ios.zip (Build 4, iPhone-only)"
 
 [[outputs]]
 id = "oKYCCBNsxK-BkMH8R8zNc"
