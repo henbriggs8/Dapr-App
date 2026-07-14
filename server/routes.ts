@@ -27,6 +27,36 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function providerAuthError(res: Response, status: number, code: string, message: string) {
+  return res.status(status).json({ error: message, code, message });
+}
+
+function requireProvider(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return providerAuthError(res, 401, "UNAUTHENTICATED", "Please sign in again.");
+  }
+
+  if (!req.user.isProvider) {
+    return providerAuthError(res, 403, "PROVIDER_REQUIRED", "This account is not approved as a Dapr Pro yet.");
+  }
+
+  next();
+}
+
+function safeProviderProfile(user: Express.User) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    profileImage: user.profileImage,
+    rating: user.rating,
+    ratingCount: user.ratingCount,
+    currentStatus: user.currentStatus,
+    isProvider: user.isProvider,
+  };
+}
+
 /** Returns true only for real Stripe customer IDs (cus_...). */
 function isValidStripeCustomerId(id: string | null | undefined): id is string {
   return typeof id === 'string' && id.startsWith('cus_');
@@ -192,6 +222,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Provider endpoints
+  app.get("/api/provider/me", resolveUserFromBearer, requireProvider, async (req, res) => {
+    res.json(safeProviderProfile(req.user!));
+  });
+
   app.post("/api/provider/location", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -2359,7 +2393,6 @@ export function registerRoutes(app: Express): Server {
       // Check if we already have a user with this Clerk ID (stored in username for now)
       const clerkUsername = `clerk_${clerkUserId}`;
       let user = await storage.getUserByUsername(clerkUsername);
-      const wantsProvider = req.body?.isProvider === true;
       
       if (!user) {
         // Create a new user in our database
@@ -2370,18 +2403,15 @@ export function registerRoutes(app: Express): Server {
         user = await storage.createUser({
           username: clerkUsername,
           password: Math.random().toString(36), // Random password, won't be used
-          isProvider: wantsProvider,
+          isProvider: false,
           isAdmin: false,
           name: name || 'User',
           email: email || null,
           phone: phone || null
         });
       }
-      // NOTE: We intentionally do NOT upgrade an existing user to provider
-      // based on the pendingIsProvider localStorage flag. That flag can be
-      // stale from a previous abandoned provider-signup session on the same
-      // device. Provider status for returning users is determined solely by
-      // their DB record, never by client-side state.
+      // Client-supplied role/provider/admin fields are intentionally ignored.
+      // Provider/admin access is determined solely by backend-owned DB fields.
       
       // Establish passport session for this user
       await new Promise<void>((resolve, reject) => {
