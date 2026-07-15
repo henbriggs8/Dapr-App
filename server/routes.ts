@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
 import { setupAuth } from "./auth";
-import { storage } from "./storage";
+import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
 import { ADD_ONS, resolveBookingAddOns } from "@shared/add-ons";
@@ -29,6 +29,25 @@ function isProvider(req: Request, res: Response, next: NextFunction) {
 
 function providerAuthError(res: Response, status: number, code: string, message: string) {
   return res.status(status).json({ error: message, code, message });
+}
+
+function referralAuthError(res: Response) {
+  return res.status(401).json({ code: 'UNAUTHENTICATED', message: 'Authentication is required.' });
+}
+
+function serializeReferral(referral: any) {
+  return {
+    id: referral.id,
+    referrerUserId: referral.referrerId,
+    referredUserId: referral.referredUserId,
+    referralCodeUsed: referral.referralCodeUsed,
+    rewardStatus: referral.rewardStatus,
+    discountStatus: referral.discountStatus,
+    relatedBookingId: referral.relatedBookingId,
+    createdAt: referral.createdAt,
+    completedAt: referral.completedAt,
+    rewardedAt: referral.rewardedAt,
+  };
 }
 
 function requireProvider(req: Request, res: Response, next: NextFunction) {
@@ -1476,13 +1495,8 @@ export function registerRoutes(app: Express): Server {
         }
       }
       
-      // Credit the referrer if this is the customer's first completed booking
       try {
-        const customerBookings = await storage.getUserBookings(booking.userId);
-        const completedCount = customerBookings.filter(b => b.status === 'completed' && b.isPaid).length;
-        if (completedCount === 1) {
-          await storage.creditReferrerForCompletedBooking(booking.userId);
-        }
+        await storage.awardReferralForCompletedBooking(booking.id);
       } catch (e) {
         console.error('Referral credit error:', e);
       }
@@ -1986,6 +2000,14 @@ export function registerRoutes(app: Express): Server {
     try {
       // Update the booking status
       const booking = await storage.updateBookingStatus(id, status, stage);
+
+      if (status === 'completed') {
+        try {
+          await storage.awardReferralForCompletedBooking(booking.id);
+        } catch (error) {
+          console.error('Referral credit error:', error);
+        }
+      }
       
       // Notify the customer via WebSocket if they're connected
       if (booking.userId) {
@@ -2560,39 +2582,38 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ── Referral routes ──────────────────────────────────────────────────────
-  app.get('/api/referral/my-code', async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+  app.get('/api/referrals/me', resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return referralAuthError(res);
     try {
       const info = await storage.getReferralInfo(req.user.id);
-      res.json(info);
+      res.json({ ...info, history: info.history.map(serializeReferral) });
     } catch (e) {
-      res.status(500).json({ error: 'Failed to get referral info' });
+      console.error('Get referral info error:', e);
+      res.status(500).json({ code: 'REFERRAL_SERVER_ERROR', message: 'Failed to get referral info.' });
     }
   });
 
-  app.post('/api/referral/apply', async (req, res) => {
-    if (!req.user) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith('Bearer ')) {
-        try {
-          const token = authHeader.substring(7);
-          const { clerkClient: cc } = await import('@clerk/clerk-sdk-node');
-          const verified = await cc.verifyToken(token);
-          if (verified?.sub) {
-            const localUser = await storage.getUserByUsername(`clerk_${verified.sub}`);
-            if (localUser) (req as any).user = localUser;
-          }
-        } catch { /* fall through */ }
-      }
+  app.post('/api/referrals/apply', resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return referralAuthError(res);
+    const { referralCode } = req.body;
+    if (!referralCode || typeof referralCode !== 'string') {
+      return res.status(400).json({ code: 'INVALID_REFERRAL_CODE', message: 'Referral code is required.' });
     }
-    if (!req.user) return res.sendStatus(401);
-    const { code } = req.body;
-    if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Code is required.' });
     try {
-      const result = await storage.applyReferralCode(req.user.id, code.trim());
-      res.json(result);
+      const referral = await storage.applyReferralCode(req.user.id, referralCode);
+      res.status(201).json({
+        referral: serializeReferral(referral),
+        message: 'Referral code applied. You’ll receive $20 off your first eligible wash.',
+      });
     } catch (e) {
-      res.status(500).json({ error: 'Failed to apply referral code' });
+      if (e instanceof ReferralError) {
+        return res.status(e.code === 'REFERRAL_LIMIT_REACHED' ? 409 : 400).json({ code: e.code, message: e.message });
+      }
+      if ((e as any)?.code === '23505') {
+        return res.status(409).json({ code: 'ALREADY_REFERRED', message: 'You have already applied a referral code.' });
+      }
+      console.error('Apply referral code error:', e);
+      res.status(500).json({ code: 'REFERRAL_SERVER_ERROR', message: 'Failed to apply referral code.' });
     }
   });
 
