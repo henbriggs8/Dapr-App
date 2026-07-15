@@ -41,11 +41,3 @@ ALTER TABLE "referrals"
 CREATE UNIQUE INDEX IF NOT EXISTS "referrals_related_booking_id_unique"
   ON "referrals" ("related_booking_id")
   WHERE "related_booking_id" IS NOT NULL;
-
-ALTER TABLE "users"
-  ADD CONSTRAINT "users_referral_credit_nonnegative"
-  CHECK ("referral_credit_balance_cents" >= 0) NOT VALID;
-
-ALTER TABLE "bookings"
-  ADD CONSTRAINT "bookings_referral_discount_nonnegative"
-  CHECK ("referral_discount_cents" >= 0) NOT VALID;
