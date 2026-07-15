@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
-import { setupAuth } from "./auth";
+import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
@@ -2443,7 +2443,7 @@ export function registerRoutes(app: Express): Server {
         });
       });
       
-      res.json(user);
+      res.json(safeUser(user));
     } catch (error) {
       console.error('Clerk sync error:', error);
       res.status(500).json({ error: 'Failed to sync Clerk user' });
