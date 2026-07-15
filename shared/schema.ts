@@ -25,6 +25,7 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(),
   freeWashCredits: integer("free_wash_credits").default(0),
   referredByCode: text("referred_by_code"),
+  referralCreditBalanceCents: integer("referral_credit_balance_cents").notNull().default(0),
   stripeCustomerId: text("stripe_customer_id"),
   pushToken: text("push_token")
 });
@@ -115,6 +116,8 @@ export const bookings = pgTable("bookings", {
   addOns: json("add_ons").default([]), // JSON array of selected add-ons
   addOnTotal: integer("add_on_total"), // Total price of add-ons
   totalPrice: integer("total_price"), // Total booking price incl. add-ons
+  referralDiscountCents: integer("referral_discount_cents").notNull().default(0),
+  referralCreditAppliedCents: integer("referral_credit_applied_cents").notNull().default(0),
   
   // Payment fields
   isPaid: boolean("is_paid").default(false), // Whether booking has been paid for
@@ -168,8 +171,16 @@ export const referrals = pgTable("referrals", {
   id: serial("id").primaryKey(),
   referrerId: integer("referrer_id").notNull(),
   referredUserId: integer("referred_user_id").notNull().unique(),
+  referralCodeUsed: text("referral_code_used").notNull(),
+  rewardStatus: text("reward_status").notNull().default("pending"),
+  discountStatus: text("discount_status").notNull().default("available"),
+  relatedBookingId: integer("related_booking_id").unique(),
+  discountAmountCents: integer("discount_amount_cents").notNull().default(2000),
+  rewardAmountCents: integer("reward_amount_cents").notNull().default(2000),
   referrerCredited: boolean("referrer_credited").notNull().default(false),
-  createdAt: text("created_at").notNull()
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+  rewardedAt: text("rewarded_at")
 });
 
 export const contactMessages = pgTable("contact_messages", {

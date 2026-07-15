@@ -15,6 +15,43 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
+export const REFERRAL_DISCOUNT_CENTS = 2000;
+export const REFERRAL_REWARD_CENTS = 2000;
+export const REFERRAL_MAX_REWARDS = 5;
+// bookings.totalPrice follows the existing checkout contract and is stored in
+// whole USD (for example 39), while referral ledger amounts are stored in cents.
+// Stripe converts totalPrice to cents at the payment boundary.
+const REFERRAL_DISCOUNT_BOOKING_DOLLARS = REFERRAL_DISCOUNT_CENTS / 100;
+
+export type ReferralErrorCode =
+  | 'INVALID_REFERRAL_CODE'
+  | 'SELF_REFERRAL_NOT_ALLOWED'
+  | 'ALREADY_REFERRED'
+  | 'REFERRAL_LIMIT_REACHED';
+
+export class ReferralError extends Error {
+  constructor(public readonly code: ReferralErrorCode, message: string) {
+    super(message);
+    this.name = 'ReferralError';
+  }
+}
+
+export type ReferralSummary = {
+  referralCode: string;
+  creditBalanceCents: number;
+  successfulReferralCount: number;
+  maxRemainingReferrals: number;
+  totalCreditsEarnedCents: number;
+  hasPendingReferralDiscount: boolean;
+  history: Referral[];
+};
+
+function generateReferralCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(8);
+  return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
+}
+
 // Canonical four marketing tiers shown on /services. Categories map 1:1
 // so the booking screen, predictive logic, and seed all stay in sync.
 export const TIER_SEEDS: InsertService[] = [
@@ -197,10 +234,11 @@ export interface IStorage {
 
   // Referral methods
   getUserByReferralCode(code: string): Promise<User | undefined>;
-  applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }>;
-  getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }>;
+  ensureReferralCode(userId: number): Promise<string>;
+  applyReferralCode(newUserId: number, code: string): Promise<Referral>;
+  getReferralInfo(userId: number): Promise<ReferralSummary>;
   consumeFreeWashCredit(userId: number): Promise<boolean>;
-  creditReferrerForCompletedBooking(referredUserId: number): Promise<void>;
+  awardReferralForCompletedBooking(bookingId: number): Promise<boolean>;
 
   // Booking photo methods
   addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto>;
@@ -415,10 +453,12 @@ export class MemStorage implements IStorage {
       isProvider: insertUser.isProvider || false,
       isAdmin: insertUser.isAdmin || false,
       birthday: (insertUser as any).birthday ?? null,
-      referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+      referralCode: generateReferralCode(),
       freeWashCredits: 0,
       referredByCode: null,
+      referralCreditBalanceCents: 0,
       stripeCustomerId: null,
+      pushToken: null,
     };
     this.users.set(id, user);
     return user;
@@ -525,6 +565,8 @@ export class MemStorage implements IStorage {
       addOns: booking.addOns ?? [],
       addOnTotal: booking.addOnTotal ?? null,
       totalPrice: booking.totalPrice ?? null,
+      referralDiscountCents: booking.referralDiscountCents ?? 0,
+      referralCreditAppliedCents: booking.referralCreditAppliedCents ?? 0,
       isPaid: booking.isPaid ?? false,
       paymentStatus: booking.paymentStatus ?? 'pending',
       paymentId: booking.paymentId ?? null,
@@ -1574,10 +1616,11 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> { throw new Error("Not implemented in MemStorage"); }
-  async applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }> { throw new Error("Not implemented in MemStorage"); }
-  async getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }> { throw new Error("Not implemented in MemStorage"); }
+  async ensureReferralCode(_userId: number): Promise<string> { throw new Error("Not implemented in MemStorage"); }
+  async applyReferralCode(newUserId: number, code: string): Promise<Referral> { throw new Error("Not implemented in MemStorage"); }
+  async getReferralInfo(userId: number): Promise<ReferralSummary> { throw new Error("Not implemented in MemStorage"); }
   async consumeFreeWashCredit(userId: number): Promise<boolean> { throw new Error("Not implemented in MemStorage"); }
-  async creditReferrerForCompletedBooking(referredUserId: number): Promise<void> { throw new Error("Not implemented in MemStorage"); }
+  async awardReferralForCompletedBooking(bookingId: number): Promise<boolean> { throw new Error("Not implemented in MemStorage"); }
   async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
     throw new Error("createContactMessage not implemented in MemStorage");
   }
@@ -1622,12 +1665,18 @@ export class DatabaseStorage implements IStorage {
     const passwordToStore = insertUser.password.includes('.')
       ? insertUser.password
       : await hashPassword(insertUser.password);
-    const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const [user] = await db
-      .insert(users)
-      .values({ ...insertUser, password: passwordToStore, referralCode })
-      .returning();
-    return user;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const [user] = await db
+          .insert(users)
+          .values({ ...insertUser, password: passwordToStore, referralCode: generateReferralCode() })
+          .returning();
+        return user;
+      } catch (error: any) {
+        if (error?.code !== '23505' || attempt === 4) throw error;
+      }
+    }
+    throw new Error('Unable to generate a unique referral code.');
   }
 
   async updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User> {
@@ -1684,11 +1733,57 @@ export class DatabaseStorage implements IStorage {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let ref = 'DAPR-';
     for (let i = 0; i < 6; i++) ref += chars[Math.floor(Math.random() * chars.length)];
-    const [newBooking] = await db
-      .insert(bookings)
-      .values({ ...booking, bookingRef: ref } as any)
-      .returning();
-    return newBooking;
+    return await db.transaction(async (tx) => {
+      const [availableReferral] = await tx
+        .select()
+        .from(referrals)
+        .where(and(
+          eq(referrals.referredUserId, booking.userId),
+          eq(referrals.discountStatus, 'available')
+        ))
+        .limit(1);
+
+      const [priorPaidBooking] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.userId, booking.userId), eq(bookings.isPaid, true)))
+        .limit(1);
+
+      const eligibleReferral = priorPaidBooking ? undefined : availableReferral;
+
+      const discountCents = eligibleReferral ? REFERRAL_DISCOUNT_CENTS : 0;
+      const originalTotal = booking.totalPrice ?? 0;
+      const discountedTotal = Math.max(
+        0,
+        originalTotal - (eligibleReferral ? REFERRAL_DISCOUNT_BOOKING_DOLLARS : 0),
+      );
+      const [newBooking] = await tx
+        .insert(bookings)
+        .values({
+          ...booking,
+          bookingRef: ref,
+          totalPrice: discountedTotal,
+          referralDiscountCents: discountCents,
+        } as any)
+        .returning();
+
+      if (eligibleReferral) {
+        const [claimed] = await tx
+          .update(referrals)
+          .set({
+            discountStatus: 'applied',
+            relatedBookingId: newBooking.id,
+          })
+          .where(and(
+            eq(referrals.id, eligibleReferral.id),
+            eq(referrals.discountStatus, 'available')
+          ))
+          .returning();
+        if (!claimed) throw new Error('Referral discount was claimed concurrently. Please retry.');
+      }
+
+      return newBooking;
+    });
   }
 
   async getUserBookings(userId: number): Promise<Booking[]> {
@@ -2360,6 +2455,9 @@ export class DatabaseStorage implements IStorage {
       .set(paymentInfo)
       .where(eq(bookings.id, bookingId))
       .returning();
+    if (paymentInfo.isPaid === true && booking.status === 'completed') {
+      await this.awardReferralForCompletedBooking(booking.id);
+    }
     return booking;
   }
 
@@ -2745,34 +2843,95 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async applyReferralCode(newUserId: number, code: string): Promise<{ success: boolean; message: string }> {
-    const newUser = await db.select().from(users).where(eq(users.id, newUserId)).then(r => r[0]);
-    if (!newUser) return { success: false, message: 'User not found.' };
-    if (newUser.referredByCode) return { success: false, message: 'You have already applied a referral code.' };
+  async ensureReferralCode(userId: number): Promise<string> {
+    const existing = await this.getUser(userId);
+    if (!existing) throw new Error('User not found.');
+    if (existing.referralCode) return existing.referralCode;
 
-    const referrer = await this.getUserByReferralCode(code);
-    if (!referrer) return { success: false, message: 'Referral code not found.' };
-    if (referrer.id === newUserId) return { success: false, message: 'You cannot use your own referral code.' };
-
-    await db.update(users).set({ referredByCode: code.toUpperCase(), freeWashCredits: (newUser.freeWashCredits ?? 0) + 1 }).where(eq(users.id, newUserId));
-    await db.insert(referrals).values({ referrerId: referrer.id, referredUserId: newUserId, referrerCredited: false, createdAt: new Date().toISOString() });
-
-    return { success: true, message: '1 free wash credit added to your account!' };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const code = generateReferralCode();
+        const [updated] = await db
+          .update(users)
+          .set({ referralCode: code })
+          .where(and(eq(users.id, userId), isNull(users.referralCode)))
+          .returning({ referralCode: users.referralCode });
+        if (updated?.referralCode) return updated.referralCode;
+        const refreshed = await this.getUser(userId);
+        if (refreshed?.referralCode) return refreshed.referralCode;
+      } catch (error: any) {
+        if (error?.code !== '23505' || attempt === 4) throw error;
+      }
+    }
+    throw new Error('Unable to generate a unique referral code.');
   }
 
-  async getReferralInfo(userId: number): Promise<{ code: string; credits: number; referralCount: number; pendingCredits: number }> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) return { code: '', credits: 0, referralCount: 0, pendingCredits: 0 };
+  async applyReferralCode(newUserId: number, rawCode: string): Promise<Referral> {
+    const code = rawCode.trim().toUpperCase();
+    return await db.transaction(async (tx) => {
+      const [newUser] = await tx.select().from(users).where(eq(users.id, newUserId));
+      if (!newUser) throw new ReferralError('INVALID_REFERRAL_CODE', 'Customer account not found.');
 
-    const allReferrals = await db.select().from(referrals).where(eq(referrals.referrerId, userId));
-    const credited = allReferrals.filter(r => r.referrerCredited).length;
-    const pending = allReferrals.filter(r => !r.referrerCredited).length;
+      const [existingReferral] = await tx.select().from(referrals).where(eq(referrals.referredUserId, newUserId));
+      if (newUser.referredByCode || existingReferral) {
+        throw new ReferralError('ALREADY_REFERRED', 'You have already applied a referral code.');
+      }
+
+      const [referrer] = await tx.select().from(users).where(eq(users.referralCode, code));
+      if (!referrer || referrer.isProvider) {
+        throw new ReferralError('INVALID_REFERRAL_CODE', 'Referral code not found.');
+      }
+      if (referrer.id === newUserId) {
+        throw new ReferralError('SELF_REFERRAL_NOT_ALLOWED', 'You cannot use your own referral code.');
+      }
+
+      await tx.execute(sql`select pg_advisory_xact_lock(${referrer.id})`);
+      const rewarded = await tx.select({ id: referrals.id }).from(referrals).where(and(
+        eq(referrals.referrerId, referrer.id),
+        eq(referrals.rewardStatus, 'rewarded')
+      ));
+      if (rewarded.length >= REFERRAL_MAX_REWARDS) {
+        throw new ReferralError('REFERRAL_LIMIT_REACHED', 'This customer has reached the referral reward limit.');
+      }
+
+      const now = new Date().toISOString();
+      const [referral] = await tx.insert(referrals).values({
+        referrerId: referrer.id,
+        referredUserId: newUserId,
+        referralCodeUsed: code,
+        rewardStatus: 'pending',
+        discountStatus: 'available',
+        discountAmountCents: REFERRAL_DISCOUNT_CENTS,
+        rewardAmountCents: REFERRAL_REWARD_CENTS,
+        referrerCredited: false,
+        createdAt: now,
+      }).returning();
+      await tx.update(users).set({ referredByCode: code }).where(eq(users.id, newUserId));
+      return referral;
+    });
+  }
+
+  async getReferralInfo(userId: number): Promise<ReferralSummary> {
+    const referralCode = await this.ensureReferralCode(userId);
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) throw new Error('User not found.');
+
+    const history = await db.select().from(referrals)
+      .where(or(eq(referrals.referrerId, userId), eq(referrals.referredUserId, userId)))
+      .orderBy(desc(referrals.id));
+    const successfulReferralCount = history.filter(r => r.referrerId === userId && r.rewardStatus === 'rewarded').length;
+    const hasPendingReferralDiscount = history.some(r =>
+      r.referredUserId === userId && r.discountStatus === 'available'
+    );
 
     return {
-      code: user.referralCode ?? '',
-      credits: user.freeWashCredits ?? 0,
-      referralCount: credited,
-      pendingCredits: pending,
+      referralCode,
+      creditBalanceCents: user.referralCreditBalanceCents,
+      successfulReferralCount,
+      maxRemainingReferrals: Math.max(0, REFERRAL_MAX_REWARDS - successfulReferralCount),
+      totalCreditsEarnedCents: successfulReferralCount * REFERRAL_REWARD_CENTS,
+      hasPendingReferralDiscount,
+      history,
     };
   }
 
@@ -2783,17 +2942,55 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async creditReferrerForCompletedBooking(referredUserId: number): Promise<void> {
-    const [referral] = await db.select().from(referrals).where(
-      and(eq(referrals.referredUserId, referredUserId), eq(referrals.referrerCredited, false))
-    );
-    if (!referral) return;
+  async awardReferralForCompletedBooking(bookingId: number): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId));
+      if (!booking || booking.status !== 'completed' || !booking.isPaid) return false;
 
-    const [referrer] = await db.select().from(users).where(eq(users.id, referral.referrerId));
-    if (!referrer) return;
+      const [referral] = await tx.select().from(referrals).where(and(
+        eq(referrals.referredUserId, booking.userId),
+        eq(referrals.relatedBookingId, booking.id),
+        eq(referrals.rewardStatus, 'pending')
+      ));
+      if (!referral) return false;
 
-    await db.update(users).set({ freeWashCredits: (referrer.freeWashCredits ?? 0) + 1 }).where(eq(users.id, referral.referrerId));
-    await db.update(referrals).set({ referrerCredited: true }).where(eq(referrals.id, referral.id));
+      await tx.execute(sql`select pg_advisory_xact_lock(${referral.referrerId})`);
+      const priorPaidCompletions = await tx.select({ id: bookings.id }).from(bookings).where(and(
+        eq(bookings.userId, booking.userId),
+        eq(bookings.status, 'completed'),
+        eq(bookings.isPaid, true),
+        sql`${bookings.id} <> ${booking.id}`
+      ));
+      if (priorPaidCompletions.length > 0) return false;
+
+      const rewarded = await tx.select({ id: referrals.id }).from(referrals).where(and(
+        eq(referrals.referrerId, referral.referrerId),
+        eq(referrals.rewardStatus, 'rewarded')
+      ));
+      const now = new Date().toISOString();
+      if (rewarded.length >= REFERRAL_MAX_REWARDS) {
+        await tx.update(referrals).set({
+          rewardStatus: 'limit_reached',
+          discountStatus: 'redeemed',
+          completedAt: now,
+        }).where(and(eq(referrals.id, referral.id), eq(referrals.rewardStatus, 'pending')));
+        return false;
+      }
+
+      const [awarded] = await tx.update(referrals).set({
+        rewardStatus: 'rewarded',
+        discountStatus: 'redeemed',
+        referrerCredited: true,
+        completedAt: now,
+        rewardedAt: now,
+      }).where(and(eq(referrals.id, referral.id), eq(referrals.rewardStatus, 'pending'))).returning();
+      if (!awarded) return false;
+
+      await tx.update(users).set({
+        referralCreditBalanceCents: sql`${users.referralCreditBalanceCents} + ${REFERRAL_REWARD_CENTS}`,
+      }).where(eq(users.id, referral.referrerId));
+      return true;
+    });
   }
 }
 
