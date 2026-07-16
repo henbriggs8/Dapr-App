@@ -491,6 +491,23 @@ export function registerRoutes(app: Express): Server {
       // beyond that (e.g. vehicle-size markup) is layered in by the client and
       // sent as `totalPrice`; we never trust it to be lower than base+add-ons.
       const service = await storage.getServiceById(bookingData.serviceId);
+      const selectedTimeSlot = await storage.getTimeSlotById(bookingData.timeSlotId);
+      if (
+        !selectedTimeSlot ||
+        !selectedTimeSlot.isAvailable ||
+        selectedTimeSlot.currentBookings >= selectedTimeSlot.maxBookings
+      ) {
+        return res.status(409).json({
+          code: "TIME_SLOT_UNAVAILABLE",
+          error: "The selected time slot does not exist or is no longer available.",
+        });
+      }
+      if (selectedTimeSlot.date !== req.body.date) {
+        return res.status(400).json({
+          code: "SLOT_DATE_MISMATCH",
+          error: "The selected time slot does not match the booking date.",
+        });
+      }
       if (bookingData.vehicleId != null) {
         const vehicle = await storage.getVehicleById(bookingData.vehicleId);
         if (!vehicle || vehicle.userId !== req.user.id) {
@@ -894,6 +911,12 @@ export function registerRoutes(app: Express): Server {
   // Time slots endpoints
   app.get("/api/timeslots", async (req, res) => {
     const date = req.query.date as string | undefined;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        code: "INVALID_DATE",
+        error: "date is required in YYYY-MM-DD format.",
+      });
+    }
     const timeSlots = await storage.getAvailableTimeSlots(date);
     res.json(timeSlots);
   });
