@@ -914,8 +914,6 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/addresses", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
-      const ownedAddress = (await storage.getSavedAddresses(req.user.id)).find(address => address.id === id);
-      if (!ownedAddress) return res.status(404).json({ error: "Address not found" });
       const { label, address, isDefault } = req.body;
       if (!label || !address) return res.status(400).json({ error: "label and address are required" });
       const addr = await storage.createSavedAddress({
