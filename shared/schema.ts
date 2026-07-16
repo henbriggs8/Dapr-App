@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, json, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, json, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -118,6 +118,11 @@ export const bookings = pgTable("bookings", {
   totalPrice: integer("total_price"), // Total booking price incl. add-ons
   referralDiscountCents: integer("referral_discount_cents").notNull().default(0),
   referralCreditAppliedCents: integer("referral_credit_applied_cents").notNull().default(0),
+  quoteId: text("quote_id").unique(),
+  bookingIdempotencyKey: text("booking_idempotency_key").unique(),
+  paymentIntentIdempotencyKey: text("payment_intent_idempotency_key"),
+  paymentExpiresAt: text("payment_expires_at"),
+  referralCreditRefundedAt: text("referral_credit_refunded_at"),
   
   // Payment fields
   isPaid: boolean("is_paid").default(false), // Whether booking has been paid for
@@ -147,6 +152,36 @@ export const bookings = pgTable("bookings", {
   timeAdjustments: json("time_adjustments").default([]), // Array of TimeAdjustment objects
   providerNotes: text("provider_notes") // Optional provider notes about the job
 });
+
+export const bookingQuotes = pgTable("booking_quotes", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  requestFingerprint: text("request_fingerprint").notNull(),
+  serviceId: integer("service_id").notNull(),
+  timeSlotId: integer("time_slot_id").notNull(),
+  vehicleId: integer("vehicle_id").notNull(),
+  serviceLocation: text("service_location").notNull(),
+  serviceLocationType: text("service_location_type").notNull(),
+  serviceLatitude: doublePrecision("service_latitude"),
+  serviceLongitude: doublePrecision("service_longitude"),
+  date: text("date").notNull(),
+  time: text("time").notNull(),
+  priceTier: text("price_tier").notNull(),
+  addOnIds: json("add_on_ids").notNull().default([]),
+  addOns: json("add_ons").notNull().default([]),
+  subtotalCents: integer("subtotal_cents").notNull(),
+  referralDiscountCents: integer("referral_discount_cents").notNull().default(0),
+  referralCreditAppliedCents: integer("referral_credit_applied_cents").notNull().default(0),
+  totalAmountCents: integer("total_amount_cents").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  consumedAt: text("consumed_at"),
+  bookingId: integer("booking_id"),
+}, (table) => ({
+  userIdempotencyUnique: uniqueIndex("booking_quotes_user_idempotency_unique")
+    .on(table.userId, table.idempotencyKey),
+}));
 
 export const bookingPhotos = pgTable("booking_photos", {
   id: serial("id").primaryKey(),
@@ -294,6 +329,7 @@ export type User = typeof users.$inferSelect;
 export type Service = typeof services.$inferSelect;
 export type TimeSlot = typeof timeSlots.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type BookingQuote = typeof bookingQuotes.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type PricingConfig = typeof pricingConfig.$inferSelect;

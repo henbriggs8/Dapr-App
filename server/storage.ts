@@ -567,6 +567,11 @@ export class MemStorage implements IStorage {
       totalPrice: booking.totalPrice ?? null,
       referralDiscountCents: booking.referralDiscountCents ?? 0,
       referralCreditAppliedCents: booking.referralCreditAppliedCents ?? 0,
+      quoteId: booking.quoteId ?? null,
+      bookingIdempotencyKey: booking.bookingIdempotencyKey ?? null,
+      paymentIntentIdempotencyKey: booking.paymentIntentIdempotencyKey ?? null,
+      paymentExpiresAt: booking.paymentExpiresAt ?? null,
+      referralCreditRefundedAt: booking.referralCreditRefundedAt ?? null,
       isPaid: booking.isPaid ?? false,
       paymentStatus: booking.paymentStatus ?? 'pending',
       paymentId: booking.paymentId ?? null,
@@ -1355,7 +1360,8 @@ export class MemStorage implements IStorage {
   async getUnassignedBookings(): Promise<Booking[]> {
     return Array.from(this.bookings.values()).filter(
       (booking) => 
-        booking.status === 'pending' &&
+        booking.status === 'confirmed' &&
+        booking.isPaid === true &&
         (!booking.providerId)
     );
   }
@@ -2077,7 +2083,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(bookings.id, bookingId),
-          eq(bookings.status, 'pending'),
+          eq(bookings.status, 'confirmed'),
+          eq(bookings.isPaid, true),
           isNull(bookings.providerId)
         )
       )
@@ -2186,7 +2193,8 @@ export class DatabaseStorage implements IStorage {
       .from(bookings)
       .where(
         and(
-          eq(bookings.status, 'pending'),
+          eq(bookings.status, 'confirmed'),
+          eq(bookings.isPaid, true),
           isNull(bookings.providerId)
         )
       );
