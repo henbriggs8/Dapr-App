@@ -7,11 +7,12 @@ import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
-import { ADD_ONS, resolveBookingAddOns } from "@shared/add-ons";
+import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
+import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -129,6 +130,35 @@ async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<stri
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  const clients = new Map<number, WebSocket[]>();
+
+  const sendBookingEvent = (booking: { userId: number; providerId?: number | null }, payload: unknown) => {
+    const participantIds = new Set([booking.userId, booking.providerId].filter((id): id is number => typeof id === "number"));
+    const message = JSON.stringify(payload);
+    participantIds.forEach(userId => {
+      (clients.get(userId) || []).forEach(client => {
+        if (client.readyState === WebSocket.OPEN) client.send(message);
+      });
+    });
+  };
+
+  const loadProviderMutableBooking = async (req: Request, res: Response, bookingId: number) => {
+    if (!req.user || (!req.user.isProvider && !req.user.isAdmin)) {
+      res.status(403).json({ code: "PROVIDER_REQUIRED", error: "Provider or admin access required" });
+      return null;
+    }
+    const booking = await storage.getBookingById(bookingId);
+    if (!booking) {
+      res.status(404).json({ code: "BOOKING_NOT_FOUND", error: "Booking not found" });
+      return null;
+    }
+    if (!canMutateAssignedBooking(req.user, booking)) {
+      res.status(403).json({ code: "BOOKING_ASSIGNMENT_REQUIRED", error: "Only the assigned provider or an admin can update this booking" });
+      return null;
+    }
+    return booking;
+  };
+
 
   // Public endpoints
   app.get("/api/providers", async (req, res) => {
@@ -206,6 +236,10 @@ export function registerRoutes(app: Express): Server {
     
     try {
       const bookingId = parseInt(req.params.bookingId);
+      if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      const existing = await storage.getBookingById(bookingId);
+      if (!existing) return res.status(404).json({ error: "Booking not found" });
+      if (!canAccessBookingTracking(req.user, existing)) return res.status(403).json({ error: "Access denied" });
       const booking = await storage.enableTrackingForBooking(bookingId);
       res.json(booking);
     } catch (error) {
@@ -232,6 +266,9 @@ export function registerRoutes(app: Express): Server {
     try {
       const bookingId = parseInt(req.params.bookingId);
       if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      const booking = await storage.getBookingById(bookingId);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+      if (!canAccessBookingTracking(req.user, booking)) return res.status(403).json({ error: "Access denied" });
       const trackingInfo = await storage.getTrackingInfo(bookingId);
       res.json(trackingInfo);
     } catch (error) {
@@ -259,6 +296,12 @@ export function registerRoutes(app: Express): Server {
     try {
       const bookingId = parseInt(req.params.bookingId);
       const { latitude, longitude } = req.body;
+      if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      const existing = await loadProviderMutableBooking(req, res, bookingId);
+      if (!existing) return;
+      if (!["assigned", "confirmed", "on_the_way", "arrived", "in_progress"].includes(existing.status)) {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Location cannot be updated in the current booking state" });
+      }
       
       const booking = await storage.updateProviderLocationForBooking(bookingId, latitude, longitude);
       
@@ -272,11 +315,7 @@ export function registerRoutes(app: Express): Server {
         distance: booking.distanceToCustomer
       });
       
-      wss.clients.forEach((client: WebSocket) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(message);
-        }
-      });
+      sendBookingEvent(booking, JSON.parse(message));
       
       res.json(booking);
     } catch (error) {
@@ -289,6 +328,9 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
 
     const { status } = req.body;
+    if (status !== "online" && status !== "offline") {
+      return res.status(400).json({ code: "INVALID_PROVIDER_STATUS", error: "Provider status must be online or offline" });
+    }
     const user = await storage.updateProviderStatus(req.user.id, status);
     res.json(user);
   });
@@ -438,6 +480,10 @@ export function registerRoutes(app: Express): Server {
               .map((a: any) => (a && typeof a === "object" ? a.id : a))
               .filter((v: unknown): v is string => typeof v === "string")
           : [];
+      const invalidAddOnIds = unknownAddOnIds(incomingAddOnIds, new Set(Object.keys(ADD_ONS_BY_ID)));
+      if (invalidAddOnIds.length > 0) {
+        return res.status(400).json({ code: "INVALID_ADD_ON", error: "One or more add-ons are not recognized.", invalidAddOnIds });
+      }
       const { addOns: resolvedAddOns, addOnTotal, addOnDurationMinutes } =
         resolveBookingAddOns(incomingAddOnIds);
 
@@ -445,6 +491,12 @@ export function registerRoutes(app: Express): Server {
       // beyond that (e.g. vehicle-size markup) is layered in by the client and
       // sent as `totalPrice`; we never trust it to be lower than base+add-ons.
       const service = await storage.getServiceById(bookingData.serviceId);
+      if (bookingData.vehicleId != null) {
+        const vehicle = await storage.getVehicleById(bookingData.vehicleId);
+        if (!vehicle || vehicle.userId !== req.user.id) {
+          return res.status(403).json({ code: "VEHICLE_ACCESS_DENIED", error: "The selected vehicle does not belong to this account." });
+        }
+      }
       const basePrice = service?.price ?? 0;
       const clientTotal = Number(req.body.totalPrice);
       const minimumTotal = basePrice + addOnTotal;
@@ -738,6 +790,8 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/addresses", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
+      const ownedAddress = (await storage.getSavedAddresses(req.user.id)).find(address => address.id === id);
+      if (!ownedAddress) return res.status(404).json({ error: "Address not found" });
       const { label, address, isDefault } = req.body;
       if (!label || !address) return res.status(400).json({ error: "label and address are required" });
       const addr = await storage.createSavedAddress({
@@ -773,6 +827,8 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).send("Invalid ID");
+    const ownedAddress = (await storage.getSavedAddresses(req.user.id)).find(address => address.id === id);
+    if (!ownedAddress) return res.status(404).json({ error: "Address not found" });
     await storage.deleteSavedAddress(id);
     res.sendStatus(204);
   });
@@ -1323,9 +1379,6 @@ export function registerRoutes(app: Express): Server {
   // Set up WebSocket server for real-time notifications
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
-  // Store active client connections for each user ID
-  const clients = new Map<number, WebSocket[]>();
-  
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
     // We'll set this when the client sends an auth message
@@ -1415,10 +1468,6 @@ export function registerRoutes(app: Express): Server {
   
   // Service timer endpoints
   app.post('/api/bookings/:id/start', async (req, res) => {
-    if (!req.user?.isProvider) {
-      return res.status(403).send('Provider access required');
-    }
-    
     const id = parseInt(req.params.id);
     
     if (isNaN(id)) {
@@ -1426,6 +1475,11 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (!["assigned", "confirmed", "arrived"].includes(existing.status)) {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Service cannot be started in the current booking state" });
+      }
       const booking = await storage.startServiceTimer(id);
       
       // Notify the customer via WebSocket if they're connected
@@ -1458,10 +1512,6 @@ export function registerRoutes(app: Express): Server {
   });
   
   app.post('/api/bookings/:id/complete', async (req, res) => {
-    if (!req.user?.isProvider) {
-      return res.status(403).send('Provider access required');
-    }
-    
     const id = parseInt(req.params.id);
     
     if (isNaN(id)) {
@@ -1469,6 +1519,11 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (existing.status !== "in_progress") {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Only an in-progress booking can be completed" });
+      }
       const booking = await storage.completeServiceTimer(id);
       
       // Notify the customer via WebSocket if they're connected
@@ -1843,7 +1898,7 @@ export function registerRoutes(app: Express): Server {
   );
 
   // Rating endpoint
-  app.post('/api/bookings/:id/rating', async (req, res) => {
+  app.post('/api/bookings/:id/rating', resolveUserFromBearer, async (req, res) => {
     if (!req.user) {
       return res.sendStatus(401);
     }
@@ -1986,10 +2041,6 @@ export function registerRoutes(app: Express): Server {
 
   // Add API endpoint to update booking status with notifications
   app.post('/api/bookings/:id/status', async (req, res) => {
-    if (!req.user?.isProvider) {
-      return res.status(403).send('Provider access required');
-    }
-    
     const { status, stage } = req.body;
     const id = parseInt(req.params.id);
     
@@ -1998,6 +2049,14 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (!isAllowedProviderStatusTransition(existing.status, status)) {
+        return res.status(409).json({ code: "INVALID_STATUS_TRANSITION", error: `Cannot transition booking from ${existing.status} to ${String(status)}` });
+      }
+      if (stage !== undefined && !isAllowedProviderStage(stage)) {
+        return res.status(400).json({ code: "INVALID_BOOKING_STAGE", error: "Unsupported booking stage" });
+      }
       // Update the booking status
       const booking = await storage.updateBookingStatus(id, status, stage);
 
@@ -2039,10 +2098,14 @@ export function registerRoutes(app: Express): Server {
   
   // Provider marks arrival — sets arrivalTime, calculates initial ETA, notifies customer
   app.post('/api/bookings/:id/arrive', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (!["assigned", "confirmed", "on_the_way"].includes(existing.status)) {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Arrival cannot be recorded in the current booking state" });
+      }
       const { baseDurationMinutes = 60 } = req.body;
       const booking = await storage.markArrived(id, baseDurationMinutes);
       // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
@@ -2054,9 +2117,7 @@ export function registerRoutes(app: Express): Server {
         extraTimeMinutes: booking.extraTimeMinutes,
         timeAdjustments: booking.timeAdjustments,
       });
-      wss.clients.forEach((client: WebSocket) => {
-        if (client.readyState === WebSocket.OPEN) client.send(arrivedMsg);
-      });
+      sendBookingEvent(booking, JSON.parse(arrivedMsg));
       res.json(booking);
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to mark arrival' });
@@ -2065,17 +2126,19 @@ export function registerRoutes(app: Express): Server {
 
   // Provider advances service stage — broadcasts stage_update to customer tracking screen
   app.post('/api/bookings/:id/stage', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     const { stage } = req.body;
-    if (!stage) return res.status(400).json({ error: 'stage is required' });
+    if (!isAllowedProviderStage(stage)) return res.status(400).json({ code: "INVALID_BOOKING_STAGE", error: 'Unsupported booking stage' });
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (existing.status !== "in_progress") {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Stages can only be updated while service is in progress" });
+      }
       const booking = await storage.updateBookingStage(id, stage);
       const msg = JSON.stringify({ type: 'stage_update', bookingId: booking.id, stage });
-      wss.clients.forEach((client: WebSocket) => {
-        if (client.readyState === WebSocket.OPEN) client.send(msg);
-      });
+      sendBookingEvent(booking, JSON.parse(msg));
       res.json(booking);
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to update stage' });
@@ -2084,10 +2147,14 @@ export function registerRoutes(app: Express): Server {
 
   // Provider updates time adjustments — recalculates ETA, notifies customer
   app.patch('/api/bookings/:id/time-adjustments', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     try {
+      const existing = await loadProviderMutableBooking(req, res, id);
+      if (!existing) return;
+      if (existing.status !== "in_progress") {
+        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Time adjustments require an in-progress booking" });
+      }
       const { adjustments, providerNotes } = req.body;
       if (!Array.isArray(adjustments)) return res.status(400).json({ error: 'adjustments must be an array' });
       const booking = await storage.updateTimeAdjustments(id, adjustments, providerNotes);
@@ -2099,9 +2166,7 @@ export function registerRoutes(app: Express): Server {
         extraTimeMinutes: booking.extraTimeMinutes,
         timeAdjustments: booking.timeAdjustments,
       });
-      wss.clients.forEach((client: WebSocket) => {
-        if (client.readyState === WebSocket.OPEN) client.send(etaMsg);
-      });
+      sendBookingEvent(booking, JSON.parse(etaMsg));
       res.json(booking);
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to update adjustments' });
