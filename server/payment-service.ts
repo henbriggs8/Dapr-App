@@ -5,6 +5,29 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-04-22.dahlia',
 });
 
+export async function createNativePaymentSheetIntent(input: {
+  bookingId: number;
+  amountCents: number;
+  customerId?: string;
+  idempotencyKey: string;
+}): Promise<{ paymentIntentId: string; clientSecret: string; amountCents: number }> {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not configured");
+  if (!Number.isInteger(input.amountCents) || input.amountCents < 50) throw new Error("PaymentIntent amount must be at least 50 cents");
+  const intent = await stripe.paymentIntents.create({
+    amount: input.amountCents,
+    currency: "usd",
+    automatic_payment_methods: { enabled: true },
+    metadata: { bookingId: String(input.bookingId), contract: "native_payment_sheet_v1" },
+    ...(input.customerId ? { customer: input.customerId } : {}),
+  }, { idempotencyKey: input.idempotencyKey });
+  if (!intent.client_secret) throw new Error("Stripe did not return a PaymentIntent client secret");
+  return { paymentIntentId: intent.id, clientSecret: intent.client_secret, amountCents: intent.amount };
+}
+
+export async function retrievePaymentSheetIntent(paymentIntentId: string) {
+  return stripe.paymentIntents.retrieve(paymentIntentId);
+}
+
 /**
  * Create a PaymentIntent for in-app embedded payment.
  * Returns clientSecret for use with Stripe's Payment Element.

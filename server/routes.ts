@@ -13,6 +13,7 @@ import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
 import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
+import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -34,6 +35,21 @@ function providerAuthError(res: Response, status: number, code: string, message:
 
 function referralAuthError(res: Response) {
   return res.status(401).json({ code: 'UNAUTHENTICATED', message: 'Authentication is required.' });
+}
+
+function requireIdempotencyKey(req: Request): string {
+  const value = req.get("Idempotency-Key")?.trim();
+  if (!value || !/^[A-Za-z0-9._:-]{16,128}$/.test(value)) {
+    throw new NativeContractError(400, "INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must be 16-128 safe characters.");
+  }
+  return value;
+}
+
+function nativeContractError(res: Response, error: unknown) {
+  if (error instanceof NativeContractError) return res.status(error.status).json({ code: error.code, error: error.message });
+  if (error && typeof error === "object" && "issues" in error) return res.status(400).json({ code: "INVALID_REQUEST", error: "Request validation failed.", details: (error as any).issues });
+  console.error("Native payment contract error:", error);
+  return res.status(500).json({ code: "INTERNAL_ERROR", error: "The request could not be completed." });
 }
 
 function serializeReferral(referral: any) {
@@ -426,8 +442,82 @@ export function registerRoutes(app: Express): Server {
     res.json(bookings);
   });
 
-  // Protected endpoints
+  // Native transactional quote and PaymentSheet contract.
+  app.post("/api/quotes", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const quote = await createNativeQuote(req.user.id, requireIdempotencyKey(req), req.body);
+      return res.status(201).json(serializeQuote(quote));
+    } catch (error) {
+      return nativeContractError(res, error);
+    }
+  });
+
   app.post("/api/bookings", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const quoteId = typeof req.body?.quoteId === "string" ? req.body.quoteId.trim() : "";
+      if (!quoteId) throw new NativeContractError(400, "QUOTE_ID_REQUIRED", "quoteId is required; client prices are not accepted.");
+      const booking = await createBookingFromQuote(req.user.id, quoteId, requireIdempotencyKey(req));
+      return res.status(201).json(booking);
+    } catch (error) {
+      return nativeContractError(res, error);
+    }
+  });
+
+  app.post("/api/bookings/:id/payment-sheet", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const bookingId = Number(req.params.id);
+      if (!Number.isInteger(bookingId) || bookingId <= 0) throw new NativeContractError(400, "INVALID_BOOKING_ID", "Invalid booking ID.");
+      const idempotencyKey = requireIdempotencyKey(req);
+      const booking = await nativePaymentStatus(req.user.id, bookingId);
+      if (!booking) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+      if (booking.isPaid) return res.json({ bookingId, amountCents: booking.amount ?? 0, paymentStatus: booking.paymentStatus, clientSecret: null });
+      if (booking.paymentStatus === "payment_expired") throw new NativeContractError(410, "PAYMENT_EXPIRED", "The payment window expired; create a new quote and booking.");
+      const amountCents = booking.amount ?? Math.round((booking.totalPrice ?? 0) * 100);
+      if (amountCents === 0) {
+        const paid = await confirmZeroAmountBooking(booking.id);
+        return res.json({ bookingId, amountCents: 0, paymentStatus: paid?.paymentStatus ?? "paid", clientSecret: null });
+      }
+      if (booking.stripeSessionId) {
+        const { retrievePaymentSheetIntent } = await import("./payment-service");
+        const existing = await retrievePaymentSheetIntent(booking.stripeSessionId);
+        if (existing.client_secret && !["succeeded", "canceled"].includes(existing.status)) {
+          return res.json({ bookingId, paymentIntentId: existing.id, clientSecret: existing.client_secret, amountCents: existing.amount, currency: existing.currency, paymentStatus: booking.paymentStatus });
+        }
+      }
+      const customerId = await resolveOrCreateStripeCustomerId(req.user);
+      const { createNativePaymentSheetIntent } = await import("./payment-service");
+      const intent = await createNativePaymentSheetIntent({ bookingId, amountCents, customerId, idempotencyKey: `native:${bookingId}:${idempotencyKey}` });
+      await attachNativePaymentIntent(bookingId, idempotencyKey, intent.paymentIntentId);
+      return res.status(201).json({ bookingId, ...intent, currency: "usd", paymentStatus: "payment_pending" });
+    } catch (error) {
+      return nativeContractError(res, error);
+    }
+  });
+
+  app.get("/api/bookings/:id/payment-status", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      const bookingId = Number(req.params.id);
+      if (!Number.isInteger(bookingId) || bookingId <= 0) throw new NativeContractError(400, "INVALID_BOOKING_ID", "Invalid booking ID.");
+      const booking = await nativePaymentStatus(req.user.id, bookingId);
+      return res.json({
+        bookingId: booking!.id,
+        bookingStatus: booking!.status,
+        paymentStatus: booking!.paymentStatus,
+        isPaid: booking!.isPaid,
+        amountCents: booking!.amount ?? Math.round((booking!.totalPrice ?? 0) * 100),
+        paymentExpiresAt: booking!.paymentExpiresAt,
+      });
+    } catch (error) {
+      return nativeContractError(res, error);
+    }
+  });
+
+  // Legacy web booking creation retained temporarily; native clients must not call it.
+  app.post("/api/bookings/legacy", resolveUserFromBearer, async (req, res) => {
     if (!req.user) {
       console.log("Booking attempt without authentication");
       return res.status(401).json({ error: "Authentication required to create bookings. Please log in first." });
@@ -447,16 +537,6 @@ export function registerRoutes(app: Express): Server {
         if (existingBooking) {
           console.log(`[bookings] Reusing existing unpaid booking #${existingBooking.id} for user ${req.user.id}`);
           // Re-broadcast the job so providers that missed the original notification can see it
-          const jobNotification = {
-            type: 'new_job_available',
-            booking: existingBooking,
-            providersNotified: 0,
-          };
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify(jobNotification));
-            }
-          });
           return res.status(200).json(existingBooking);
         }
       }
@@ -624,7 +704,8 @@ export function registerRoutes(app: Express): Server {
             15 // 15 mile radius
           );
           
-          // Notify nearby providers via WebSocket
+          if (!newBooking.isPaid || newBooking.status !== 'confirmed') return res.status(201).json(newBooking);
+          // Notify nearby providers only after payment verification and confirmation.
           const jobNotification = {
             type: 'new_job_available',
             booking: newBooking,
@@ -1320,9 +1401,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid booking ID" });
       }
 
-      // Check if booking is still available (pending = unassigned to any provider)
+      // Only paid, confirmed, unassigned bookings are provider-visible.
       const booking = await storage.getBookingById(bookingId);
-      if (!booking || booking.status !== 'pending' || booking.providerId) {
+      if (!booking || !booking.isPaid || booking.status !== 'confirmed' || booking.providerId) {
         return res.status(400).json({ error: "Job is no longer available" });
       }
 
@@ -1917,6 +1998,17 @@ export function registerRoutes(app: Express): Server {
           }
         }
 
+        if (event.type === 'payment_intent.payment_failed' || event.type === 'payment_intent.canceled') {
+          const intent = event.data.object as import('stripe').Stripe.PaymentIntent;
+          const bookingId = intent.metadata?.bookingId ? parseInt(intent.metadata.bookingId) : null;
+          if (bookingId) {
+            await refundReferralCreditsForFailedPayment(
+              bookingId,
+              event.type === 'payment_intent.canceled' ? 'payment_cancelled' : 'payment_failed',
+            );
+          }
+        }
+
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object as import('stripe').Stripe.Checkout.Session;
           const bookingId = session.metadata?.bookingId ? parseInt(session.metadata.bookingId) : null;
@@ -1926,6 +2018,12 @@ export function registerRoutes(app: Express): Server {
             else if (session.payment_method_types?.length) method = 'card';
             await markBookingPaid(bookingId, session.id, method);
           }
+        }
+
+        if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
+          const session = event.data.object as import('stripe').Stripe.Checkout.Session;
+          const bookingId = session.metadata?.bookingId ? parseInt(session.metadata.bookingId) : null;
+          if (bookingId) await refundReferralCreditsForFailedPayment(bookingId, 'payment_expired');
         }
 
         res.status(200).end();
