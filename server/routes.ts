@@ -15,6 +15,7 @@ import path from "path";
 import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
 import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 import { getAsapAvailability } from "./asap-availability";
+import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -1333,6 +1334,28 @@ export function registerRoutes(app: Express): Server {
       res.json(updatedTimeSlot);
     } catch (error) {
       res.status(404).send(error instanceof Error ? error.message : "Time slot not found");
+    }
+  });
+
+  app.post("/api/admin/time-slots/publish-capacity", isAdmin, async (req, res) => {
+    try {
+      return res.json(await publishTimeSlotCapacity(req.body));
+    } catch (error) {
+      if (error instanceof TimeSlotCapacityConflictError) {
+        return res.status(409).json({ code: "TIME_SLOT_CONFLICT", error: error.message });
+      }
+      return nativeContractError(res, error);
+    }
+  });
+
+  app.post("/api/admin/time-slots/unpublish-capacity", isAdmin, async (req, res) => {
+    try {
+      return res.json(await unpublishTimeSlotCapacity(req.body));
+    } catch (error) {
+      if (error instanceof TimeSlotCapacityConflictError) {
+        return res.status(409).json({ code: "TIME_SLOT_CONFLICT", error: error.message });
+      }
+      return nativeContractError(res, error);
     }
   });
 
