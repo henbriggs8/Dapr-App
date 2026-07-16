@@ -20,6 +20,7 @@ async function main() {
   const { bookings, savedAddresses, services, timeSlots, users, vehicles } = await import("@shared/schema");
   const { eq, inArray } = await import("drizzle-orm");
   const { confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, refundReferralCreditsForFailedPayment } = await import("./native-payment-contract");
+  const { publishTimeSlotCapacity, unpublishTimeSlotCapacity } = await import("./time-slot-capacity");
   const { storage } = await import("./storage");
 
   const createdUserIds: number[] = [];
@@ -45,6 +46,40 @@ async function main() {
     const [contendedSlot] = await db.insert(timeSlots).values({ date: "2099-01-01", startTime: "10:00", endTime: "11:00", isAvailable: true, maxBookings: 1, currentBookings: 0, isPublished: true }).returning();
     const [paidSlot] = await db.insert(timeSlots).values({ date: "2099-01-01", startTime: "11:00", endTime: "12:00", isAvailable: true, maxBookings: 1, currentBookings: 0, isPublished: true }).returning();
     createdSlotIds.push(contendedSlot.id, paidSlot.id);
+
+    const [existingCapacitySlot] = await db.insert(timeSlots).values({
+      date: "2099-12-30",
+      startTime: "09:00",
+      endTime: "10:00",
+      isAvailable: false,
+      maxBookings: 3,
+      currentBookings: 2,
+      isPublished: false,
+    }).returning();
+    createdSlotIds.push(existingCapacitySlot.id);
+    const publication = await publishTimeSlotCapacity({
+      date: "2099-12-30",
+      startTime: "09:00",
+      endTime: "11:00",
+      slotDurationMinutes: 60,
+      maxBookings: 1,
+    });
+    createdSlotIds.push(...publication.slots.filter(slot => slot.id !== existingCapacitySlot.id).map(slot => slot.id));
+    assert.equal(publication.createdCount, 1);
+    assert.equal(publication.updatedCount, 1);
+    assert.equal(publication.slots[0].currentBookings, 2, "publishing never resets current bookings");
+    assert.equal(publication.slots[0].maxBookings, 2, "publishing never lowers capacity below current bookings");
+    assert.equal(publication.slots[0].isAvailable, true);
+    assert.equal(publication.slots[0].isPublished, true);
+    const unpublication = await unpublishTimeSlotCapacity({
+      date: "2099-12-30",
+      startTime: "09:00",
+      endTime: "11:00",
+      slotDurationMinutes: 60,
+    });
+    assert.equal(unpublication.unpublishedCount, 2);
+    assert.ok(unpublication.slots.every(slot => !slot.isPublished));
+    assert.equal(unpublication.slots[0].currentBookings, 2, "unpublishing leaves reservations untouched");
 
     async function quote(customer: typeof first, slotId: number, time: string, key: string) {
       const created = await createNativeQuote(customer.user.id, `${runId}:quote:${key}`, {
