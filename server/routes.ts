@@ -747,7 +747,21 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
-      const updatedVehicle = await storage.updateVehicle(id, req.body);
+      const updates = insertVehicleSchema
+        .pick({
+          year: true,
+          make: true,
+          model: true,
+          color: true,
+          licensePlate: true,
+          notes: true,
+        })
+        .partial()
+        .parse(req.body);
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "At least one editable vehicle field is required" });
+      }
+      const updatedVehicle = await storage.updateVehicle(id, updates);
       res.json(updatedVehicle);
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "An error occurred" });
@@ -810,6 +824,8 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).send("Invalid ID");
+    const ownedAddress = (await storage.getSavedAddresses(req.user.id)).find(address => address.id === id);
+    if (!ownedAddress) return res.status(404).json({ error: "Address not found" });
     try {
       const { label, address, isDefault } = req.body;
       const updated = await storage.updateSavedAddress(id, {
