@@ -1,6 +1,6 @@
 import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, gt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, gt, lt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -1919,12 +1919,18 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(timeSlots).where(
         and(
           eq(timeSlots.isAvailable, true),
-          eq(timeSlots.date, date)
+          eq(timeSlots.date, date),
+          lt(timeSlots.currentBookings, timeSlots.maxBookings)
         )
       );
     }
     
-    return await db.select().from(timeSlots).where(eq(timeSlots.isAvailable, true));
+    return await db.select().from(timeSlots).where(
+      and(
+        eq(timeSlots.isAvailable, true),
+        lt(timeSlots.currentBookings, timeSlots.maxBookings)
+      )
+    );
   }
 
   private async generateTimeSlotsForDate(dateString: string): Promise<void> {
