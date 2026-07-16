@@ -1,19 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { bookingQuotes, bookings, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
 import { db } from "./db";
+import { NativeContractError } from "./native-contract-error";
+import { asapAvailabilityConfig, isAsapSlotCandidate } from "./asap-availability";
+
+export { NativeContractError } from "./native-contract-error";
 
 const QUOTE_TTL_MS = 15 * 60 * 1000;
 const PAYMENT_TTL_MS = 30 * 60 * 1000;
 const REFERRAL_DISCOUNT_CENTS = 2_000;
-
-export class NativeContractError extends Error {
-  constructor(public status: number, public code: string, message: string) {
-    super(message);
-  }
-}
 
 export const nativeQuoteRequestSchema = z.object({
   serviceId: z.number().int().positive(),
@@ -27,6 +25,7 @@ export const nativeQuoteRequestSchema = z.object({
   time: z.string().trim().min(1),
   addOnIds: z.array(z.string()).default([]),
   applyReferralCredits: z.boolean().default(true),
+  fulfillmentMode: z.enum(["asap", "scheduled"]).default("scheduled"),
 });
 
 export type NativeQuoteRequest = z.infer<typeof nativeQuoteRequestSchema>;
@@ -57,6 +56,7 @@ export function serializeQuote(quote: typeof bookingQuotes.$inferSelect) {
     totalAmountCents: quote.totalAmountCents,
     currency: "usd",
     expiresAt: quote.expiresAt,
+    fulfillmentMode: quote.fulfillmentMode,
   };
 }
 
@@ -83,6 +83,10 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
   }
   if (slot.date !== input.date) throw new NativeContractError(400, "SLOT_DATE_MISMATCH", "The selected time slot does not match the booking date.");
+  if (slot.startTime !== input.time) throw new NativeContractError(400, "SLOT_TIME_MISMATCH", "The selected time slot does not match the booking time.");
+  if (input.fulfillmentMode === "asap" && !isAsapSlotCandidate(slot, new Date(), asapAvailabilityConfig())) {
+    throw new NativeContractError(409, "ASAP_SLOT_UNAVAILABLE", "The selected slot is no longer eligible for Arrive Now.");
+  }
 
   const uniqueAddOnIds = input.addOnIds.filter((id, index, ids) => ids.indexOf(id) === index);
   const invalidAddOnIds = uniqueAddOnIds.filter(id => !ADD_ONS_BY_ID[id]);
@@ -110,6 +114,7 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     date: input.date, time: input.time, priceTier: service.category,
     addOnIds: uniqueAddOnIds, addOns: resolved.addOns,
     subtotalCents, referralDiscountCents, referralCreditAppliedCents, totalAmountCents,
+    fulfillmentMode: input.fulfillmentMode,
     createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + QUOTE_TTL_MS).toISOString(),
   }).returning();
   return quote;
@@ -131,8 +136,19 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
     }
     if (new Date(quote.expiresAt).getTime() <= Date.now()) throw new NativeContractError(410, "QUOTE_EXPIRED", "Quote has expired.");
 
-    const [slot] = await tx.select().from(timeSlots).where(eq(timeSlots.id, quote.timeSlotId)).limit(1);
-    if (!slot || !slot.isAvailable || slot.currentBookings >= slot.maxBookings) throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
+    // Reserve capacity with one conditional UPDATE. Concurrent transactions cannot
+    // both claim the last unit because PostgreSQL rechecks the WHERE clause after
+    // waiting for the row lock.
+    const reservationConditions = [
+      eq(timeSlots.id, quote.timeSlotId),
+      eq(timeSlots.isAvailable, true),
+      lt(timeSlots.currentBookings, timeSlots.maxBookings),
+    ];
+    if (quote.fulfillmentMode === "asap") reservationConditions.push(eq(timeSlots.isPublished, true));
+    const [slot] = await tx.update(timeSlots).set({
+      currentBookings: sql`${timeSlots.currentBookings} + 1`,
+    }).where(and(...reservationConditions)).returning();
+    if (!slot) throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
     const [vehicle] = await tx.select().from(vehicles).where(eq(vehicles.id, quote.vehicleId)).limit(1);
     if (!vehicle || vehicle.userId !== userId) throw new NativeContractError(403, "VEHICLE_ACCESS_DENIED", "Vehicle does not belong to this account.");
 
@@ -159,6 +175,8 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
       totalPrice: Math.round(quote.totalAmountCents / 100), amount: quote.totalAmountCents,
       referralDiscountCents: quote.referralDiscountCents, referralCreditAppliedCents: quote.referralCreditAppliedCents,
       quoteId: quote.id, bookingIdempotencyKey: idempotencyKey,
+      fulfillmentMode: quote.fulfillmentMode,
+      slotReservedAt: now.toISOString(),
       isPaid: false, paymentStatus: "payment_pending", paymentExpiresAt: new Date(now.getTime() + PAYMENT_TTL_MS).toISOString(),
     }).returning();
     await tx.update(bookingQuotes).set({ consumedAt: now.toISOString(), bookingId: booking.id }).where(and(eq(bookingQuotes.id, quote.id), isNull(bookingQuotes.bookingId)));
@@ -174,6 +192,12 @@ export async function refundReferralCreditsForFailedPayment(bookingId: number, p
     await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
     if (!booking || booking.isPaid) return booking;
+    const now = new Date().toISOString();
+    if (booking.slotReservedAt && !booking.slotReservationReleasedAt) {
+      await tx.update(timeSlots).set({
+        currentBookings: sql`greatest(${timeSlots.currentBookings} - 1, 0)`,
+      }).where(eq(timeSlots.id, booking.timeSlotId));
+    }
     if (booking.referralCreditAppliedCents > 0 && !booking.referralCreditRefundedAt) {
       await tx.update(users).set({ referralCreditBalanceCents: sql`${users.referralCreditBalanceCents} + ${booking.referralCreditAppliedCents}` }).where(eq(users.id, booking.userId));
     }
@@ -183,7 +207,8 @@ export async function refundReferralCreditsForFailedPayment(bookingId: number, p
     ));
     const [updated] = await tx.update(bookings).set({
       paymentStatus,
-      referralCreditRefundedAt: booking.referralCreditAppliedCents > 0 ? new Date().toISOString() : booking.referralCreditRefundedAt,
+      referralCreditRefundedAt: booking.referralCreditAppliedCents > 0 ? now : booking.referralCreditRefundedAt,
+      slotReservationReleasedAt: booking.slotReservedAt && !booking.slotReservationReleasedAt ? now : booking.slotReservationReleasedAt,
     }).where(eq(bookings.id, bookingId)).returning();
     return updated;
   });
@@ -208,12 +233,40 @@ export async function attachNativePaymentIntent(bookingId: number, idempotencyKe
   return booking;
 }
 
+export async function markNativeBookingPaid(bookingId: number, intentId: string, paymentMethod?: string | null) {
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
+    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!booking) return undefined;
+    if (booking.slotReservationReleasedAt) {
+      throw new NativeContractError(409, "SLOT_RESERVATION_RELEASED", "Payment cannot be confirmed after slot capacity was released.");
+    }
+    const newlyPaid = !booking.isPaid;
+    const [updated] = await tx.update(bookings).set({
+      isPaid: true,
+      paymentStatus: "completed",
+      paymentDate: booking.paymentDate || new Date().toISOString(),
+      stripeSessionId: intentId,
+      status: newlyPaid ? "confirmed" : booking.status,
+      ...(paymentMethod ? { paymentMethod } : {}),
+    }).where(eq(bookings.id, bookingId)).returning();
+    return { booking: updated, newlyPaid };
+  });
+}
+
 export async function confirmZeroAmountBooking(bookingId: number) {
-  const [booking] = await db.update(bookings).set({
-    isPaid: true,
-    paymentStatus: "paid",
-    paymentDate: new Date().toISOString(),
-    status: "confirmed",
-  }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
-  return booking;
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
+    const [existing] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!existing) return undefined;
+    if (existing.slotReservationReleasedAt) throw new NativeContractError(409, "SLOT_RESERVATION_RELEASED", "Payment cannot be confirmed after slot capacity was released.");
+    if (existing.isPaid) return existing;
+    const [booking] = await tx.update(bookings).set({
+      isPaid: true,
+      paymentStatus: "paid",
+      paymentDate: new Date().toISOString(),
+      status: "confirmed",
+    }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
+    return booking;
+  });
 }

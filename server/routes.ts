@@ -13,7 +13,8 @@ import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
 import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
-import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
+import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
+import { getAsapAvailability } from "./asap-availability";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -443,6 +444,15 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Native transactional quote and PaymentSheet contract.
+  app.post("/api/availability/asap", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    try {
+      return res.json(await getAsapAvailability(req.user.id, req.body));
+    } catch (error) {
+      return nativeContractError(res, error);
+    }
+  });
+
   app.post("/api/quotes", resolveUserFromBearer, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     try {
@@ -474,7 +484,9 @@ export function registerRoutes(app: Express): Server {
       const booking = await nativePaymentStatus(req.user.id, bookingId);
       if (!booking) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
       if (booking.isPaid) return res.json({ bookingId, amountCents: booking.amount ?? 0, paymentStatus: booking.paymentStatus, clientSecret: null });
-      if (booking.paymentStatus === "payment_expired") throw new NativeContractError(410, "PAYMENT_EXPIRED", "The payment window expired; create a new quote and booking.");
+      if (["payment_failed", "payment_cancelled", "payment_expired", "failed", "cancelled", "expired"].includes((booking.paymentStatus ?? "").toLowerCase())) {
+        throw new NativeContractError(410, "PAYMENT_ATTEMPT_CLOSED", "This payment attempt is closed; create a new quote and booking.");
+      }
       const amountCents = booking.amount ?? Math.round((booking.totalPrice ?? 0) * 100);
       if (amountCents === 0) {
         const paid = await confirmZeroAmountBooking(booking.id);
@@ -1308,7 +1320,7 @@ export function registerRoutes(app: Express): Server {
     const timeSlotData = insertTimeSlotSchema.parse(req.body);
     const { id, ...timeSlotWithoutId } = timeSlotData;
     
-    const newTimeSlot = await storage.createTimeSlot(timeSlotWithoutId);
+    const newTimeSlot = await storage.createTimeSlot({ ...timeSlotWithoutId, isPublished: true });
     res.status(201).json(newTimeSlot);
   });
   
@@ -1962,26 +1974,11 @@ export function registerRoutes(app: Express): Server {
       }
 
       const markBookingPaid = async (bookingId: number, intentId: string, detectedMethod?: string | null) => {
-        const booking = await storage.getBookingById(bookingId);
-        if (booking) {
-          const needsUpdate =
-            !booking.isPaid ||
-            (detectedMethod && !booking.paymentMethod);
-          if (needsUpdate) {
-            await storage.updateBookingPaymentInfo(booking.id, {
-              isPaid: true,
-              paymentStatus: 'completed',
-              paymentDate: booking.paymentDate || new Date().toISOString(),
-              stripeSessionId: intentId,
-              ...(detectedMethod ? { paymentMethod: detectedMethod } : {}),
-            });
-            if (!booking.isPaid) {
-              await storage.updateBookingStatus(booking.id, 'confirmed');
-              const userClients = clients.get(booking.userId) || [];
-              const notification = JSON.stringify({ type: 'payment_completed', bookingId: booking.id });
-              userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
-            }
-          }
+        const result = await markNativeBookingPaid(bookingId, intentId, detectedMethod);
+        if (result?.newlyPaid) {
+          const userClients = clients.get(result.booking.userId) || [];
+          const notification = JSON.stringify({ type: 'payment_completed', bookingId: result.booking.id });
+          userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
         }
       };
 
