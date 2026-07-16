@@ -572,6 +572,9 @@ export class MemStorage implements IStorage {
       paymentIntentIdempotencyKey: booking.paymentIntentIdempotencyKey ?? null,
       paymentExpiresAt: booking.paymentExpiresAt ?? null,
       referralCreditRefundedAt: booking.referralCreditRefundedAt ?? null,
+      fulfillmentMode: booking.fulfillmentMode ?? "scheduled",
+      slotReservedAt: booking.slotReservedAt ?? null,
+      slotReservationReleasedAt: booking.slotReservationReleasedAt ?? null,
       isPaid: booking.isPaid ?? false,
       paymentStatus: booking.paymentStatus ?? 'pending',
       paymentId: booking.paymentId ?? null,
@@ -1071,7 +1074,8 @@ export class MemStorage implements IStorage {
       id,
       isAvailable: timeSlot.isAvailable ?? true,
       maxBookings: timeSlot.maxBookings ?? 3,
-      currentBookings: timeSlot.currentBookings ?? 0
+      currentBookings: timeSlot.currentBookings ?? 0,
+      isPublished: timeSlot.isPublished ?? false,
     };
     this.timeSlots.set(id, newTimeSlot);
     return newTimeSlot;

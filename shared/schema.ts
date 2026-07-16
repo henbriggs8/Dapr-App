@@ -55,7 +55,8 @@ export const timeSlots = pgTable("time_slots", {
   endTime: text("end_time").notNull(), // HH:MM format
   isAvailable: boolean("is_available").notNull().default(true),
   maxBookings: integer("max_bookings").notNull().default(3),
-  currentBookings: integer("current_bookings").notNull().default(0)
+  currentBookings: integer("current_bookings").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(false)
 });
 
 export const vehicles = pgTable("vehicles", {
@@ -123,6 +124,9 @@ export const bookings = pgTable("bookings", {
   paymentIntentIdempotencyKey: text("payment_intent_idempotency_key"),
   paymentExpiresAt: text("payment_expires_at"),
   referralCreditRefundedAt: text("referral_credit_refunded_at"),
+  fulfillmentMode: text("fulfillment_mode").notNull().default("scheduled"),
+  slotReservedAt: text("slot_reserved_at"),
+  slotReservationReleasedAt: text("slot_reservation_released_at"),
   
   // Payment fields
   isPaid: boolean("is_paid").default(false), // Whether booking has been paid for
@@ -178,6 +182,7 @@ export const bookingQuotes = pgTable("booking_quotes", {
   createdAt: text("created_at").notNull(),
   consumedAt: text("consumed_at"),
   bookingId: integer("booking_id"),
+  fulfillmentMode: text("fulfillment_mode").notNull().default("scheduled"),
 }, (table) => ({
   userIdempotencyUnique: uniqueIndex("booking_quotes_user_idempotency_unique")
     .on(table.userId, table.idempotencyKey),
