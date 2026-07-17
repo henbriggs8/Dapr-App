@@ -145,6 +145,66 @@ async function resolveOrCreateStripeCustomerId(user: Express.User): Promise<stri
   }
 }
 
+function clerkUserIdFor(user: Express.User): string | undefined {
+  return user.username.startsWith("clerk_") ? user.username.substring(6) : undefined;
+}
+
+function stripeErrorMetadata(error: unknown) {
+  if (!error || typeof error !== "object") return { errorType: typeof error };
+  const value = error as {
+    type?: unknown;
+    code?: unknown;
+    param?: unknown;
+    requestId?: unknown;
+    statusCode?: unknown;
+  };
+  return {
+    type: typeof value.type === "string" ? value.type : undefined,
+    code: typeof value.code === "string" ? value.code : undefined,
+    param: typeof value.param === "string" ? value.param : undefined,
+    requestId: typeof value.requestId === "string" ? value.requestId : undefined,
+    statusCode: typeof value.statusCode === "number" ? value.statusCode : undefined,
+  };
+}
+
+/**
+ * Removes a Customer reference from every local cache and recreates it using the
+ * currently configured Stripe environment. This is called only after Stripe has
+ * explicitly rejected the saved Customer as missing.
+ */
+async function recoverStaleStripeCustomerId(user: Express.User): Promise<string> {
+  const clerkUserId = clerkUserIdFor(user);
+  try {
+    await storage.updateUserStripeCustomerId(user.id, null);
+    if (clerkUserId) await storage.deleteClerkStripeMapping(clerkUserId);
+  } catch (error) {
+    console.error("[Stripe] Stale customer reset failed", { userId: user.id, ...stripeErrorMetadata(error) });
+    throw new NativeContractError(500, "STALE_CUSTOMER_RESET_FAILED", "The saved payment profile could not be reset. Please try again.");
+  }
+
+  const { createStripeCustomer } = await import("./payment-service");
+  let customerId: string;
+  try {
+    customerId = await createStripeCustomer(
+      user.email || undefined,
+      user.phone || undefined,
+      user.name || undefined,
+    );
+  } catch (error) {
+    console.error("[Stripe] Replacement customer creation failed", { userId: user.id, ...stripeErrorMetadata(error) });
+    throw new NativeContractError(502, "STRIPE_CUSTOMER_CREATE_FAILED", "Stripe could not create a new payment profile. Please try again.");
+  }
+
+  try {
+    if (clerkUserId) await storage.upsertClerkStripeMapping(clerkUserId, customerId);
+    await storage.updateUserStripeCustomerId(user.id, customerId);
+  } catch (error) {
+    console.error("[Stripe] Replacement customer persistence failed", { userId: user.id, ...stripeErrorMetadata(error) });
+    throw new NativeContractError(500, "STRIPE_CUSTOMER_SAVE_FAILED", "The new payment profile could not be saved. Please try again.");
+  }
+  return customerId;
+}
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
@@ -505,8 +565,45 @@ export function registerRoutes(app: Express): Server {
         }
       }
       const customerId = await resolveOrCreateStripeCustomerId(req.user);
-      const { createNativePaymentSheetIntent } = await import("./payment-service");
-      const intent = await createNativePaymentSheetIntent({ bookingId, amountCents, customerId, idempotencyKey: `native:${bookingId}:${idempotencyKey}` });
+      const { createNativePaymentSheetIntent, isMissingStripeCustomerError, stripeEnvironment } = await import("./payment-service");
+      let intent;
+      try {
+        intent = await createNativePaymentSheetIntent({ bookingId, amountCents, customerId, idempotencyKey: `native:${bookingId}:${idempotencyKey}` });
+      } catch (error) {
+        if (!customerId || !isMissingStripeCustomerError(error)) {
+          console.error("[Stripe] Native PaymentIntent creation failed", {
+            userId: req.user.id,
+            bookingId,
+            stripeEnvironment: stripeEnvironment(),
+            ...stripeErrorMetadata(error),
+          });
+          throw new NativeContractError(502, "PAYMENT_INTENT_CREATE_FAILED", "Stripe could not create the payment session. Please try again.");
+        }
+
+        console.warn("[Stripe] Recovering stale customer for active environment", {
+          userId: req.user.id,
+          bookingId,
+          stripeEnvironment: stripeEnvironment(),
+          staleCustomerRef: `cus_…${customerId.slice(-6)}`,
+        });
+        const recoveredCustomerId = await recoverStaleStripeCustomerId(req.user);
+        try {
+          intent = await createNativePaymentSheetIntent({
+            bookingId,
+            amountCents,
+            customerId: recoveredCustomerId,
+            idempotencyKey: `native:${bookingId}:${idempotencyKey}:customer-recovery`,
+          });
+        } catch (recoveryError) {
+          console.error("[Stripe] PaymentIntent creation failed after stale customer recovery", {
+            userId: req.user.id,
+            bookingId,
+            stripeEnvironment: stripeEnvironment(),
+            ...stripeErrorMetadata(recoveryError),
+          });
+          throw new NativeContractError(502, "PAYMENT_INTENT_RECOVERY_FAILED", "Stripe could not create the payment session after refreshing your payment profile.");
+        }
+      }
       await attachNativePaymentIntent(bookingId, idempotencyKey, intent.paymentIntentId);
       return res.status(201).json({ bookingId, ...intent, currency: "usd", paymentStatus: "payment_pending" });
     } catch (error) {

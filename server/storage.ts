@@ -92,7 +92,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
   updateUser(id: number, updates: Partial<Pick<User, 'isProvider' | 'isAdmin'>>): Promise<User>;
-  updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void>;
+  updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void>;
   updateUserPushToken(id: number, token: string): Promise<void>;
   deleteUser(id: number): Promise<void>;
   getProviders(): Promise<User[]>;
@@ -231,6 +231,7 @@ export interface IStorage {
   getClerkStripeMapping(clerkUserId: string): Promise<ClerkStripeMapping | undefined>;
   createClerkStripeMapping(mapping: InsertClerkStripeMapping): Promise<ClerkStripeMapping>;
   upsertClerkStripeMapping(clerkUserId: string, stripeCustomerId: string): Promise<void>;
+  deleteClerkStripeMapping(clerkUserId: string): Promise<void>;
 
   // Referral methods
   getUserByReferralCode(code: string): Promise<User | undefined>;
@@ -487,7 +488,7 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void> {
+  async updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void> {
     const user = await this.getUser(id);
     if (user) this.users.set(id, { ...user, stripeCustomerId });
   }
@@ -1613,6 +1614,9 @@ export class MemStorage implements IStorage {
   async upsertClerkStripeMapping(_clerkUserId: string, _stripeCustomerId: string): Promise<void> {
     throw new Error("upsertClerkStripeMapping not implemented in MemStorage");
   }
+  async deleteClerkStripeMapping(_clerkUserId: string): Promise<void> {
+    throw new Error("deleteClerkStripeMapping not implemented in MemStorage");
+  }
 
   // Booking photo methods for MemStorage (not implemented)
   async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
@@ -1703,7 +1707,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<void> {
+  async updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void> {
     await db.update(users).set({ stripeCustomerId }).where(eq(users.id, id));
   }
 
@@ -2745,6 +2749,10 @@ export class DatabaseStorage implements IStorage {
         target: clerkStripeMapping.clerkUserId,
         set: { stripeCustomerId },
       });
+  }
+
+  async deleteClerkStripeMapping(clerkUserId: string): Promise<void> {
+    await db.delete(clerkStripeMapping).where(eq(clerkStripeMapping.clerkUserId, clerkUserId));
   }
 
   async addBookingPhoto(bookingId: number, photoType: string, dataUrl: string, caption?: string): Promise<BookingPhoto> {
