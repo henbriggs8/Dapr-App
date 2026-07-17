@@ -83,7 +83,7 @@ export const bookings = pgTable("bookings", {
   userId: integer("user_id").notNull(),
   providerId: integer("provider_id"), // Can be null for unassigned bookings
   serviceId: integer("service_id").notNull(),
-  timeSlotId: integer("time_slot_id").notNull(),
+  timeSlotId: integer("time_slot_id"),
   vehicleId: integer("vehicle_id"),
   // Human-readable booking reference e.g. DAPR-A3X9K2
   bookingRef: text("booking_ref").unique(),
@@ -163,7 +163,7 @@ export const bookingQuotes = pgTable("booking_quotes", {
   idempotencyKey: text("idempotency_key").notNull(),
   requestFingerprint: text("request_fingerprint").notNull(),
   serviceId: integer("service_id").notNull(),
-  timeSlotId: integer("time_slot_id").notNull(),
+  timeSlotId: integer("time_slot_id"),
   vehicleId: integer("vehicle_id").notNull(),
   serviceLocation: text("service_location").notNull(),
   serviceLocationType: text("service_location_type").notNull(),

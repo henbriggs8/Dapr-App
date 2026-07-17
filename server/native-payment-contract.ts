@@ -5,7 +5,7 @@ import { ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { bookingQuotes, bookings, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
 import { db } from "./db";
 import { NativeContractError } from "./native-contract-error";
-import { asapAvailabilityConfig, isAsapSlotCandidate } from "./asap-availability";
+import { getEligibleOnlineProviderCount } from "./asap-availability";
 
 export { NativeContractError } from "./native-contract-error";
 
@@ -13,20 +13,31 @@ const QUOTE_TTL_MS = 15 * 60 * 1000;
 const PAYMENT_TTL_MS = 30 * 60 * 1000;
 const REFERRAL_DISCOUNT_CENTS = 2_000;
 
-export const nativeQuoteRequestSchema = z.object({
+const nativeQuoteCommonSchema = z.object({
   serviceId: z.number().int().positive(),
-  timeSlotId: z.number().int().positive(),
   vehicleId: z.number().int().positive(),
   serviceLocation: z.string().trim().min(1),
   serviceLocationType: z.enum(["home", "work", "other"]),
   serviceLatitude: z.number().finite().nullable().optional(),
   serviceLongitude: z.number().finite().nullable().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().trim().min(1),
   addOnIds: z.array(z.string()).default([]),
   applyReferralCredits: z.boolean().default(true),
-  fulfillmentMode: z.enum(["asap", "scheduled"]).default("scheduled"),
 });
+
+export const nativeQuoteRequestSchema = z.discriminatedUnion("fulfillmentMode", [
+  nativeQuoteCommonSchema.extend({
+    fulfillmentMode: z.literal("asap"),
+    timeSlotId: z.null().optional(),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    time: z.string().trim().min(1).optional(),
+  }),
+  nativeQuoteCommonSchema.extend({
+    fulfillmentMode: z.literal("scheduled"),
+    timeSlotId: z.number().int().positive(),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    time: z.string().trim().min(1),
+  }),
+]);
 
 export type NativeQuoteRequest = z.infer<typeof nativeQuoteRequestSchema>;
 
@@ -39,6 +50,17 @@ function bookingReference(): string {
   let value = "DAPR-";
   for (let i = 0; i < 6; i++) value += chars[Math.floor(Math.random() * chars.length)];
   return value;
+}
+
+function dateInPhoenix(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 export function serializeQuote(quote: typeof bookingQuotes.$inferSelect) {
@@ -78,14 +100,26 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
   if (!service) throw new NativeContractError(400, "INVALID_SERVICE", "Service not found.");
   const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, input.vehicleId)).limit(1);
   if (!vehicle || vehicle.userId !== userId) throw new NativeContractError(403, "VEHICLE_ACCESS_DENIED", "Vehicle does not belong to this account.");
-  const [slot] = await db.select().from(timeSlots).where(eq(timeSlots.id, input.timeSlotId)).limit(1);
-  if (!slot || !slot.isAvailable || slot.currentBookings >= slot.maxBookings) {
-    throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
-  }
-  if (slot.date !== input.date) throw new NativeContractError(400, "SLOT_DATE_MISMATCH", "The selected time slot does not match the booking date.");
-  if (slot.startTime !== input.time) throw new NativeContractError(400, "SLOT_TIME_MISMATCH", "The selected time slot does not match the booking time.");
-  if (input.fulfillmentMode === "asap" && !isAsapSlotCandidate(slot, new Date(), asapAvailabilityConfig())) {
-    throw new NativeContractError(409, "ASAP_SLOT_UNAVAILABLE", "The selected slot is no longer eligible for Arrive Now.");
+  let timeSlotId: number | null = null;
+  let quoteDate: string;
+  let quoteTime: string;
+  if (input.fulfillmentMode === "scheduled") {
+    const [slot] = await db.select().from(timeSlots).where(eq(timeSlots.id, input.timeSlotId)).limit(1);
+    if (!slot || !slot.isPublished || !slot.isAvailable || slot.currentBookings >= slot.maxBookings) {
+      throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected published time slot is no longer available.");
+    }
+    if (slot.date !== input.date) throw new NativeContractError(400, "SLOT_DATE_MISMATCH", "The selected time slot does not match the booking date.");
+    if (slot.startTime !== input.time) throw new NativeContractError(400, "SLOT_TIME_MISMATCH", "The selected time slot does not match the booking time.");
+    timeSlotId = input.timeSlotId;
+    quoteDate = input.date;
+    quoteTime = input.time;
+  } else {
+    if (await getEligibleOnlineProviderCount(db) < 1) {
+      throw new NativeContractError(409, "NO_ONLINE_PROVIDERS", "No online Dapr Pros are currently available.");
+    }
+    timeSlotId = null;
+    quoteDate = dateInPhoenix(new Date());
+    quoteTime = "ASAP";
   }
 
   const uniqueAddOnIds = input.addOnIds.filter((id, index, ids) => ids.indexOf(id) === index);
@@ -108,10 +142,10 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
   const now = new Date();
   const [quote] = await db.insert(bookingQuotes).values({
     id: randomUUID(), userId, idempotencyKey, requestFingerprint,
-    serviceId: input.serviceId, timeSlotId: input.timeSlotId, vehicleId: input.vehicleId,
+    serviceId: input.serviceId, timeSlotId, vehicleId: input.vehicleId,
     serviceLocation: input.serviceLocation, serviceLocationType: input.serviceLocationType,
     serviceLatitude: input.serviceLatitude ?? null, serviceLongitude: input.serviceLongitude ?? null,
-    date: input.date, time: input.time, priceTier: service.category,
+    date: quoteDate, time: quoteTime, priceTier: service.category,
     addOnIds: uniqueAddOnIds, addOns: resolved.addOns,
     subtotalCents, referralDiscountCents, referralCreditAppliedCents, totalAmountCents,
     fulfillmentMode: input.fulfillmentMode,
@@ -136,19 +170,23 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
     }
     if (new Date(quote.expiresAt).getTime() <= Date.now()) throw new NativeContractError(410, "QUOTE_EXPIRED", "Quote has expired.");
 
-    // Reserve capacity with one conditional UPDATE. Concurrent transactions cannot
-    // both claim the last unit because PostgreSQL rechecks the WHERE clause after
-    // waiting for the row lock.
-    const reservationConditions = [
-      eq(timeSlots.id, quote.timeSlotId),
-      eq(timeSlots.isAvailable, true),
-      lt(timeSlots.currentBookings, timeSlots.maxBookings),
-    ];
-    if (quote.fulfillmentMode === "asap") reservationConditions.push(eq(timeSlots.isPublished, true));
-    const [slot] = await tx.update(timeSlots).set({
-      currentBookings: sql`${timeSlots.currentBookings} + 1`,
-    }).where(and(...reservationConditions)).returning();
-    if (!slot) throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
+    const now = new Date();
+    let slotReservedAt: string | null = null;
+    if (quote.fulfillmentMode === "scheduled") {
+      if (quote.timeSlotId == null) throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The scheduled quote has no time slot.");
+      // Scheduled capacity remains atomic. PostgreSQL rechecks the conditions
+      // after a competing transaction releases the row lock.
+      const [slot] = await tx.update(timeSlots).set({
+        currentBookings: sql`${timeSlots.currentBookings} + 1`,
+      }).where(and(
+        eq(timeSlots.id, quote.timeSlotId),
+        eq(timeSlots.isPublished, true),
+        eq(timeSlots.isAvailable, true),
+        lt(timeSlots.currentBookings, timeSlots.maxBookings),
+      )).returning();
+      if (!slot) throw new NativeContractError(409, "TIME_SLOT_UNAVAILABLE", "The selected time slot is no longer available.");
+      slotReservedAt = now.toISOString();
+    }
     const [vehicle] = await tx.select().from(vehicles).where(eq(vehicles.id, quote.vehicleId)).limit(1);
     if (!vehicle || vehicle.userId !== userId) throw new NativeContractError(403, "VEHICLE_ACCESS_DENIED", "Vehicle does not belong to this account.");
 
@@ -165,7 +203,6 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
       if (!debited) throw new NativeContractError(409, "QUOTE_STALE", "Referral credit balance changed; request a new quote.");
     }
 
-    const now = new Date();
     const [booking] = await tx.insert(bookings).values({
       userId, providerId: null, serviceId: quote.serviceId, timeSlotId: quote.timeSlotId, vehicleId: quote.vehicleId,
       bookingRef: bookingReference(), status: "awaiting_payment", priceTier: quote.priceTier,
@@ -176,7 +213,7 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
       referralDiscountCents: quote.referralDiscountCents, referralCreditAppliedCents: quote.referralCreditAppliedCents,
       quoteId: quote.id, bookingIdempotencyKey: idempotencyKey,
       fulfillmentMode: quote.fulfillmentMode,
-      slotReservedAt: now.toISOString(),
+      slotReservedAt,
       isPaid: false, paymentStatus: "payment_pending", paymentExpiresAt: new Date(now.getTime() + PAYMENT_TTL_MS).toISOString(),
     }).returning();
     await tx.update(bookingQuotes).set({ consumedAt: now.toISOString(), bookingId: booking.id }).where(and(eq(bookingQuotes.id, quote.id), isNull(bookingQuotes.bookingId)));
@@ -193,7 +230,7 @@ export async function refundReferralCreditsForFailedPayment(bookingId: number, p
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
     if (!booking || booking.isPaid) return booking;
     const now = new Date().toISOString();
-    if (booking.slotReservedAt && !booking.slotReservationReleasedAt) {
+    if (booking.timeSlotId != null && booking.slotReservedAt && !booking.slotReservationReleasedAt) {
       await tx.update(timeSlots).set({
         currentBookings: sql`greatest(${timeSlots.currentBookings} - 1, 0)`,
       }).where(eq(timeSlots.id, booking.timeSlotId));

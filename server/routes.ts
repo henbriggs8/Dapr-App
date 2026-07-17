@@ -349,6 +349,10 @@ export function registerRoutes(app: Express): Server {
     if (status !== "online" && status !== "offline") {
       return res.status(400).json({ code: "INVALID_PROVIDER_STATUS", error: "Provider status must be online or offline" });
     }
+    const currentProvider = await storage.getUser(req.user.id);
+    if (!currentProvider || currentProvider.currentStatus === "inactive") {
+      return res.status(403).json({ code: "PROVIDER_INACTIVE", error: "An administrator must reactivate this provider account." });
+    }
     const user = await storage.updateProviderStatus(req.user.id, status);
     res.json(user);
   });
@@ -584,7 +588,11 @@ export function registerRoutes(app: Express): Server {
       // beyond that (e.g. vehicle-size markup) is layered in by the client and
       // sent as `totalPrice`; we never trust it to be lower than base+add-ons.
       const service = await storage.getServiceById(bookingData.serviceId);
-      const selectedTimeSlot = await storage.getTimeSlotById(bookingData.timeSlotId);
+      const legacyTimeSlotId = bookingData.timeSlotId;
+      if (legacyTimeSlotId == null) {
+        return res.status(400).json({ code: "TIME_SLOT_REQUIRED", error: "This scheduled booking requires a time slot." });
+      }
+      const selectedTimeSlot = await storage.getTimeSlotById(legacyTimeSlotId);
       if (
         !selectedTimeSlot ||
         !selectedTimeSlot.isAvailable ||
@@ -625,7 +633,7 @@ export function registerRoutes(app: Express): Server {
         userId: bookingWithoutId.userId,
         providerId: null, // Always null on creation — providers are assigned via accept-job flow
         serviceId: bookingWithoutId.serviceId,
-        timeSlotId: bookingWithoutId.timeSlotId,
+        timeSlotId: legacyTimeSlotId,
         serviceLocation: bookingWithoutId.serviceLocation,
         serviceLocationType: bookingWithoutId.serviceLocationType,
         priceTier: bookingWithoutId.priceTier,
