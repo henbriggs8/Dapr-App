@@ -1,6 +1,6 @@
-# Arrive Now capacity manual test
+# Schedule Ahead capacity manual test
 
-The capacity routes use the existing admin session authentication. The ASAP request uses a customer bearer token.
+The capacity routes use the existing admin session authentication and are only for Schedule Ahead. Arrive Now does not use published time slots.
 
 Set `BASE_URL` to the running backend. Use a capacity window with at least one slot that starts 15–180 minutes from the current Phoenix time.
 
