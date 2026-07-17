@@ -5,6 +5,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-04-22.dahlia',
 });
 
+export function stripeEnvironment(): "test" | "live" | "unknown" {
+  const key = process.env.STRIPE_SECRET_KEY || "";
+  if (key.startsWith("sk_test_") || key.startsWith("rk_test_")) return "test";
+  if (key.startsWith("sk_live_") || key.startsWith("rk_live_")) return "live";
+  return "unknown";
+}
+
+/** True only when Stripe says the supplied Customer does not exist in the active environment. */
+export function isMissingStripeCustomerError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const stripeError = error as { code?: unknown; param?: unknown; message?: unknown };
+  return stripeError.code === "resource_missing"
+    && (stripeError.param === "customer"
+      || (typeof stripeError.message === "string" && stripeError.message.includes("No such customer")));
+}
+
 export async function createNativePaymentSheetIntent(input: {
   bookingId: number;
   amountCents: number;

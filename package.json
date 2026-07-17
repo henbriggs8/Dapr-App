@@ -11,7 +11,8 @@
     "db:push": "drizzle-kit push",
     "test:referrals": "tsx server/referrals.integration.test.ts",
     "test:arrive-now": "tsx --test server/asap-availability.test.ts server/time-slot-capacity.test.ts",
-    "test:arrive-now:integration": "tsx server/arrive-now.integration.test.ts"
+    "test:arrive-now:integration": "tsx server/arrive-now.integration.test.ts",
+    "test:payments": "tsx --test server/payment-service.test.ts"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
