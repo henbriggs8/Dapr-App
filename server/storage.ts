@@ -537,7 +537,7 @@ export class MemStorage implements IStorage {
       userId: booking.userId,
       providerId: booking.providerId ?? null,
       serviceId: booking.serviceId,
-      timeSlotId: booking.timeSlotId,
+      timeSlotId: booking.timeSlotId ?? null,
       vehicleId: booking.vehicleId ?? null,
       status: booking.status || 'pending',
       currentStage: booking.currentStage ?? null,
@@ -1052,7 +1052,7 @@ export class MemStorage implements IStorage {
   }
   
   async getAvailableTimeSlots(date?: string): Promise<TimeSlot[]> {
-    let slots = Array.from(this.timeSlots.values()).filter(slot => slot.isAvailable && slot.currentBookings < slot.maxBookings);
+    let slots = Array.from(this.timeSlots.values()).filter(slot => slot.isPublished && slot.isAvailable && slot.currentBookings < slot.maxBookings);
     
     if (date) {
       slots = slots.filter(slot => slot.date === date);
@@ -1918,16 +1918,9 @@ export class DatabaseStorage implements IStorage {
 
   async getAvailableTimeSlots(date?: string): Promise<TimeSlot[]> {
     if (date) {
-      // Check if time slots exist for this date
-      const existingSlots = await db.select().from(timeSlots).where(eq(timeSlots.date, date));
-      
-      // If no slots exist for this date, create them
-      if (existingSlots.length === 0) {
-        await this.generateTimeSlotsForDate(date);
-      }
-      
       return await db.select().from(timeSlots).where(
         and(
+          eq(timeSlots.isPublished, true),
           eq(timeSlots.isAvailable, true),
           eq(timeSlots.date, date),
           lt(timeSlots.currentBookings, timeSlots.maxBookings)
@@ -1937,6 +1930,7 @@ export class DatabaseStorage implements IStorage {
     
     return await db.select().from(timeSlots).where(
       and(
+        eq(timeSlots.isPublished, true),
         eq(timeSlots.isAvailable, true),
         lt(timeSlots.currentBookings, timeSlots.maxBookings)
       )

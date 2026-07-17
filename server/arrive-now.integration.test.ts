@@ -7,7 +7,7 @@ console.log(`[arrive-now-test] Isolated database: ${redactDatabaseUrl(testDataba
 process.env.DATABASE_URL = testDatabaseUrl;
 
 const pool = await prepareTestDatabase(testDatabaseUrl);
-for (const migration of ["0002_native_quote_payment_contract.sql", "0003_arrive_now_capacity.sql"]) {
+for (const migration of ["0002_native_quote_payment_contract.sql", "0003_arrive_now_capacity.sql", "0004_asap_live_provider_supply.sql"]) {
   await pool.query(await readFile(new URL(`../migrations/${migration}`, import.meta.url), "utf8"));
 }
 
@@ -20,6 +20,7 @@ async function main() {
   const { bookings, savedAddresses, services, timeSlots, users, vehicles } = await import("@shared/schema");
   const { eq, inArray } = await import("drizzle-orm");
   const { confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, refundReferralCreditsForFailedPayment } = await import("./native-payment-contract");
+  const { getAsapAvailability } = await import("./asap-availability");
   const { publishTimeSlotCapacity, unpublishTimeSlotCapacity } = await import("./time-slot-capacity");
   const { storage } = await import("./storage");
 
@@ -43,9 +44,74 @@ async function main() {
     const first = await customer("first");
     const second = await customer("second");
     const paidCustomer = await customer("paid");
+    const [onlineProvider] = await db.insert(users).values({
+      username: `${runId}_provider`,
+      password: "not-for-login",
+      isProvider: true,
+      isAdmin: false,
+      currentStatus: "online",
+    }).returning();
+    createdUserIds.push(onlineProvider.id);
     const [contendedSlot] = await db.insert(timeSlots).values({ date: "2099-01-01", startTime: "10:00", endTime: "11:00", isAvailable: true, maxBookings: 1, currentBookings: 0, isPublished: true }).returning();
     const [paidSlot] = await db.insert(timeSlots).values({ date: "2099-01-01", startTime: "11:00", endTime: "12:00", isAvailable: true, maxBookings: 1, currentBookings: 0, isPublished: true }).returning();
     createdSlotIds.push(contendedSlot.id, paidSlot.id);
+
+    const [providerActiveBooking] = await db.insert(bookings).values({
+      userId: paidCustomer.user.id,
+      providerId: onlineProvider.id,
+      serviceId: service.id,
+      timeSlotId: paidSlot.id,
+      vehicleId: paidCustomer.vehicle.id,
+      status: "in_progress",
+      priceTier: "basic",
+      timestamp: new Date().toISOString(),
+      serviceLocation: paidCustomer.address.address,
+      serviceLocationType: "home",
+      isPaid: true,
+      paymentStatus: "completed",
+      fulfillmentMode: "scheduled",
+    }).returning();
+    createdBookingIds.push(providerActiveBooking.id);
+
+    const liveAvailability = await getAsapAvailability(first.user.id, {
+      addressId: first.address.id,
+      serviceId: service.id,
+      vehicleId: first.vehicle.id,
+      addOnIds: [],
+    });
+    assert.equal(liveAvailability.available, true, "an online provider remains eligible while working an active job");
+    assert.equal(liveAvailability.onlineProviderCount, 1);
+
+    const asapQuote = await createNativeQuote(first.user.id, `${runId}:quote:asap`, {
+      serviceId: service.id,
+      vehicleId: first.vehicle.id,
+      serviceLocation: first.address.address,
+      serviceLocationType: "home",
+      addOnIds: [],
+      fulfillmentMode: "asap",
+    });
+    createdQuoteIds.push(asapQuote.id);
+    assert.equal(asapQuote.timeSlotId, null, "ASAP quotes do not require a time slot");
+    const asapBooking = await createBookingFromQuote(first.user.id, asapQuote.id, `${runId}:booking:asap`);
+    createdBookingIds.push(asapBooking.id);
+    assert.equal(asapBooking.timeSlotId, null, "ASAP bookings do not require a time slot");
+    assert.equal(asapBooking.slotReservedAt, null, "ASAP bookings do not reserve scheduled capacity");
+    await confirmZeroAmountBooking(asapBooking.id);
+
+    await db.update(users).set({ currentStatus: "offline" }).where(eq(users.id, onlineProvider.id));
+    await assert.rejects(
+      createNativeQuote(second.user.id, `${runId}:quote:no-provider`, {
+        serviceId: service.id,
+        vehicleId: second.vehicle.id,
+        serviceLocation: second.address.address,
+        serviceLocationType: "home",
+        addOnIds: [],
+        fulfillmentMode: "asap",
+      }),
+      (error: any) => error?.code === "NO_ONLINE_PROVIDERS",
+      "ASAP quote creation rechecks live provider supply",
+    );
+    await db.update(users).set({ currentStatus: "online" }).where(eq(users.id, onlineProvider.id));
 
     const [existingCapacitySlot] = await db.insert(timeSlots).values({
       date: "2099-12-30",
@@ -151,8 +217,13 @@ async function main() {
 
     const visible = await storage.getUnassignedBookings();
     assert.equal(visible.some(booking => booking.id === winner.value.id), false, "unpaid booking is not provider-visible");
+    assert.equal(visible.some(booking => booking.id === asapBooking.id), true, "paid slotless ASAP booking is provider-visible");
     assert.equal(visible.some(booking => booking.id === paidBooking.id), true, "paid confirmed booking is provider-visible");
-    console.log("[arrive-now-test] PASS: atomic reserve, one-time release, paid retention, and provider gate verified.");
+    const firstQueued = await storage.assignBookingToProvider(asapBooking.id, onlineProvider.id);
+    const secondQueued = await storage.assignBookingToProvider(paidBooking.id, onlineProvider.id);
+    assert.equal(firstQueued.providerId, onlineProvider.id);
+    assert.equal(secondQueued.providerId, onlineProvider.id, "providers may accept multiple queued jobs");
+    console.log("[arrive-now-test] PASS: live supply, slotless ASAP, scheduled capacity, payment gate, and provider queue verified.");
   } finally {
     if (createdQuoteIds.length) await pool.query("DELETE FROM booking_quotes WHERE id = ANY($1::text[])", [createdQuoteIds]);
     if (createdBookingIds.length) await db.delete(bookings).where(inArray(bookings.id, createdBookingIds));
