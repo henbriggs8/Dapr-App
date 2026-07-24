@@ -44,6 +44,52 @@ export async function retrievePaymentSheetIntent(paymentIntentId: string) {
   return stripe.paymentIntents.retrieve(paymentIntentId);
 }
 
+export type NativePaymentIntentDisposition = "paid" | "reusable" | "closed" | "unavailable";
+
+export type NativePaymentIntentValidationIssue =
+  | "intent_id_mismatch"
+  | "amount_mismatch"
+  | "currency_mismatch"
+  | "booking_metadata_mismatch"
+  | "contract_metadata_mismatch"
+  | "customer_mismatch";
+
+export interface NativePaymentIntentExpectation {
+  paymentIntentId: string;
+  bookingId: number;
+  amountCents: number;
+  currency: string;
+  customerId: string | null;
+}
+
+function stripeReferenceId(value: string | { id: string } | null): string | null {
+  if (typeof value === "string") return value;
+  return value?.id ?? null;
+}
+
+export function validateNativePaymentIntent(
+  intent: Pick<Stripe.PaymentIntent, "id" | "amount" | "currency" | "customer" | "metadata">,
+  expected: NativePaymentIntentExpectation,
+): { valid: boolean; issues: NativePaymentIntentValidationIssue[] } {
+  const issues: NativePaymentIntentValidationIssue[] = [];
+  if (intent.id !== expected.paymentIntentId) issues.push("intent_id_mismatch");
+  if (intent.amount !== expected.amountCents) issues.push("amount_mismatch");
+  if (intent.currency.toLowerCase() !== expected.currency.toLowerCase()) issues.push("currency_mismatch");
+  if (intent.metadata.bookingId !== String(expected.bookingId)) issues.push("booking_metadata_mismatch");
+  if (intent.metadata.contract !== "native_payment_sheet_v1") issues.push("contract_metadata_mismatch");
+  if (stripeReferenceId(intent.customer) !== expected.customerId) issues.push("customer_mismatch");
+  return { valid: issues.length === 0, issues };
+}
+
+export function nativePaymentIntentDisposition(
+  intent: Pick<Stripe.PaymentIntent, "status" | "client_secret">,
+): NativePaymentIntentDisposition {
+  if (intent.status === "succeeded") return "paid";
+  if (intent.status === "canceled") return "closed";
+  if (intent.client_secret) return "reusable";
+  return "unavailable";
+}
+
 /**
  * Create a PaymentIntent for in-app embedded payment.
  * Returns clientSecret for use with Stripe's Payment Element.

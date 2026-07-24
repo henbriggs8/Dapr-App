@@ -559,11 +559,35 @@ export function registerRoutes(app: Express): Server {
         return res.json({ bookingId, amountCents: 0, paymentStatus: paid?.paymentStatus ?? "paid", clientSecret: null });
       }
       if (booking.stripeSessionId) {
-        const { retrievePaymentSheetIntent } = await import("./payment-service");
+        const { nativePaymentIntentDisposition, retrievePaymentSheetIntent, validateNativePaymentIntent } = await import("./payment-service");
         const existing = await retrievePaymentSheetIntent(booking.stripeSessionId);
-        if (existing.client_secret && !["succeeded", "canceled"].includes(existing.status)) {
+        const validation = validateNativePaymentIntent(existing, {
+          paymentIntentId: booking.stripeSessionId,
+          bookingId: booking.id,
+          amountCents,
+          currency: "usd",
+          customerId: req.user.stripeCustomerId ?? null,
+        });
+        if (!validation.valid) {
+          console.warn("[Stripe] Existing native PaymentIntent validation blocked", {
+            bookingId: booking.id,
+            intentRef: `pi_…${existing.id.slice(-6)}`,
+            status: existing.status,
+            issues: validation.issues,
+          });
+          throw new NativeContractError(409, "PAYMENT_STILL_VERIFYING", "The existing payment is still being verified. Do not submit another payment.");
+        }
+        const disposition = nativePaymentIntentDisposition(existing);
+        if (disposition === "paid") {
+          throw new NativeContractError(409, "PAYMENT_STILL_VERIFYING", "The successful payment is still being applied to the booking. Do not submit another payment.");
+        }
+        if (disposition === "closed") {
+          throw new NativeContractError(410, "PAYMENT_ATTEMPT_CLOSED", "This payment attempt is closed; create a new quote and booking.");
+        }
+        if (disposition === "reusable" && existing.client_secret) {
           return res.json({ bookingId, paymentIntentId: existing.id, clientSecret: existing.client_secret, amountCents: existing.amount, currency: existing.currency, paymentStatus: booking.paymentStatus });
         }
+        throw new NativeContractError(409, "PAYMENT_INTENT_UNAVAILABLE", "The existing payment is still resolving. Check its status before trying again.");
       }
       const customerId = await resolveOrCreateStripeCustomerId(req.user);
       const { createNativePaymentSheetIntent, isMissingStripeCustomerError, stripeEnvironment } = await import("./payment-service");
@@ -623,6 +647,7 @@ export function registerRoutes(app: Express): Server {
         bookingStatus: booking!.status,
         paymentStatus: booking!.paymentStatus,
         isPaid: booking!.isPaid,
+        reconciliationStatus: booking!.isPaid ? "confirmed" : "still_verifying",
         amountCents: booking!.amount ?? Math.round((booking!.totalPrice ?? 0) * 100),
         paymentExpiresAt: booking!.paymentExpiresAt,
       });
