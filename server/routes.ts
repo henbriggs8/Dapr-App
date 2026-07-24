@@ -7,6 +7,7 @@ import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
+import type { User, Vehicle } from "@shared/schema";
 import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
@@ -893,6 +894,66 @@ export function registerRoutes(app: Express): Server {
     
     const bookings = await storage.getActiveBookings(req.user.id);
     res.json(bookings);
+  });
+
+  app.get("/api/provider/jobs", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const providerBookings = await storage.getProviderBookings(req.user.id);
+      const customerIds = Array.from(new Set(providerBookings.map(booking => booking.userId)));
+      const vehicleIds = Array.from(
+        new Set(
+          providerBookings
+            .map(booking => booking.vehicleId)
+            .filter((id): id is number => typeof id === "number")
+        )
+      );
+      const [customers, vehicles] = await Promise.all([
+        Promise.all(customerIds.map(id => storage.getUser(id))),
+        Promise.all(vehicleIds.map(id => storage.getVehicleById(id))),
+      ]);
+      const customerMap = new Map(
+        customers.filter((customer): customer is User => Boolean(customer))
+          .map(customer => [customer.id, customer])
+      );
+      const vehicleMap = new Map(
+        vehicles.filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
+          .map(vehicle => [vehicle.id, vehicle])
+      );
+
+      res.json(providerBookings.map(booking => {
+        const customer = customerMap.get(booking.userId);
+        const vehicle = typeof booking.vehicleId === "number"
+          ? vehicleMap.get(booking.vehicleId)
+          : undefined;
+
+        return {
+          id: booking.id,
+          serviceId: booking.serviceId,
+          serviceLocation: booking.serviceLocation,
+          date: booking.date,
+          time: booking.time,
+          totalPrice: booking.totalPrice,
+          providerEarnings: booking.providerEarnings,
+          serviceDuration: booking.serviceDuration,
+          customerFirstName: customer?.name?.split(" ")[0] || null,
+          vehicleLabel: vehicle
+            ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ""}`
+            : null,
+          notes: booking.notes,
+          status: booking.status,
+          currentStage: booking.currentStage,
+          acceptedAt: booking.acceptedAt,
+          arrivalTime: booking.arrivalTime,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+        };
+      }));
+    } catch (error) {
+      console.error("Provider jobs error:", error);
+      res.status(500).json({ error: "Failed to load provider jobs" });
+    }
   });
 
   // Vehicle endpoints

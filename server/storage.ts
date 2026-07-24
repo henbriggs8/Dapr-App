@@ -102,6 +102,7 @@ export interface IStorage {
   getUserBookings(userId: number): Promise<Booking[]>;
   findRecentUnpaidBooking(userId: number, serviceId: number): Promise<Booking | undefined>;
   getActiveBookings(providerId: number): Promise<Booking[]>;
+  getProviderBookings(providerId: number): Promise<Booking[]>;
   updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking>;
   updateProviderLocation(userId: number, latitude: number, longitude: number): Promise<void>;
   updateProviderStatus(userId: number, status: string): Promise<User>;
@@ -626,6 +627,12 @@ export class MemStorage implements IStorage {
       (booking) => 
         booking.providerId === providerId && 
         ['confirmed', 'in_progress', 'assigned'].includes(booking.status)
+    );
+  }
+
+  async getProviderBookings(providerId: number): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      (booking) => booking.providerId === providerId && booking.isPaid === true
     );
   }
   
@@ -1833,6 +1840,19 @@ export class DatabaseStorage implements IStorage {
           inArray(bookings.status, ['assigned', 'confirmed', 'in_progress'])
         )
       );
+  }
+
+  async getProviderBookings(providerId: number): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.providerId, providerId),
+          eq(bookings.isPaid, true)
+        )
+      )
+      .orderBy(desc(bookings.id));
   }
 
   async getBookingById(id: number): Promise<Booking | undefined> {
