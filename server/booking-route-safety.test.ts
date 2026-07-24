@@ -5,6 +5,8 @@ import {
   canMutateAssignedBooking,
   isAllowedProviderStage,
   isAllowedProviderStatusTransition,
+  serializeAvailableJob,
+  serializePublicProvider,
   unknownAddOnIds,
 } from "./booking-route-safety";
 
@@ -37,4 +39,67 @@ test("provider status and stage values are allowlisted", () => {
 
 test("unknown add-on ids are rejected deterministically", () => {
   assert.deepEqual(unknownAddOnIds(["pet-hair", "bogus", "bogus"], new Set(["pet-hair"])), ["bogus"]);
+});
+
+test("public provider profiles omit private account fields", () => {
+  const profile = serializePublicProvider({
+    id: 20,
+    name: "Provider",
+    description: "Mobile detailer",
+    profileImage: null,
+    rating: 5,
+    ratingCount: 12,
+    currentStatus: "online",
+    email: "private@example.com",
+    phone: "555-0100",
+    password: "hash",
+    stripeCustomerId: "cus_private",
+    pushToken: "private-token",
+  } as any);
+
+  assert.deepEqual(Object.keys(profile).sort(), [
+    "currentStatus",
+    "description",
+    "id",
+    "name",
+    "profileImage",
+    "rating",
+    "ratingCount",
+  ]);
+});
+
+test("available jobs expose only the provider offer contract", () => {
+  const job = serializeAvailableJob({
+    id: 31,
+    serviceId: 4,
+    serviceLocation: "Service area",
+    date: "2026-07-24",
+    time: "ASAP",
+    totalPrice: 285,
+    serviceDuration: 180,
+    notes: "Gate code on arrival",
+    userId: 10,
+    vehicleId: 44,
+    paymentId: "pi_private",
+    stripeSessionId: "cs_private",
+    paymentStatus: "completed",
+  } as any, {
+    customerFirstName: "Taylor",
+    vehicleLabel: "2024 Honda Civic",
+    distance: 2.4,
+  });
+
+  assert.deepEqual(Object.keys(job).sort(), [
+    "customerFirstName",
+    "date",
+    "distance",
+    "id",
+    "notes",
+    "serviceDuration",
+    "serviceId",
+    "serviceLocation",
+    "time",
+    "totalPrice",
+    "vehicleLabel",
+  ]);
 });

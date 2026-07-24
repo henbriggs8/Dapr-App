@@ -3,6 +3,47 @@ import type { Booking, User } from "@shared/schema";
 type BookingActor = Pick<User, "id" | "isProvider" | "isAdmin">;
 type BookingAccess = Pick<Booking, "userId" | "providerId" | "status">;
 
+type PublicProvider = Pick<
+  User,
+  "id" | "name" | "description" | "profileImage" | "rating" | "ratingCount" | "currentStatus"
+>;
+
+type AvailableJob = Pick<
+  Booking,
+  "id" | "serviceId" | "serviceLocation" | "date" | "time" | "totalPrice" | "serviceDuration" | "notes"
+>;
+
+export function serializePublicProvider(provider: PublicProvider) {
+  return {
+    id: provider.id,
+    name: provider.name,
+    description: provider.description,
+    profileImage: provider.profileImage,
+    rating: provider.rating,
+    ratingCount: provider.ratingCount,
+    currentStatus: provider.currentStatus,
+  };
+}
+
+export function serializeAvailableJob(
+  booking: AvailableJob,
+  details: { customerFirstName: string | null; vehicleLabel: string | null; distance: number | null },
+) {
+  return {
+    id: booking.id,
+    serviceId: booking.serviceId,
+    serviceLocation: booking.serviceLocation,
+    date: booking.date,
+    time: booking.time,
+    totalPrice: booking.totalPrice,
+    serviceDuration: booking.serviceDuration,
+    notes: booking.notes,
+    customerFirstName: details.customerFirstName,
+    vehicleLabel: details.vehicleLabel,
+    distance: details.distance,
+  };
+}
+
 export function canAccessBookingTracking(actor: BookingActor, booking: BookingAccess): boolean {
   return actor.isAdmin || booking.userId === actor.id || (actor.isProvider && booking.providerId === actor.id);
 }

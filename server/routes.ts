@@ -13,7 +13,7 @@ import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./cler
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
-import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
+import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, serializeAvailableJob, serializePublicProvider, unknownAddOnIds } from "./booking-route-safety";
 import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
@@ -242,7 +242,7 @@ export function registerRoutes(app: Express): Server {
   // Public endpoints
   app.get("/api/providers", async (req, res) => {
     const providers = await storage.getProviders();
-    res.json(providers);
+    res.json(providers.map(serializePublicProvider));
   });
 
   app.get("/api/pricing", async (req, res) => {
@@ -403,7 +403,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/provider/status", isProvider, async (req, res) => {
+  app.patch("/api/provider/status", resolveUserFromBearer, isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const { status } = req.body;
@@ -1568,7 +1568,7 @@ export function registerRoutes(app: Express): Server {
           ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ''}`
           : null;
 
-        const extra = { customerFirstName: firstName, vehicleLabel };
+        const details = { customerFirstName: firstName, vehicleLabel, distance: null as number | null };
 
         if (providerHasLocation && bookingHasLocation) {
           const distance = calculateDistance(
@@ -1577,10 +1577,9 @@ export function registerRoutes(app: Express): Server {
             booking.serviceLatitude!,
             booking.serviceLongitude!
           );
-          jobs.push({ ...booking, ...extra, distance: Math.round(distance * 10) / 10 });
-        } else {
-          jobs.push({ ...booking, ...extra, distance: null });
+          details.distance = Math.round(distance * 10) / 10;
         }
+        jobs.push(serializeAvailableJob(booking, details));
       }
 
       res.json(jobs);
@@ -2495,10 +2494,16 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Booking photo endpoints
-  app.get('/api/bookings/:id/photos', async (req, res) => {
+  app.get('/api/bookings/:id/photos', resolveUserFromBearer, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     try {
+      if (!req.user) return res.status(401).json({ code: 'UNAUTHENTICATED', error: 'Authentication is required' });
+      const booking = await storage.getBookingById(id);
+      if (!booking) return res.status(404).json({ code: 'BOOKING_NOT_FOUND', error: 'Booking not found' });
+      if (!canAccessBookingTracking(req.user, booking)) {
+        return res.status(403).json({ code: 'BOOKING_ACCESS_DENIED', error: 'Access denied' });
+      }
       const photos = await storage.getBookingPhotos(id);
       res.json(photos);
     } catch (error) {
@@ -2506,14 +2511,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post('/api/bookings/:id/photos', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+  app.post('/api/bookings/:id/photos', resolveUserFromBearer, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
-    const { photoType, dataUrl, caption } = req.body;
-    if (!photoType || !dataUrl) return res.status(400).json({ error: 'photoType and dataUrl are required' });
-    if (!['before', 'after'].includes(photoType)) return res.status(400).json({ error: 'photoType must be before or after' });
     try {
+      const booking = await loadProviderMutableBooking(req, res, id);
+      if (!booking) return;
+      const { photoType, dataUrl, caption } = req.body;
+      if (!photoType || !dataUrl) return res.status(400).json({ error: 'photoType and dataUrl are required' });
+      if (!['before', 'after'].includes(photoType)) return res.status(400).json({ error: 'photoType must be before or after' });
       const photo = await storage.addBookingPhoto(id, photoType, dataUrl, caption);
       res.json(photo);
     } catch (error) {
@@ -2521,11 +2527,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete('/api/bookings/:id/photos/:photoId', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+  app.delete('/api/bookings/:id/photos/:photoId', resolveUserFromBearer, async (req, res) => {
+    const id = parseInt(req.params.id);
     const photoId = parseInt(req.params.photoId);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     if (isNaN(photoId)) return res.status(400).json({ error: 'Invalid photo ID' });
     try {
+      const booking = await loadProviderMutableBooking(req, res, id);
+      if (!booking) return;
+      const photos = await storage.getBookingPhotos(id);
+      if (!photos.some(photo => photo.id === photoId)) {
+        return res.status(404).json({ code: 'PHOTO_NOT_FOUND', error: 'Photo not found for this booking' });
+      }
       await storage.deleteBookingPhoto(photoId);
       res.json({ success: true });
     } catch (error) {
