@@ -7,12 +7,13 @@ import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
+import type { User, Vehicle } from "@shared/schema";
 import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
-import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, unknownAddOnIds } from "./booking-route-safety";
+import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, serializeAvailableJob, serializePublicProvider, unknownAddOnIds } from "./booking-route-safety";
 import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
@@ -241,7 +242,7 @@ export function registerRoutes(app: Express): Server {
   // Public endpoints
   app.get("/api/providers", async (req, res) => {
     const providers = await storage.getProviders();
-    res.json(providers);
+    res.json(providers.map(serializePublicProvider));
   });
 
   app.get("/api/pricing", async (req, res) => {
@@ -402,7 +403,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/provider/status", isProvider, async (req, res) => {
+  app.patch("/api/provider/status", resolveUserFromBearer, isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const { status } = req.body;
@@ -893,6 +894,66 @@ export function registerRoutes(app: Express): Server {
     
     const bookings = await storage.getActiveBookings(req.user.id);
     res.json(bookings);
+  });
+
+  app.get("/api/provider/jobs", isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const providerBookings = await storage.getProviderBookings(req.user.id);
+      const customerIds = Array.from(new Set(providerBookings.map(booking => booking.userId)));
+      const vehicleIds = Array.from(
+        new Set(
+          providerBookings
+            .map(booking => booking.vehicleId)
+            .filter((id): id is number => typeof id === "number")
+        )
+      );
+      const [customers, vehicles] = await Promise.all([
+        Promise.all(customerIds.map(id => storage.getUser(id))),
+        Promise.all(vehicleIds.map(id => storage.getVehicleById(id))),
+      ]);
+      const customerMap = new Map(
+        customers.filter((customer): customer is User => Boolean(customer))
+          .map(customer => [customer.id, customer])
+      );
+      const vehicleMap = new Map(
+        vehicles.filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
+          .map(vehicle => [vehicle.id, vehicle])
+      );
+
+      res.json(providerBookings.map(booking => {
+        const customer = customerMap.get(booking.userId);
+        const vehicle = typeof booking.vehicleId === "number"
+          ? vehicleMap.get(booking.vehicleId)
+          : undefined;
+
+        return {
+          id: booking.id,
+          serviceId: booking.serviceId,
+          serviceLocation: booking.serviceLocation,
+          date: booking.date,
+          time: booking.time,
+          totalPrice: booking.totalPrice,
+          providerEarnings: booking.providerEarnings,
+          serviceDuration: booking.serviceDuration,
+          customerFirstName: customer?.name?.split(" ")[0] || null,
+          vehicleLabel: vehicle
+            ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ""}`
+            : null,
+          notes: booking.notes,
+          status: booking.status,
+          currentStage: booking.currentStage,
+          acceptedAt: booking.acceptedAt,
+          arrivalTime: booking.arrivalTime,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+        };
+      }));
+    } catch (error) {
+      console.error("Provider jobs error:", error);
+      res.status(500).json({ error: "Failed to load provider jobs" });
+    }
   });
 
   // Vehicle endpoints
@@ -1507,7 +1568,7 @@ export function registerRoutes(app: Express): Server {
           ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ''}`
           : null;
 
-        const extra = { customerFirstName: firstName, vehicleLabel };
+        const details = { customerFirstName: firstName, vehicleLabel, distance: null as number | null };
 
         if (providerHasLocation && bookingHasLocation) {
           const distance = calculateDistance(
@@ -1516,10 +1577,9 @@ export function registerRoutes(app: Express): Server {
             booking.serviceLatitude!,
             booking.serviceLongitude!
           );
-          jobs.push({ ...booking, ...extra, distance: Math.round(distance * 10) / 10 });
-        } else {
-          jobs.push({ ...booking, ...extra, distance: null });
+          details.distance = Math.round(distance * 10) / 10;
         }
+        jobs.push(serializeAvailableJob(booking, details));
       }
 
       res.json(jobs);
@@ -2434,10 +2494,16 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Booking photo endpoints
-  app.get('/api/bookings/:id/photos', async (req, res) => {
+  app.get('/api/bookings/:id/photos', resolveUserFromBearer, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     try {
+      if (!req.user) return res.status(401).json({ code: 'UNAUTHENTICATED', error: 'Authentication is required' });
+      const booking = await storage.getBookingById(id);
+      if (!booking) return res.status(404).json({ code: 'BOOKING_NOT_FOUND', error: 'Booking not found' });
+      if (!canAccessBookingTracking(req.user, booking)) {
+        return res.status(403).json({ code: 'BOOKING_ACCESS_DENIED', error: 'Access denied' });
+      }
       const photos = await storage.getBookingPhotos(id);
       res.json(photos);
     } catch (error) {
@@ -2445,14 +2511,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post('/api/bookings/:id/photos', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+  app.post('/api/bookings/:id/photos', resolveUserFromBearer, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
-    const { photoType, dataUrl, caption } = req.body;
-    if (!photoType || !dataUrl) return res.status(400).json({ error: 'photoType and dataUrl are required' });
-    if (!['before', 'after'].includes(photoType)) return res.status(400).json({ error: 'photoType must be before or after' });
     try {
+      const booking = await loadProviderMutableBooking(req, res, id);
+      if (!booking) return;
+      const { photoType, dataUrl, caption } = req.body;
+      if (!photoType || !dataUrl) return res.status(400).json({ error: 'photoType and dataUrl are required' });
+      if (!['before', 'after'].includes(photoType)) return res.status(400).json({ error: 'photoType must be before or after' });
       const photo = await storage.addBookingPhoto(id, photoType, dataUrl, caption);
       res.json(photo);
     } catch (error) {
@@ -2460,11 +2527,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete('/api/bookings/:id/photos/:photoId', async (req, res) => {
-    if (!req.user?.isProvider) return res.status(403).json({ error: 'Provider access required' });
+  app.delete('/api/bookings/:id/photos/:photoId', resolveUserFromBearer, async (req, res) => {
+    const id = parseInt(req.params.id);
     const photoId = parseInt(req.params.photoId);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     if (isNaN(photoId)) return res.status(400).json({ error: 'Invalid photo ID' });
     try {
+      const booking = await loadProviderMutableBooking(req, res, id);
+      if (!booking) return;
+      const photos = await storage.getBookingPhotos(id);
+      if (!photos.some(photo => photo.id === photoId)) {
+        return res.status(404).json({ code: 'PHOTO_NOT_FOUND', error: 'Photo not found for this booking' });
+      }
       await storage.deleteBookingPhoto(photoId);
       res.json({ success: true });
     } catch (error) {
