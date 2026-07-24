@@ -1,0 +1,57 @@
+Going forward, Dapr is moving to fully native iOS apps built in Swift/SwiftUI.
+
+There are now two separate native applications:
+
+1. Dapr Customer iOS App
+2. Dapr Provider iOS App
+
+These native apps are being developed separately using Codex/Xcode.
+
+This Replit project should now be treated primarily as the Dapr backend and API layer.
+
+Your responsibilities in this project are:
+
+* Backend API endpoints
+* Database and data models
+* Booking logic
+* Customer/provider relationships
+* Provider availability and job assignment
+* Stripe payment logic and payment verification
+* Clerk authentication/token verification
+* Push notification backend infrastructure
+* Admin/internal operations endpoints
+* Business logic and security/authorization
+* Maintaining a stable API contract for the native iOS apps
+
+Do NOT make frontend/UI changes for the customer or provider mobile apps unless I explicitly ask.
+
+Assume the Swift apps consume this backend through HTTP APIs.
+
+When making backend changes:
+
+* Preserve existing native mobile API contracts whenever possible.
+* Do not rename response fields, change response shapes, remove fields, or change endpoint behavior without explicitly warning me that the native Swift apps may need to be updated.
+* Prefer explicit DTOs/allowlists for API responses rather than returning raw database objects.
+* Never expose sensitive information such as passwords, Clerk internals, Stripe identifiers, push tokens, provider private contact information, or unrelated database fields.
+* Keep customer/provider authorization enforced server-side.
+* Treat the backend as the source of truth for payment status, booking status, provider approval, assignment, and permissions.
+* Keep API responses predictable and strongly typed so they can map cleanly to Swift Codable models.
+* Maintain backward compatibility with the native apps unless a breaking change is specifically approved.
+
+The current architecture should be thought of as:
+
+Native Swift Customer App
+↓
+Dapr Backend API on Replit
+↓
+Database / Stripe / Clerk / business logic
+
+Native Swift Provider App
+↓
+Dapr Backend API on Replit
+↓
+Database / Stripe / Clerk / business logic
+
+Do not attempt to recreate the native apps inside Replit.
+
+Before making a change that could affect either native app's API contract, clearly identify the affected endpoint, request shape, response shape, and any Swift-side changes that would be required.

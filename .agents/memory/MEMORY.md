@@ -1,2 +1,3 @@
 - [Clerk OAuth + Proxy cookie conflict](clerk-oauth-proxy.md) — removing the proxy on autodapper.com fixes authorization_invalid for Google/Apple Sign In
 - [iOS Capacitor blank-screen root cause](ios-blank-screen-build.md) — verify dist/public is non-empty and cap sync ran against a clean build before archiving
+- [Project role: backend API only](project-role-backend.md) — Dapr is now backend-only on Replit; native Swift iOS apps handle all customer/provider UI
