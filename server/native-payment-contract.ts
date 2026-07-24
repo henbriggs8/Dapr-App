@@ -252,8 +252,50 @@ export async function refundReferralCreditsForFailedPayment(bookingId: number, p
 }
 
 export async function nativePaymentStatus(userId: number, bookingId: number) {
-  const [booking] = await db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId))).limit(1);
+  let [booking] = await db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId))).limit(1);
   if (!booking) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+  if (!booking.isPaid && booking.stripeSessionId?.startsWith("pi_")) {
+    let succeededIntentId: string | undefined;
+    try {
+      const { nativePaymentIntentDisposition, retrievePaymentSheetIntent, validateNativePaymentIntent } = await import("./payment-service");
+      const intent = await retrievePaymentSheetIntent(booking.stripeSessionId);
+      const [owner] = await db.select({ stripeCustomerId: users.stripeCustomerId }).from(users).where(eq(users.id, userId)).limit(1);
+      const validation = validateNativePaymentIntent(intent, {
+        paymentIntentId: booking.stripeSessionId,
+        bookingId: booking.id,
+        amountCents: booking.amount ?? Math.round((booking.totalPrice ?? 0) * 100),
+        currency: "usd",
+        customerId: owner?.stripeCustomerId ?? null,
+      });
+      if (!validation.valid) {
+        console.warn("[Stripe] Native payment reconciliation validation blocked", {
+          bookingId: booking.id,
+          intentRef: `pi_…${intent.id.slice(-6)}`,
+          status: intent.status,
+          issues: validation.issues,
+        });
+        return booking;
+      }
+      if (nativePaymentIntentDisposition(intent) === "paid") {
+        succeededIntentId = intent.id;
+      }
+    } catch (error) {
+      const stripeError = error as { name?: unknown; type?: unknown; code?: unknown };
+      console.error("[Stripe] Native payment reconciliation failed", {
+        bookingId: booking.id,
+        errorType: typeof stripeError.type === "string"
+          ? stripeError.type
+          : (typeof stripeError.name === "string" ? stripeError.name : "unknown"),
+        errorCode: typeof stripeError.code === "string" ? stripeError.code : undefined,
+      });
+      return booking;
+    }
+    if (succeededIntentId) {
+      const paid = await markNativeBookingPaid(booking.id, succeededIntentId);
+      if (!paid) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+      booking = paid.booking;
+    }
+  }
   if (!booking.isPaid && booking.paymentExpiresAt && new Date(booking.paymentExpiresAt).getTime() <= Date.now() && booking.paymentStatus !== "payment_expired") {
     return refundReferralCreditsForFailedPayment(booking.id, "payment_expired");
   }
