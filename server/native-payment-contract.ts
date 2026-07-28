@@ -6,6 +6,7 @@ import { bookingQuotes, bookings, referrals, services, timeSlots, users, vehicle
 import { db } from "./db";
 import { NativeContractError } from "./native-contract-error";
 import { getEligibleOnlineProviderCount } from "./asap-availability";
+import { applyPromoCode, calculateQuoteDiscounts, resolvePromoCode, type PromoCodeDefinition } from "./promo-codes";
 
 export { NativeContractError } from "./native-contract-error";
 
@@ -22,6 +23,7 @@ const nativeQuoteCommonSchema = z.object({
   serviceLongitude: z.number().finite().nullable().optional(),
   addOnIds: z.array(z.string()).default([]),
   applyReferralCredits: z.boolean().default(true),
+  promoCode: z.string().trim().min(1).max(64).optional(),
 });
 
 export const nativeQuoteRequestSchema = z.discriminatedUnion("fulfillmentMode", [
@@ -63,7 +65,28 @@ function dateInPhoenix(date: Date): string {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export function serializeQuote(quote: typeof bookingQuotes.$inferSelect) {
+type NativeQuote = typeof bookingQuotes.$inferSelect & {
+  promoCode: string | null;
+  promoDiscountCents: number;
+  promoDiscountLabel: string | null;
+  discountMessage: string | null;
+};
+
+function withPromoMetadata(
+  quote: typeof bookingQuotes.$inferSelect,
+  promo: PromoCodeDefinition | null,
+): NativeQuote {
+  const application = promo ? applyPromoCode(promo, quote.subtotalCents) : null;
+  return {
+    ...quote,
+    promoCode: application?.promoCode ?? null,
+    promoDiscountCents: promo ? Math.max(0, quote.subtotalCents - quote.totalAmountCents) : 0,
+    promoDiscountLabel: application?.promoDiscountLabel ?? null,
+    discountMessage: application?.discountMessage ?? null,
+  };
+}
+
+export function serializeQuote(quote: NativeQuote) {
   return {
     quoteId: quote.id,
     serviceId: quote.serviceId,
@@ -71,6 +94,10 @@ export function serializeQuote(quote: typeof bookingQuotes.$inferSelect) {
     vehicleId: quote.vehicleId,
     addOns: quote.addOns,
     subtotalCents: quote.subtotalCents,
+    promoCode: quote.promoCode,
+    promoDiscountCents: quote.promoDiscountCents,
+    promoDiscountLabel: quote.promoDiscountLabel,
+    discountMessage: quote.discountMessage,
     referralDiscountCents: quote.referralDiscountCents,
     referralCreditAppliedCents: quote.referralCreditAppliedCents,
     feesCents: 0,
@@ -84,6 +111,7 @@ export function serializeQuote(quote: typeof bookingQuotes.$inferSelect) {
 
 export async function createNativeQuote(userId: number, idempotencyKey: string, raw: unknown) {
   const input = nativeQuoteRequestSchema.parse(raw);
+  const promo = resolvePromoCode(input.promoCode);
   const requestFingerprint = fingerprint(input);
   const [existing] = await db.select().from(bookingQuotes).where(and(
     eq(bookingQuotes.userId, userId),
@@ -93,7 +121,7 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     if (existing.requestFingerprint !== requestFingerprint) {
       throw new NativeContractError(409, "IDEMPOTENCY_CONFLICT", "This idempotency key was already used for a different quote request.");
     }
-    return existing;
+    return withPromoMetadata(existing, promo);
   }
 
   const [service] = await db.select().from(services).where(eq(services.id, input.serviceId)).limit(1);
@@ -128,17 +156,31 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
   const resolved = resolveBookingAddOns(uniqueAddOnIds);
   const subtotalCents = Math.round((service.price + resolved.addOnTotal) * 100);
 
-  const [priorPaid] = await db.select({ id: bookings.id }).from(bookings).where(and(
-    eq(bookings.userId, userId), eq(bookings.isPaid, true),
-  )).limit(1);
-  const [availableReferral] = priorPaid ? [] : await db.select({ id: referrals.id }).from(referrals).where(and(
-    eq(referrals.referredUserId, userId), eq(referrals.discountStatus, "available"),
-  )).limit(1);
-  const referralDiscountCents = availableReferral ? Math.min(REFERRAL_DISCOUNT_CENTS, subtotalCents) : 0;
-  const [user] = await db.select({ credit: users.referralCreditBalanceCents }).from(users).where(eq(users.id, userId)).limit(1);
-  const afterDiscount = subtotalCents - referralDiscountCents;
-  const referralCreditAppliedCents = input.applyReferralCredits ? Math.min(user?.credit ?? 0, afterDiscount) : 0;
-  const totalAmountCents = afterDiscount - referralCreditAppliedCents;
+  let availableReferralDiscountCents = 0;
+  let referralCreditBalanceCents = 0;
+  if (!promo) {
+    const [priorPaid] = await db.select({ id: bookings.id }).from(bookings).where(and(
+      eq(bookings.userId, userId), eq(bookings.isPaid, true),
+    )).limit(1);
+    const [availableReferral] = priorPaid ? [] : await db.select({ id: referrals.id }).from(referrals).where(and(
+      eq(referrals.referredUserId, userId), eq(referrals.discountStatus, "available"),
+    )).limit(1);
+    availableReferralDiscountCents = availableReferral ? REFERRAL_DISCOUNT_CENTS : 0;
+    const [user] = await db.select({ credit: users.referralCreditBalanceCents }).from(users).where(eq(users.id, userId)).limit(1);
+    referralCreditBalanceCents = user?.credit ?? 0;
+  }
+  const discountCalculation = calculateQuoteDiscounts({
+    subtotalCents,
+    promo,
+    availableReferralDiscountCents,
+    referralCreditBalanceCents,
+    applyReferralCredits: input.applyReferralCredits,
+  });
+  const {
+    referralDiscountCents,
+    referralCreditAppliedCents,
+    totalAmountCents,
+  } = discountCalculation;
   const now = new Date();
   const [quote] = await db.insert(bookingQuotes).values({
     id: randomUUID(), userId, idempotencyKey, requestFingerprint,
@@ -151,7 +193,7 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     fulfillmentMode: input.fulfillmentMode,
     createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + QUOTE_TTL_MS).toISOString(),
   }).returning();
-  return quote;
+  return withPromoMetadata(quote, promo);
 }
 
 export async function createBookingFromQuote(userId: number, quoteId: string, idempotencyKey: string): Promise<Booking> {
