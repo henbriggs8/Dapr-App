@@ -257,7 +257,7 @@ export default function HomeDesktop() {
             <div>
               <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8c52ff] mb-4 lg:mb-6">
                 <Icon icon={MapPin} size="xs" />
-                Car care in Phoenix
+                Car care where you are
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-4 lg:mb-5">
                 Your car,<br />cared for.
