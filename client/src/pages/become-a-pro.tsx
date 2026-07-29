@@ -8,124 +8,19 @@ import {
   Shield,
   Clock,
   Star,
-  ChevronDown,
-  Menu,
-  X,
   MapPin,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, useRef } from "react";
+import SiteNav from "@/components/site-nav";
 
 const dapprLogo = "/dapr-logo.svg";
-
-function NavBar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [, setLocation] = useLocation();
-  const { user } = useAuth();
-  const aboutRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!aboutOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) setAboutOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [aboutOpen]);
-
-  const nav = (path: string) => { setMobileOpen(false); setLocation(path); };
-
-  return (
-    <>
-      <nav
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
-          scrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-white"
-        } border-b border-gray-100`}
-      >
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-8">
-            <button onClick={() => nav("/")} aria-label="Dapr home">
-              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto" />
-            </button>
-            <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-600">
-              <button onClick={() => nav("/corporate")} className="hover:text-black transition-colors">Fleets</button>
-              <button onClick={() => nav("/become-a-pro")} className="text-black font-bold">Become a Pro</button>
-              <div className="relative" ref={aboutRef}>
-                <button
-                  onClick={() => setAboutOpen((o) => !o)}
-                  className="flex items-center gap-1 hover:text-black transition-colors"
-                >
-                  About <Icon icon={ChevronDown} size="xs" className={`transition-transform ${aboutOpen ? "rotate-180" : ""}`} />
-                </button>
-                {aboutOpen && (
-                  <div className="absolute top-full mt-2 left-0 bg-white border border-gray-100 rounded-2xl shadow-lg py-2 w-44 z-50">
-                    {[
-                      { label: "Offers", path: "/first-wash-offer" },
-                      { label: "Careers", path: "/careers" },
-                      { label: "Blog", path: "/blog" },
-                      { label: "About Us", path: "/about" },
-                    ].map((item) => (
-                      <button key={item.label} onClick={() => { setAboutOpen(false); nav(item.path); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 text-gray-700 hover:text-black transition-colors">
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button onClick={() => nav("/faq")} className="hover:text-black transition-colors">Help</button>
-            </div>
-          </div>
-          <div className="hidden lg:flex items-center gap-4">
-            {user ? (
-              <button onClick={() => nav("/profile")} className="text-sm font-medium text-gray-600 hover:text-black transition-colors">My Account</button>
-            ) : (
-              <button onClick={() => nav("/auth")} className="text-sm font-medium text-gray-600 hover:text-black transition-colors">Log in</button>
-            )}
-            <button onClick={() => nav("/auth")} className="bg-black text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-gray-900 transition-colors">
-              Create account
-            </button>
-          </div>
-          <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setMobileOpen((o) => !o)} aria-label="Toggle menu">
-            <Icon icon={mobileOpen ? X : Menu} size="md" className="text-black" />
-          </button>
-        </div>
-      </nav>
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-16">
-          <div className="px-6 py-8 space-y-1">
-            {[
-              { label: "Fleets", path: "/corporate" },
-              { label: "Become a Pro", path: "/become-a-pro" },
-              { label: "Help", path: "/faq" },
-            ].map((item) => (
-              <button key={item.label} onClick={() => nav(item.path)} className="w-full text-left px-4 py-4 text-lg font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition-colors">{item.label}</button>
-            ))}
-            <div className="pt-6 space-y-3">
-              <button onClick={() => nav("/auth")} className="w-full py-3.5 rounded-full border border-gray-200 text-base font-bold text-black">Log in</button>
-              <button onClick={() => nav("/auth")} className="w-full py-3.5 rounded-full bg-black text-white text-base font-bold">Create account</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
 
 export default function BecomeAPro() {
   const [, setLocation] = useLocation();
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
-      <NavBar />
+      <SiteNav active="become-a-pro" />
 
       {/* Hero */}
       <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">

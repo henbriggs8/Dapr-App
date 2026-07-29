@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SiteNav from "@/components/site-nav";
 import { useLocation } from "wouter";
 import {
   ArrowRight,
@@ -218,43 +219,7 @@ function DesktopServices() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
-      {/* Nav */}
-      <nav
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b border-white/5 ${
-          scrolled ? "bg-[#050505]/80 backdrop-blur-md py-4" : "bg-transparent py-6"
-        }`}
-      >
-        <div className="max-w-[1120px] mx-auto px-8 flex items-center justify-between">
-          <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapr home">
-              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
-            </button>
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-              <button className="text-white" data-testid="link-services-active">Services</button>
-              <button onClick={() => setLocation("/how-it-works")} className="hover:text-white transition-colors" data-testid="link-how-it-works">How it Works</button>
-              <button onClick={() => setLocation("/corporate")} className="hover:text-white transition-colors" data-testid="link-corporate">For Fleets</button>
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            {user ? (
-              <button onClick={() => setLocation("/profile")} className="text-sm font-medium text-white/60 hover:text-white transition-colors" data-testid="link-profile">
-                My Account
-              </button>
-            ) : (
-              <button onClick={() => setLocation("/auth")} className="text-sm font-medium text-white/60 hover:text-white transition-colors" data-testid="link-login">
-                Log in
-              </button>
-            )}
-            <button
-              onClick={() => goBookWith()}
-              className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95"
-              data-testid="button-book-nav"
-            >
-              Book a Wash
-            </button>
-          </div>
-        </div>
-      </nav>
+      <SiteNav />
 
       {/* Hero */}
       <section className="relative pt-40 pb-16 lg:pt-52 lg:pb-24 overflow-hidden">
