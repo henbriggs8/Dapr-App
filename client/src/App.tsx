@@ -147,6 +147,7 @@ function Router() {
           <Route path="/onboarding/address" component={AddressScreen} />
           <Route path="/onboarding/car-profile" component={CarProfileScreen} />
           <Route path="/onboarding/first-wash-offer" component={FirstWashOffer} />
+          <Route path="/first-wash-offer" component={FirstWashOffer} />
           <Route path="/referral" component={ReferralPage} />
           <Route path="/how-it-works" component={HowItWorks} />
           <Route path="/interior-cleaning" component={InteriorCleaning} />
