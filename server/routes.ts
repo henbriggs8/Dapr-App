@@ -25,6 +25,22 @@ function isAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireProviderApplicationAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({
+      code: "UNAUTHENTICATED",
+      error: "Authentication required.",
+    });
+  }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({
+      code: "ADMIN_REQUIRED",
+      error: "Admin access required.",
+    });
+  }
+  next();
+}
+
 function isProvider(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isProvider) {
     return res.status(403).send("Provider access required");
@@ -3395,7 +3411,7 @@ export function registerRoutes(app: Express): Server {
    * GET /api/admin/provider-applications
    * List all applications. Optional ?status= filter.
    */
-  app.get("/api/admin/provider-applications", isAdmin, async (req, res) => {
+  app.get("/api/admin/provider-applications", requireProviderApplicationAdmin, async (req, res) => {
     try {
       const status = typeof req.query.status === "string" ? req.query.status : undefined;
       const applications = await storage.getAllProviderApplications(status ? { status } : undefined);
@@ -3410,7 +3426,7 @@ export function registerRoutes(app: Express): Server {
    * GET /api/admin/provider-applications/:id
    * Full application detail including internal review notes.
    */
-  app.get("/api/admin/provider-applications/:id", isAdmin, async (req, res) => {
+  app.get("/api/admin/provider-applications/:id", requireProviderApplicationAdmin, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
     try {
@@ -3428,7 +3444,7 @@ export function registerRoutes(app: Express): Server {
    * Transition application status. Enforces the allowed-transition map.
    * Records reviewedAt + reviewedBy on admin-initiated transitions.
    */
-  app.patch("/api/admin/provider-applications/:id/status", isAdmin, async (req, res) => {
+  app.patch("/api/admin/provider-applications/:id/status", requireProviderApplicationAdmin, async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
 
