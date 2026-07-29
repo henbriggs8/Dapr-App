@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/use-auth";
+import SiteNav from "@/components/site-nav";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -377,104 +378,93 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div
-      className="min-h-screen bg-white font-sans"
-      style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
-    >
-      {/* Header — avatar + name + sign out */}
-      <div className="pt-14 pb-6 px-6 bg-white border-b border-gray-100">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-[#8c52ff] flex items-center justify-center flex-shrink-0 shadow-sm">
-              <span className="text-xl font-semibold text-white tracking-tight">
-                {getInitials(user?.name)}
-              </span>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-0.5">Account</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-black leading-tight">
-                {user?.name || "Profile"}
-              </h1>
-              {user?.email && (
-                <p className="text-sm text-gray-500 mt-0.5">{user.email}</p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={handleSignOut}
-            disabled={logoutMutation.isPending}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-black transition-colors mt-1 flex-shrink-0"
-          >
-            <Icon icon={LogOut} size="sm" />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
-        </div>
+    <div className="min-h-screen bg-white font-sans">
+      <SiteNav />
 
-        {/* Stats row */}
-        {!user?.isProvider && (
-          <div className="flex gap-4 mt-5">
-            <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Icon icon={Calendar} size="xs" className="text-gray-400" />
-                <span className="text-lg font-semibold text-black">{bookings.length}</span>
+      {/* ── Profile header ───────────────────────────────────────── */}
+      <div className="pt-28 pb-10 border-b border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex items-center gap-5">
+              {/* Avatar */}
+              <div className="w-20 h-20 rounded-2xl bg-[#8c52ff] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span className="text-2xl font-extrabold text-white tracking-tight">
+                  {getInitials(user?.name)}
+                </span>
               </div>
-              <p className="text-xs text-gray-500">Bookings</p>
+              <div>
+                <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-1">My Account</p>
+                <h1 className="text-3xl font-extrabold tracking-tight text-black leading-tight">
+                  {user?.name || "Profile"}
+                </h1>
+                {user?.email && (
+                  <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Icon icon={Car} size="xs" className="text-gray-400" />
-                <span className="text-lg font-semibold text-black">{vehicles.length}</span>
-              </div>
-              <p className="text-xs text-gray-500">Vehicles</p>
+
+            <div className="flex items-center gap-3 shrink-0 mt-1">
+              {/* Book a service */}
+              <button
+                onClick={() => setLocation("/")}
+                className="hidden sm:flex items-center gap-2 bg-[#8c52ff] text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-[#7a3fff] transition-colors"
+              >
+                <Icon icon={Car} size="sm" />
+                Book a service
+              </button>
+              {/* Sign out */}
+              <button
+                onClick={handleSignOut}
+                disabled={logoutMutation.isPending}
+                className="flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-black border border-gray-200 hover:border-gray-400 px-4 py-2.5 rounded-full transition-colors"
+              >
+                <Icon icon={LogOut} size="sm" />
+                Sign out
+              </button>
             </div>
-            {avgRating && (
-              <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-                <div className="flex items-center justify-center gap-1 mb-0.5">
-                  <Icon icon={Star} size="xs" className="text-[#8c52ff]" />
-                  <span className="text-lg font-semibold text-black">{avgRating}</span>
-                </div>
-                <p className="text-xs text-gray-500">Avg Rating</p>
-              </div>
-            )}
           </div>
-        )}
+
+          {/* Stats row */}
+          {!user?.isProvider && (
+            <div className="flex gap-6 mt-8">
+              {[
+                { icon: Calendar, val: bookings.length, label: "Bookings" },
+                { icon: Car, val: vehicles.length, label: "Vehicles" },
+                ...(avgRating ? [{ icon: Star, val: avgRating, label: "Avg rating" }] : []),
+              ].map(({ icon, val, label }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <Icon icon={icon} size="sm" className="text-[#8c52ff]" />
+                  <span className="text-xl font-extrabold text-black">{val}</span>
+                  <span className="text-sm text-gray-400">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Book CTA row */}
-      <button
-        onClick={() => setLocation("/")}
-        className="w-full flex items-center justify-between px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#f3eeff] flex items-center justify-center flex-shrink-0">
-            <Icon icon={Car} size="sm" className="text-[#8c52ff]" />
-          </div>
-          <span className="text-base font-medium text-black">Book a service</span>
+      {/* ── Tab switcher ─────────────────────────────────────────── */}
+      <div className="border-b border-gray-100 bg-white sticky top-[64px] z-10">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`mr-6 py-4 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? "border-[#8c52ff] text-[#8c52ff]"
+                  : "border-transparent text-gray-400 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <Icon icon={ChevronRight} size="md" className="text-[#8c52ff]" />
-      </button>
-
-      {/* Tab Switcher */}
-      <div className="flex border-b border-gray-100 px-6 overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`mr-5 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? "border-[#8c52ff] text-[#8c52ff]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Profile Tab */}
       {activeTab === "profile" && (
-        <div className="px-6 pt-6">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 pt-8 pb-16">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit((data) => updateProfileMutation.mutate(data))}
@@ -675,7 +665,7 @@ export default function ProfilePage() {
 
       {/* Vehicles Tab */}
       {activeTab === "vehicles" && (
-        <div className="px-6 pt-6">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 pt-8 pb-16">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xs font-semibold text-gray-400 tracking-widest uppercase">My Vehicles</h2>
             <button
@@ -746,7 +736,7 @@ export default function ProfilePage() {
 
       {/* Bookings Tab */}
       {activeTab === "bookings" && (
-        <div className="px-6 pt-6">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 pt-8 pb-16">
           <h2 className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-4">Booking History</h2>
           {bookings.length === 0 ? (
             <div className="py-16 text-center border border-dashed border-gray-200 rounded-xl">
@@ -807,7 +797,7 @@ export default function ProfilePage() {
 
       {/* Settings Tab */}
       {activeTab === "settings" && (
-        <div className="px-6 pt-6 space-y-6">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 pt-8 pb-16 space-y-6">
           {/* Notifications section */}
           <div>
             <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">Notifications</p>
