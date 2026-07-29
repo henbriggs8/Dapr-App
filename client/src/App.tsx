@@ -50,6 +50,7 @@ const IdVerificationPage = lazy(() => import("@/pages/provider-onboarding/id-ver
 const VehicleSetupPage = lazy(() => import("@/pages/provider-onboarding/vehicle-setup"));
 const BankInfoPage = lazy(() => import("@/pages/provider-onboarding/bank-info"));
 const BecomeAPro = lazy(() => import("@/pages/become-a-pro"));
+const CareersPage = lazy(() => import("@/pages/careers"));
 
 function PageLoader() {
   return (
@@ -154,6 +155,7 @@ function Router() {
           <Route path="/faq" component={FAQ} />
           <Route path="/corporate" component={Corporate} />
           <Route path="/become-a-pro" component={BecomeAPro} />
+          <Route path="/careers" component={CareersPage} />
           <Route path="/privacy" component={PrivacyPolicy} />
           <Route path="/terms" component={TermsOfService} />
 
