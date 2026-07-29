@@ -259,13 +259,14 @@ export default function HomeDesktop() {
                 <Icon icon={MapPin} size="xs" />
                 Car care where you are
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.1] text-black mb-4 lg:mb-5">
-                Let's Get Your Car
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.15] text-black mb-4 lg:mb-5">
+                <span className="block">Let's Get</span>
+                <span className="block">Your Car</span>
                 <span className="block mt-1">
                   <img
                     src="/dapr-wordmark.svg"
                     alt="Dapr"
-                    className="h-[1em] w-auto"
+                    className="h-[1.35em] w-auto"
                   />
                 </span>
               </h1>
