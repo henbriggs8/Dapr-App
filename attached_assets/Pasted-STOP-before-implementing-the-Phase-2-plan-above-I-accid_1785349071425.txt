@@ -1,0 +1,85 @@
+STOP before implementing the Phase 2 plan above.
+
+I accidentally declined/answered the previous planning flow incorrectly. I do not want to proceed with Phase 2 yet.
+
+First, confirm the workspace state
+
+Before making any new changes, inspect the current git diff/checkpoint and tell me whether any code from the attempted Phase 2 work was actually written.
+
+You previously stated:
+
+“I'm still in Plan mode — file writes are blocked.”
+
+Therefore I expect that no Phase 2 code changes were made.
+
+If there are somehow any partial Phase 2 changes, identify them before reverting anything. Do not revert or overwrite the provider application Phase 1 work or any other existing work.
+
+CURRENT SCOPE: PROVIDER APPLICATION PHASE 1 ONLY
+
+Continue only with the original Dapr Pro application system.
+
+The scope is:
+
+Dapr.com → Apply to Become a Dapr Pro → application record → Dapr admin review → application status → shared API for the native SwiftUI Dapr Pro app
+
+Build/finish:
+
+provider_applications data model
+draft saving
+multi-step responsive provider application
+review + submission
+duplicate protection
+applicant confirmation
+application status system
+applicant confirmation email
+admin application notification
+Applications tab in existing admin dashboard
+admin review/status controls
+GET /api/provider-applications/me
+other provider-application endpoints required for Phase 1
+Become a Pro website CTAs
+
+Preserve the architecture corrections previously agreed on:
+
+users.isProvider does not become true at approved_needs_setup
+users.isProvider only becomes true once the provider is actually activated
+native SwiftUI uses the shared application API and renders its own native status screens
+application status transitions are enforced server-side
+duplicate detection must not attach another user's application to the wrong Clerk account
+OUT OF SCOPE FOR NOW
+
+Do not implement:
+
+Stripe Connect
+Stripe Express accounts
+Stripe Connect webhooks
+provider payout onboarding
+bank account collection
+tax/KYC onboarding
+driver's license uploads
+vehicle photo uploads
+walk-around video uploads
+Base64 verification storage
+private verification file storage
+Phase 2 verification endpoints
+provider activation/setup completion logic beyond preparing the statuses/API for future work
+
+Verification can exist as future statuses such as:
+
+verification_requested
+
+but the actual verification upload system is a later task.
+
+Stripe Connect will also be handled later as part of post-approval Dapr Pro setup, not the application system.
+
+Desired stopping point for this build
+
+Phase 1 should be able to reach:
+
+Application → Submitted → Under Review → Verification Requested OR Approved Needs Setup OR Rejected
+
+We will build everything after verification_requested / approved_needs_setup separately.
+
+Do not start Phase 2 automatically.
+
+First confirm whether the accidental Phase 2 attempt modified any files. Then continue with Phase 1 only.
