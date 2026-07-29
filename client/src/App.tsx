@@ -51,6 +51,7 @@ const VehicleSetupPage = lazy(() => import("@/pages/provider-onboarding/vehicle-
 const BankInfoPage = lazy(() => import("@/pages/provider-onboarding/bank-info"));
 const BecomeAPro = lazy(() => import("@/pages/become-a-pro"));
 const CareersPage = lazy(() => import("@/pages/careers"));
+const AboutPage = lazy(() => import("@/pages/about"));
 const ProviderApply = lazy(() => import("@/pages/provider-apply"));
 const ProviderApplyStatus = lazy(() => import("@/pages/provider-apply-status"));
 
@@ -159,6 +160,7 @@ function Router() {
           <Route path="/corporate" component={Corporate} />
           <Route path="/become-a-pro" component={BecomeAPro} />
           <Route path="/careers" component={CareersPage} />
+          <Route path="/about" component={AboutPage} />
           <Route path="/providers/apply/status" component={ProviderApplyStatus} />
           <Route path="/providers/apply" component={ProviderApply} />
           <Route path="/privacy" component={PrivacyPolicy} />

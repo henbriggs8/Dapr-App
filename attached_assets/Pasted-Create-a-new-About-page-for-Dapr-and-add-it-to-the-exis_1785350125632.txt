@@ -1,0 +1,212 @@
+Create a new **About page for Dapr** and add it to the existing website navigation.
+
+Use the overall simplicity and storytelling style of Chasi’s About page as inspiration, but keep the design completely consistent with Dapr’s existing website, typography, spacing, colors, buttons, header, and footer. Do not copy Chasi’s design or wording directly.
+
+IMPORTANT:
+
+* This is a website/front-end change only.
+* Do not modify the backend, API contracts, database, authentication, booking logic, Stripe integration, or anything used by the native SwiftUI customer/provider apps.
+* Reuse existing website components/styles where possible.
+* Make the page responsive and polished on desktop and mobile.
+* Avoid generic startup/corporate filler.
+* Dapr should feel ambitious, modern, trustworthy, and still clearly early-stage.
+
+## PAGE STRUCTURE
+
+### 1. Hero
+
+Use a large, simple hero similar in spirit to Chasi's About page.
+
+Headline:
+
+**Consumers can order food, rides, and groceries on demand, but car care is still offline and messy. Dapr fixes that.**
+
+Make this the dominant element on the page.
+
+Below it, add a short supporting statement along the lines of:
+
+**We're building a better way to take care of your car — starting with on-demand detailing delivered directly to your driveway.**
+
+Use generous whitespace and strong typography.
+
+Include a high-quality Dapr/car-detailing image if an appropriate existing website asset is already available. Do not add a generic stock photo if we don't already have a good asset.
+
+---
+
+### 2. The Problem
+
+Heading:
+
+**Car care hasn't caught up.**
+
+Keep this section short and direct.
+
+Copy:
+
+Taking care of your car still means calling around, comparing unclear prices, rearranging your schedule, driving somewhere, waiting around, and hoping you chose the right provider.
+
+We think it should be as easy as ordering everything else in your life.
+
+---
+
+### 3. What We're Building
+
+Heading:
+
+**Car care, on demand.**
+
+Explain Dapr simply:
+
+Dapr connects drivers with vetted local professionals who come directly to them. Customers can choose their vehicle, select a service, see the price, book a time, and manage the experience from their phone.
+
+Today, we're starting with detailing.
+
+But the larger vision is to make caring for a vehicle dramatically easier.
+
+Do not over-explain features. This should feel like a mission statement, not a product page.
+
+---
+
+### 4. Founder / Origin Story
+
+Heading:
+
+**Built from the driveway up.**
+
+This section is important.
+
+Copy direction:
+
+Dapr wasn't created by someone looking for an industry to disrupt.
+
+Founder Henry Briggs spent years building and operating Dapper, an automotive detailing and restyling company. That meant actually dealing with the problems behind car care: scheduling, routing, technicians, customers, vehicles, pricing, quality control, and the operational complexity of delivering services at people's homes.
+
+After seeing the same friction over and over again, the idea behind Dapr became simple:
+
+There should be a better infrastructure for getting car care to the customer.
+
+Dapr is being built from those lessons.
+
+Keep this authentic and understated. Do not make it sound like a LinkedIn biography.
+
+If there is room visually, create a place for an authentic photo of Henry working on/detailing a vehicle rather than a traditional corporate headshot. Use a placeholder if we don't currently have the right image.
+
+---
+
+### 5. Marketplace Mission
+
+Create a section showing that Dapr is built for both sides of the marketplace.
+
+Heading:
+
+**Better for drivers. Better for pros.**
+
+Two-column layout.
+
+#### Drivers
+
+Car care that comes to you.
+
+Clear pricing, simple booking, trusted professionals, and less time spent waiting around.
+
+#### Dapr Pros
+
+A better way to earn doing great work.
+
+Dapr gives independent car-care professionals technology, demand, and infrastructure so they can spend more time doing the work and less time managing everything around it.
+
+Keep both sides visually equal.
+
+---
+
+### 6. Bigger Vision
+
+This should be one of the most visually prominent sections.
+
+Heading:
+
+**We're building the infrastructure for on-demand car care.**
+
+Copy:
+
+Today, that starts with detailing.
+
+Over time, we believe more of the work required to maintain and care for a vehicle will come directly to the customer — powered by better software, smarter logistics, and new forms of automation.
+
+Our goal isn't simply to build a better detailing company.
+
+It's to build a better way to take care of a car.
+
+Keep this ambitious without making claims about products or services that Dapr does not currently offer.
+
+---
+
+### 7. Gilbert Origin
+
+Heading:
+
+**Starting local. Thinking much bigger.**
+
+Copy:
+
+Dapr started in Gilbert, Arizona.
+
+We're beginning the way great local marketplaces are built: one neighborhood, one customer, and one great experience at a time.
+
+We're learning what it takes to make on-demand car care exceptional before bringing Dapr to more communities.
+
+Make this feel like part of the company's origin story.
+
+---
+
+### 8. Final CTA
+
+Use a bold, simple final section.
+
+Headline:
+
+**There's a better way to care for your car.**
+
+Primary CTA:
+**Book with Dapr**
+
+Secondary CTA:
+**Become a Dapr Pro**
+
+Use the existing booking and provider/application destinations already used elsewhere on the website. Do not create new backend routes unnecessarily.
+
+---
+
+## DESIGN DIRECTION
+
+The page should feel closer to a modern YC startup About page than a traditional corporate About page.
+
+Think:
+
+* large typography
+* concise sections
+* lots of breathing room
+* minimal visual clutter
+* authentic imagery
+* strong statements instead of paragraphs of marketing copy
+* Uber-level ambition without pretending Dapr is already a massive company
+
+Do not add:
+
+* fake statistics
+* investor logos
+* press logos
+* generic company values
+* corporate governance sections
+* sustainability claims
+* fake team members
+* claims about cities/services we haven't launched
+* unnecessary animations
+
+The finished page should make someone understand three things:
+
+1. **Car care is still inconvenient and fragmented.**
+2. **Dapr is building an on-demand marketplace to change that.**
+3. **The company comes from real experience operating inside the industry.**
+
+Before making changes, inspect the existing website structure and components so the new About page feels native to the current Dapr site rather than like a separate template.

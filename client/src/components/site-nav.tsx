@@ -148,6 +148,7 @@ export default function SiteNav({ active = "" }: SiteNavProps) {
             {[
               { label: "For Fleets", path: "/corporate" },
               { label: "Become a Pro", path: "/become-a-pro" },
+              { label: "About Us", path: "/about" },
               { label: "Offers", path: "/first-wash-offer" },
               { label: "Help", path: "/faq" },
             ].map((item) => (
