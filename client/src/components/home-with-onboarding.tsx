@@ -19,19 +19,15 @@ export function HomeWithOnboarding() {
     );
   }
 
-  // Desktop: show the public marketing landing page (auth-gated CTAs handle login).
-  if (!isMobile) {
-    return <HomeDesktop />;
+  // Authenticated mobile users: onboarding flow + home screen dashboard.
+  if (isMobile && user) {
+    return (
+      <OnboardingWrapper>
+        <HomeScreen />
+      </OnboardingWrapper>
+    );
   }
 
-  // Mobile: keep existing behavior — require auth, then onboarding + home.
-  if (!user) {
-    return <Redirect to="/auth" />;
-  }
-
-  return (
-    <OnboardingWrapper>
-      <HomeScreen />
-    </OnboardingWrapper>
-  );
+  // All other cases (desktop always, mobile unauthenticated): marketing landing page.
+  return <HomeDesktop />;
 }

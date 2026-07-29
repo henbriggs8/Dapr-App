@@ -250,26 +250,26 @@ export default function HomeDesktop() {
       <SiteNav active="home" />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <section className="pt-20 pb-12 lg:pt-32 lg:pb-24">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left */}
             <div>
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8c52ff] mb-6">
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8c52ff] mb-4 lg:mb-6">
                 <Icon icon={MapPin} size="xs" />
                 Car care in Phoenix
               </div>
-              <h1 className="text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-5">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-4 lg:mb-5">
                 Your car,<br />cared for.
               </h1>
-              <p className="text-lg lg:text-xl text-gray-500 mb-8 leading-relaxed max-w-lg">
+              <p className="text-base lg:text-xl text-gray-500 mb-6 lg:mb-8 leading-relaxed max-w-lg">
                 Professional car care that comes to you. Book a vetted Dapr Pro at home, work, or wherever your car is.
               </p>
               <BookingWidget />
             </div>
 
             {/* Right — hero photo */}
-            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[620px] bg-gray-900 shadow-xl">
+            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/3] sm:aspect-[4/3] lg:aspect-auto lg:h-[620px] bg-gray-900 shadow-xl">
               <img
                 src="/hero-exterior-wash.jpg"
                 alt="Dapr Pro washing a black Mercedes G-Wagon"
@@ -309,9 +309,9 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Trust bar ─────────────────────────────────────────────────────── */}
-      <section className="py-8 border-y border-gray-100 bg-gray-50/50">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-10 lg:gap-20 text-sm font-semibold text-gray-400">
+      <section className="py-6 lg:py-8 border-y border-gray-100 bg-gray-50/50">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 lg:gap-20 text-xs sm:text-sm font-semibold text-gray-400">
             {["4.9★ average rating", "10,000+ services completed", "Vetted & insured Pros", "No waiting — comes to you"].map((item) => (
               <span key={item}>{item}</span>
             ))}
@@ -320,10 +320,10 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Explore Dapr ──────────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Explore Dapr</h2>
-          <p className="text-gray-500 mb-10 text-lg">Everything you need for your car, at your door.</p>
+      <section className="py-14 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Explore Dapr</h2>
+          <p className="text-gray-500 mb-8 lg:mb-10 text-base lg:text-lg">Everything you need for your car, at your door.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
@@ -388,9 +388,9 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Schedule-ahead ────────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-10">Plan ahead</h2>
+      <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-8 lg:mb-10">Plan ahead</h2>
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             {/* Scheduling card */}
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
@@ -469,11 +469,11 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── How Dapr works ────────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-4">How Dapr works</h2>
-            <p className="text-gray-500 text-lg">Three simple steps to a cleaner car.</p>
+      <section className="py-14 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-10 lg:mb-14">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-4">How Dapr works</h2>
+            <p className="text-gray-500 text-base lg:text-lg">Three simple steps to a cleaner car.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -510,12 +510,12 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Services ──────────────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+      <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 lg:mb-12 gap-4 lg:gap-6">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Services</h2>
-              <p className="text-gray-500 text-lg">From a quick refresh to a full detail — professional care for every car.</p>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Services</h2>
+              <p className="text-gray-500 text-base lg:text-lg">From a quick refresh to a full detail — professional care for every car.</p>
             </div>
             <button
               onClick={goServices}
@@ -588,17 +588,17 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Dapr for Fleets ───────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+      <section className="py-14 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-black rounded-[2rem] overflow-hidden">
             <div className="grid lg:grid-cols-2 gap-0">
               {/* Text side */}
-              <div className="p-10 lg:p-14 flex flex-col justify-center">
+              <div className="p-8 sm:p-10 lg:p-14 flex flex-col justify-center">
                 <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-4">For Business</span>
-                <h2 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-5">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-5">
                   Dapr for Fleets
                 </h2>
-                <p className="text-gray-400 text-lg leading-relaxed mb-8">
+                <p className="text-gray-400 text-base lg:text-lg leading-relaxed mb-8">
                   Keep your entire fleet spotless without lifting a finger. Recurring schedules, centralized billing, and dedicated support — built for growing businesses.
                 </p>
                 <div className="space-y-3 mb-10">
@@ -645,15 +645,15 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Become a Pro ──────────────────────────────────────────────────── */}
-      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             <div>
               <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-4 block">For Professionals</span>
-              <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-black mb-5">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-black mb-5">
                 Your skills.<br />Your schedule.<br />Your business.
               </h2>
-              <p className="text-gray-500 text-lg leading-relaxed mb-8">
+              <p className="text-gray-500 text-base lg:text-lg leading-relaxed mb-8">
                 Join the Dapr Pro network and earn on your own terms. We connect you with customers — you bring the expertise.
               </p>
               <div className="space-y-4 mb-10">
@@ -695,9 +695,9 @@ export default function HomeDesktop() {
       </section>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="bg-white border-t border-gray-100 pt-16 pb-10">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
+      <footer className="bg-white border-t border-gray-100 pt-12 lg:pt-16 pb-10">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8 mb-10 lg:mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-3 lg:col-span-2">
               <img src={dapprLogo} alt="Dapr" className="h-16 w-auto" />

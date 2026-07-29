@@ -197,12 +197,25 @@ function Router() {
   );
 }
 
+// Public/marketing routes where the bottom tab bar should never appear.
+const PUBLIC_ROUTE_PREFIXES = [
+  '/auth', '/onboarding', '/how-it-works', '/interior-cleaning',
+  '/exterior-cleaning', '/car-seat-cleaning', '/faq', '/corporate',
+  '/become-a-pro', '/privacy', '/terms', '/referral', '/first-wash-offer',
+  '/blog', '/about', '/careers', '/sso-callback', '/services',
+];
+
+function isPublicRoute(location: string) {
+  if (location === '/') return true;
+  return PUBLIC_ROUTE_PREFIXES.some((prefix) => location.startsWith(prefix));
+}
+
 function MobileTabNavigation({ location }: { location: string }) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   if (!isMobile) return null;
   if (!user || user.isAdmin || user.isProvider) return null;
-  if (location.startsWith('/onboarding')) return null;
+  if (isPublicRoute(location)) return null;
   return <TabNavigation />;
 }
 
