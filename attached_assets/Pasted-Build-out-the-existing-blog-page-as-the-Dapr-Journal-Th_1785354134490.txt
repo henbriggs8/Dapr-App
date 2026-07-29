@@ -1,0 +1,183 @@
+Build out the existing /blog page as the Dapr Journal.
+
+The purpose of the Journal is to document Dapr’s mission, explain what we are building, recruit future Dapr Pros, and share meaningful company progress. It should not feel like a generic car-detailing SEO blog.
+
+Important constraints
+This is a public website/front-end task only.
+Do not modify the database, backend, API contracts, authentication, Clerk, Stripe, booking logic, provider logic, or anything used by the native SwiftUI apps.
+Keep the existing /blog route so existing navigation does not break.
+Do not add a CMS, admin publishing system, database tables, or third-party blogging platform yet.
+Store the initial article content in a clean static data structure or local content files that can be replaced with a CMS later.
+Reuse the website’s existing header, footer, typography, buttons, spacing, colors, and responsive components.
+Inspect the current website implementation before making changes.
+Blog landing page
+
+Keep Blog as the navigation label for now, but use this page title:
+
+Dapr Journal
+
+Supporting copy:
+
+Notes on building a better way to care for your car.
+
+Create:
+
+One large featured article at the top
+A clean article grid beneath it
+Article category, date, title, summary, image, and estimated reading time
+Responsive desktop and mobile layouts
+A polished empty-state-resistant design that looks intentional with only three articles
+
+Do not add:
+
+Comments
+View counts
+Fake engagement numbers
+Author avatars that do not exist
+Search or category filtering that is unnecessary with only three posts
+Newsletter signup unless an existing functional email-capture system already exists
+Generic stock photography
+
+Use existing authentic Dapr or automotive images where appropriate. If the right images are unavailable, use tasteful image placeholders that are easy to replace later.
+
+Initial articles
+
+Create three complete article detail pages. Do not create cards that lead to blank or unfinished pages.
+
+Article 1 — Featured article
+
+Category: Company
+Title: Car care should come to you
+Subtitle: Why we’re building Dapr and why the way people care for their cars needs to change.
+Reading time: Approximately 4 minutes
+
+The article should communicate:
+
+Consumers can order food, rides, and groceries on demand, but car care is still offline and messy.
+Traditional car care often requires calling around, comparing unclear pricing, driving somewhere, rearranging a schedule, waiting, and hoping the provider is reliable.
+Dapr is building a simpler experience where customers choose their vehicle, service, price, and time from their phone.
+A vetted local Dapr Pro comes directly to the customer.
+Dapr is starting with detailing, but the larger mission is to create better infrastructure for on-demand car care.
+The company is still early and is focused on building an exceptional experience before expanding.
+
+Suggested opening:
+
+Consumers can order food, rides, and groceries on demand, but car care is still offline and messy. Dapr fixes that.
+
+Keep the article mission-driven and customer-focused. Do not turn it into a long founder biography.
+
+End with:
+
+There’s a better way to care for your car.
+
+Primary CTA: Book with Dapr
+Secondary CTA: Become a Dapr Pro
+
+Use the existing functional booking and provider application destinations.
+
+Article 2
+
+Category: Company
+Title: Why Dapr is starting in Gilbert, Arizona
+Subtitle: Building an exceptional local marketplace one neighborhood at a time.
+Reading time: Approximately 3 minutes
+
+The article should explain:
+
+Dapr is beginning in Gilbert, Arizona.
+Local service marketplaces depend on density, trust, reliable providers, and consistently good customer experiences.
+Starting in one focused market allows Dapr to learn quickly and deliver a better experience.
+Dapr is not pretending to be available everywhere before the service is ready.
+The company plans to grow neighborhood by neighborhood after proving the model locally.
+Early customers and Pros will help shape what Dapr becomes.
+
+Suggested line:
+
+We’re starting the way strong local marketplaces are built: one neighborhood, one customer, and one great experience at a time.
+
+Keep the tone confident. Do not make starting locally sound like a limitation.
+
+End with the same booking and provider CTAs.
+
+Article 3
+
+Category: For Pros
+Title: What it means to be a Dapr Pro
+Subtitle: The standard we’re building for professionals on the Dapr platform.
+Reading time: Approximately 4 minutes
+
+The article should explain:
+
+Dapr Pros are independent car-care professionals serving customers through the platform.
+Customers should expect professionalism, communication, care, reliability, and respect for their vehicle and property.
+Dapr is intended to help Pros spend less time managing scheduling, customer acquisition, payments, and operational busywork.
+The long-term goal is to give skilled professionals better technology, demand, and infrastructure.
+Becoming a Dapr Pro should represent a standard of service, not simply creating an account.
+Avoid making legal claims about employment status, guaranteed earnings, or guaranteed job volume.
+
+Suggested line:
+
+Great car care depends on great people. Dapr is being built to help those people do their best work.
+
+Primary CTA: Become a Dapr Pro
+
+Secondary CTA: Learn about Dapr
+
+Article page design
+
+Each article page should include:
+
+Category
+Article title
+Subtitle
+Publication date
+Estimated reading time
+Large hero image
+Comfortable, readable article width
+Clear heading hierarchy
+Generous spacing
+A final CTA section
+A link back to the Dapr Journal
+Related article cards at the bottom
+
+Use Dapr as the author rather than inventing individual authors or adding a large founder profile.
+
+Dates
+
+Use accurate July 2026 publication dates. Do not label the posts as old company history or imply that Dapr has been operating longer than it has.
+
+SEO and metadata
+
+Add appropriate page titles, meta descriptions, Open Graph titles, and Open Graph descriptions for:
+
+The main Journal page
+Each individual article
+
+Use clean URL slugs:
+
+/blog/car-care-should-come-to-you
+/blog/why-dapr-is-starting-in-gilbert
+/blog/what-it-means-to-be-a-dapr-pro
+
+Do not add inaccurate structured data, fake review data, or unsupported claims.
+
+Final Journal CTA
+
+At the bottom of the main Journal page, add:
+
+Follow along as we build the future of car care.
+
+Primary CTA: Book with Dapr
+Secondary CTA: Become a Dapr Pro
+
+Final verification
+
+Before completing the task, verify:
+
+All three article cards open complete article pages.
+All booking and provider CTAs use existing working routes.
+The page works on mobile and desktop.
+The public navigation still works.
+No backend or database changes were made.
+No native app API contracts were changed.
+No fake company claims, statistics, customer counts, provider counts, press coverage, or service locations were added.

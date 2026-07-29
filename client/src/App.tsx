@@ -54,6 +54,8 @@ const CareersPage = lazy(() => import("@/pages/careers"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const ProviderApply = lazy(() => import("@/pages/provider-apply"));
 const ProviderApplyStatus = lazy(() => import("@/pages/provider-apply-status"));
+const BlogPage = lazy(() => import("@/pages/blog"));
+const BlogPostPage = lazy(() => import("@/pages/blog-post"));
 
 function PageLoader() {
   return (
@@ -182,6 +184,8 @@ function Router() {
           <Route path="/become-a-pro" component={BecomeAPro} />
           <Route path="/careers" component={CareersPage} />
           <Route path="/about" component={AboutPage} />
+          <Route path="/blog/:slug" component={BlogPostPage} />
+          <Route path="/blog" component={BlogPage} />
           <Route path="/providers/apply/status" component={ProviderApplyStatus} />
           <Route path="/providers/apply" component={ProviderApply} />
           <Route path="/privacy" component={PrivacyPolicy} />
