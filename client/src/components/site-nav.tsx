@@ -60,7 +60,7 @@ export default function SiteNav({ active = "" }: SiteNavProps) {
             </button>
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
               <button onClick={() => nav("/corporate")} className={linkCls("fleets")}>
-                Fleets
+                For Fleets
               </button>
               <button onClick={() => nav("/become-a-pro")} className={linkCls("become-a-pro")}>
                 Become a Pro
