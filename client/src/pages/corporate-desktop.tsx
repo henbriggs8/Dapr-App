@@ -297,7 +297,7 @@ export default function CorporateDesktop() {
             {[0, 1].map((pass) => (
               <div key={pass} className="flex items-center shrink-0" aria-hidden={pass === 1}>
                 {PARTNER_LOGOS.map(({ name, src }) => (
-                  <img key={name} src={src} alt={name} className="h-10 w-auto mx-10 object-contain" />
+                  <img key={name} src={src} alt={name} className="h-14 w-auto mx-10 object-contain" />
                 ))}
               </div>
             ))}
