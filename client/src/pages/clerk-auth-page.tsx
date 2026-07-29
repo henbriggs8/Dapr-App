@@ -14,16 +14,25 @@ const devLog = (...args: unknown[]) => { if (import.meta.env.DEV) console.log(..
 // ─── Shared style tokens ────────────────────────────────────────────────────
 
 const primaryBtn =
-  'inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#111] px-5 text-[14px] font-medium text-white transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
-
-const mutedBtn =
-  'inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f1f1f1] px-5 text-[14px] font-medium text-[#111] transition hover:bg-[#e9e9e9] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
+  'inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-black px-5 text-[15px] font-semibold text-white transition hover:bg-gray-900 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
 
 const inputCls =
-  'h-12 w-full border border-[#ececec] bg-[#f6f6f6] px-4 text-[14px] text-[#111] outline-none placeholder:text-[#a3a3a3] focus:border-[#d7d7d7] transition rounded-none';
+  'h-12 w-full border border-gray-200 bg-white rounded-xl px-4 text-[14px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[#8c52ff] focus:ring-2 focus:ring-[#8c52ff]/10 transition-all';
 
 const otpInputCls =
-  'h-14 w-12 border border-[#dcdcdc] bg-white text-center text-[20px] font-semibold outline-none focus:border-black rounded-none transition';
+  'h-14 w-12 border border-gray-200 bg-white text-center text-[20px] font-semibold outline-none focus:border-black rounded-xl transition';
+
+// ─── Layout card (centered on desktop, full-width on mobile) ─────────────────
+
+function AuthCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-white sm:bg-gray-50 flex flex-col sm:items-center sm:justify-center">
+      <div className="w-full sm:max-w-[500px] bg-white sm:rounded-3xl sm:shadow-sm sm:border sm:border-gray-100 px-6 sm:px-10 pt-10 pb-10 sm:my-10">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -32,7 +41,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
     <button
       type="button"
       onClick={onBack}
-      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f1f1] text-[#111] transition hover:bg-[#e9e9e9] mb-8"
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition hover:bg-gray-200 mb-8"
     >
       <Icon icon={ArrowLeft} size="sm" />
     </button>
@@ -110,48 +119,6 @@ function OtpGrid({
   );
 }
 
-// ─── Animated word cycler ─────────────────────────────────────────────────────
-
-const CYCLE_WORDS = ['cleaned', 'detailed', 'vacuumed', 'foamed', 'shined', 'refreshed', 'Dapr.'];
-
-function AnimatedWordCycler() {
-  const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setIndex(i => (i + 1) % CYCLE_WORDS.length);
-        setVisible(true);
-      }, 280);
-    }, 2400);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div className="mt-8 mb-1 text-center select-none">
-      <p className="text-[22px] font-bold tracking-[-0.02em] text-[#111] leading-tight">
-        Get your car
-      </p>
-      <p
-        style={{
-          color: '#8c52ff',
-          fontSize: '22px',
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.2,
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0px)' : 'translateY(-5px)',
-          transition: 'opacity 0.26s ease, transform 0.26s ease',
-        }}
-      >
-        {CYCLE_WORDS[index]}
-      </p>
-    </div>
-  );
-}
-
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 function LandingScreen({
@@ -163,6 +130,7 @@ function LandingScreen({
   loading,
   error,
   isProviderMode,
+  fromBooking,
 }: {
   phone: string;
   setPhone: (v: string) => void;
@@ -172,6 +140,7 @@ function LandingScreen({
   loading: boolean;
   error: string;
   isProviderMode?: boolean;
+  fromBooking?: boolean;
 }) {
   const [inputMode, setInputMode] = useState<'phone' | 'email'>('phone');
   const [email, setEmail] = useState('');
@@ -191,108 +160,111 @@ function LandingScreen({
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-16 pb-10">
-      {/* App icon */}
-      <div className="flex flex-col items-center mb-8">
-        <img
-          src="/assets/dapper-app-icon-dark.svg"
-          alt="Dapr"
-          className="w-[72px] h-[72px] mb-6"
-          style={{ borderRadius: "18px" }}
-        />
-        {isProviderMode ? (
-          <div className="text-center">
-            <p className="text-[22px] font-bold text-[#111] leading-tight">Detail Pro Portal</p>
-            <p className="text-[13px] text-[#888] mt-1">Sign in to your provider account</p>
-          </div>
-        ) : (
-          <AnimatedWordCycler />
-        )}
+    <AuthCard>
+      {/* Logo */}
+      <div className="mb-8">
+        <img src="/dapr-logo.svg" alt="Dapr" className="h-9 w-auto" />
       </div>
 
+      {/* Context-aware heading */}
+      {isProviderMode ? (
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight text-black">Dapr Pro Portal</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Sign in to your provider account</p>
+        </div>
+      ) : fromBooking ? (
+        <div className="mb-8">
+          <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-2">Almost there</p>
+          <h1 className="text-[22px] font-bold tracking-tight text-black leading-snug">
+            Create an account or log in to see services and pricing for your vehicle.
+          </h1>
+        </div>
+      ) : (
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight text-black">Log in or create account</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Welcome to Dapr.</p>
+        </div>
+      )}
+
       {/* Phone / Email toggle */}
-      <div className="flex mb-4 rounded-lg bg-[#f2f2f2] p-1 gap-1">
+      <div className="flex mb-5 rounded-xl bg-gray-100 p-1 gap-1">
         <button
           type="button"
           onClick={() => setInputMode('phone')}
-          className={`flex-1 h-[36px] rounded-md text-[13px] font-medium transition-all ${inputMode === 'phone' ? 'bg-white text-[#111] shadow-sm' : 'text-[#888]'}`}
+          className={`flex-1 h-9 rounded-lg text-[13px] font-medium transition-all ${
+            inputMode === 'phone' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
           Phone
         </button>
         <button
           type="button"
           onClick={() => setInputMode('email')}
-          className={`flex-1 h-[36px] rounded-md text-[13px] font-medium transition-all ${inputMode === 'email' ? 'bg-white text-[#111] shadow-sm' : 'text-[#888]'}`}
+          className={`flex-1 h-9 rounded-lg text-[13px] font-medium transition-all ${
+            inputMode === 'email' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          Email / Username
+          Email
         </button>
       </div>
 
       {/* Input */}
       <div className="mb-1">
         {inputMode === 'phone' ? (
-          <>
-            <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
-            <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden">
-              <div className="flex h-full items-center gap-1.5 px-3 border-r border-[#d8d8d8] shrink-0">
-                <span className="text-[18px] leading-none">🇺🇸</span>
-                <svg className="w-3 h-3 text-[#666]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-              <div className="flex h-full flex-1 items-center">
-                <span className="pl-3 text-[14px] text-[#111] font-medium select-none">+1</span>
-                <input
-                  value={formatDisplay(phone)}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext(identifier)}
-                  placeholder="(201) 555-0123"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  autoFocus
-                  className="h-full flex-1 bg-transparent px-2 text-[14px] text-[#111] outline-none placeholder:text-[#b0b0b0]"
-                />
-              </div>
+          <div className="flex h-12 items-center border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:border-[#8c52ff] focus-within:ring-2 focus-within:ring-[#8c52ff]/10 transition-all">
+            <div className="flex h-full items-center gap-1.5 px-3 border-r border-gray-200 shrink-0">
+              <span className="text-[18px] leading-none">🇺🇸</span>
+              <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
-          </>
+            <div className="flex h-full flex-1 items-center">
+              <span className="pl-3 text-[14px] text-gray-900 font-medium select-none">+1</span>
+              <input
+                value={formatDisplay(phone)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext(identifier)}
+                placeholder="(201) 555-0123"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                autoFocus
+                className="h-full flex-1 bg-transparent px-2 text-[14px] text-gray-900 outline-none placeholder:text-gray-400"
+              />
+            </div>
+          </div>
         ) : (
-          <>
-            <p className="text-[13px] font-medium text-[#111] mb-2">
-              Email or username
-            </p>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && canSubmit && onNext(identifier)}
-              placeholder="email or username"
-              type="text"
-              inputMode="text"
-              autoComplete="username"
-              autoFocus
-              className="w-full h-[52px] border border-[#d8d8d8] rounded-lg px-4 text-[14px] text-[#111] outline-none focus:border-[#8c52ff] placeholder:text-[#b0b0b0]"
-            />
-          </>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && canSubmit && onNext(identifier)}
+            placeholder="your@email.com"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoFocus
+            className={inputCls}
+          />
         )}
       </div>
 
       {error && <ErrorBanner msg={error} />}
 
-      {/* Continue button */}
+      {/* Continue */}
       <button
         type="button"
         onClick={() => onNext(identifier)}
         disabled={!canSubmit || loading}
-        className="mt-4 inline-flex h-[52px] w-full items-center justify-center rounded-lg bg-[#111] text-[15px] font-semibold text-white transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+        className={`${primaryBtn} mt-4`}
       >
-        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : "Continue"}
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Continue'}
       </button>
 
       {/* Divider */}
       <div className="flex items-center gap-3 my-5">
-        <div className="h-px flex-1 bg-[#e5e5e5]" />
-        <span className="text-[13px] text-[#999]">or</span>
-        <div className="h-px flex-1 bg-[#e5e5e5]" />
+        <div className="h-px flex-1 bg-gray-200" />
+        <span className="text-[13px] text-gray-400">or</span>
+        <div className="h-px flex-1 bg-gray-200" />
       </div>
 
       {/* Social buttons — Apple must appear first per Apple HIG */}
@@ -300,7 +272,7 @@ function LandingScreen({
         <button
           type="button"
           onClick={onApple}
-          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-lg bg-[#111] text-[14px] font-medium text-white transition hover:bg-[#222] active:scale-[0.99]"
+          className="flex h-12 w-full items-center justify-center gap-3 rounded-full bg-black text-[14px] font-semibold text-white transition hover:bg-gray-900 active:scale-[0.99]"
         >
           <SiApple className="h-5 w-5 shrink-0" />
           Continue with Apple
@@ -310,7 +282,7 @@ function LandingScreen({
           <button
             type="button"
             onClick={onGoogle}
-            className="flex h-[52px] w-full items-center justify-center gap-3 rounded-lg bg-[#f2f2f2] text-[14px] font-medium text-[#111] transition hover:bg-[#ebebeb] active:scale-[0.99]"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-gray-200 bg-white text-[14px] font-medium text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
           >
             <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -323,45 +295,45 @@ function LandingScreen({
         )}
       </div>
 
-      {/* Detail Pro link */}
-      <div className="mt-6 flex flex-col items-center gap-2">
+      {/* Dapr Pro link */}
+      <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-2">
         {isProviderMode ? (
           <>
-            <p className="text-center text-[12px] text-[#aaa]">
-              New to Dapr?{" "}
+            <p className="text-center text-[12px] text-gray-400">
+              New to Dapr?{' '}
               <button
                 type="button"
-                onClick={() => window.location.href = "/auth?provider=1&mode=signup"}
-                className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+                onClick={() => window.location.href = '/auth?provider=1&mode=signup'}
+                className="text-[#8c52ff] font-medium hover:underline underline-offset-2"
               >
-                Become a Detail Pro
+                Become a Dapr Pro
               </button>
             </p>
-            <p className="text-center text-[12px] text-[#aaa]">
-              Not a provider?{" "}
+            <p className="text-center text-[12px] text-gray-400">
+              Not a provider?{' '}
               <button
                 type="button"
-                onClick={() => window.location.href = "/auth"}
-                className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+                onClick={() => window.location.href = '/auth'}
+                className="text-[#8c52ff] font-medium hover:underline underline-offset-2"
               >
                 Sign in as a customer
               </button>
             </p>
           </>
         ) : (
-          <p className="text-center text-[12px] text-[#aaa]">
-            A detail pro?{" "}
+          <p className="text-center text-[12px] text-gray-400">
+            A Dapr Pro?{' '}
             <button
               type="button"
-              onClick={() => window.location.href = "/auth?provider=1"}
-              className="text-[#8c52ff] font-medium underline-offset-2 hover:underline"
+              onClick={() => window.location.href = '/auth?provider=1'}
+              className="text-[#8c52ff] font-medium hover:underline underline-offset-2"
             >
-              Sign in as a Detail Pro
+              Sign in as a Dapr Pro
             </button>
           </p>
         )}
       </div>
-    </div>
+    </AuthCard>
   );
 }
 
@@ -385,12 +357,11 @@ function PasswordScreen({
   const [show, setShow] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+    <AuthCard>
       <BackButton onBack={onBack} />
 
-      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-8">
-        Welcome back
-      </h1>
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-2">Welcome back</h1>
+      <p className="text-sm text-gray-500 mb-8">Enter your password to continue.</p>
 
       <div className="relative">
         <input
@@ -398,13 +369,14 @@ function PasswordScreen({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onNext()}
-          placeholder="Enter your password"
+          placeholder="Password"
+          autoFocus
           className={`${inputCls} pr-12`}
         />
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
         >
           {show ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
         </button>
@@ -412,36 +384,25 @@ function PasswordScreen({
 
       {error && <ErrorBanner msg={error} />}
 
-      <div className="mt-5 flex flex-col gap-2.5">
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!password.trim() || loading}
+        className={`${primaryBtn} mt-5`}
+      >
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Continue'}
+      </button>
+
+      <div className="mt-4 flex justify-center">
         <button
           type="button"
           onClick={onForgot}
-          className="w-fit rounded-full bg-[#f1f1f1] px-4 py-2 text-[13px] font-medium text-[#111]"
+          className="text-sm text-gray-500 hover:text-black transition-colors font-medium"
         >
-          I've forgotten my password
+          Forgot password?
         </button>
       </div>
-
-      <div className="mt-auto pt-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
-        >
-          <Icon icon={ArrowLeft} size="sm" />
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!password.trim() || loading}
-          className={`${mutedBtn} min-w-[100px]`}
-        >
-          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
-            <>Next <Icon icon={ArrowRight} size="sm" /></>
-          )}
-        </button>
-      </div>
-    </div>
+    </AuthCard>
   );
 }
 
@@ -471,48 +432,37 @@ function OtpScreen({
   resendLabel?: string;
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+    <AuthCard>
       <BackButton onBack={onBack} />
 
-      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-2">
-        {title}
-      </h1>
-      <p className="text-[13px] text-[#8a8a8a] mb-8 leading-5">{subtitle}</p>
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-2">{title}</h1>
+      <p className="text-sm text-gray-500 mb-8 leading-relaxed">{subtitle}</p>
 
       <OtpGrid code={code} setCode={setCode} prefix={prefix} length={6} />
 
       {error && <ErrorBanner msg={error} />}
 
-      {onResend && (
-        <button
-          type="button"
-          onClick={onResend}
-          className="mt-5 w-fit rounded-full bg-[#f1f1f1] px-4 py-2 text-[12px] text-[#666]"
-        >
-          {resendLabel}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={code.length < 6 || loading}
+        className={`${primaryBtn} mt-6`}
+      >
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Verify'}
+      </button>
 
-      <div className="mt-auto pt-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f1f1]"
-        >
-          <Icon icon={ArrowLeft} size="sm" />
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={code.length < 6 || loading}
-          className={`${mutedBtn} min-w-[100px]`}
-        >
-          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
-            <>Verify <Icon icon={ArrowRight} size="sm" /></>
-          )}
-        </button>
-      </div>
-    </div>
+      {onResend && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={onResend}
+            className="text-sm text-gray-500 hover:text-black transition-colors font-medium"
+          >
+            {resendLabel}
+          </button>
+        </div>
+      )}
+    </AuthCard>
   );
 }
 
@@ -529,52 +479,53 @@ function EmailCollectScreen({
 }) {
   const [email, setEmail] = useState('');
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">
+    <AuthCard>
+      <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">
         {required ? 'Almost there' : 'One more thing'}
       </p>
-      <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-[#111] leading-tight">
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-2">
         {required ? 'Verify your email' : 'Add your email'}
       </h1>
-      <p className="mt-3 text-[13px] leading-5 text-[#9b9b9b]">
+      <p className="text-sm text-gray-500 mb-8 leading-relaxed">
         {required
           ? "We'll send a quick code to confirm your email address."
           : 'Your email lets you reset your password and receive booking confirmations.'}
       </p>
 
-      <div className="mt-8 space-y-3">
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && email.trim() && onSubmit(email.trim())}
-          className={`${inputCls} rounded-xl`}
-        />
-        {error && <ErrorBanner msg={error} />}
-      </div>
+      <input
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && email.trim() && onSubmit(email.trim())}
+        className={inputCls}
+        autoFocus
+      />
+      {error && <ErrorBanner msg={error} />}
 
       <button
         type="button"
         disabled={loading || !email.trim()}
         onClick={() => onSubmit(email.trim())}
-        className={`${primaryBtn} mt-6`}
+        className={`${primaryBtn} mt-5`}
       >
         {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : required ? 'Send code' : 'Save email'}
       </button>
 
       {!required && (
-        <button
-          type="button"
-          onClick={() => onSubmit('')}
-          className="mt-4 text-center text-[13px] text-[#9b9b9b] underline-offset-2 hover:underline"
-        >
-          Skip for now
-        </button>
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => onSubmit('')}
+            className="text-sm text-gray-500 hover:text-black transition-colors font-medium"
+          >
+            Skip for now
+          </button>
+        </div>
       )}
-    </div>
+    </AuthCard>
   );
 }
 
@@ -606,28 +557,27 @@ function SetPasswordScreen({
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8c52ff] mb-6">Reset password</p>
-      <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-[#111] leading-tight">
-        Set a new password
-      </h1>
-      <p className="mt-3 text-[13px] leading-5 text-[#9b9b9b]">
+    <AuthCard>
+      <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">Reset password</p>
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-2">Set a new password</h1>
+      <p className="text-sm text-gray-500 mb-8 leading-relaxed">
         Choose a strong password you haven't used before.
       </p>
 
-      <div className="mt-8 space-y-3">
+      <div className="flex flex-col gap-3">
         <div className="relative">
           <input
             type={showPw ? 'text' : 'password'}
             placeholder="New password"
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
-            className={`${inputCls} rounded-xl pr-12`}
+            className={`${inputCls} pr-12`}
+            autoFocus
           />
           <button
             type="button"
             onClick={() => setShowPw(v => !v)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9b9b9b]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
           >
             {showPw ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
           </button>
@@ -637,39 +587,40 @@ function SetPasswordScreen({
           placeholder="Confirm new password"
           value={confirmPassword}
           onChange={e => setConfirmPassword(e.target.value)}
-          className={`${inputCls} rounded-xl`}
+          className={inputCls}
         />
-        {(localError || error) && <ErrorBanner msg={localError || error} />}
       </div>
+
+      {(localError || error) && <ErrorBanner msg={localError || error} />}
 
       <button
         type="button"
         disabled={loading}
         onClick={handleSubmit}
-        className={`${primaryBtn} mt-6`}
+        className={`${primaryBtn} mt-5`}
       >
         {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Set password'}
       </button>
-    </div>
+    </AuthCard>
   );
 }
 
 function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-24 pb-10">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-[#8c52ff]">
+    <AuthCard>
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#8c52ff]/10 mb-8">
         <Icon icon={Check} size="lg" className="text-[#8c52ff]" />
       </div>
 
-      <h1 className="mt-7 text-[30px] font-semibold tracking-[-0.04em] text-[#111]">All set.</h1>
-      <p className="mt-4 max-w-[260px] text-[13px] leading-5 text-[#9b9b9b]">
-        You're signed in. Tap continue to start booking your car wash.
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-2">All set.</h1>
+      <p className="text-sm text-gray-500 leading-relaxed mb-8">
+        You're signed in. Tap continue to get started.
       </p>
 
-      <button type="button" onClick={onContinue} className={`${mutedBtn} mt-8 w-fit`}>
+      <button type="button" onClick={onContinue} className={primaryBtn}>
         Continue <Icon icon={ArrowRight} size="sm" />
       </button>
-    </div>
+    </AuthCard>
   );
 }
 
@@ -730,31 +681,32 @@ function ProfileInfoScreen({
   const canSubmit = firstName.trim() && lastName.trim() && password.length >= 8 && phoneValid;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-14 pb-10">
+    <AuthCard>
       <BackButton onBack={onBack} />
 
-      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111] mb-1">
-        Create your account
-      </h1>
-      <p className="text-[13px] text-[#9b9b9b] mb-8">{displayPhone}</p>
+      <h1 className="text-2xl font-bold tracking-tight text-black mb-1">Create your account</h1>
+      {displayPhone && <p className="text-sm text-gray-400 mb-8">{displayPhone}</p>}
+      {!displayPhone && <div className="mb-8" />}
 
       <div className="flex flex-col gap-3">
-        <input
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          placeholder="First name"
-          autoComplete="given-name"
-          className={inputCls}
-        />
-        <input
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          placeholder="Last name"
-          autoComplete="family-name"
-          className={inputCls}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First name"
+            autoComplete="given-name"
+            className={inputCls}
+            autoFocus
+          />
+          <input
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Last name"
+            autoComplete="family-name"
+            className={inputCls}
+          />
+        </div>
 
-        {/* Email address */}
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -778,7 +730,6 @@ function ProfileInfoScreen({
           />
         )}
 
-        {/* Password */}
         <div className="relative">
           <input
             type={showPw ? 'text' : 'password'}
@@ -791,7 +742,7 @@ function ProfileInfoScreen({
           <button
             type="button"
             onClick={() => setShowPw(v => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707070]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
           >
             {showPw ? <Icon icon={EyeOff} size="sm" /> : <Icon icon={Eye} size="sm" />}
           </button>
@@ -809,22 +760,20 @@ function ProfileInfoScreen({
 
       {(localError || error) && <ErrorBanner msg={localError || error} />}
 
-      <div className="mt-auto pt-8 flex flex-col gap-4">
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={!canSubmit || loading}
-          className={primaryBtn}
-        >
-          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
-            <>Create account <Icon icon={ArrowRight} size="sm" /></>
-          )}
-        </button>
-        <p className="text-center text-[11px] leading-4 text-[#a0a0a0] px-4">
-          By proceeding, you consent to receive SMS messages from Dapr to the number provided.
-        </p>
-      </div>
-    </div>
+      <button
+        type="button"
+        onClick={handleNext}
+        disabled={!canSubmit || loading}
+        className={`${primaryBtn} mt-6`}
+      >
+        {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : (
+          <>Create account <Icon icon={ArrowRight} size="sm" /></>
+        )}
+      </button>
+      <p className="mt-4 text-center text-[11px] leading-4 text-gray-400 px-4">
+        By proceeding, you consent to receive SMS messages from Dapr to the number provided.
+      </p>
+    </AuthCard>
   );
 }
 
@@ -1502,7 +1451,7 @@ function AuthFlow() {
           await setSignInActive!({ session: sessionId });
           await queryClient.invalidateQueries();
           setLoading(false);
-          navigate('/');
+          navigate(postAuthDest);
         } else if (clerkStatus === 'missing_requirements') {
           // Clerk created the external account but needs a phone number to complete sign-up.
           // Collect it now then verify via SMS OTP.
@@ -1555,7 +1504,7 @@ function AuthFlow() {
       if (sid) {
         await setSignUpActive!({ session: sid });
         await queryClient.invalidateQueries();
-        navigate('/');
+        navigate(postAuthDest);
       } else {
         setError('Verification failed — please try again.');
       }
@@ -1719,6 +1668,7 @@ function AuthFlow() {
         loading={loading}
         error={error}
         isProviderMode={params.get('provider') === '1'}
+        fromBooking={params.get('context') === 'booking'}
       />
     );
   }
@@ -1816,7 +1766,7 @@ function AuthFlow() {
   }
 
   if (step === 'welcome') {
-    return <WelcomeScreen onContinue={() => navigate('/')} />;
+    return <WelcomeScreen onContinue={() => navigate(postAuthDest)} />;
   }
 
   if (step === 'applePhoneCollect') {
@@ -1829,21 +1779,20 @@ function AuthFlow() {
       return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
     };
     return (
-      <div className="flex flex-col min-h-screen bg-white px-6 pt-16 pb-10">
+      <AuthCard>
         <BackButton onBack={() => { setStep('landing'); setError(''); }} />
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mb-5">
-            <SiApple className="w-7 h-7 text-white" />
-          </div>
-          <p className="text-[22px] font-bold text-[#111] text-center leading-tight">One more step</p>
-          <p className="text-[13px] text-[#888] text-center mt-2">We need your mobile number to send booking confirmations and connect you with your detailer.</p>
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black mb-6">
+          <SiApple className="w-7 h-7 text-white" />
         </div>
-        <p className="text-[13px] font-medium text-[#111] mb-2">Mobile number</p>
-        <div className="flex h-[52px] items-center border border-[#d8d8d8] rounded-lg bg-white overflow-hidden mb-1">
-          <div className="flex h-full items-center gap-1.5 px-3 border-r border-[#d8d8d8] shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight text-black mb-2">One more step</h1>
+        <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+          We need your mobile number to send booking confirmations and connect you with your detailer.
+        </p>
+        <div className="flex h-12 items-center border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:border-[#8c52ff] focus-within:ring-2 focus-within:ring-[#8c52ff]/10 transition-all mb-1">
+          <div className="flex h-full items-center gap-1.5 px-3 border-r border-gray-200 shrink-0">
             <span className="text-[18px] leading-none">🇺🇸</span>
           </div>
-          <span className="pl-3 text-[14px] text-[#111] font-medium select-none">+1</span>
+          <span className="pl-3 text-[14px] text-gray-900 font-medium select-none">+1</span>
           <input
             value={formatDisplay(appleSignUpPhone)}
             onChange={(e) => setAppleSignUpPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -1853,7 +1802,7 @@ function AuthFlow() {
             inputMode="tel"
             autoComplete="tel"
             autoFocus
-            className="h-full flex-1 bg-transparent px-2 text-[14px] text-[#111] outline-none placeholder:text-[#b0b0b0]"
+            className="h-full flex-1 bg-transparent px-2 text-[14px] text-gray-900 outline-none placeholder:text-gray-400"
           />
         </div>
         {error && <ErrorBanner msg={error} />}
@@ -1862,9 +1811,9 @@ function AuthFlow() {
           disabled={!ready || loading}
           onClick={handleApplePhoneNext}
         >
-          {loading ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : 'Send verification code'}
+          {loading ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : 'Send verification code'}
         </button>
-      </div>
+      </AuthCard>
     );
   }
 

@@ -1,0 +1,191 @@
+Redesign the customer auth screen for desktop — frontend only
+
+The homepage redesign looks good. The next thing I want to fix is the authentication screen that appears after a customer starts booking.
+
+Current booking flow:
+
+Location → Vehicle → See prices → Authentication
+
+The current auth page was originally designed for the old mobile/iPhone web app, so on desktop it stretches across the entire browser and looks awkward.
+
+I want to redesign this experience for the new Dapr website.
+
+CRITICAL: Do not change the backend or auth architecture
+
+This is primarily a frontend/responsive UI change.
+
+Before making changes, inspect the existing implementation and preserve all existing authentication functionality, including:
+
+Clerk authentication
+phone authentication
+email authentication
+Sign in with Apple
+Sign in with Google
+existing user accounts
+existing session handling
+redirects/callbacks
+authorization/roles
+API endpoints
+database behavior
+native-app API contracts
+
+Do not create a new authentication system.
+
+Do not change Clerk configuration, API response shapes, database schemas, session behavior, or authentication backend logic.
+
+The Dapr backend is also consumed by separate native SwiftUI customer and provider apps, so existing backend/API behavior must remain backward-compatible.
+
+If this redesign appears to require a backend or API change, stop and explain why before making that change.
+
+Booking authentication experience
+
+When the customer reaches authentication from:
+
+Location → Vehicle → See prices
+
+do not make this feel like they were randomly sent to a generic login page.
+
+Instead, make authentication feel like another step in booking.
+
+Use:
+
+Almost there
+
+Create an account or log in to see services and pricing for your vehicle.
+
+Then display the authentication options below it.
+
+Most important requirement
+
+Do not make the customer re-enter information they already provided.
+
+Preserve:
+
+location/address
+selected vehicle
+year/make/model
+ASAP vs scheduled selection, if already chosen
+any other booking information already collected
+
+After successful login or signup, return the customer directly to the next appropriate step of the booking flow.
+
+Do not send them back to the homepage.
+
+Do not make them restart booking.
+
+First inspect how booking state is currently stored and preserve/reuse that mechanism rather than creating a new parallel system.
+
+Desktop design
+
+The desktop experience should feel consistent with the new Dapr homepage and native app.
+
+Do not stretch the form across the browser.
+
+Create a centered authentication area approximately 480–520px wide.
+
+Use:
+
+large amount of surrounding whitespace
+white/off-white background
+Dapr logo
+bold modern typography
+rounded inputs
+rounded buttons
+black primary CTA
+subtle gray secondary elements
+restrained Dapr purple accents
+clean spacing
+minimal borders
+polished Uber/Airbnb-like simplicity while maintaining Dapr branding
+
+The page should feel intentionally designed for desktop rather than like an enlarged phone screen.
+
+Authentication options
+
+Keep the existing functionality, but redesign its presentation.
+
+At the top:
+
+Phone | Email
+
+Then the relevant input.
+
+Primary button:
+
+Continue
+
+Then:
+
+or
+
+Secondary authentication options:
+
+Continue with Apple
+
+Continue with Google
+
+Keep the provider login link at the bottom, but update customer-facing terminology from:
+
+Detail Pro
+
+to:
+
+Dapr Pro
+
+For example:
+
+A Dapr Pro? Sign in as a Dapr Pro
+
+Only change display terminology. Do not change backend role names or permission identifiers merely to match the new wording.
+
+Responsive behavior
+Desktop
+
+Centered approximately 480–520px authentication panel/card.
+
+No full-browser-width fields.
+
+Tablet
+
+Centered authentication layout with comfortable margins.
+
+Mobile
+
+Allow the experience to become nearly full width with normal mobile padding and retain the visual feel of the Dapr native app.
+
+This should be one responsive frontend using the same underlying authentication system.
+
+Important UX behavior
+
+Authentication may also be accessed directly through Log in or Create account in the website navigation.
+
+For direct authentication, use appropriate generic headings such as:
+
+Welcome back
+
+or
+
+Create your Dapr account
+
+But when authentication originates from the booking flow, use the contextual:
+
+Almost there
+
+Create an account or log in to see services and pricing for your vehicle.
+
+The component can determine which version to display based on how the customer entered authentication.
+
+Before implementation
+
+First inspect the current implementation and tell me:
+
+What component/page renders this auth screen.
+What existing Clerk/authentication functions it uses.
+How booking information is currently preserved while the customer authenticates.
+How the system knows where to redirect them after authentication.
+Which frontend files you intend to change.
+Whether this entire redesign can be completed without modifying backend/API/auth contracts.
+
+Then implement it.
+
+Do not make unrelated changes while completing this task.

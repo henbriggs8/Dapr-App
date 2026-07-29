@@ -392,7 +392,7 @@ export default function BookingDialog({
           variant: "destructive",
           action: (
             <button 
-              onClick={() => window.location.href = "/auth"}
+              onClick={() => window.location.href = "/auth?context=booking"}
               className="text-sm underline"
             >
               Go to Login
@@ -419,7 +419,7 @@ export default function BookingDialog({
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/auth";
+        window.location.href = "/auth?context=booking";
       }, 2000);
       return;
     }
