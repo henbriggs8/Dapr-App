@@ -272,17 +272,25 @@ export default function CorporateDesktop() {
       </section>
 
       {/* ── Trusted by ────────────────────────────────────────────────── */}
-      <section className="py-10 border-y border-gray-100 bg-gray-50">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
-          <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-7">Trusted by fleets & operators at</p>
-          <div className="flex flex-wrap items-center justify-center gap-12 lg:gap-20 opacity-40">
-            {PARTNER_LOGOS.map((name) => (
-              <span key={name} className="text-lg font-bold tracking-tighter text-gray-700">{name}</span>
+      <section className="py-10 border-y border-gray-100 bg-gray-50 overflow-hidden">
+        <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-7">Trusted by fleets & operators at</p>
+        {/* Marquee track — items duplicated for seamless loop */}
+        <div className="relative">
+          {/* Fade edges */}
+          <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none" />
+          <div className="flex items-center opacity-40" style={{ animation: "marquee 28s linear infinite" }}>
+            {[0, 1].map((pass) => (
+              <div key={pass} className="flex items-center shrink-0" aria-hidden={pass === 1}>
+                {PARTNER_LOGOS.map((name) => (
+                  <span key={name} className="text-lg font-bold tracking-tighter text-gray-700 mx-10">{name}</span>
+                ))}
+                <img src="/adobe-logo.png" alt="Adobe" className="h-8 w-auto grayscale invert mx-10" />
+                <img src="/podium-logo.png" alt="Podium" className="h-8 w-auto grayscale mx-10" />
+                <img src="/herc-rentals-logo.png" alt="Herc Rentals" className="h-8 w-auto grayscale mx-10" />
+                <img src="/sunbelt-rentals-logo.png" alt="Sunbelt Rentals" className="h-8 w-auto grayscale invert mx-10" />
+              </div>
             ))}
-            <img src="/adobe-logo.png" alt="Adobe" className="h-8 w-auto grayscale invert" />
-            <img src="/podium-logo.png" alt="Podium" className="h-8 w-auto grayscale" />
-            <img src="/herc-rentals-logo.png" alt="Herc Rentals" className="h-8 w-auto grayscale" />
-            <img src="/sunbelt-rentals-logo.png" alt="Sunbelt Rentals" className="h-8 w-auto grayscale invert" />
           </div>
         </div>
       </section>
