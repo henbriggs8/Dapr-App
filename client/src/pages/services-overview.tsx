@@ -213,34 +213,48 @@ function DesktopServices() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const goBookWith = (slug?: string) => {
-    setLocation("/");
+  const goBookWith = (_slug?: string) => {
+    setLocation(user ? "/services" : "/auth?context=booking&redirect=%2Fservices");
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
       <SiteNav />
 
       {/* Hero */}
-      <section className="relative pt-40 pb-16 lg:pt-52 lg:pb-24 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8c52ff]/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="max-w-[1120px] mx-auto px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
+      <section className="pt-28 pb-16 lg:pt-36 lg:pb-20 bg-white">
+        <div className="max-w-[1120px] mx-auto px-8 text-center">
+          <span className="inline-flex items-center gap-2 text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-6">
             <Icon icon={Sparkles} size="sm" /> Our Services
-          </div>
-          <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6 max-w-4xl mx-auto">
+          </span>
+          <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-6 max-w-4xl mx-auto">
             Every detail of every detail.
           </h1>
-          <p className="text-lg lg:text-xl text-white/60 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg lg:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto mb-10">
             From a quick weekly hand wash to a full showroom restoration — every Dapr service is performed at your home, office, or curb by a vetted professional with their own water and power.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <button
+              onClick={() => goBookWith()}
+              className="bg-black text-white px-8 py-4 rounded-full text-base font-bold hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
+              data-testid="button-hero-cta"
+            >
+              Book a Wash <Icon icon={ArrowRight} size="sm" />
+            </button>
+            <a
+              href="#compare"
+              className="border border-gray-200 text-gray-700 px-8 py-4 rounded-full text-base font-bold hover:bg-gray-50 transition-colors"
+            >
+              Compare Services
+            </a>
+          </div>
         </div>
       </section>
 
-      {/* Sticky in-page anchor nav (sits below the fixed top nav) */}
+      {/* Sticky in-page anchor nav */}
       <div
-        className={`sticky z-40 border-b border-white/5 bg-[#050505]/85 backdrop-blur-md transition-all duration-300 ${
-          scrolled ? "top-[68px]" : "top-[88px]"
+        className={`sticky z-40 border-b border-gray-100 bg-white/90 backdrop-blur-md transition-all duration-300 ${
+          scrolled ? "top-[64px]" : "top-[80px]"
         }`}
         data-testid="services-anchor-nav"
       >
@@ -249,7 +263,7 @@ function DesktopServices() {
             <a
               key={t.slug}
               href={`#${t.slug}`}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
               data-testid={`anchor-${t.slug}`}
             >
               {t.name}
@@ -257,40 +271,40 @@ function DesktopServices() {
           ))}
           <a
             href="#compare"
-            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+            className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
             data-testid="anchor-compare"
           >
             Compare
           </a>
           <a
             href="#add-ons"
-            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+            className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
             data-testid="anchor-add-ons"
-            >
-              Add-ons
-            </a>
+          >
+            Add-ons
+          </a>
         </div>
       </div>
 
       {/* Why Dapr */}
-      <section className="py-16 border-t border-white/5">
+      <section className="py-16 border-t border-gray-100">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="text-center mb-12">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-3">Why Dapr</p>
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">Premium results, with care for what matters.</h2>
+            <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">Why Dapr</p>
+            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-black">Premium results, with care for what matters.</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
             {DIFFERENTIATORS.map((d) => (
               <div
                 key={d.title}
-                className="rounded-2xl border border-white/5 bg-[#0a0a0a] p-6 hover:border-white/10 transition-colors"
+                className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
                 data-testid={`diff-${d.title.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-4">
                   <Icon icon={d.icon} size="md" />
                 </div>
-                <h3 className="text-base font-bold mb-2 leading-tight">{d.title}</h3>
-                <p className="text-sm text-white/55 leading-relaxed">{d.body}</p>
+                <h3 className="text-base font-bold text-black mb-2 leading-tight">{d.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{d.body}</p>
               </div>
             ))}
           </div>
@@ -298,7 +312,7 @@ function DesktopServices() {
       </section>
 
       {/* Tier sections */}
-      <section className="py-16 border-t border-white/5">
+      <section className="py-16 border-t border-gray-100">
         <div className="max-w-[1120px] mx-auto px-8 space-y-20">
           {TIERS.map((tier, i) => (
             <TierBlock key={tier.slug} tier={tier} index={i} onBook={() => goBookWith(tier.slug)} />
@@ -307,25 +321,25 @@ function DesktopServices() {
       </section>
 
       {/* Compare */}
-      <section id="compare" className="py-20 border-t border-white/5 bg-[#070707]">
+      <section id="compare" className="py-20 border-t border-gray-100 bg-gray-50">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="text-center mb-12">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-3">Compare Services</p>
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-tight">All four tiers, side by side.</h2>
+            <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">Compare Services</p>
+            <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-black">All four tiers, side by side.</h2>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0a0a0a]">
+          <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-white/[0.02] border-b border-white/10">
-                    <th className="text-left font-semibold text-white/60 px-6 py-5 min-w-[260px]">Feature</th>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left font-semibold text-gray-500 px-6 py-5 min-w-[260px]">Feature</th>
                     {TIERS.map((t) => (
-                      <th key={t.slug} className="text-center font-semibold text-white px-4 py-5 min-w-[140px]">
+                      <th key={t.slug} className="text-center font-semibold text-black px-4 py-5 min-w-[140px]">
                         <div className="flex flex-col items-center gap-1">
                           <Icon icon={t.icon} size="sm" className="text-[#8c52ff]" />
                           <span className="text-[13px] leading-tight">{t.name}</span>
-                          <span className="text-[11px] text-white/40 font-normal">${t.price}</span>
+                          <span className="text-[11px] text-gray-400 font-normal">${t.price}</span>
                         </div>
                       </th>
                     ))}
@@ -333,14 +347,14 @@ function DesktopServices() {
                 </thead>
                 <tbody>
                   {COMPARE.map((row) => (
-                    <tr key={row.feature} className="border-b border-white/5 last:border-0">
-                      <td className="px-6 py-4 text-white/80">{row.feature}</td>
+                    <tr key={row.feature} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 text-gray-700">{row.feature}</td>
                       {row.values.map((v, idx) => (
                         <td key={idx} className="px-4 py-4 text-center">
                           {v ? (
                             <Icon icon={Check} size="sm" className="text-[#8c52ff] mx-auto" />
                           ) : (
-                            <span className="text-white/20">—</span>
+                            <span className="text-gray-300">—</span>
                           )}
                         </td>
                       ))}
@@ -351,19 +365,19 @@ function DesktopServices() {
             </div>
           </div>
 
-          <p className="text-center text-xs text-white/40 mt-6 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed max-w-2xl mx-auto">
             Final results vary based on vehicle size and condition. Heavy soiling, pet hair, or unusual conditions may require an upgrade or add-on.
           </p>
         </div>
       </section>
 
       {/* Add-ons */}
-      <section id="add-ons" className="py-20 border-t border-white/5">
+      <section id="add-ons" className="py-20 border-t border-gray-100">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="text-center mb-12">
-            <p className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider mb-3">Add-Ons</p>
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-4">Tailor any service to your car.</h2>
-            <p className="text-white/60 max-w-2xl mx-auto">
+            <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">Add-Ons</p>
+            <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-black mb-4">Tailor any service to your car.</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
               Add any of these to a base package at checkout. Extra time will be reserved automatically.
             </p>
           </div>
@@ -371,7 +385,7 @@ function DesktopServices() {
             {ADD_ONS.map((a) => (
               <div
                 key={a.name}
-                className="rounded-2xl border border-white/5 bg-[#0a0a0a] p-6 hover:border-white/10 transition-colors"
+                className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
                 data-testid={`addon-${a.name.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -379,11 +393,11 @@ function DesktopServices() {
                     <div className="w-9 h-9 rounded-lg bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center shrink-0">
                       <Icon icon={Plus} size="sm" />
                     </div>
-                    <h3 className="text-base font-bold leading-tight">{a.name}</h3>
+                    <h3 className="text-base font-bold text-black leading-tight">{a.name}</h3>
                   </div>
                   <p className="text-base font-bold text-[#8c52ff] shrink-0">${a.price}</p>
                 </div>
-                <p className="text-sm text-white/55 leading-relaxed pl-12">{a.description}</p>
+                <p className="text-sm text-gray-500 leading-relaxed pl-12">{a.description}</p>
               </div>
             ))}
           </div>
@@ -391,16 +405,15 @@ function DesktopServices() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-32 relative border-t border-white/5">
-        <div className="absolute inset-0 bg-[#8c52ff]/5" />
-        <div className="max-w-[1100px] mx-auto px-8 relative z-10 text-center">
-          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapr clean?</h2>
-          <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12">
+      <section className="py-28 border-t border-gray-100 bg-gray-50">
+        <div className="max-w-[1100px] mx-auto px-8 text-center">
+          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight text-black mb-6">Ready for a Dapr clean?</h2>
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10">
             Pick your service and we'll come to you. Most bookings start in under 60 minutes.
           </p>
           <button
             onClick={() => goBookWith()}
-            className="bg-white text-black px-10 py-5 rounded-full text-lg font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)] inline-flex items-center gap-3"
+            className="bg-black text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-gray-900 active:scale-[0.98] transition-all inline-flex items-center gap-3"
             data-testid="button-final-cta"
           >
             Book a Wash <Icon icon={ArrowRight} size="md" />
@@ -409,15 +422,15 @@ function DesktopServices() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-white/5 bg-[#020202]">
+      <footer className="py-12 border-t border-gray-100 bg-white">
         <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
-          <div className="flex gap-6 text-sm text-white/40">
-            <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq-footer">FAQ</button>
-            <button onClick={() => setLocation("/corporate")} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
-            <button onClick={() => setLocation("/how-it-works")} className="hover:text-white transition-colors" data-testid="link-how-footer">How it Works</button>
+          <img src={dapprLogo} alt="Dapr" className="h-10 w-auto" />
+          <div className="flex gap-6 text-sm text-gray-400">
+            <button onClick={() => setLocation("/faq")} className="hover:text-black transition-colors" data-testid="link-faq-footer">FAQ</button>
+            <button onClick={() => setLocation("/corporate")} className="hover:text-black transition-colors" data-testid="link-corporate-footer">For Fleets</button>
+            <button onClick={() => setLocation("/how-it-works")} className="hover:text-black transition-colors" data-testid="link-how-footer">How it Works</button>
           </div>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
+          <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
         </div>
       </footer>
     </div>
@@ -433,26 +446,26 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
         {/* Header / pitch column */}
         <div className="lg:[direction:ltr]">
           <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center">
               <Icon icon={TierIcon} size="lg" />
             </div>
-            <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider">
+            <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest">
               Tier {String(index + 1).padStart(2, "0")}
             </span>
           </div>
-          <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05] mb-4">{tier.name}</h2>
+          <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05] text-black mb-4">{tier.name}</h2>
           <div className="flex items-baseline gap-3 mb-6">
-            <p className="text-3xl font-bold text-white">${tier.price}</p>
-            <p className="text-sm text-white/40 font-medium">starting price</p>
-            <span className="w-1 h-1 rounded-full bg-white/20" />
-            <p className="text-sm text-white/60 font-medium flex items-center gap-1.5">
+            <p className="text-3xl font-bold text-black">${tier.price}</p>
+            <p className="text-sm text-gray-400 font-medium">starting price</p>
+            <span className="w-1 h-1 rounded-full bg-gray-300" />
+            <p className="text-sm text-gray-500 font-medium flex items-center gap-1.5">
               <Icon icon={Clock} size="xs" /> {tier.duration}
             </p>
           </div>
-          <p className="text-lg text-white/70 leading-relaxed mb-8 max-w-lg">{tier.tagline}</p>
+          <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">{tier.tagline}</p>
           <button
             onClick={onBook}
-            className="bg-[#8c52ff] text-white px-7 py-3.5 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 shadow-[0_0_30px_-10px_#8c52ff]"
+            className="bg-black text-white px-7 py-3.5 rounded-full text-sm font-bold hover:bg-gray-900 transition-all active:scale-[0.98] inline-flex items-center gap-2"
             data-testid={`button-book-${tier.slug}`}
           >
             Book {tier.name} <Icon icon={ArrowRight} size="sm" />
@@ -460,11 +473,11 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
         </div>
 
         {/* Lists column */}
-        <div className="lg:[direction:ltr] rounded-3xl border border-white/10 bg-[#0a0a0a] p-8 space-y-6">
+        <div className="lg:[direction:ltr] rounded-3xl border border-gray-100 bg-white p-8 shadow-sm space-y-6">
           <DetailList title="What's included" items={tier.included} />
-          <div className="h-px bg-white/5" />
+          <div className="h-px bg-gray-100" />
           <DetailList title="Best for" items={tier.bestFor} muted />
-          <div className="h-px bg-white/5" />
+          <div className="h-px bg-gray-100" />
           <DetailList title="Good to know" items={tier.goodToKnow} muted />
         </div>
       </div>
@@ -475,10 +488,10 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
 function DetailList({ title, items, muted }: { title: string; items: string[]; muted?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-3">{title}</p>
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">{title}</p>
       <ul className="space-y-2">
         {items.map((item, i) => (
-          <li key={i} className={`flex items-start gap-2.5 leading-snug ${muted ? "text-sm text-white/60" : "text-sm text-white/85"}`}>
+          <li key={i} className={`flex items-start gap-2.5 leading-snug ${muted ? "text-sm text-gray-500" : "text-sm text-gray-700"}`}>
             <Icon icon={Check} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
             <span>{item}</span>
           </li>
