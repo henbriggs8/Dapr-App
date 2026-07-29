@@ -395,18 +395,15 @@ export default function HomeDesktop() {
               <BookingWidget />
             </div>
 
-            {/* Right — image placeholder */}
-            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[620px] bg-gray-100 shadow-xl">
-              {/* Placeholder — swap src for final Dapr photography */}
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-50 flex items-center justify-center">
-                <div className="text-center px-8">
-                  <div className="w-20 h-20 rounded-full bg-[#8c52ff]/10 flex items-center justify-center mx-auto mb-4">
-                    <Icon icon={Car} size="xl" className="text-[#8c52ff]" />
-                  </div>
-                  <p className="text-sm text-gray-400 font-medium">Dapr photography coming soon</p>
-                  <p className="text-xs text-gray-300 mt-1">A Dapr Pro arriving at your door</p>
-                </div>
-              </div>
+            {/* Right — hero photo */}
+            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[620px] bg-gray-900 shadow-xl">
+              <img
+                src="/hero-exterior-wash.jpg"
+                alt="Dapr Pro washing a black Mercedes G-Wagon"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              {/* Dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
               {/* Floating "arriving" card */}
               <div className="absolute top-6 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
