@@ -279,10 +279,10 @@ export default function CorporateDesktop() {
             {PARTNER_LOGOS.map((name) => (
               <span key={name} className="text-lg font-bold tracking-tighter text-gray-700">{name}</span>
             ))}
-            <img src="/adobe-logo.png" alt="Adobe" className="h-6 w-auto invert" />
-            <img src="/podium-logo.png" alt="Podium" className="h-5 w-auto" />
-            <img src="/herc-rentals-logo.png" alt="Herc Rentals" className="h-7 w-auto" />
-            <img src="/sunbelt-rentals-logo.png" alt="Sunbelt Rentals" className="h-6 w-auto invert" />
+            <img src="/adobe-logo.png" alt="Adobe" className="h-8 w-auto grayscale invert" />
+            <img src="/podium-logo.png" alt="Podium" className="h-8 w-auto grayscale" />
+            <img src="/herc-rentals-logo.png" alt="Herc Rentals" className="h-8 w-auto grayscale" />
+            <img src="/sunbelt-rentals-logo.png" alt="Sunbelt Rentals" className="h-8 w-auto grayscale invert" />
           </div>
         </div>
       </section>
