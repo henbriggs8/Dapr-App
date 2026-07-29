@@ -163,7 +163,7 @@ function LandingScreen({
     <AuthCard>
       {/* Logo */}
       <div className="mb-8">
-        <img src="/dapr-logo.svg" alt="Dapr" className="h-14 w-auto" />
+        <img src="/dapr-logo.svg" alt="Dapr" className="h-16 w-auto" />
       </div>
 
       {/* Context-aware heading */}
