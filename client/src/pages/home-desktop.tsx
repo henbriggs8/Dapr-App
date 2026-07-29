@@ -110,7 +110,7 @@ function NavBar() {
           {/* Left — logo + links */}
           <div className="flex items-center gap-8">
             <button onClick={() => nav("/")} aria-label="Dapr home">
-              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto" />
+              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto brightness-0" />
             </button>
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-600">
               <button onClick={() => nav("/corporate")} className="hover:text-black transition-colors" data-testid="nav-fleets">
@@ -830,7 +830,7 @@ export default function HomeDesktop() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-3 lg:col-span-2">
-              <img src={dapprLogo} alt="Dapr" className="h-16 w-auto mb-4" />
+              <img src={dapprLogo} alt="Dapr" className="h-16 w-auto brightness-0" />
               <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
                 Professional mobile car care, delivered to your door. Vetted Pros. On-demand or scheduled.
               </p>

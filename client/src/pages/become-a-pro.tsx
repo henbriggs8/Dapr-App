@@ -54,7 +54,7 @@ function NavBar() {
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <button onClick={() => nav("/")} aria-label="Dapr home">
-              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto" />
+              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto brightness-0" />
             </button>
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-600">
               <button onClick={() => nav("/corporate")} className="hover:text-black transition-colors">Fleets</button>
@@ -327,7 +327,7 @@ export default function BecomeAPro() {
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <img src={dapprLogo} alt="Dapr" className="h-16 w-auto mb-4" />
+              <img src={dapprLogo} alt="Dapr" className="h-16 w-auto brightness-0" />
               <p className="text-gray-400 text-sm leading-relaxed">Professional mobile car care, delivered to your door.</p>
             </div>
             <div>
