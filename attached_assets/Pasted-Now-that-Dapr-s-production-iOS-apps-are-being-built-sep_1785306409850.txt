@@ -1,0 +1,122 @@
+Now that Dapr's production iOS apps are being built separately as native SwiftUI apps in Xcode/Codex, we are no longer using the mobile website as the UI for a Capacitor iOS app.
+
+Because of that, I want to remove the old architectural/design requirement that the iPhone/mobile web view be substantially different from the desktop website.
+
+New direction
+
+Dapr should now have one responsive public website.
+
+Desktop, tablet, and mobile should use:
+
+the same Dapr design system
+the same content
+the same homepage structure
+the same booking journey
+the same navigation destinations
+the same authentication system
+the same underlying website components where practical
+
+The mobile version should be a thoughtfully responsive version of the new desktop website, not the old mobile-app-style Capacitor interface.
+
+Do not simply shrink the desktop layout. Adapt it appropriately for mobile.
+
+IMPORTANT ARCHITECTURE GUARDRAILS
+
+The native Dapr customer and provider apps now exist separately as SwiftUI apps and consume this Replit project's backend APIs.
+
+Therefore:
+
+You may redesign/refactor the React website's mobile frontend.
+
+But do NOT:
+
+change existing /api/* contracts
+change API request/response shapes
+change authentication backend behavior
+change Clerk backend configuration
+change Stripe/payment verification behavior
+change database schemas merely for this redesign
+remove endpoints used by the native Swift apps
+change backend role/permission behavior
+
+This task should be a web frontend/responsive-layout refactor.
+
+If removing old Capacitor-specific frontend code appears to affect backend functionality or shared API code, stop and explain it before changing it.
+
+First inspect the current mobile architecture
+
+Before changing anything, identify:
+
+How the project currently decides between the desktop and old mobile layouts.
+Which components are specifically remnants of the previous Capacitor implementation.
+Whether there are separate mobile routes/components versus responsive breakpoints.
+Whether any of those components contain backend/auth/booking logic that should be preserved.
+What can safely be removed or consolidated now that Capacitor is no longer the production iOS frontend.
+
+Do not blindly delete old mobile components.
+
+Separate presentation code from any useful business logic first.
+
+Desired mobile homepage
+
+Make the iPhone/mobile website visually consistent with the new desktop Dapr homepage.
+
+Preserve the same primary hierarchy:
+
+Dapr navigation
+
+Your car, cared for.
+
+Supporting Dapr messaging
+
+Booking widget
+
+Location
+Vehicle
+ASAP / Schedule where applicable
+See services & prices
+
+Hero imagery
+
+Explore Dapr
+
+How Dapr works
+
+Services
+
+Fleets
+
+Become a Dapr Pro
+
+Footer
+
+On mobile:
+
+stack content vertically
+use approximately 16–20px side padding
+use large touch targets
+keep buttons easy to tap
+use appropriately sized typography
+use rounded Dapr cards
+avoid horizontal scrolling
+use mobile menus/dropdowns rather than desktop navigation
+keep the booking experience prominent near the top
+
+The result should feel like the Dapr website viewed beautifully on an iPhone, not like a separate app.
+
+Native app separation
+
+Do not try to make this React mobile site become the native Dapr app again.
+
+The native app is now maintained separately in SwiftUI/Codex.
+
+The website and native app should share branding and UX philosophy, but they are separate frontend implementations.
+
+Before implementation, show me:
+
+which old mobile/Capacitor-specific frontend architecture exists
+what you recommend consolidating
+which files you plan to modify/remove
+confirmation that none of the proposed changes affect the backend APIs consumed by the native apps
+
+Then implement the responsive website refactor.
