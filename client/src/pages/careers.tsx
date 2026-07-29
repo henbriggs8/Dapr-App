@@ -154,14 +154,14 @@ function RoleCard({ role, onApply }: { role: Role; onApply: () => void }) {
 
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <MapPin className="w-3.5 h-3.5" />
+          <Icon icon={MapPin} size="sm" />
           <span>{role.location}</span>
         </div>
         <button
           onClick={onApply}
           className="flex items-center gap-1.5 text-sm font-semibold text-[#8c52ff] hover:gap-2.5 transition-all"
         >
-          Apply <ArrowRight className="w-4 h-4" />
+          Apply <Icon icon={ArrowRight} size="sm" />
         </button>
       </div>
     </div>
@@ -326,7 +326,7 @@ export default function CareersPage() {
               onClick={handleApply}
               className="shrink-0 flex items-center gap-2 bg-black text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#8c52ff] transition-colors"
             >
-              Send a general application <ArrowRight className="w-4 h-4" />
+              Send a general application <Icon icon={ArrowRight} size="sm" />
             </button>
           </div>
         </div>
@@ -362,7 +362,7 @@ export default function CareersPage() {
             onClick={handleApply}
             className="inline-flex items-center gap-2 bg-[#8c52ff] text-white font-bold text-base px-8 py-4 rounded-full shadow-lg hover:bg-[#7a3fff] transition-colors"
           >
-            Get in touch <ArrowRight className="w-5 h-5" />
+            Get in touch <Icon icon={ArrowRight} size="sm" />
           </button>
         </div>
       </section>
