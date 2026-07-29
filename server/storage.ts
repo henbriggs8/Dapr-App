@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, providerApplications, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress, ProviderApplication, InsertProviderApplication } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, gt, lt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -3031,6 +3031,67 @@ export class DatabaseStorage implements IStorage {
       }).where(eq(users.id, referral.referrerId));
       return true;
     });
+  }
+
+  // ── Provider Applications ─────────────────────────────────────────────────
+
+  async createProviderApplication(data: Omit<InsertProviderApplication, 'createdAt' | 'updatedAt'>): Promise<ProviderApplication> {
+    const now = new Date().toISOString();
+    const [app] = await db.insert(providerApplications).values({
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    }).returning();
+    return app;
+  }
+
+  async getProviderApplicationById(id: number): Promise<ProviderApplication | undefined> {
+    const [app] = await db.select().from(providerApplications).where(eq(providerApplications.id, id));
+    return app;
+  }
+
+  async getProviderApplicationByUserId(userId: number): Promise<ProviderApplication | undefined> {
+    const [app] = await db.select().from(providerApplications)
+      .where(eq(providerApplications.userId, userId))
+      .orderBy(desc(providerApplications.createdAt))
+      .limit(1);
+    return app;
+  }
+
+  async getProviderApplicationByNormalizedEmail(normalizedEmail: string): Promise<ProviderApplication | undefined> {
+    const [app] = await db.select().from(providerApplications)
+      .where(eq(providerApplications.normalizedEmail, normalizedEmail))
+      .orderBy(desc(providerApplications.createdAt))
+      .limit(1);
+    return app;
+  }
+
+  async getProviderApplicationByNormalizedPhone(normalizedPhone: string): Promise<ProviderApplication | undefined> {
+    const [app] = await db.select().from(providerApplications)
+      .where(eq(providerApplications.normalizedPhoneNumber, normalizedPhone))
+      .orderBy(desc(providerApplications.createdAt))
+      .limit(1);
+    return app;
+  }
+
+  async updateProviderApplication(id: number, data: Partial<InsertProviderApplication>): Promise<ProviderApplication> {
+    const now = new Date().toISOString();
+    const [app] = await db.update(providerApplications)
+      .set({ ...data, updatedAt: now })
+      .where(eq(providerApplications.id, id))
+      .returning();
+    if (!app) throw new Error("Provider application not found");
+    return app;
+  }
+
+  async getAllProviderApplications(filters?: { status?: string }): Promise<ProviderApplication[]> {
+    if (filters?.status) {
+      return db.select().from(providerApplications)
+        .where(eq(providerApplications.applicationStatus, filters.status))
+        .orderBy(desc(providerApplications.createdAt));
+    }
+    return db.select().from(providerApplications)
+      .orderBy(desc(providerApplications.createdAt));
   }
 }
 

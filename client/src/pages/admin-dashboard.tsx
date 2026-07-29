@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Booking, PricingConfig, ContactMessage } from "@shared/schema";
+import { User, Booking, PricingConfig, ContactMessage, ProviderApplication } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,10 @@ import {
   MessageSquare,
   Phone,
   Mail,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +106,8 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [supportFilter, setSupportFilter] = useState<"open" | "all" | "resolved">("open");
+  const [appStatusFilter, setAppStatusFilter] = useState("all");
+  const [expandedAppId, setExpandedAppId] = useState<number | null>(null);
 
   // Role-based access check
   if (!user?.isAdmin) {
@@ -163,6 +168,30 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/analytics");
       return await res.json();
+    },
+  });
+
+  // Fetch provider applications
+  const { data: providerApplications = [], isLoading: appsLoading } = useQuery<ProviderApplication[]>({
+    queryKey: ["/api/admin/provider-applications"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/provider-applications");
+      return res.json();
+    },
+  });
+
+  const updateApplicationStatusMutation = useMutation({
+    mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/provider-applications/${id}/status`, { status, internalReviewNotes: notes });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || "Failed to update status"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/provider-applications"] });
+      toast({ title: "Application status updated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -275,6 +304,149 @@ export default function AdminDashboard() {
     queryKey: ["/api/pricing"],
   });
   const [pricingForm, setPricingForm] = useState({ basic: "", interior: "", standard: "", premium: "" });
+
+  // Computed: filtered applications
+  const filteredApps = appStatusFilter === "all"
+    ? providerApplications
+    : providerApplications.filter(a => a.applicationStatus === appStatusFilter);
+
+  const ALLOWED_ADMIN_TRANSITIONS: Record<string, string[]> = {
+    submitted:              ["under_review"],
+    under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+    verification_requested: ["verification_submitted"],
+    verification_submitted: ["approved_needs_setup", "rejected"],
+  };
+
+  const APP_STATUS_LABELS: Record<string, string> = {
+    draft: "Draft", submitted: "Submitted", under_review: "Under Review",
+    verification_requested: "Verification Requested", verification_submitted: "Verification Submitted",
+    approved_needs_setup: "Approved", rejected: "Rejected",
+    active_provider: "Active Provider", withdrawn: "Withdrawn",
+  };
+
+  const APP_STATUS_COLORS: Record<string, string> = {
+    draft: "bg-gray-100 text-gray-500",
+    submitted: "bg-blue-100 text-blue-700",
+    under_review: "bg-amber-100 text-amber-700",
+    verification_requested: "bg-orange-100 text-orange-700",
+    verification_submitted: "bg-yellow-100 text-yellow-700",
+    approved_needs_setup: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+    active_provider: "bg-[#f3eeff] text-[#8c52ff]",
+    withdrawn: "bg-gray-100 text-gray-400",
+  };
+
+  interface ApplicationRowProps {
+    app: ProviderApplication;
+    onStatusChange: (status: string, notes?: string) => void;
+    isUpdating: boolean;
+  }
+  function ApplicationRow({ app, onStatusChange, isUpdating }: ApplicationRowProps) {
+    const [reviewNotes, setReviewNotes] = useState(app.internalReviewNotes || "");
+    const isExpanded = expandedAppId === app.id;
+    const allowed = ALLOWED_ADMIN_TRANSITIONS[app.applicationStatus] ?? [];
+    const expLabels: Record<string, string> = {
+      newToDetailing: "New to detailing", someExperience: "Some experience",
+      experienced: "Experienced", professional: "Professional",
+    };
+    return (
+      <div className={`border rounded-xl overflow-hidden transition-all ${isExpanded ? "border-[#8c52ff]/40 shadow-sm" : "border-gray-100"}`}>
+        {/* Row header */}
+        <button
+          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors text-left"
+          onClick={() => setExpandedAppId(isExpanded ? null : app.id)}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-[#8c52ff]/10 flex items-center justify-center shrink-0 text-[#8c52ff] text-xs font-bold">
+              {(app.fullName || "?").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">{app.fullName || "—"}</p>
+              <p className="text-xs text-gray-400 truncate">{app.email} · {app.city}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0 ml-3">
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${APP_STATUS_COLORS[app.applicationStatus] || "bg-gray-100 text-gray-500"}`}>
+              {APP_STATUS_LABELS[app.applicationStatus] || app.applicationStatus}
+            </span>
+            <span className="text-xs text-gray-400 hidden sm:inline">
+              {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Draft"}
+            </span>
+            <Icon icon={isExpanded ? ChevronUp : ChevronDown} size="sm" className="text-gray-400" />
+          </div>
+        </button>
+
+        {/* Expanded detail */}
+        {isExpanded && (
+          <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/60 space-y-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+              {[
+                { label: "Phone", value: app.phoneNumber },
+                { label: "ZIP", value: app.zipCode },
+                { label: "Experience", value: expLabels[app.experienceLevel || ""] || app.experienceLevel },
+                { label: "Years detailing", value: app.yearsDetailing?.toString() },
+                { label: "Vehicle", value: app.vehicleType ? `${app.vehicleType} — ${app.vehicleDescription}` : null },
+                { label: "Travel radius", value: app.maxTravelRadius ? `${app.maxTravelRadius} mi` : null },
+                { label: "Availability", value: [app.availableWeekdays && "Weekdays", app.availableWeekends && "Weekends"].filter(Boolean).join(", ") || null },
+                { label: "App #", value: `#${app.id}` },
+              ].filter(r => r.value).map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">{label}</p>
+                  <p className="text-sm text-gray-800">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {app.notes && (
+              <div>
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Notes</p>
+                <p className="text-sm text-gray-700 bg-white rounded-lg px-3 py-2 border border-gray-100">{app.notes}</p>
+              </div>
+            )}
+
+            {/* Internal review notes */}
+            <div>
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wide block mb-1">Internal notes (admin only)</label>
+              <textarea
+                value={reviewNotes}
+                onChange={e => setReviewNotes(e.target.value)}
+                placeholder="Add internal review notes…"
+                rows={2}
+                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white resize-none focus:outline-none focus:ring-1 focus:ring-[#8c52ff]"
+              />
+            </div>
+
+            {/* Status transition buttons */}
+            {allowed.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {allowed.map(targetStatus => {
+                  const isApprove = targetStatus === "approved_needs_setup";
+                  const isReject = targetStatus === "rejected";
+                  return (
+                    <button
+                      key={targetStatus}
+                      disabled={isUpdating}
+                      onClick={() => onStatusChange(targetStatus, reviewNotes)}
+                      className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-60 ${
+                        isApprove ? "bg-green-600 text-white hover:bg-green-700" :
+                        isReject ? "bg-red-600 text-white hover:bg-red-700" :
+                        "bg-[#8c52ff] text-white hover:bg-[#7a3fff]"
+                      }`}
+                    >
+                      → {APP_STATUS_LABELS[targetStatus] || targetStatus}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {allowed.length === 0 && (
+              <p className="text-xs text-gray-400 italic">No transitions available from this status.</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
   useEffect(() => {
     if (pricingData) {
       setPricingForm({
@@ -541,10 +713,19 @@ export default function AdminDashboard() {
         {/* Main Content */}
         <Tabs defaultValue="dispatch" className="space-y-4">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-7 h-auto">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-8 h-auto">
               <TabsTrigger value="dispatch" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
                 <Icon icon={Radio} size="sm" />
                 Dispatch
+              </TabsTrigger>
+              <TabsTrigger value="applications" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
+                <Icon icon={FileText} size="sm" />
+                Applications
+                {providerApplications.filter(a => a.applicationStatus === "submitted").length > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
+                    {providerApplications.filter(a => a.applicationStatus === "submitted").length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
                 <Icon icon={Users} size="sm" />
@@ -853,6 +1034,68 @@ export default function AdminDashboard() {
                 </>
               );
             })()}
+          </TabsContent>
+
+          {/* Applications Tab */}
+          <TabsContent value="applications" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Pro Applications</CardTitle>
+                    <CardDescription>Review and manage Dapr Pro applicants</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {(["all", "submitted", "under_review", "verification_requested", "approved_needs_setup", "rejected"] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setAppStatusFilter(s)}
+                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                          appStatusFilter === s
+                            ? "bg-[#8c52ff] text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {s === "all" ? "All" :
+                         s === "submitted" ? "New" :
+                         s === "under_review" ? "In Review" :
+                         s === "verification_requested" ? "Needs Verification" :
+                         s === "approved_needs_setup" ? "Approved" :
+                         "Rejected"}
+                        {s !== "all" && (
+                          <span className="ml-1.5 opacity-70">
+                            ({providerApplications.filter(a => a.applicationStatus === s).length})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {appsLoading ? (
+                  <div className="text-center py-12 text-gray-400">Loading applications…</div>
+                ) : filteredApps.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <Icon icon={FileText} size="lg" className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No applications{appStatusFilter !== "all" ? ` with status "${appStatusFilter}"` : ""}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredApps.map(app => (
+                      <ApplicationRow
+                        key={app.id}
+                        app={app}
+                        onStatusChange={(status, notes) =>
+                          updateApplicationStatusMutation.mutate({ id: app.id, status, notes })
+                        }
+                        isUpdating={updateApplicationStatusMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Users Tab */}

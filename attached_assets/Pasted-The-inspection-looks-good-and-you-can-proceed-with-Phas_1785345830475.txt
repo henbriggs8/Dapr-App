@@ -1,0 +1,81 @@
+The inspection looks good and you can proceed with Phase 1, with the following architecture corrections before implementation.
+
+1. Do not set users.isProvider = true at approved_needs_setup
+
+users.isProvider currently grants access to existing provider functionality such as /api/provider/me, so treat it as the indicator that someone is actually an active Dapr provider.
+
+Desired lifecycle:
+
+approved_needs_setup
+→ applicant is approved and may finish native Dapr Pro setup
+
+active_provider
+→ provider setup is complete and users.isProvider may then become true
+
+The native SwiftUI app should use GET /api/provider-applications/me to allow an approved applicant through pre-activation onboarding without requiring isProvider=true.
+
+Do not loosen authorization on existing provider job/earnings APIs merely to support onboarding.
+
+2. Keep the native status experience native
+
+provider-apply-status.tsx should be the website's applicant status/confirmation page.
+
+Do not design the native SwiftUI provider app to deep-link into this web page as its normal status experience.
+
+The native app should consume GET /api/provider-applications/me and render its own native screens based on:
+
+application status
+verification requirement
+setup eligibility
+active-provider state
+
+The website and SwiftUI app share backend data, not frontend screens.
+
+3. Enforce status transitions server-side
+
+Do not allow the admin status endpoint to change an application to any arbitrary status.
+
+Implement an explicit allowed-transition map.
+
+For Phase 1:
+
+draft → submitted
+
+submitted → under_review
+
+under_review → verification_requested
+
+under_review → approved_needs_setup
+
+under_review → rejected
+
+Later:
+
+verification_requested → verification_submitted
+
+verification_submitted → approved_needs_setup
+
+verification_submitted → rejected
+
+approved_needs_setup → active_provider
+
+Withdrawal should only apply to applications that have not already become an active provider. Active-provider deactivation should remain part of the existing provider/account system.
+
+Record the appropriate review timestamps/admin identity when admin transitions occur.
+
+Additional small change
+
+Do not hardcode the admin notification recipient into application logic if avoidable. Use the project's existing configuration/environment pattern for the provider application notification email.
+
+Other than those corrections, proceed with the implementation order you proposed:
+
+Schema + migration
+Storage methods
+API endpoints + emails
+Responsive multi-step web application
+Admin Applications tab
+Become a Pro / navigation CTAs
+
+Keep all existing customer, payment, booking, and provider-job API behavior untouched.
+
+At completion, give me the exact API contract for GET /api/provider-applications/me and the provider-application status model so I can pass those directly to Codex for the native SwiftUI Dapr Pro app.

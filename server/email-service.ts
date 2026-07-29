@@ -288,6 +288,135 @@ This is an automated message — please do not reply to this email.
   }
 }
 
+// ── Provider application emails ───────────────────────────────────────────────
+
+export interface ProviderApplicationEmailParams {
+  applicantName: string;
+  applicantEmail: string;
+  city: string;
+  experienceLevel: string;
+  applicationId: number;
+}
+
+/**
+ * Notify the Dapr admin team that a new provider application was submitted.
+ * Recipient is configured via PROVIDER_APPLICATION_NOTIFY_EMAIL env var,
+ * falling back to the shared NOTIFY_EMAIL constant.
+ */
+export async function sendProviderApplicationAdminNotification(
+  params: ProviderApplicationEmailParams
+): Promise<void> {
+  const client = getResendClient();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY not set — skipping provider application admin notification.");
+    return;
+  }
+
+  const notifyEmail = process.env.PROVIDER_APPLICATION_NOTIFY_EMAIL || NOTIFY_EMAIL;
+
+  const experienceLabels: Record<string, string> = {
+    newToDetailing: "New to detailing",
+    someExperience: "Some experience",
+    experienced: "Experienced",
+    professional: "Professional detailer",
+  };
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family:sans-serif;background:#f4f4f5;margin:0;padding:24px;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background:#8c52ff;padding:20px 28px;">
+      <h2 style="margin:0;color:#fff;font-size:20px;">New Pro Application #${params.applicationId}</h2>
+    </div>
+    <div style="padding:28px;">
+      <table style="width:100%;border-collapse:collapse;font-size:15px;">
+        <tr><td style="padding:8px 0;color:#6b7280;width:160px;vertical-align:top;">Name</td><td style="padding:8px 0;font-weight:600;">${escapeHtml(params.applicantName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Email</td><td style="padding:8px 0;"><a href="mailto:${escapeHtml(params.applicantEmail)}" style="color:#8c52ff;">${escapeHtml(params.applicantEmail)}</a></td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">City</td><td style="padding:8px 0;">${escapeHtml(params.city)}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Experience</td><td style="padding:8px 0;">${escapeHtml(experienceLabels[params.experienceLevel] || params.experienceLevel)}</td></tr>
+      </table>
+      <div style="margin-top:20px;">
+        <a href="https://autodapr.com/admin" style="display:inline-block;background:#8c52ff;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Review in Admin</a>
+      </div>
+    </div>
+    <div style="padding:14px 28px;background:#f9fafb;font-size:12px;color:#9ca3af;text-align:center;">
+      Sent automatically by Dapr — do not reply.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const { error } = await client.emails.send({
+    from: FROM_EMAIL,
+    to: [notifyEmail],
+    subject: `New Pro Application #${params.applicationId} — ${params.applicantName}`,
+    html,
+  });
+
+  if (error) {
+    console.error(`[email] Failed to send provider application admin notification #${params.applicationId}:`, error);
+  } else {
+    console.log(`[email] Provider application admin notification sent for #${params.applicationId}`);
+  }
+}
+
+/**
+ * Confirm receipt of a provider application to the applicant.
+ */
+export async function sendProviderApplicationConfirmation(
+  params: ProviderApplicationEmailParams
+): Promise<void> {
+  const client = getResendClient();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY not set — skipping provider application confirmation email.");
+    return;
+  }
+
+  const firstName = params.applicantName.split(" ")[0];
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family:sans-serif;background:#f4f4f5;margin:0;padding:24px;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background:#8c52ff;padding:28px;">
+      <h2 style="margin:0;color:#fff;font-size:22px;">Application received, ${escapeHtml(firstName)}!</h2>
+    </div>
+    <div style="padding:32px;">
+      <p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 16px;">
+        We've received your application to become a Dapr Pro. Our team will review your information and contact you about verification and next steps.
+      </p>
+      <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 24px;">
+        Your application reference is <strong>#${params.applicationId}</strong>. You can check your application status at any time by visiting your Dapr account.
+      </p>
+      <p style="font-size:15px;color:#374151;line-height:1.6;margin:0;">
+        Thanks for your interest in joining the Dapr Pro network.
+      </p>
+    </div>
+    <div style="padding:14px 28px;background:#f9fafb;font-size:12px;color:#9ca3af;text-align:center;">
+      © Dapr, Inc. — This is an automated message, please do not reply.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const { error } = await client.emails.send({
+    from: FROM_EMAIL,
+    to: [params.applicantEmail],
+    subject: "We received your Dapr Pro application",
+    html,
+  });
+
+  if (error) {
+    console.error(`[email] Failed to send provider application confirmation to ${params.applicantEmail}:`, error);
+  } else {
+    console.log(`[email] Provider application confirmation sent to ${params.applicantEmail}`);
+  }
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")

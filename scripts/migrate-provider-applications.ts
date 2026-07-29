@@ -1,0 +1,53 @@
+import { pool } from "../server/db";
+
+const sql = `
+CREATE TABLE IF NOT EXISTS "provider_applications" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "user_id" integer,
+  "full_name" text,
+  "phone_number" text,
+  "normalized_phone_number" text,
+  "email" text,
+  "normalized_email" text,
+  "city" text,
+  "zip_code" text,
+  "experience_level" text,
+  "years_detailing" integer,
+  "vehicle_type" text,
+  "vehicle_description" text,
+  "available_weekdays" boolean DEFAULT false,
+  "available_weekends" boolean DEFAULT false,
+  "max_travel_radius" integer DEFAULT 15,
+  "notes" text,
+  "privacy_policy_version" text,
+  "privacy_accepted_at" text,
+  "applicant_terms_version" text,
+  "applicant_terms_accepted_at" text,
+  "contact_consent_at" text,
+  "has_reliable_vehicle" boolean,
+  "agreed_to_standards" boolean,
+  "standards_version" text,
+  "standards_accepted_at" text,
+  "application_status" text NOT NULL DEFAULT 'draft',
+  "submitted_at" text,
+  "reviewed_at" text,
+  "reviewed_by" integer,
+  "internal_review_notes" text,
+  "created_at" text NOT NULL,
+  "updated_at" text NOT NULL
+);
+`;
+
+async function run() {
+  try {
+    await pool.query(sql);
+    console.log("✓ provider_applications table created");
+  } catch (err: any) {
+    console.error("Migration error:", err.message);
+    process.exit(1);
+  } finally {
+    await pool.end();
+  }
+}
+
+run();

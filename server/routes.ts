@@ -3120,5 +3120,353 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ── Provider Applications ──────────────────────────────────────────────────
+
+  /** Status transition rules enforced server-side */
+  const ADMIN_ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    submitted:              ["under_review"],
+    under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+    // Phase 2 — prepared but not yet surfaced in admin UI:
+    verification_requested: ["verification_submitted"],
+    verification_submitted: ["approved_needs_setup", "rejected"],
+    // active_provider set by controlled backend logic (setup completion), not direct admin action
+  };
+
+  /** Human-readable display labels — never expose raw status strings to applicants */
+  function applicationDisplayStatus(status: string): string {
+    const labels: Record<string, string> = {
+      draft:                  "Draft",
+      submitted:              "Application received",
+      under_review:           "We're reviewing your application",
+      verification_requested: "Verification needed",
+      verification_submitted: "Verification submitted",
+      approved_needs_setup:   "You're approved — finish setting up your Dapr Pro account",
+      rejected:               "Application not approved",
+      active_provider:        "You're ready to earn with Dapr",
+      withdrawn:              "Application withdrawn",
+    };
+    return labels[status] || status;
+  }
+
+  /** Strip admin-only fields before returning to applicant */
+  function safeApplicationForApplicant(app: any) {
+    const {
+      internalReviewNotes, reviewedBy, normalizedEmail, normalizedPhoneNumber, ...safe
+    } = app;
+    return {
+      ...safe,
+      displayStatus: applicationDisplayStatus(app.applicationStatus),
+      canSubmitVerification: app.applicationStatus === "verification_requested",
+      canBeginProviderSetup: app.applicationStatus === "approved_needs_setup",
+      isActiveProvider: app.applicationStatus === "active_provider",
+    };
+  }
+
+  /** Normalize phone to E.164-ish for duplicate detection (strips non-digits, keeps leading +) */
+  function normalizePhone(phone: string): string {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+    return `+${digits}`;
+  }
+
+  /** Normalize email for duplicate detection */
+  function normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  /**
+   * POST /api/provider-applications
+   * Create a new draft, or return the authenticated user's existing application.
+   * Duplicate detection: if normalizedEmail/phone matches ANOTHER user's application,
+   * we do NOT attach it — we alert the applicant to contact support.
+   */
+  app.post("/api/provider-applications", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ code: "UNAUTHENTICATED", error: "Sign in to save your application." });
+    }
+
+    try {
+      // Return existing application for this user
+      const existing = await storage.getProviderApplicationByUserId(req.user.id);
+      if (existing) {
+        return res.json({ created: false, application: safeApplicationForApplicant(existing) });
+      }
+
+      const { fullName, phoneNumber, email } = req.body;
+
+      // Duplicate detection — don't link another user's record
+      if (email) {
+        const nEmail = normalizeEmail(email);
+        const byEmail = await storage.getProviderApplicationByNormalizedEmail(nEmail);
+        if (byEmail && byEmail.userId !== req.user.id) {
+          return res.status(409).json({
+            code: "DUPLICATE_EMAIL",
+            error: "An application already exists with this email address. Contact support if you need help accessing your application.",
+          });
+        }
+      }
+      if (phoneNumber) {
+        const nPhone = normalizePhone(phoneNumber);
+        const byPhone = await storage.getProviderApplicationByNormalizedPhone(nPhone);
+        if (byPhone && byPhone.userId !== req.user.id) {
+          return res.status(409).json({
+            code: "DUPLICATE_PHONE",
+            error: "An application already exists with this phone number. Contact support if you need help accessing your application.",
+          });
+        }
+      }
+
+      const nEmail = email ? normalizeEmail(email) : undefined;
+      const nPhone = phoneNumber ? normalizePhone(phoneNumber) : undefined;
+
+      const app2 = await storage.createProviderApplication({
+        userId: req.user.id,
+        fullName: fullName || null,
+        phoneNumber: phoneNumber || null,
+        normalizedPhoneNumber: nPhone || null,
+        email: email || null,
+        normalizedEmail: nEmail || null,
+        city: req.body.city || null,
+        zipCode: req.body.zipCode || null,
+        applicationStatus: "draft",
+      });
+
+      return res.status(201).json({ created: true, application: safeApplicationForApplicant(app2) });
+    } catch (err) {
+      console.error("[provider-applications] POST error:", err);
+      res.status(500).json({ error: "Failed to create application" });
+    }
+  });
+
+  /**
+   * GET /api/provider-applications/me
+   * Canonical endpoint for both the website and the native SwiftUI Dapr Pro app.
+   * Returns { exists: false } if no application found.
+   * Returns full safe application data with computed capability fields if found.
+   */
+  app.get("/api/provider-applications/me", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ code: "UNAUTHENTICATED", error: "Authentication required." });
+    }
+    try {
+      const application = await storage.getProviderApplicationByUserId(req.user.id);
+      if (!application) {
+        return res.json({ exists: false });
+      }
+      return res.json({ exists: true, ...safeApplicationForApplicant(application) });
+    } catch (err) {
+      console.error("[provider-applications] GET /me error:", err);
+      res.status(500).json({ error: "Failed to retrieve application" });
+    }
+  });
+
+  /**
+   * PATCH /api/provider-applications/:id
+   * Update draft fields. Only the owning user; only while status is 'draft'.
+   */
+  app.patch("/api/provider-applications/:id", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ code: "UNAUTHENTICATED", error: "Sign in to update your application." });
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
+
+    try {
+      const existing = await storage.getProviderApplicationById(id);
+      if (!existing) return res.status(404).json({ error: "Application not found" });
+      if (existing.userId !== req.user.id) return res.status(403).json({ error: "Access denied" });
+      if (existing.applicationStatus !== "draft") {
+        return res.status(409).json({ error: "Only draft applications can be edited" });
+      }
+
+      // Re-normalize if contact fields are being updated
+      const updates: any = { ...req.body };
+      if (updates.email) updates.normalizedEmail = normalizeEmail(updates.email);
+      if (updates.phoneNumber) updates.normalizedPhoneNumber = normalizePhone(updates.phoneNumber);
+      // Never allow client to set these fields directly
+      delete updates.applicationStatus;
+      delete updates.submittedAt;
+      delete updates.reviewedAt;
+      delete updates.reviewedBy;
+      delete updates.internalReviewNotes;
+      delete updates.userId;
+
+      const updated = await storage.updateProviderApplication(id, updates);
+      return res.json(safeApplicationForApplicant(updated));
+    } catch (err) {
+      console.error("[provider-applications] PATCH error:", err);
+      res.status(500).json({ error: "Failed to update application" });
+    }
+  });
+
+  /**
+   * POST /api/provider-applications/:id/submit
+   * Transition draft → submitted. Validates required fields are present.
+   */
+  app.post("/api/provider-applications/:id/submit", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ code: "UNAUTHENTICATED", error: "Sign in to submit your application." });
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
+
+    try {
+      const existing = await storage.getProviderApplicationById(id);
+      if (!existing) return res.status(404).json({ error: "Application not found" });
+      if (existing.userId !== req.user.id) return res.status(403).json({ error: "Access denied" });
+      if (existing.applicationStatus !== "draft") {
+        return res.status(409).json({ error: "Only draft applications can be submitted" });
+      }
+
+      // Validate required fields
+      const required = [
+        "fullName", "phoneNumber", "email", "city", "zipCode",
+        "experienceLevel", "yearsDetailing", "vehicleType", "vehicleDescription",
+        "privacyAcceptedAt", "applicantTermsAcceptedAt", "contactConsentAt",
+      ] as const;
+      const missing = required.filter(f => !(existing as any)[f]);
+      if (missing.length > 0) {
+        return res.status(422).json({ error: "Application is incomplete", missing });
+      }
+      if (!existing.availableWeekdays && !existing.availableWeekends) {
+        return res.status(422).json({ error: "At least one availability option (weekdays or weekends) is required" });
+      }
+
+      const now = new Date().toISOString();
+      const updated = await storage.updateProviderApplication(id, {
+        applicationStatus: "submitted",
+        submittedAt: now,
+      });
+
+      // Fire-and-forget emails
+      import("./email-service").then(({ sendProviderApplicationAdminNotification, sendProviderApplicationConfirmation }) => {
+        const params = {
+          applicantName: existing.fullName!,
+          applicantEmail: existing.email!,
+          city: existing.city!,
+          experienceLevel: existing.experienceLevel!,
+          applicationId: id,
+        };
+        sendProviderApplicationAdminNotification(params).catch(e => console.error("[email] admin notify error:", e));
+        sendProviderApplicationConfirmation(params).catch(e => console.error("[email] confirm error:", e));
+      });
+
+      return res.json({ submitted: true, application: safeApplicationForApplicant(updated) });
+    } catch (err) {
+      console.error("[provider-applications] submit error:", err);
+      res.status(500).json({ error: "Failed to submit application" });
+    }
+  });
+
+  /**
+   * POST /api/provider-applications/:id/withdraw
+   * Withdraw an application. Only allowed before active_provider status.
+   */
+  app.post("/api/provider-applications/:id/withdraw", resolveUserFromBearer, async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ code: "UNAUTHENTICATED", error: "Authentication required." });
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
+
+    try {
+      const existing = await storage.getProviderApplicationById(id);
+      if (!existing) return res.status(404).json({ error: "Application not found" });
+      if (existing.userId !== req.user.id) return res.status(403).json({ error: "Access denied" });
+      if (existing.applicationStatus === "active_provider") {
+        return res.status(409).json({ error: "Active provider accounts cannot be withdrawn through this endpoint" });
+      }
+      if (existing.applicationStatus === "withdrawn") {
+        return res.status(409).json({ error: "Application is already withdrawn" });
+      }
+
+      const updated = await storage.updateProviderApplication(id, { applicationStatus: "withdrawn" });
+      return res.json(safeApplicationForApplicant(updated));
+    } catch (err) {
+      console.error("[provider-applications] withdraw error:", err);
+      res.status(500).json({ error: "Failed to withdraw application" });
+    }
+  });
+
+  // ── Admin: Provider Applications ──────────────────────────────────────────
+
+  /**
+   * GET /api/admin/provider-applications
+   * List all applications. Optional ?status= filter.
+   */
+  app.get("/api/admin/provider-applications", isAdmin, async (req, res) => {
+    try {
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const applications = await storage.getAllProviderApplications(status ? { status } : undefined);
+      return res.json(applications);
+    } catch (err) {
+      console.error("[admin/provider-applications] GET list error:", err);
+      res.status(500).json({ error: "Failed to retrieve applications" });
+    }
+  });
+
+  /**
+   * GET /api/admin/provider-applications/:id
+   * Full application detail including internal review notes.
+   */
+  app.get("/api/admin/provider-applications/:id", isAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
+    try {
+      const application = await storage.getProviderApplicationById(id);
+      if (!application) return res.status(404).json({ error: "Application not found" });
+      return res.json(application);
+    } catch (err) {
+      console.error("[admin/provider-applications] GET detail error:", err);
+      res.status(500).json({ error: "Failed to retrieve application" });
+    }
+  });
+
+  /**
+   * PATCH /api/admin/provider-applications/:id/status
+   * Transition application status. Enforces the allowed-transition map.
+   * Records reviewedAt + reviewedBy on admin-initiated transitions.
+   */
+  app.patch("/api/admin/provider-applications/:id/status", isAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid application ID" });
+
+    const { status, internalReviewNotes } = req.body;
+    if (!status || typeof status !== "string") {
+      return res.status(400).json({ error: "status is required" });
+    }
+
+    try {
+      const existing = await storage.getProviderApplicationById(id);
+      if (!existing) return res.status(404).json({ error: "Application not found" });
+
+      const allowed = ADMIN_ALLOWED_TRANSITIONS[existing.applicationStatus] ?? [];
+      if (!allowed.includes(status)) {
+        return res.status(409).json({
+          code: "INVALID_TRANSITION",
+          error: `Cannot transition from '${existing.applicationStatus}' to '${status}'`,
+          allowedTransitions: allowed,
+        });
+      }
+
+      const now = new Date().toISOString();
+      const updates: any = {
+        applicationStatus: status,
+        reviewedAt: now,
+        reviewedBy: req.user!.id,
+      };
+      if (typeof internalReviewNotes === "string") {
+        updates.internalReviewNotes = internalReviewNotes;
+      }
+
+      const updated = await storage.updateProviderApplication(id, updates);
+      return res.json(updated);
+    } catch (err) {
+      console.error("[admin/provider-applications] PATCH status error:", err);
+      res.status(500).json({ error: "Failed to update application status" });
+    }
+  });
+
   return httpServer;
 }

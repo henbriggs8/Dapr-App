@@ -139,7 +139,6 @@ export const bookings = pgTable("bookings", {
   tipAmount: integer("tip_amount"), // Tip amount in cents (set after Stripe confirms payment)
   pendingTipSessionId: text("pending_tip_session_id"), // Stripe Checkout Session ID for pending tip
   pendingTipCents: integer("pending_tip_cents"), // Expected tip cents for pending checkout
-  paymentMethod: text("payment_method"), // Payment method used: 'card', 'apple_pay', 'google_pay', 'paypal'
   
   // GPS Tracking fields
   providerLatitude: doublePrecision("provider_latitude"), // Current provider location
@@ -232,6 +231,56 @@ export const contactMessages = pgTable("contact_messages", {
   submittedAt: text("submitted_at").notNull(),
   resolved: boolean("resolved").notNull().default(false),
   resolvedAt: text("resolved_at"),
+});
+
+// ── Provider Applications ────────────────────────────────────────────────────
+export const providerApplications = pgTable("provider_applications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"), // nullable — linked once authenticated
+
+  // Step 1 — Personal info
+  fullName: text("full_name"),
+  phoneNumber: text("phone_number"),
+  normalizedPhoneNumber: text("normalized_phone_number"),
+  email: text("email"),
+  normalizedEmail: text("normalized_email"),
+  city: text("city"),
+  zipCode: text("zip_code"),
+
+  // Step 2 — Experience & vehicle
+  experienceLevel: text("experience_level"), // newToDetailing | someExperience | experienced | professional
+  yearsDetailing: integer("years_detailing"),
+  vehicleType: text("vehicle_type"), // Car | SUV | Truck | Van
+  vehicleDescription: text("vehicle_description"),
+
+  // Step 3 — Availability
+  availableWeekdays: boolean("available_weekdays").default(false),
+  availableWeekends: boolean("available_weekends").default(false),
+  maxTravelRadius: integer("max_travel_radius").default(15),
+  notes: text("notes"),
+
+  // Review step — legal agreements
+  privacyPolicyVersion: text("privacy_policy_version"),
+  privacyAcceptedAt: text("privacy_accepted_at"),
+  applicantTermsVersion: text("applicant_terms_version"),
+  applicantTermsAcceptedAt: text("applicant_terms_accepted_at"),
+  contactConsentAt: text("contact_consent_at"),
+
+  // Phase 2 — verification (nullable until needed)
+  hasReliableVehicle: boolean("has_reliable_vehicle"),
+  agreedToStandards: boolean("agreed_to_standards"),
+  standardsVersion: text("standards_version"),
+  standardsAcceptedAt: text("standards_accepted_at"),
+
+  // Application lifecycle
+  applicationStatus: text("application_status").notNull().default("draft"),
+  submittedAt: text("submitted_at"),
+  reviewedAt: text("reviewed_at"),
+  reviewedBy: integer("reviewed_by"), // userId of admin who performed the last review action
+  internalReviewNotes: text("internal_review_notes"), // never exposed to applicants
+
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 // Relations
@@ -360,3 +409,43 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
 });
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+
+// Provider application types
+export type ProviderApplication = typeof providerApplications.$inferSelect;
+export type InsertProviderApplication = typeof providerApplications.$inferInsert;
+
+export const APPLICATION_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "verification_requested",
+  "verification_submitted",
+  "approved_needs_setup",
+  "rejected",
+  "active_provider",
+  "withdrawn",
+] as const;
+export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
+
+/** Transitions the admin panel is allowed to trigger in Phase 1 */
+export const ADMIN_ALLOWED_TRANSITIONS: Record<string, ApplicationStatus[]> = {
+  submitted:              ["under_review"],
+  under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+  // Phase 2 — prepared but not yet surfaced in admin UI:
+  verification_requested: ["verification_submitted"],
+  verification_submitted: ["approved_needs_setup", "rejected"],
+  // active_provider is set by controlled backend logic (setup completion), not direct admin action
+};
+
+/** Human-readable labels for each status — safe to display to applicants */
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  draft:                  "Draft",
+  submitted:              "Application received",
+  under_review:           "We're reviewing your application",
+  verification_requested: "Verification needed",
+  verification_submitted: "Verification submitted",
+  approved_needs_setup:   "You're approved — finish setting up your Dapr Pro account",
+  rejected:               "Application not approved",
+  active_provider:        "You're ready to earn with Dapr",
+  withdrawn:              "Application withdrawn",
+};

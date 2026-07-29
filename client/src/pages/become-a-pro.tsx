@@ -36,7 +36,7 @@ export default function BecomeAPro() {
               </p>
               <div className="flex items-center gap-4 flex-wrap">
                 <button
-                  onClick={() => setLocation("/auth")}
+                  onClick={() => setLocation("/providers/apply")}
                   className="bg-black text-white px-7 py-4 rounded-full font-bold text-base hover:bg-gray-900 active:scale-[0.98] transition-all inline-flex items-center gap-2"
                   data-testid="hero-apply"
                 >
@@ -257,7 +257,7 @@ export default function BecomeAPro() {
                 Join hundreds of Dapr Pros already earning on the platform. Applications take under 5 minutes.
               </p>
               <button
-                onClick={() => setLocation("/auth")}
+                onClick={() => setLocation("/providers/apply")}
                 className="w-full py-4 rounded-2xl bg-white text-black font-bold text-base hover:bg-gray-100 active:scale-[0.98] transition-all mb-4"
                 data-testid="apply-cta"
               >

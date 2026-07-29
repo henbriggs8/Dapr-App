@@ -1,0 +1,100 @@
+The full inspection looks good and I want to proceed with Phase 1. Before implementation, make these architecture adjustments:
+
+1. users.isProvider only becomes true at active_provider
+
+Do not set users.isProvider = true when an application reaches approved_needs_setup.
+
+Treat:
+
+approved_needs_setup
+= approved by Dapr, but provider onboarding/setup is still incomplete.
+
+active_provider
+= setup is complete and the person is authorized to operate as a Dapr Pro.
+
+Only when reaching active_provider should the existing users.isProvider flag become true.
+
+Keep existing provider job/earnings/profile API authorization unchanged.
+
+The native SwiftUI app should use the new provider-application API during pre-activation onboarding.
+
+2. Native provider application/status UI remains native
+
+provider-apply-status.tsx should serve the website.
+
+Do not make the SwiftUI Dapr Pro app normally deep-link into that web page to show application status.
+
+The native app should instead call:
+
+GET /api/provider-applications/me
+
+and render its own SwiftUI UI based on the returned status and capabilities.
+
+Website and native app share the same backend application record, not the same frontend screens.
+
+3. Enforce application status transitions server-side
+
+Implement an explicit transition map rather than accepting arbitrary status values.
+
+Phase 1/future lifecycle:
+
+draft → submitted
+
+submitted → under_review
+
+under_review → verification_requested
+
+under_review → approved_needs_setup
+
+under_review → rejected
+
+Future:
+
+verification_requested → verification_submitted
+
+verification_submitted → approved_needs_setup
+
+verification_submitted → rejected
+
+approved_needs_setup → active_provider
+
+The transition to active_provider should happen through controlled backend logic once required provider setup is complete rather than allowing a client to arbitrarily set that value.
+
+Allow withdrawal only before someone becomes an active provider. Existing active-provider activation/deactivation logic remains responsible for active provider accounts.
+
+4. Duplicate detection must not create an account-linking vulnerability
+
+Continue using normalized email and phone to prevent duplicate applications, but do not automatically attach an existing application belonging to another userId to the currently authenticated account merely because email or phone matches.
+
+An applicant should only automatically resume an application when ownership can be established safely.
+
+Do not reveal another applicant's private data through duplicate detection responses.
+
+5. Admin notification address
+
+Do not hardcode henry@autodapr.com directly into application business logic if avoidable. Use the existing environment/configuration pattern so the admin notification recipient can be changed later without code changes.
+
+Otherwise, proceed with your proposed implementation:
+
+Schema + migration
+Storage methods
+New provider-application APIs
+Email notifications
+Multi-step responsive website application
+Admin Applications tab
+Become a Pro / SiteNav CTAs
+
+Requiring Clerk authentication before the first backend draft save is acceptable. Preserve any fields entered before authentication through the existing temporary frontend/session mechanism and return the applicant directly to /providers/apply afterward.
+
+Do not modify existing customer booking, payment, Stripe, Clerk configuration, provider job, earnings, location, or customer/native API behavior.
+
+At completion, provide:
+
+migration/schema changes
+every new endpoint
+request and response examples
+complete GET /api/provider-applications/me contract
+allowed status transitions
+how approved_needs_setup → active_provider is intended to work
+files changed
+the exact information Codex needs to connect the native SwiftUI Dapr Pro app
