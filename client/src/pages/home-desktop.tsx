@@ -681,14 +681,14 @@ export default function HomeDesktop() {
                 Become a Dapr Pro <Icon icon={ArrowRight} size="xs" />
               </button>
             </div>
-            {/* Visual placeholder */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#8c52ff]/10 to-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[440px] flex items-center justify-center border border-gray-100">
-              <div className="text-center px-8">
-                <div className="w-16 h-16 rounded-full bg-[#8c52ff]/15 flex items-center justify-center mx-auto mb-3">
-                  <Icon icon={Shield} size="lg" className="text-[#8c52ff]" />
-                </div>
-                <p className="text-sm text-gray-400 font-medium">Pro photography coming soon</p>
-              </div>
+            {/* Pro photo */}
+            <div className="relative rounded-3xl overflow-hidden bg-gray-900 aspect-[4/3] lg:aspect-auto lg:h-[440px]">
+              <img
+                src="/become-a-pro-hero.jpg"
+                alt="Dapr Pro detailing a Porsche"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
             </div>
           </div>
         </div>
