@@ -246,7 +246,7 @@ export default function HomeDesktop() {
   const goBecomePro = () => setLocation("/become-a-pro");
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans">
+    <div className="min-h-screen bg-white text-gray-900 font-sans overflow-x-hidden">
       <SiteNav active="home" />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -269,7 +269,7 @@ export default function HomeDesktop() {
             </div>
 
             {/* Right — hero photo */}
-            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/3] sm:aspect-[4/3] lg:aspect-auto lg:h-[620px] bg-gray-900 shadow-xl">
+            <div className="relative rounded-[2rem] overflow-hidden aspect-video sm:aspect-[4/3] lg:aspect-auto lg:h-[620px] bg-gray-900 shadow-xl">
               <img
                 src="/hero-exterior-wash.jpg"
                 alt="Dapr Pro washing a black Mercedes G-Wagon"
@@ -279,7 +279,7 @@ export default function HomeDesktop() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
               {/* Floating "arriving" card */}
-              <div className="absolute top-6 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+              <div className="absolute top-6 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 hidden sm:flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-[#8c52ff]/10 flex items-center justify-center">
                   <Icon icon={Clock} size="sm" className="text-[#8c52ff]" />
                 </div>
@@ -290,7 +290,7 @@ export default function HomeDesktop() {
               </div>
 
               {/* Floating pro card */}
-              <div className="absolute bottom-6 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+              <div className="absolute bottom-6 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 hidden sm:flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                   <Icon icon={Users} size="sm" className="text-gray-500" />
                   <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
@@ -311,9 +311,9 @@ export default function HomeDesktop() {
       {/* ── Trust bar ─────────────────────────────────────────────────────── */}
       <section className="py-6 lg:py-8 border-y border-gray-100 bg-gray-50/50">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 lg:gap-20 text-xs sm:text-sm font-semibold text-gray-400">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-4 sm:gap-10 lg:gap-20 text-xs sm:text-sm font-semibold text-gray-400">
             {["4.9★ average rating", "10,000+ services completed", "Vetted & insured Pros", "No waiting — comes to you"].map((item) => (
-              <span key={item}>{item}</span>
+              <span key={item} className="text-center">{item}</span>
             ))}
           </div>
         </div>
@@ -496,7 +496,7 @@ export default function HomeDesktop() {
                 desc: "Track your appointment, get notified when done, and enjoy a clean car.",
               },
             ].map((step) => (
-              <div key={step.num} className="bg-gray-50 rounded-3xl p-8 hover:bg-gray-100/60 transition-colors">
+              <div key={step.num} className="bg-gray-50 rounded-3xl p-6 sm:p-8 hover:bg-gray-100/60 transition-colors">
                 <div className="text-4xl font-extrabold text-gray-200 mb-4 leading-none">{step.num}</div>
                 <div className="w-10 h-10 rounded-2xl bg-[#8c52ff]/10 flex items-center justify-center mb-4">
                   <step.icon size={18} className="text-[#8c52ff]" />
