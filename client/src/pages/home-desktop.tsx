@@ -261,13 +261,12 @@ export default function HomeDesktop() {
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.1] text-black mb-4 lg:mb-5">
                 Let's Get Your Car
-                <span className="flex items-center gap-1 mt-1">
+                <span className="block mt-1">
                   <img
                     src="/dapr-wordmark.svg"
                     alt="Dapr"
                     className="h-[1em] w-auto"
                   />
-                  <span>'d</span>
                 </span>
               </h1>
               <p className="text-base lg:text-xl text-gray-500 mb-6 lg:mb-8 leading-relaxed max-w-lg">
