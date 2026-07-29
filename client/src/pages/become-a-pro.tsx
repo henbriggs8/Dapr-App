@@ -172,8 +172,61 @@ export default function BecomeAPro() {
         </div>
       </section>
 
+      {/* Training */}
+      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Copy */}
+            <div>
+              <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-4 block">No experience? No problem.</span>
+              <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-black mb-5">
+                We'll train you — for free.
+              </h2>
+              <p className="text-gray-500 text-lg leading-relaxed mb-8">
+                You don't need years of experience to join Dapr. Our hands-on training program teaches you everything — from zero-scratch wash technique to customer-ready finishing — so you can start taking jobs with confidence.
+              </p>
+              <ul className="space-y-4 mb-10">
+                {[
+                  "Free, hands-on training at a local Dapr facility",
+                  "Learn our zero-scratch wash methodology from certified trainers",
+                  "Understand product selection, paint safety, and interior care",
+                  "Pass a practical assessment and receive your Dapr Pro certification",
+                  "Start earning as soon as you're certified",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-gray-700 text-sm">
+                    <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-gray-400 italic">
+                Already experienced? Skip straight to verification and be on the platform faster.
+              </p>
+            </div>
+
+            {/* Feature cards */}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { icon: Zap,          label: "Free training", sub: "No upfront cost, ever" },
+                { icon: CheckCircle2, label: "Certification",  sub: "Dapr Pro credential" },
+                { icon: Clock,        label: "1–2 days",       sub: "Typical program length" },
+                { icon: BarChart3,    label: "Earn right away",sub: "Jobs waiting after cert" },
+              ].map(({ icon, label, sub }) => (
+                <div key={label} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-4">
+                    <Icon icon={icon} size="md" />
+                  </div>
+                  <p className="font-bold text-black text-sm mb-0.5">{label}</p>
+                  <p className="text-gray-400 text-xs">{sub}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Requirements */}
-      <section className="py-20 lg:py-24 bg-gray-50/60 border-y border-gray-100">
+      <section className="py-20 lg:py-24 border-y border-gray-100">
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
