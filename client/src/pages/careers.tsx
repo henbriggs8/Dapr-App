@@ -218,8 +218,8 @@ export default function CareersPage() {
           {/* Stats bar */}
           <div className="grid grid-cols-3 gap-6 mt-14 max-w-lg">
             {[
-              { val: "~20", label: "People on the team" },
-              { val: "3+", label: "Cities live" },
+              { val: "Growing", label: "Team" },
+              { val: "3", label: "New cities launching this year" },
               { val: "Seed", label: "Stage" },
             ].map(({ val, label }) => (
               <div key={label}>
