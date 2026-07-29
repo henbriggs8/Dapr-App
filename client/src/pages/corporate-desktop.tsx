@@ -59,7 +59,7 @@ const FAQS = [
   { q: "How is pricing finalized?",              a: "After a quick discovery call we'll walk your site, confirm vehicle mix and service frequency, and send a fixed per-vehicle quote." },
 ];
 
-const PARTNER_LOGOS = ["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid"] as const;
+const PARTNER_LOGOS = ["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid", "Herc Rentals", "Sunbelt Rentals"] as const;
 
 function formatMoney(n: number) {
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
