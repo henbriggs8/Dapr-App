@@ -161,8 +161,6 @@ export default function FAQ() {
 
 function DesktopFAQ() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
   const [openId, setOpenId] = useState<string | null>("pricing-0");
   const { toast } = useToast();
   const [contactSubmitted, setContactSubmitted] = useState(false);
@@ -187,44 +185,35 @@ function DesktopFAQ() {
     contactMutation.mutate(contactForm);
   }
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const inputCls = "w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#8c52ff] focus:ring-2 focus:ring-[#8c52ff]/10 transition-all";
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
       <SiteNav active="help" />
 
-      {/* Hero */}
-      <section className="relative pt-40 pb-12 lg:pt-52 lg:pb-16 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8c52ff]/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="max-w-[1120px] mx-auto px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#8c52ff] mb-8 uppercase tracking-wider">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <section className="pt-28 pb-14 lg:pt-36 lg:pb-20 bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 text-center">
+          <span className="inline-flex items-center gap-2 text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-6">
             <Icon icon={HelpCircle} size="sm" /> Frequently Asked
-          </div>
-          <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6 max-w-3xl mx-auto">
+          </span>
+          <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-6 max-w-3xl mx-auto">
             Answers, before you ask.
           </h1>
-          <p className="text-lg lg:text-xl text-white/60 leading-relaxed max-w-2xl mx-auto">
-            Everything we get asked the most about pricing, the service itself, where we work, and how we keep your car safe.
+          <p className="text-lg lg:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto">
+            Everything we get asked about pricing, the service itself, where we work, and how we keep your car safe.
           </p>
         </div>
       </section>
 
-      {/* Sticky in-page anchor nav */}
-      <div
-        className={`sticky z-40 border-b border-white/5 bg-[#050505]/85 backdrop-blur-md transition-all duration-300 ${
-          scrolled ? "top-[68px]" : "top-[88px]"
-        }`}
-      >
-        <div className="max-w-[1120px] mx-auto px-8 py-3 flex flex-wrap items-center justify-center gap-2">
+      {/* ── Sticky category anchor nav ───────────────────────────────── */}
+      <div className="sticky top-16 z-40 border-b border-gray-100 bg-white/90 backdrop-blur-md">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-3 flex flex-wrap items-center justify-center gap-2">
           {CATEGORIES.map((c) => (
             <a
               key={c.id}
               href={`#${c.id}`}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-gray-500 border border-gray-200 hover:border-[#8c52ff] hover:text-[#8c52ff] transition-colors"
               data-testid={`anchor-${c.id}`}
             >
               {c.title}
@@ -233,27 +222,27 @@ function DesktopFAQ() {
         </div>
       </div>
 
-      {/* Categories */}
-      <section className="py-16 border-t border-white/5">
-        <div className="max-w-[1120px] mx-auto px-8 space-y-16">
+      {/* ── Categories ───────────────────────────────────────────────── */}
+      <section className="py-16 border-t border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 space-y-16">
           {CATEGORIES.map((cat) => {
             const CatIcon = cat.icon;
             return (
               <div key={cat.id} id={cat.id} className="scroll-mt-32">
-                <div className="grid lg:grid-cols-[280px_1fr] gap-10 lg:gap-16 items-start">
-                  {/* Category header */}
-                  <div className="lg:sticky lg:top-40">
-                    <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center mb-5">
-                      <Icon icon={CatIcon} size="lg" />
+                <div className="grid lg:grid-cols-[260px_1fr] gap-10 lg:gap-16 items-start">
+                  {/* Sticky category header */}
+                  <div className="lg:sticky lg:top-36">
+                    <div className="w-11 h-11 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-5">
+                      <Icon icon={CatIcon} size="md" />
                     </div>
-                    <h2 className="text-3xl font-extrabold tracking-tight leading-tight mb-3">
+                    <h2 className="text-2xl font-extrabold tracking-tight text-black leading-tight mb-3">
                       {cat.title}
                     </h2>
-                    <p className="text-sm text-white/55 leading-relaxed">{cat.blurb}</p>
+                    <p className="text-sm text-gray-500 leading-relaxed">{cat.blurb}</p>
                   </div>
 
-                  {/* Q&A list */}
-                  <div className="rounded-3xl border border-white/10 bg-[#0a0a0a] divide-y divide-white/5">
+                  {/* Q&A accordion */}
+                  <div className="rounded-3xl border border-gray-100 bg-white shadow-sm divide-y divide-gray-100">
                     {cat.items.map((item, i) => {
                       const id = `${cat.id}-${i}`;
                       const open = openId === id;
@@ -262,29 +251,25 @@ function DesktopFAQ() {
                           key={id}
                           onClick={() => setOpenId(open ? null : id)}
                           aria-expanded={open}
-                          className="w-full text-left px-6 py-5 group focus:outline-none"
+                          className="w-full text-left px-6 py-5 focus:outline-none hover:bg-gray-50/50 transition-colors first:rounded-t-3xl last:rounded-b-3xl"
                           data-testid={`faq-toggle-${id}`}
                         >
                           <div className="flex items-start justify-between gap-6">
-                            <p className="text-[15px] font-semibold text-white leading-snug flex-1">
+                            <p className="text-[15px] font-semibold text-black leading-snug flex-1">
                               {item.q}
                             </p>
                             <Icon
                               icon={ChevronDown}
                               size="sm"
-                              className={`text-white/40 mt-0.5 shrink-0 transition-transform duration-300 ${
-                                open ? "rotate-180" : ""
-                              }`}
+                              className={`text-gray-400 mt-0.5 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
                             />
                           </div>
                           <div
-                            className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                              open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                            }`}
+                            className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                             aria-hidden={!open}
                           >
                             <div className="overflow-hidden">
-                              <p className="pt-3 text-sm text-white/65 leading-relaxed">
+                              <p className="pt-3 text-sm text-gray-500 leading-relaxed text-left">
                                 {item.a}
                               </p>
                             </div>
@@ -300,42 +285,42 @@ function DesktopFAQ() {
         </div>
       </section>
 
-      {/* Still need help / Contact support */}
-      <section className="py-24 border-t border-white/5 bg-[#070707]">
-        <div className="max-w-[1120px] mx-auto px-8">
+      {/* ── Still need help ──────────────────────────────────────────── */}
+      <section className="py-24 border-t border-gray-100 bg-gray-50">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             {/* Left: copy */}
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center mb-6">
-                <Icon icon={MessageSquare} size="lg" />
+              <div className="w-11 h-11 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6">
+                <Icon icon={MessageSquare} size="md" />
               </div>
-              <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-4">
+              <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-black mb-5">
                 Still need help?
               </h2>
-              <p className="text-white/60 text-lg leading-relaxed mb-8">
-                Didn't find what you were looking for? Send us a message and we'll get back to you, or check a box to request a callback.
+              <p className="text-gray-500 text-lg leading-relaxed mb-8">
+                Didn't find what you were looking for? Send us a message and we'll get back to you, or check the box to request a callback.
               </p>
               <div className="flex flex-col gap-4 mb-10">
-                <div className="flex items-center gap-3 text-white/50 text-sm">
+                <div className="flex items-center gap-3 text-gray-600 text-sm">
                   <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] shrink-0" />
                   Usually responds within a few hours
                 </div>
-                <div className="flex items-center gap-3 text-white/50 text-sm">
+                <div className="flex items-center gap-3 text-gray-600 text-sm">
                   <Icon icon={Phone} size="sm" className="text-[#8c52ff] shrink-0" />
                   We can call you back if you prefer
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4 pt-2 border-t border-white/5">
+              <div className="flex flex-wrap gap-6 pt-6 border-t border-gray-100">
                 <button
                   onClick={() => setLocation("/services")}
-                  className="text-white/50 hover:text-white text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+                  className="text-gray-500 hover:text-black text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
                   data-testid="button-see-services"
                 >
                   See all services <Icon icon={ArrowRight} size="sm" />
                 </button>
                 <button
                   onClick={() => setLocation("/how-it-works")}
-                  className="text-white/50 hover:text-white text-sm font-semibold transition-colors"
+                  className="text-gray-500 hover:text-black text-sm font-semibold transition-colors"
                   data-testid="button-how-it-works"
                 >
                   How it works
@@ -344,14 +329,14 @@ function DesktopFAQ() {
             </div>
 
             {/* Right: form */}
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-8">
+            <div className="rounded-3xl border border-gray-100 bg-white shadow-sm p-8">
               {contactSubmitted ? (
                 <div className="flex flex-col items-center justify-center text-center py-10 gap-4">
-                  <div className="w-14 h-14 rounded-full bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center">
                     <Icon icon={CheckCircle2} size="xl" />
                   </div>
-                  <h3 className="text-xl font-bold">Message sent!</h3>
-                  <p className="text-white/60 text-sm max-w-xs">
+                  <h3 className="text-xl font-bold text-black">Message sent!</h3>
+                  <p className="text-gray-500 text-sm max-w-xs">
                     We received your message and will follow up soon.{" "}
                     {lastRequestedCallback ? "Expect a call from us." : ""}
                   </p>
@@ -366,65 +351,50 @@ function DesktopFAQ() {
                 <form onSubmit={handleContactSubmit} className="flex flex-col gap-5">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                        Your name
-                      </label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your name</label>
                       <input
-                        type="text"
-                        required
-                        placeholder="Jane Smith"
+                        type="text" required placeholder="Jane Smith"
                         value={contactForm.name}
                         onChange={(e) => setContactForm((f) => ({ ...f, name: e.target.value }))}
-                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors"
-                        data-testid="contact-name"
+                        className={inputCls} data-testid="contact-name"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                        Email address
-                      </label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Email address</label>
                       <input
-                        type="email"
-                        required
-                        placeholder="jane@example.com"
+                        type="email" required placeholder="jane@example.com"
                         value={contactForm.email}
                         onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
-                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors"
-                        data-testid="contact-email"
+                        className={inputCls} data-testid="contact-email"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                      Your message
-                    </label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your message</label>
                     <textarea
-                      required
-                      minLength={10}
-                      rows={4}
+                      required minLength={10} rows={4}
                       placeholder="What can we help you with?"
                       value={contactForm.message}
                       onChange={(e) => setContactForm((f) => ({ ...f, message: e.target.value }))}
-                      className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#8c52ff]/60 focus:bg-white/8 transition-colors resize-none"
-                      data-testid="contact-message"
+                      className={`${inputCls} resize-none`} data-testid="contact-message"
                     />
                   </div>
-                  <label className="flex items-center gap-3 cursor-pointer group" data-testid="contact-callback-label">
+                  <label className="flex items-center gap-3 cursor-pointer" data-testid="contact-callback-label">
                     <input
                       type="checkbox"
                       checked={contactForm.requestCallback}
                       onChange={(e) => setContactForm((f) => ({ ...f, requestCallback: e.target.checked }))}
-                      className="w-4 h-4 accent-[#8c52ff] cursor-pointer"
+                      className="w-4 h-4 accent-[#8c52ff] cursor-pointer rounded"
                       data-testid="contact-callback"
                     />
-                    <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
+                    <span className="text-sm text-gray-500">
                       I'd prefer a callback — please call me instead of emailing
                     </span>
                   </label>
                   <button
                     type="submit"
                     disabled={contactMutation.isPending}
-                    className="bg-[#8c52ff] text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 inline-flex items-center justify-center gap-2 shadow-[0_0_30px_-10px_#8c52ff] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                    className="bg-black text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-gray-900 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                     data-testid="contact-submit"
                   >
                     {contactMutation.isPending ? "Sending…" : <><Icon icon={Send} size="sm" /> Send message</>}
@@ -436,36 +406,16 @@ function DesktopFAQ() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-white/5 bg-[#020202]">
-        <div className="max-w-[1120px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
-          <div className="flex gap-6 text-sm text-white/40">
-            <button
-              onClick={() => setLocation("/services")}
-              className="hover:text-white transition-colors"
-              data-testid="link-services-footer"
-            >
-              Services
-            </button>
-            <button
-              onClick={() => setLocation("/how-it-works")}
-              className="hover:text-white transition-colors"
-              data-testid="link-how-footer"
-            >
-              How it Works
-            </button>
-            <button
-              onClick={() => setLocation("/corporate")}
-              className="hover:text-white transition-colors"
-              data-testid="link-corporate-footer"
-            >
-              For Fleets
-            </button>
+      {/* ── Footer ───────────────────────────────────────────────────── */}
+      <footer className="py-10 border-t border-gray-100 bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto" />
+          <div className="flex gap-6 text-sm text-gray-400">
+            <button onClick={() => setLocation("/services")} className="hover:text-black transition-colors" data-testid="link-services-footer">Services</button>
+            <button onClick={() => setLocation("/how-it-works")} className="hover:text-black transition-colors" data-testid="link-how-footer">How it Works</button>
+            <button onClick={() => setLocation("/corporate")} className="hover:text-black transition-colors" data-testid="link-corporate-footer">For Fleets</button>
           </div>
-          <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Dapr. All rights reserved.
-          </p>
+          <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
         </div>
       </footer>
     </div>
