@@ -66,13 +66,14 @@ export default function BecomeAPro() {
             </div>
 
             {/* Visual */}
-            <div className="relative rounded-[2rem] overflow-hidden bg-gradient-to-br from-[#8c52ff]/10 to-gray-100 aspect-[4/5] lg:aspect-auto lg:h-[580px] flex items-center justify-center border border-gray-100">
-              <div className="text-center px-8">
-                <div className="w-20 h-20 rounded-full bg-[#8c52ff]/15 flex items-center justify-center mx-auto mb-4">
-                  <Shield size={32} className="text-[#8c52ff]" />
-                </div>
-                <p className="text-sm text-gray-400 font-medium">Pro photography coming soon</p>
-              </div>
+            <div className="relative rounded-[2rem] overflow-hidden bg-gray-900 aspect-[4/5] lg:aspect-auto lg:h-[580px]">
+              <img
+                src="/become-a-pro-hero.jpg"
+                alt="Dapr Pro giving thumbs up next to a branded vehicle"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              {/* Gradient overlay matching home page style */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
               {/* Floating earnings card */}
               <div className="absolute bottom-6 left-6 bg-white rounded-2xl shadow-lg px-5 py-4">
                 <p className="text-xs text-gray-500 mb-1">This week</p>
@@ -190,7 +191,7 @@ export default function BecomeAPro() {
                   "Commitment to Dapr's quality standards",
                 ].map((req) => (
                   <li key={req} className="flex items-start gap-3 text-gray-700 text-sm">
-                    <CheckCircle2 size={16} className="text-[#8c52ff] shrink-0 mt-0.5" />
+                    <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] shrink-0 mt-0.5" />
                     {req}
                   </li>
                 ))}

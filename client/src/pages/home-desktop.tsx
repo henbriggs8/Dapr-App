@@ -585,7 +585,7 @@ export default function HomeDesktop() {
                     "Dedicated account manager",
                   ].map((f) => (
                     <div key={f} className="flex items-center gap-3 text-gray-300 text-sm">
-                      <CheckCircle2 size={15} className="text-[#8c52ff] shrink-0" />
+                      <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff] shrink-0" />
                       {f}
                     </div>
                   ))}
@@ -661,7 +661,7 @@ export default function HomeDesktop() {
             <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#8c52ff]/10 to-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[440px] flex items-center justify-center border border-gray-100">
               <div className="text-center px-8">
                 <div className="w-16 h-16 rounded-full bg-[#8c52ff]/15 flex items-center justify-center mx-auto mb-3">
-                  <Shield size={28} className="text-[#8c52ff]" />
+                  <Icon icon={Shield} size="lg" className="text-[#8c52ff]" />
                 </div>
                 <p className="text-sm text-gray-400 font-medium">Pro photography coming soon</p>
               </div>
