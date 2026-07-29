@@ -1,0 +1,56 @@
+Everything here looks good. Before we consider this finished, I want to verify/fix one specific part of the post-auth booking experience.
+
+You mentioned that when authentication originates from the booking flow, the customer currently returns to / after successful authentication because postAuthDest defaults to home, and that localStorage preserves userAddress and userVehicle.
+
+I do not want the customer simply returned to the homepage after authentication, even if their information is preserved.
+
+The intended experience is:
+
+Location → Vehicle → See prices → Authentication → automatically resume booking at the next step
+
+After successful login/signup, the customer should immediately see the services/pricing step they were trying to reach.
+
+They should NOT need to:
+
+click the booking widget again
+click See Prices again
+re-select their vehicle
+re-enter their address
+Please first inspect the current flow
+
+Determine what happens right now after:
+
+Customer enters location
+Customer selects vehicle
+Customer clicks See Prices
+Customer is sent to /auth?context=booking
+Customer successfully authenticates
+
+Specifically tell me whether the booking dialog automatically reopens and advances to services/prices, or whether they merely land back on the homepage with their information saved.
+
+If it already automatically resumes
+
+Do not change anything. Just confirm the exact behavior.
+
+If it only returns them to the homepage
+
+Fix the frontend flow so authentication automatically resumes the existing BookingDialog at the correct next step.
+
+Reuse the existing booking state/localStorage/navigation architecture wherever possible.
+
+A small frontend-only return/resume indicator or redirect mechanism is fine if needed.
+
+Do not:
+
+change Clerk authentication logic
+change backend endpoints
+change API contracts
+change database schemas
+create a new booking-state system if the existing one can be reused
+affect direct Log In / Create Account behavior
+
+Direct navigation to Log In/Create Account should still behave normally.
+
+This automatic resume behavior should only apply when authentication was initiated from the booking flow.
+
+After making the change, test this exact path end-to-end and tell me the resulting sequence the customer sees.

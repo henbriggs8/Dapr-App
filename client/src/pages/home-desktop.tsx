@@ -90,7 +90,16 @@ function BookingWidget() {
     return () => document.removeEventListener("mousedown", onClick);
   }, [addr.open]);
 
-  const handleBook = () => setLocation(user ? "/" : "/auth");
+  const handleBook = () => {
+    if (user) {
+      setLocation("/services");
+    } else {
+      // Persist widget state so it survives the auth round-trip.
+      if (addr.input.trim()) localStorage.setItem("userAddress", addr.input.trim());
+      if (vehicle.trim()) localStorage.setItem("pendingBookingVehicle", vehicle.trim());
+      setLocation("/auth?context=booking&redirect=%2Fservices");
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 w-full max-w-md">
@@ -216,7 +225,7 @@ export default function HomeDesktop() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const goBook = () => setLocation(user ? "/" : "/auth");
+  const goBook = () => setLocation(user ? "/services" : "/auth?context=booking&redirect=%2Fservices");
   const goServices = () => setLocation("/services");
   const goCorporate = () => setLocation("/corporate");
   const goBecomePro = () => setLocation("/become-a-pro");
