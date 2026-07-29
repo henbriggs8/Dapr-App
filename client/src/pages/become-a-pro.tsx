@@ -116,8 +116,8 @@ export default function BecomeAPro() {
               },
               {
                 icon: Users,
-                title: "Grow your client base",
-                desc: "Dapr handles all the marketing and customer acquisition. You just show up and do great work.",
+                title: "Jobs come to you",
+                desc: "Dapr handles all the marketing and booking. No chasing leads or repeat customers — just consistent work in your area.",
               },
               {
                 icon: Star,
