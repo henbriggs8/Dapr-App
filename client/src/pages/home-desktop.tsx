@@ -660,7 +660,7 @@ export default function HomeDesktop() {
                 {[
                   { icon: Zap, title: "Set your own hours", desc: "Work when you want — full-time or part-time." },
                   { icon: BarChart3, title: "Keep more of what you earn", desc: "Transparent pricing with no surprise deductions." },
-                  { icon: Users, title: "Grow your client base", desc: "Dapr handles marketing, booking, and payments." },
+                  { icon: Users, title: "Get jobs instantly", desc: "Dapr handles marketing, booking, and payments." },
                 ].map((b) => (
                   <div key={b.title} className="flex gap-4">
                     <div className="w-9 h-9 rounded-xl bg-[#8c52ff]/10 flex items-center justify-center shrink-0">
