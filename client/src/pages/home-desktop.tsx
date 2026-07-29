@@ -228,7 +228,7 @@ function BookingWidget() {
         See services &amp; prices
       </button>
 
-      <p className="text-center text-xs text-gray-400 mt-3">
+      <p className="text-center text-xs text-[#8c52ff] font-semibold mt-3">
         Vetted Pros · At Home · On-Demand
       </p>
     </div>
