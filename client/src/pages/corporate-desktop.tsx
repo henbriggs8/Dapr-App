@@ -59,7 +59,21 @@ const FAQS = [
   { q: "How is pricing finalized?",              a: "After a quick discovery call we'll walk your site, confirm vehicle mix and service frequency, and send a fixed per-vehicle quote." },
 ];
 
-const PARTNER_LOGOS = ["Vivint", "Bill.com", "dōTERRA", "Lucid"] as const;
+const PARTNER_LOGOS = [
+  { name: "Vivint",        src: "/logo-vivint.svg"       },
+  { name: "Bill.com",      src: "/logo-bill.svg"         },
+  { name: "dōTERRA",       src: "/logo-doterra.svg"      },
+  { name: "Adobe",         src: "/logo-adobe.svg"        },
+  { name: "Podium",        src: "/logo-podium.svg"       },
+  { name: "Herc Rentals",  src: "/logo-herc-rentals.svg" },
+  { name: "Sunbelt",       src: "/logo-sunbelt.svg"      },
+  { name: "Ancestry",      src: "/logo-ancestry.svg"     },
+  { name: "Domo",          src: "/logo-domo.svg"         },
+  { name: "Greystar",      src: "/logo-greystar.svg"     },
+  { name: "Kiln",          src: "/logo-kiln.svg"         },
+  { name: "Porsche",       src: "/logo-porsche.svg"      },
+  { name: "Ritz-Carlton",  src: "/logo-ritz.svg"         },
+] as const;
 
 function formatMoney(n: number) {
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -279,16 +293,12 @@ export default function CorporateDesktop() {
           {/* Fade edges */}
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none" />
-          <div className="flex items-center opacity-40" style={{ animation: "marquee 28s linear infinite" }}>
+          <div className="flex items-center" style={{ animation: "marquee 36s linear infinite" }}>
             {[0, 1].map((pass) => (
               <div key={pass} className="flex items-center shrink-0" aria-hidden={pass === 1}>
-                {PARTNER_LOGOS.map((name) => (
-                  <span key={name} className="text-lg font-bold tracking-tighter text-gray-700 mx-10">{name}</span>
+                {PARTNER_LOGOS.map(({ name, src }) => (
+                  <img key={name} src={src} alt={name} className="h-10 w-auto mx-10 object-contain" />
                 ))}
-                <img src="/adobe-logo.png" alt="Adobe" className="h-8 w-auto grayscale invert mx-10" />
-                <img src="/podium-logo.png" alt="Podium" className="h-8 w-auto grayscale mx-10" />
-                <img src="/herc-rentals-logo.png" alt="Herc Rentals" className="h-8 w-auto grayscale mx-10" />
-                <img src="/sunbelt-rentals-logo.png" alt="Sunbelt Rentals" className="h-8 w-auto grayscale invert mx-10" />
               </div>
             ))}
           </div>
