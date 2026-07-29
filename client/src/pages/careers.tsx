@@ -125,7 +125,7 @@ const PERKS = [
   },
   {
     icon: Briefcase,
-    title: "Unlimited PTO",
+    title: "Flexible PTO",
     body: "Take the time you need to recharge. We set a two-week minimum because real rest makes better work.",
   },
 ];
