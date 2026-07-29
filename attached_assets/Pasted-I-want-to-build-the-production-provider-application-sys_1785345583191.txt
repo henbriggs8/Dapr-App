@@ -1,0 +1,593 @@
+I want to build the production provider application system for Become a Dapr Pro.
+
+This is different from our recent website-only redesign work.
+
+This feature intentionally requires new backend functionality because the provider application needs to become the single source of truth shared by the Dapr website and the separate native SwiftUI Dapr Pro app.
+
+Core architecture
+
+The provider application record must live in the existing Replit backend/database.
+
+The website and native SwiftUI provider app should both consume that same backend record.
+
+The desired future flow is:
+
+Dapr website
+→ /providers/apply
+→ applicant submits application
+
+Shared backend
+→ stores one canonical provider application
+
+Admin
+→ reviews application
+→ changes application status
+→ requests verification if appropriate
+→ approves/rejects applicant
+
+Native Dapr Pro app
+→ applicant signs in
+→ backend identifies their existing application
+→ app displays their current status
+→ approved applicants continue provider account/setup
+→ applicant does NOT submit another application
+
+Do not create a website-only provider application system that the native app cannot consume.
+
+IMPORTANT — inspect before implementing
+
+Before changing anything, inspect the current project for:
+
+Existing provider/detail-pro database models.
+Existing provider onboarding endpoints.
+Existing provider authentication/account records.
+Existing provider role/status fields.
+Any existing application or approval logic.
+Existing email infrastructure.
+Existing file/object-storage infrastructure.
+Existing admin provider-management UI.
+How the native provider app currently communicates with the backend.
+
+Do not create duplicate systems when functionality already exists.
+
+Then tell me:
+
+what can be reused
+what needs to be added
+which database tables/models would change
+which API endpoints you recommend adding
+whether any existing API behavior would be modified
+how the future SwiftUI provider app will retrieve this application
+
+Do not implement until that inspection is complete.
+
+Phase 1 scope
+
+For this task, implement the initial application, application lifecycle, and status system.
+
+Do not implement driver's-license, trunk-photo, back-seat-photo, or video uploads yet.
+
+However, structure the application statuses/data model so verification can be added later without redesigning the system.
+
+Public website
+
+Add a prominent:
+
+Become a Dapr Pro
+
+CTA throughout the appropriate marketing site navigation/sections.
+
+Primary application route:
+
+/providers/apply
+
+Create a polished responsive multi-step application consistent with the new Dapr website.
+
+It should work well on:
+
+desktop
+tablet
+mobile
+
+Do not use one giant form.
+
+Step 1 — Your information
+Full name
+
+Backend field:
+
+fullName
+
+Required.
+
+Phone
+
+Backend field:
+
+phoneNumber
+
+Required.
+
+Normalize and separately store an E.164 representation if our backend conventions support it.
+
+Email
+
+Backend field:
+
+email
+
+Required.
+
+Normalize lowercase for matching.
+
+City
+
+Backend field:
+
+city
+
+Required.
+
+ZIP code
+
+Backend field:
+
+zipCode
+
+Required.
+
+Validate five-digit US ZIP codes.
+
+Step 2 — Experience & vehicle
+Experience level
+
+Backend field:
+
+experienceLevel
+
+Required.
+
+Exact stored values:
+
+newToDetailing
+someExperience
+experienced
+professional
+
+Display labels:
+
+New to detailing
+Some experience
+Experienced
+Professional detailer
+Years detailing
+
+Backend field:
+
+yearsDetailing
+
+Required.
+
+Range:
+
+0–40
+
+Vehicle type
+
+Backend field:
+
+vehicleType
+
+Required.
+
+Exact options:
+
+Car
+SUV
+Truck
+Van
+Vehicle
+
+Backend field:
+
+vehicleDescription
+
+Required.
+
+Example:
+
+2022 Ford Explorer
+
+For Phase 1 this may remain a single description field unless there is already an established structured vehicle model that should be reused.
+
+Do not create a competing vehicle architecture unnecessarily.
+
+Step 3 — Availability
+Weekdays
+
+availableWeekdays
+
+Weekends
+
+availableWeekends
+
+Require at least one.
+
+Travel radius
+
+maxTravelRadius
+
+Allow:
+
+5–50 miles
+
+in five-mile increments.
+
+Default:
+
+15 miles
+
+Always display the selected distance.
+
+Additional notes
+
+notes
+
+Optional.
+
+Maximum 1,000 characters.
+
+Display:
+
+You do not need to self-certify a detailed equipment list. Dapr will review your vehicle information during approval.
+
+Review
+
+Before submission, show a complete review screen.
+
+Allow the applicant to edit each section without restarting the application.
+
+Require separate acceptance of:
+
+Privacy Policy
+
+Store:
+
+privacyPolicyVersion
+
+privacyAcceptedAt
+
+Dapr Provider Applicant Terms
+
+Store:
+
+applicantTermsVersion
+
+applicantTermsAcceptedAt
+
+Contact consent
+
+Text should clearly allow Dapr to contact the applicant regarding their application.
+
+Store:
+
+contactConsentAt
+
+Do not pre-check any agreement checkbox.
+
+Draft saving
+
+Applications should be resumable.
+
+Prefer existing authenticated-user architecture when appropriate, but do not require unnecessary account creation before the applicant can begin unless our existing auth architecture makes that materially safer or simpler.
+
+Determine the safest approach during inspection.
+
+A draft should use:
+
+applicationStatus = draft
+
+Submission
+
+When submitted:
+
+generate application ID
+set status to submitted
+populate submittedAt
+preserve createdAt / updatedAt
+show confirmation screen
+notify Dapr admin
+send applicant confirmation email if our existing email infrastructure supports it
+
+Success copy should communicate:
+
+Application received
+
+We've received your application to become a Dapr Pro. Our team will review your information and contact you about verification and next steps.
+
+Do not promise a specific review timeframe unless one is configured.
+
+Duplicate protection
+
+We should not create multiple active applications for the same applicant accidentally.
+
+Use normalized:
+
+normalizedEmail
+
+and
+
+normalizedPhoneNumber
+
+to detect likely duplicates.
+
+However, do not simply throw a generic error.
+
+If an application already exists, return the existing application/status where appropriate and direct the applicant into the existing application flow.
+
+Account for legitimate changed phone/email information where practical.
+
+Canonical application statuses
+
+Support:
+
+draft
+
+submitted
+
+under_review
+
+verification_requested
+
+verification_submitted
+
+approved_needs_setup
+
+rejected
+
+active_provider
+
+withdrawn
+
+These are backend values.
+
+Never display these raw strings directly to applicants.
+
+Examples:
+
+submitted
+
+→ Application received
+
+under_review
+
+→ We're reviewing your application
+
+verification_requested
+
+→ Verification needed
+
+approved_needs_setup
+
+→ You're approved — finish setting up your Dapr Pro account
+
+active_provider
+
+→ You're ready to earn with Dapr
+
+Database
+
+First compare this against the existing schema.
+
+If no equivalent canonical provider application model exists, create:
+
+provider_applications
+
+Recommended fields:
+
+id
+userId nullable
+fullName
+phoneNumber
+normalizedPhoneNumber
+email
+normalizedEmail
+city
+zipCode
+experienceLevel
+yearsDetailing
+vehicleType
+vehicleDescription
+availableWeekdays
+availableWeekends
+maxTravelRadius
+notes
+hasReliableVehicle
+agreedToStandards
+standardsVersion
+standardsAcceptedAt
+privacyPolicyVersion
+privacyAcceptedAt
+applicantTermsVersion
+applicantTermsAcceptedAt
+contactConsentAt
+applicationStatus
+submittedAt
+reviewedAt
+reviewedBy
+internalReviewNotes
+createdAt
+updatedAt
+
+Fields related only to future verification can initially remain nullable.
+
+Do not modify unrelated existing provider tables merely to conform to this proposed schema if a cleaner relationship can be created.
+
+Native app API contract
+
+This is extremely important.
+
+Expose the application through a clean backend API that the native SwiftUI Dapr Pro app can later consume.
+
+The native app needs to be able to determine:
+
+Does this authenticated person already have a provider application?
+
+And receive things like:
+
+application ID
+application status
+application data
+whether verification is required
+whether verification has been submitted
+whether provider setup is allowed
+whether the user is already an active provider
+
+Do not tightly couple this API to React-specific behavior.
+
+Use the project's existing API conventions.
+
+Do not change existing native-app API contracts unless absolutely necessary.
+
+Prefer adding new backward-compatible endpoints.
+
+Before finalizing the API, document the request/response contract clearly so I can give it to Codex for the native SwiftUI implementation.
+
+Admin experience
+
+Inspect the existing admin system.
+
+If there is an appropriate provider-management area, add provider applications there rather than building a separate admin product.
+
+Admins should eventually be able to:
+
+see submitted applications
+open an application
+read applicant information
+change status
+add internal review notes
+request verification
+approve
+reject
+
+For Phase 1, prioritize:
+
+submitted → under review → verification requested / rejected
+
+Do not expose internalReviewNotes to the applicant.
+
+Verification — prepare, but do not build uploads yet
+
+Do not implement sensitive document uploads in this task.
+
+Prepare the architecture for a future Phase 2 with:
+
+verification_requested
+
+and
+
+verification_submitted
+
+Later, verification will include:
+
+driver's license
+vehicle photos
+vehicle video
+reliable-vehicle confirmation
+Dapr Pro standards acceptance
+
+Do not use public-file storage for any future verification documents.
+
+Security
+
+Provider applications contain personal information.
+
+Apply appropriate authorization and access controls.
+
+Applicants may access only their own application.
+
+Internal review fields must be admin-only.
+
+Do not expose normalized matching fields unnecessarily to clients.
+
+Do not return another applicant's information through duplicate-detection responses.
+
+Do not log sensitive application information unnecessarily.
+
+Protect the existing Dapr system
+
+Do not change unrelated:
+
+customer booking APIs
+Stripe payment APIs
+customer authentication
+Clerk configuration
+booking/database behavior
+native customer app contracts
+provider job APIs
+provider earnings APIs
+
+This should add the provider application capability without breaking existing production functionality.
+
+Completion criteria
+
+Before calling Phase 1 complete, test:
+
+New applicant
+
+Website → application → draft → review → submit → confirmation.
+
+Returning applicant
+
+Returns and resumes existing application/status.
+
+Duplicate applicant
+
+Existing application is recognized rather than creating a second active application.
+
+Admin
+
+Can see/review the submitted application.
+
+API
+
+Existing application can be retrieved in a form usable by the native SwiftUI provider app.
+
+Then provide me with:
+
+database changes
+new endpoints
+API request/response contracts
+status transition rules
+changed files
+anything Codex needs to know to connect the native provider app
+Why I prefer this over Codex's original prompt
+
+Codex designed a very good finished system.
+
+But the original prompt jumps immediately from:
+
+“What's your name?”
+
+to:
+
+private driver's-license storage + signed URLs + video uploads + file metadata + admin verification infrastructure
+
+That's a lot of complexity before you've had applicant #1.
+
+And I think your actual provider funnel should eventually look like:
+
+Dapr.com
+→ Become a Pro
+→ Apply
+→ Dapr reviews
+
+Then only people you actually want:
+
+→ Verification requested
+→ license + vehicle verification
+→ Approved
+→ download/open Dapr Pro app
+→ finish account setup
+→ training
+→ go online
