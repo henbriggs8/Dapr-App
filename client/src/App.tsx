@@ -63,6 +63,27 @@ function PageLoader() {
   );
 }
 
+function AdminAccessDenied() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
+      <p className="text-4xl font-extrabold text-black mb-3">Access denied</p>
+      <p className="text-gray-500 text-base mb-8 max-w-xs">
+        {user
+          ? "Your account does not have permission to view this page."
+          : "You must be signed in with an authorized account to access this page."}
+      </p>
+      <button
+        onClick={() => setLocation(user ? "/" : "/auth")}
+        className="bg-black text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-gray-900 transition-colors"
+      >
+        {user ? "Go home" : "Sign in"}
+      </button>
+    </div>
+  );
+}
+
 function AdminRoute({
   path,
   component: Component,
@@ -83,7 +104,7 @@ function AdminRoute({
   if (!user?.isAdmin) {
     return (
       <Route path={path}>
-        <Redirect to="/" />
+        <AdminAccessDenied />
       </Route>
     );
   }
