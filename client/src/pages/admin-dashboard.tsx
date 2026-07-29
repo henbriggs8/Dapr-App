@@ -41,6 +41,7 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  UserCircle,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { 
@@ -58,6 +61,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
+
+function relativeTime(ts: string | undefined): string {
+  if (!ts) return "";
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 // Enhanced types for admin dashboard
 interface AdminBooking extends Booking {
@@ -703,10 +717,26 @@ export default function AdminDashboard() {
               <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
               <p className="text-xs sm:text-sm text-gray-600 mt-0.5">Manage users, bookings, and analytics</p>
             </div>
-            <Button onClick={handleLogout} variant="outline" size="sm" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <Icon icon={LogOut} size="sm" />
-              Logout
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                  <Icon icon={UserCircle} size="sm" />
+                  <span className="hidden sm:inline max-w-[140px] truncate">{user?.email ?? user?.username ?? "Admin"}</span>
+                  <Icon icon={ChevronDown} size="xs" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-xs text-gray-500 truncate">{user?.email ?? user?.username}</p>
+                  <p className="text-xs font-semibold text-gray-700 mt-0.5">Administrator</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer focus:text-red-600">
+                  <Icon icon={LogOut} size="sm" className="mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -750,15 +780,9 @@ export default function AdminDashboard() {
               <TabsTrigger value="support" className="flex items-center gap-1 text-xs px-2 py-1.5 whitespace-nowrap">
                 <Icon icon={MessageSquare} size="sm" />
                 Support
-                {contactMessages.filter(m => {
-                  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                  return !m.resolved && m.submittedAt >= oneDayAgo;
-                }).length > 0 && (
+                {contactMessages.filter(m => !m.resolved).length > 0 && (
                   <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
-                    {contactMessages.filter(m => {
-                      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                      return !m.resolved && m.submittedAt >= oneDayAgo;
-                    }).length}
+                    {contactMessages.filter(m => !m.resolved).length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -795,7 +819,7 @@ export default function AdminDashboard() {
                     </Card>
                     <Card className="border-orange-100 bg-orange-50 w-[120px] sm:w-auto shrink-0">
                       <CardContent className="pt-3 pb-2 px-3">
-                        <p className="text-[10px] font-medium text-orange-600 uppercase tracking-wide">Passed</p>
+                        <p className="text-[10px] font-medium text-orange-600 uppercase tracking-wide">Needs Reassignment</p>
                         <p className="text-2xl font-bold text-orange-700">{passedJobs.length}</p>
                       </CardContent>
                     </Card>
@@ -892,7 +916,7 @@ export default function AdminDashboard() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           {active.length === 0 ? (
-                            <p className="text-sm text-gray-400 py-4 text-center">No active jobs right now</p>
+                            <p className="text-sm text-gray-400 py-4 text-center">No jobs are currently in progress</p>
                           ) : active.map((job) => (
                             <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border bg-blue-50/30">
                               <div className="space-y-1 flex-1">
@@ -923,7 +947,7 @@ export default function AdminDashboard() {
                         </CardContent>
                       </Card>
 
-                      {/* Passed / Skipped Jobs */}
+                      {/* Needs Reassignment (previously Passed by Pros) */}
                       <Card>
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-base">
@@ -936,7 +960,7 @@ export default function AdminDashboard() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           {passedJobs.length === 0 ? (
-                            <p className="text-sm text-gray-400 py-4 text-center">No passed jobs</p>
+                            <p className="text-sm text-gray-400 py-4 text-center">No jobs need reassignment</p>
                           ) : passedJobs.map((job) => {
                             const passedCount = Array.isArray(job.previousProviders) ? (job.previousProviders as number[]).length : 0;
                             return (
@@ -998,18 +1022,36 @@ export default function AdminDashboard() {
                             <p className="text-sm text-gray-400 text-center py-4">No providers found</p>
                           ) : (
                             [...(providerStatus.allProviders ?? [])]
-                              .sort((a: any, b: any) => (b.status === "online" ? 1 : 0) - (a.status === "online" ? 1 : 0))
+                              .sort((a: any, b: any) => {
+                                const aJob = active.find((bk: any) => bk.providerId === a.id);
+                                const bJob = active.find((bk: any) => bk.providerId === b.id);
+                                const score = (p: any, job: any) => p.status === "online" && job ? 2 : p.status === "online" ? 1 : 0;
+                                return score(b, bJob) - score(a, aJob);
+                              })
                               .map((p: any) => {
-                                const currentJob = active.find(b => b.providerId === p.id);
+                                const currentJob = active.find((b: any) => b.providerId === p.id);
                                 const isOnline = p.status === "online";
+                                const isBusy = isOnline && !!currentJob;
+                                const dotColor = isBusy ? "bg-orange-400" : isOnline ? "bg-green-500" : "bg-gray-300";
+                                const cardBg = isBusy
+                                  ? "border-orange-100 bg-orange-50/40"
+                                  : isOnline
+                                  ? "border-green-100 bg-green-50/40"
+                                  : "border-gray-100 bg-gray-50/40 opacity-60";
+                                const displayName = p.name || p.username || `Pro #${p.id}`;
                                 return (
-                                  <div key={p.id} className={`p-3 rounded-lg border ${isOnline ? "border-green-100 bg-green-50/40" : "border-gray-100 bg-gray-50/40 opacity-60"}`}>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-300"}`} />
-                                      <span className="text-sm font-medium truncate">{p.name}</span>
+                                  <div key={p.id} className={`p-3 rounded-lg border ${cardBg}`}>
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
+                                        <span className="text-sm font-medium truncate">{displayName}</span>
+                                      </div>
+                                      <span className={`text-[10px] font-semibold uppercase tracking-wide shrink-0 ${isBusy ? "text-orange-500" : isOnline ? "text-green-600" : "text-gray-400"}`}>
+                                        {isBusy ? "Busy" : isOnline ? "Online" : "Offline"}
+                                      </span>
                                     </div>
                                     {currentJob ? (
-                                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                                      <p className="text-xs text-orange-600 flex items-center gap-1">
                                         <Icon icon={Zap} size="xs" /> Job #{currentJob.id} · {currentJob.serviceName || currentJob.priceTier}
                                       </p>
                                     ) : isOnline ? (
@@ -1017,10 +1059,10 @@ export default function AdminDashboard() {
                                     ) : (
                                       <p className="text-xs text-gray-400">Offline</p>
                                     )}
-                                    {p.lastLocation && (
-                                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
-                                        <Icon icon={MapPin} size="xs" className="shrink-0" />
-                                        {p.lastLocation}
+                                    {p.lastLocationUpdate && (
+                                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                        <Icon icon={Clock} size="xs" className="shrink-0" />
+                                        Active {relativeTime(p.lastLocationUpdate)}
                                       </p>
                                     )}
                                   </div>
