@@ -98,56 +98,33 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── Founder / Origin ───────────────────────────────────────────── */}
+      {/* ── Credibility / Origin ───────────────────────────────────────── */}
       <section className="py-20 lg:py-28 border-t border-gray-100">
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="order-2 lg:order-1">
+            <div className="relative rounded-[2rem] overflow-hidden bg-gray-100 aspect-[3/2]">
+              <img
+                src="/dapper-jeep-desert.jpg"
+                alt="Dapr detailing professional at work"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-black/30" />
+            </div>
+            <div>
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-5 block">
-                Origin
+                Why Dapr
               </span>
               <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black leading-tight mb-8">
-                Built from the driveway up.
+                Built by people who know car care.
               </h2>
-              <div className="space-y-5 text-lg text-gray-500 leading-relaxed">
-                <p>
-                  Dapr wasn't created by someone looking for an industry to
-                  disrupt.
-                </p>
-                <p>
-                  Founder Henry Briggs spent years building and operating
-                  Dapper, an automotive detailing and restyling company. That
-                  meant actually dealing with the problems behind car care:
-                  scheduling, routing, technicians, customers, vehicles,
-                  pricing, quality control, and the operational complexity of
-                  delivering services at people's homes.
-                </p>
-                <p>
-                  After seeing the same friction over and over again, the idea
-                  behind Dapr became simple:
-                </p>
-                <p className="text-xl text-black font-semibold leading-snug border-l-4 border-[#8c52ff] pl-5">
-                  There should be a better infrastructure for getting car care
-                  to the customer.
-                </p>
-                <p>Dapr is being built from those lessons.</p>
-              </div>
-            </div>
-
-            {/* Founder image */}
-            <div className="order-1 lg:order-2">
-              <div className="relative rounded-[2rem] overflow-hidden bg-gray-100 aspect-[4/5]">
-                <img
-                  src="/dapper-jeep-desert.jpg"
-                  alt="Henry Briggs working on a vehicle"
-                  className="absolute inset-0 w-full h-full object-cover object-center"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6">
-                  <p className="text-white font-bold text-lg leading-tight">Henry Briggs</p>
-                  <p className="text-white/70 text-sm mt-0.5">Founder, Dapr</p>
-                </div>
-              </div>
+              <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                Dapr was founded by Henry Briggs after years spent building and
+                operating an automotive detailing and restyling business. That
+                firsthand experience shapes how we're building Dapr — around
+                the real needs of customers and the professionals doing the
+                work.
+              </p>
+              <p className="text-sm text-gray-400">Founded by Henry Briggs.</p>
             </div>
           </div>
         </div>
