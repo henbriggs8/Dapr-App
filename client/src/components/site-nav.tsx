@@ -146,7 +146,7 @@ export default function SiteNav({ active = "" }: SiteNavProps) {
         <div className="fixed inset-0 z-40 bg-white pt-16 overflow-y-auto">
           <div className="px-6 py-8 space-y-1">
             {[
-              { label: "Fleets", path: "/corporate" },
+              { label: "For Fleets", path: "/corporate" },
               { label: "Become a Pro", path: "/become-a-pro" },
               { label: "Offers", path: "/first-wash-offer" },
               { label: "Help", path: "/faq" },
