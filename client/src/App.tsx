@@ -208,9 +208,7 @@ function Router() {
           <AdminRoute path="/admin" component={AdminDashboard} />
 
           {/* Home route - must come after all specific routes */}
-          {user?.isAdmin ? (
-            <Route path="/"><Redirect to="/admin" /></Route>
-          ) : user?.isProvider ? (
+          {user?.isProvider ? (
             <ProviderRoute path="/" component={ProviderDashboard} />
           ) : (
             <Route path="/" component={HomeWithOnboarding} />
