@@ -96,7 +96,22 @@ function BookingWidget() {
     } else {
       // Persist widget state so it survives the auth round-trip.
       if (addr.input.trim()) localStorage.setItem("userAddress", addr.input.trim());
-      if (vehicle.trim()) localStorage.setItem("pendingBookingVehicle", vehicle.trim());
+
+      // Parse free-text vehicle ("2022 Tesla Model 3") into the canonical
+      // { year, make, model } object that BookingDialog reads from "userVehicle".
+      // Only write if parsing succeeds; never overwrite a richer existing profile.
+      const rawVehicle = vehicle.trim();
+      if (rawVehicle && !localStorage.getItem("userVehicle")) {
+        const parts = rawVehicle.split(/\s+/);
+        const yr = Number(parts[0]);
+        if (parts.length >= 3 && yr >= 1900 && yr <= 2100) {
+          localStorage.setItem(
+            "userVehicle",
+            JSON.stringify({ year: yr, make: parts[1], model: parts.slice(2).join(" ") })
+          );
+        }
+      }
+
       setLocation("/auth?context=booking&redirect=%2Fservices");
     }
   };
