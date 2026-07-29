@@ -124,7 +124,6 @@ export default function AboutPage() {
                 the real needs of customers and the professionals doing the
                 work.
               </p>
-              <p className="text-sm text-gray-400">Founded by Henry Briggs.</p>
             </div>
           </div>
         </div>
