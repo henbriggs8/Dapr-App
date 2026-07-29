@@ -1,0 +1,373 @@
+I want to redesign the public-facing Dapr website so that it visually matches the direction of our new native Dapr app.
+
+The attached Uber screenshots are a reference for the layout, hierarchy, whitespace, navigation, large typography, booking-first homepage, cards, and overall simplicity. Do not copy Uber's branding or assets. Use these only as UX/layout inspiration and keep the website distinctly Dapr.
+
+IMPORTANT — protect the existing architecture
+
+This task is primarily a website/frontend redesign.
+
+The Dapr backend is also being used by separate native SwiftUI customer and provider apps being developed outside this Replit project.
+
+Do NOT:
+
+rename or remove existing /api/* endpoints
+change API response shapes
+change API request bodies
+change authentication behavior
+change Clerk integration
+change Stripe/payment verification logic
+change booking ownership/security logic
+change database schemas unless absolutely necessary
+change existing backend behavior that could break the native Swift apps
+remove any functionality currently required by the native apps
+
+If something in this redesign appears to require a backend/API change, STOP and explain what would need to change before making that change.
+
+Existing API contracts should remain backwards-compatible.
+
+Overall design direction
+
+The website should feel like:
+
+Uber simplicity + Airbnb polish + Dapr's existing native app design.
+
+Use:
+
+White/off-white backgrounds
+Black as the dominant text/action color
+Dapr purple as a restrained accent
+Large bold typography
+Lots of whitespace
+Large rounded cards
+Very clean navigation
+Minimal borders
+Subtle shadows where appropriate
+Large photography/illustration areas
+Mobile-first responsive behavior
+The same visual personality as the native Dapr customer app
+
+Avoid making it look like a traditional car-detailing website.
+
+Dapr should feel like a modern technology marketplace for car care, not a local detailing company.
+
+Header / navigation
+
+Create a clean desktop navigation similar in structure to the attached Uber reference.
+
+Left side
+
+Dapr logo
+
+Main navigation:
+
+Fleets
+
+Become a Pro
+
+About ▾
+
+The About dropdown should contain:
+
+Offers
+Careers
+Blog
+About Us
+
+Help
+
+Right side
+
+Log in
+
+Create account
+
+Make Create account a prominent pill-style button.
+
+On mobile, collapse navigation into a clean mobile menu.
+
+Keep the navigation sticky or intelligently persistent as the user scrolls.
+
+Homepage hero
+
+The homepage should immediately communicate what Dapr does and allow the customer to begin booking.
+
+Use a two-column desktop layout inspired by the Uber homepage screenshot.
+
+Left side
+
+Location indicator near the top, for example:
+
+Car care in Phoenix
+
+Large headline.
+
+Potential starting copy:
+
+Your car, cared for.
+
+Supporting copy:
+
+Professional car care that comes to you. Book a vetted Dapr Pro at home, work, or wherever your car is.
+
+Keep our existing positioning in mind:
+
+Vetted Pros · At Home · On-Demand
+
+Main booking widget
+
+The booking interface should be the most important element on the homepage.
+
+Create a large booking card/form similar in prominence to Uber's pickup/dropoff form, but built specifically around Dapr.
+
+Initial fields:
+
+1. Location
+
+Input:
+
+Where should we come?
+
+Allow address/location entry using whatever existing location functionality we already have.
+
+2. Vehicle
+
+Input:
+
+Choose your vehicle
+
+If logged in, existing saved vehicles should eventually be usable.
+
+For logged-out users, allow them to begin selecting year/make/model through the existing booking flow.
+
+3. Service timing
+
+Give the customer a simple choice similar to Uber:
+
+ASAP
+
+or
+
+Schedule
+
+ASAP should mean the earliest available appointment rather than literally immediate service if that functionality does not currently exist.
+
+Primary CTA
+
+Large black button:
+
+See services & prices
+
+Do not duplicate booking logic unnecessarily. Wherever possible, connect this entry point to the existing booking flow rather than rebuilding or changing the underlying booking backend.
+
+Right side of hero
+
+Use a large visual area.
+
+Eventually I will provide custom Dapr photography or artwork.
+
+For now, create the layout/component so an image can easily be replaced later.
+
+The visual should communicate:
+
+mobile car care
+a Dapr Pro arriving at a customer's home
+a clean/high-end vehicle
+convenience
+technology
+
+Give the image container large rounded corners consistent with the Dapr app.
+
+Section below hero
+
+Create a section similar in philosophy to Uber's:
+
+Explore Dapr
+
+Use large cards.
+
+Initial cards:
+
+Get your car cared for
+
+Book mobile detailing from a vetted Dapr Pro.
+
+Schedule ahead
+
+Choose a date and time that works for you.
+
+Fleet care
+
+Manage recurring vehicle care for your business.
+
+Become a Dapr Pro
+
+Earn money providing professional car care on your schedule.
+
+Each should have a clean image/illustration area and CTA.
+
+Schedule-ahead section
+
+Further down the homepage, create a large section inspired structurally by the second Uber screenshot.
+
+Headline:
+
+Plan ahead
+
+Large card on the left containing:
+
+Schedule your Dapr Pro
+
+Fields:
+
+Date
+Time
+Location
+
+CTA:
+
+See availability
+
+On the right, show a clean benefits card.
+
+Potential benefits:
+
+Choose a time that works for you
+
+Book your service in advance.
+
+Your Pro comes to you
+
+Home, work, apartment, or another approved location.
+
+Vetted Dapr Pros
+
+Providers are screened before joining the platform.
+
+Do not make claims we cannot currently substantiate. Use existing Dapr policies when deciding exact wording.
+
+Additional homepage sections
+
+After the primary booking content, create placeholders/sections for:
+
+How Dapr works
+
+Three simple steps:
+
+1. Book your car
+
+Choose your vehicle, service, location, and time.
+
+2. Meet your Pro
+
+A vetted Dapr Pro comes to your location.
+
+3. Get back to your day
+
+Track your appointment and enjoy a clean car.
+
+Services
+
+Show our major service tiers using the existing service information/data, rather than hardcoding a second conflicting service system.
+
+The design should support services such as:
+
+Refresh Detail
+
+and
+
+Dapr Deluxe
+
+Use the existing backend/service catalog as the source of truth where possible.
+
+Dapr for Fleets
+
+Large premium section directing businesses toward the future Fleet page.
+
+CTA:
+
+Explore Dapr for Fleets
+
+Become a Pro
+
+Large provider-focused section.
+
+Headline direction:
+
+Your skills. Your schedule. Your business.
+
+CTA:
+
+Become a Dapr Pro
+
+Footer
+
+Create a substantial modern footer.
+
+Include:
+
+Dapr
+
+About Us
+Careers
+Blog
+Offers
+
+Customers
+
+Book a service
+Help
+Account
+
+Pros
+
+Become a Pro
+Pro resources
+Pro login
+
+Business
+
+Fleets
+
+Legal
+
+Privacy Policy
+Terms of Service
+Provider Terms
+Accessibility
+
+Social links can be added later.
+
+Existing legal/profile pages
+
+I am currently updating Privacy Policy, legal pages, profile/account content, and similar pages.
+
+Do not delete these pages during the redesign.
+
+Bring them visually into the new design system, but preserve their content and routes unless I specifically tell you otherwise.
+
+Responsive behavior
+
+Desktop should feel spacious like the attached Uber screenshots.
+
+Tablet and mobile should feel more like our native Dapr app:
+
+stacked content
+large touch targets
+full-width booking controls
+bottom-sheet/modal patterns where appropriate
+minimal visual clutter
+strong hierarchy
+
+Do not simply shrink the desktop site.
+
+Before implementation
+
+First:
+
+Inspect the existing website structure.
+Identify which components/pages can safely be redesigned without touching backend contracts.
+Identify the existing booking functionality we can reuse.
+Tell me briefly what you plan to change.
+Then implement the redesign.
+
+Again, do not modify native-app API contracts or backend architecture as part of this website redesign.

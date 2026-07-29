@@ -1,86 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, CheckCircle2, Clock, MapPin, Shield, Star, ChevronRight, Smartphone, ChevronDown, Navigation, Crown } from "lucide-react";
+import {
+  MapPin,
+  ChevronDown,
+  Navigation,
+  Calendar,
+  Clock,
+  Car,
+  Shield,
+  Star,
+  CheckCircle2,
+  ArrowRight,
+  ChevronRight,
+  Zap,
+  Users,
+  BarChart3,
+  Menu,
+  X,
+} from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
-import FluidHeroBackground from "@/components/fluid-hero-background";
-
-const TIME_OPTIONS = [
-  { id: "now", label: "Arrive now" },
-  { id: "today", label: "Later today" },
-  { id: "tomorrow", label: "Tomorrow" },
-  { id: "schedule", label: "Pick a date & time" },
-] as const;
 
 const dapprLogo = "/dapr-logo.svg";
 
-export default function HomeDesktop() {
-  const [scrolled, setScrolled] = useState(false);
-  const [, setLocation] = useLocation();
-  const { user } = useAuth();
+// ─── Address autocomplete ────────────────────────────────────────────────────
+type AddrSuggestion = { label: string; sub: string };
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const goBook = () => setLocation(user ? "/" : "/auth");
-  const goBookWith = (_slug: string) => {
-    setLocation(user ? "/" : "/auth");
-  };
-  const goServices = () => setLocation("/services");
-  const goLogin = () => setLocation("/auth");
-  const goHowItWorks = () => setLocation("/how-it-works");
-  const goCorporate = () => setLocation("/corporate");
-
-  const [timeOpt, setTimeOpt] = useState<(typeof TIME_OPTIONS)[number]>(TIME_OPTIONS[0]);
-  const [timeOpen, setTimeOpen] = useState(false);
-  const [locationInput, setLocationInput] = useState("");
-  const timePopRef = useRef<HTMLDivElement | null>(null);
-
-  type AddrSuggestion = { label: string; sub: string };
+function useAddressAutocomplete() {
+  const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
-  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
-  const [loadingSuggest, setLoadingSuggest] = useState(false);
-  const locationBoxRef = useRef<HTMLDivElement | null>(null);
-  const suppressNextFetchRef = useRef(false);
+  const suppressRef = useRef(false);
 
   useEffect(() => {
-    if (!timeOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (timePopRef.current && !timePopRef.current.contains(e.target as Node)) {
-        setTimeOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [timeOpen]);
-
-  useEffect(() => {
-    if (!suggestOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (locationBoxRef.current && !locationBoxRef.current.contains(e.target as Node)) {
-        setSuggestOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [suggestOpen]);
-
-  useEffect(() => {
-    if (suppressNextFetchRef.current) {
-      suppressNextFetchRef.current = false;
-      return;
-    }
-    const q = locationInput.trim();
-    if (q.length < 3) {
-      setSuggestions([]);
-      setLoadingSuggest(false);
-      return;
-    }
-    setLoadingSuggest(true);
+    if (suppressRef.current) { suppressRef.current = false; return; }
+    const q = input.trim();
+    if (q.length < 3) { setSuggestions([]); setLoading(false); return; }
+    setLoading(true);
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -90,671 +48,866 @@ export default function HomeDesktop() {
         );
         if (!res.ok) throw new Error("geocode failed");
         const data: { features?: Array<{ properties: Record<string, string> }> } = await res.json();
-        const items: AddrSuggestion[] =
-          data.features?.map((f) => {
-            const p = f.properties || {};
-            const street = [p.housenumber, p.street].filter(Boolean).join(" ");
-            const cityLine = [p.city || p.town || p.village, p.state, p.country].filter(Boolean).join(", ");
-            const primary = street || p.name || cityLine;
-            const secondary = street ? cityLine : (p.name && cityLine !== p.name ? cityLine : "");
-            return { label: primary, sub: secondary };
-          }).filter((s) => s.label) ?? [];
+        const items = (data.features ?? []).map((f) => {
+          const p = f.properties || {};
+          const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+          const city = [p.city || p.town || p.village, p.state, p.country].filter(Boolean).join(", ");
+          return { label: street || p.name || city, sub: street ? city : "" };
+        }).filter((s) => s.label);
         setSuggestions(items);
-        setSuggestOpen(items.length > 0);
+        setOpen(items.length > 0);
         setActiveIdx(-1);
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          setSuggestions([]);
-          setSuggestOpen(false);
-        }
-      } finally {
-        setLoadingSuggest(false);
-      }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") { setSuggestions([]); setOpen(false); }
+      } finally { setLoading(false); }
     }, 250);
-    return () => {
-      ctrl.abort();
-      clearTimeout(timer);
-    };
-  }, [locationInput]);
+    return () => { ctrl.abort(); clearTimeout(timer); };
+  }, [input]);
 
-  const pickSuggestion = (s: AddrSuggestion) => {
-    suppressNextFetchRef.current = true;
-    const full = s.sub ? `${s.label}, ${s.sub}` : s.label;
-    setLocationInput(full);
-    setSuggestOpen(false);
-    setSuggestions([]);
-    setActiveIdx(-1);
+  const pick = (s: AddrSuggestion) => {
+    suppressRef.current = true;
+    setInput(s.sub ? `${s.label}, ${s.sub}` : s.label);
+    setSuggestions([]); setOpen(false); setActiveIdx(-1);
   };
 
+  return { input, setInput, suggestions, open, setOpen, loading, activeIdx, setActiveIdx, pick };
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function NavBar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const aboutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!aboutOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) setAboutOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [aboutOpen]);
+
+  const nav = (path: string) => { setMobileOpen(false); setLocation(path); };
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#8c52ff] selection:text-white font-sans overflow-hidden">
-      {/* Navigation */}
+    <>
       <nav
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b border-white/5 ${
-          scrolled ? "bg-[#050505]/80 backdrop-blur-md py-4" : "bg-transparent py-6"
-        }`}
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
+          scrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-white"
+        } border-b border-gray-100`}
       >
-        <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between">
-          <div className="flex items-center gap-12">
-            <button onClick={() => setLocation("/")} className="flex items-center" data-testid="link-home" aria-label="Dapr home">
-              <img src={dapprLogo} alt="Dapr" className="h-28 w-auto" />
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex items-center justify-between h-16">
+          {/* Left — logo + links */}
+          <div className="flex items-center gap-8">
+            <button onClick={() => nav("/")} aria-label="Dapr home">
+              <img src={dapprLogo} alt="Dapr" className="h-20 w-auto" />
             </button>
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-              <button onClick={goServices} className="hover:text-white transition-colors" data-testid="link-services">Services</button>
-              <button onClick={goHowItWorks} className="hover:text-white transition-colors" data-testid="link-how-it-works">How it Works</button>
-              <button onClick={goCorporate} className="hover:text-white transition-colors" data-testid="link-corporate">For Fleets</button>
+            <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-600">
+              <button onClick={() => nav("/corporate")} className="hover:text-black transition-colors" data-testid="nav-fleets">
+                Fleets
+              </button>
+              <button onClick={() => nav("/become-a-pro")} className="hover:text-black transition-colors" data-testid="nav-become-pro">
+                Become a Pro
+              </button>
+              {/* About dropdown */}
+              <div className="relative" ref={aboutRef}>
+                <button
+                  onClick={() => setAboutOpen((o) => !o)}
+                  className="flex items-center gap-1 hover:text-black transition-colors"
+                  data-testid="nav-about"
+                >
+                  About <Icon icon={ChevronDown} size="xs" className={`transition-transform ${aboutOpen ? "rotate-180" : ""}`} />
+                </button>
+                {aboutOpen && (
+                  <div className="absolute top-full mt-2 left-0 bg-white border border-gray-100 rounded-2xl shadow-lg py-2 w-44 z-50">
+                    {[
+                      { label: "Offers", path: "/first-wash-offer" },
+                      { label: "Careers", path: "/careers" },
+                      { label: "Blog", path: "/blog" },
+                      { label: "About Us", path: "/about" },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => { setAboutOpen(false); nav(item.path); }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 text-gray-700 hover:text-black transition-colors"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => nav("/faq")} className="hover:text-black transition-colors" data-testid="nav-help">
+                Help
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+
+          {/* Right — auth */}
+          <div className="hidden lg:flex items-center gap-4">
             {user ? (
-              <button onClick={() => setLocation("/profile")} className="text-sm font-medium text-white/60 hover:text-white transition-colors" data-testid="link-profile">
+              <button onClick={() => nav("/profile")} className="text-sm font-medium text-gray-600 hover:text-black transition-colors" data-testid="nav-account">
                 My Account
               </button>
             ) : (
-              <button onClick={goLogin} className="text-sm font-medium text-white/60 hover:text-white transition-colors" data-testid="link-login">
+              <button onClick={() => nav("/auth")} className="text-sm font-medium text-gray-600 hover:text-black transition-colors" data-testid="nav-login">
                 Log in
               </button>
             )}
             <button
-              onClick={goBook}
-              className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95"
-              data-testid="button-book-nav"
+              onClick={() => nav("/auth")}
+              className="bg-black text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-gray-900 transition-colors"
+              data-testid="nav-create-account"
             >
-              Book a Wash
+              Create account
             </button>
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            <Icon icon={mobileOpen ? X : Menu} size="md" className="text-black" />
+          </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-20 lg:pt-52 lg:pb-32 overflow-hidden">
-        {/* Soft brand ambient (static, very subtle) */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8c52ff]/10 rounded-full blur-[140px] pointer-events-none" />
-
-        <div className="max-w-[1280px] mx-auto px-8 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-[#8c52ff] mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8c52ff] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8c52ff]"></span>
-              </span>
-              Detailers available near you
-            </div>
-            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
-              The premium car wash that{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8c52ff] to-[#b28cff]">comes to you.</span>
-            </h1>
-            <p className="text-lg lg:text-xl text-white/60 mb-8 leading-relaxed max-w-xl">
-              Book in seconds. Track your detailer live. Return to a showroom-finish car without ever leaving your home or office.
-            </p>
-
-            {/* Time selector pill */}
-            <div className="relative inline-block mb-4" ref={timePopRef}>
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-white pt-16">
+          <div className="px-6 py-8 space-y-1">
+            {[
+              { label: "Fleets", path: "/corporate" },
+              { label: "Become a Pro", path: "/become-a-pro" },
+              { label: "Offers", path: "/first-wash-offer" },
+              { label: "Help", path: "/faq" },
+            ].map((item) => (
               <button
-                onClick={() => setTimeOpen((o) => !o)}
-                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white rounded-full pl-3 pr-4 py-2.5 text-sm font-semibold border border-white/10 transition-colors"
-                data-testid="button-time-picker"
-                aria-haspopup="listbox"
-                aria-expanded={timeOpen}
+                key={item.label}
+                onClick={() => nav(item.path)}
+                className="w-full text-left px-4 py-4 text-lg font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition-colors"
               >
-                <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
-                  <Icon icon={Clock} size="xs" />
-                </span>
-                {timeOpt.label}
-                <Icon icon={ChevronDown} size="sm" className={` transition-transform ${timeOpen ? "rotate-180" : ""}`} />
+                {item.label}
               </button>
-              {timeOpen && (
-                <div
-                  className="absolute top-full mt-2 left-0 z-30 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden py-1"
-                  role="listbox"
-                >
-                  {TIME_OPTIONS.map((opt) => {
-                    const active = timeOpt.id === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => {
-                          setTimeOpt(opt);
-                          setTimeOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm hover:bg-white/5 flex items-center justify-between transition-colors ${
-                          active ? "text-[#8c52ff] font-semibold" : "text-white"
-                        }`}
-                        role="option"
-                        aria-selected={active}
-                        data-testid={`time-option-${opt.id}`}
-                      >
-                        {opt.label}
-                        {active && <Icon icon={CheckCircle2} size="sm" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Vehicle location input */}
-            <div className="relative max-w-xl mb-6" ref={locationBoxRef}>
-              <div className="bg-white/10 hover:bg-white/15 focus-within:bg-white/15 focus-within:border-[#8c52ff] transition-colors rounded-2xl px-5 py-4 flex items-center gap-4 border border-white/10">
-                <div className="w-2.5 h-2.5 rounded-full bg-white shrink-0" />
-                <input
-                  type="text"
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  onFocus={() => {
-                    if (suggestions.length > 0) setSuggestOpen(true);
-                  }}
-                  placeholder="Vehicle location"
-                  className="flex-1 bg-transparent outline-none text-base placeholder:text-white/50"
-                  data-testid="input-vehicle-location"
-                  autoComplete="off"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={suggestOpen}
-                  aria-controls="vehicle-location-suggestions"
-                  aria-activedescendant={
-                    activeIdx >= 0 ? `vehicle-location-suggestion-${activeIdx}` : undefined
-                  }
-                  onKeyDown={(e) => {
-                    if (suggestOpen && suggestions.length > 0) {
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        setActiveIdx((i) => (i + 1) % suggestions.length);
-                        return;
-                      }
-                      if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        setActiveIdx((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-                        return;
-                      }
-                      if (e.key === "Enter") {
-                        if (activeIdx >= 0 && activeIdx < suggestions.length) {
-                          e.preventDefault();
-                          pickSuggestion(suggestions[activeIdx]);
-                          return;
-                        }
-                      }
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        setSuggestOpen(false);
-                        return;
-                      }
-                    }
-                    if (e.key === "Enter") goBook();
-                  }}
-                />
-                <Icon icon={Navigation} size="md" className="text-white/60" />
-              </div>
-
-              {suggestOpen && (suggestions.length > 0 || loadingSuggest) && (
-                <div
-                  id="vehicle-location-suggestions"
-                  role="listbox"
-                  className="absolute top-full mt-2 left-0 right-0 z-30 bg-[#111] border border-white/10 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden py-1"
-                >
-                  {loadingSuggest && suggestions.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-white/50">Searching addresses…</div>
-                  ) : (
-                    suggestions.map((s, idx) => {
-                      const active = idx === activeIdx;
-                      return (
-                        <button
-                          key={`${s.label}-${idx}`}
-                          id={`vehicle-location-suggestion-${idx}`}
-                          role="option"
-                          aria-selected={active}
-                          onMouseEnter={() => setActiveIdx(idx)}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            pickSuggestion(s);
-                          }}
-                          className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
-                            active ? "bg-white/10" : "hover:bg-white/5"
-                          }`}
-                          data-testid={`suggestion-${idx}`}
-                        >
-                          <Icon icon={MapPin} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
-                          <div className="min-w-0">
-                            <div className="text-sm text-white truncate">{s.label}</div>
-                            {s.sub && (
-                              <div className="text-xs text-white/50 truncate">{s.sub}</div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={goBook}
-                className="bg-[#8c52ff] text-white px-8 py-4 rounded-full text-base font-bold hover:bg-[#7a42e5] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_40px_-10px_#8c52ff]"
-                data-testid="button-book-hero"
-              >
-                See Prices <Icon icon={ArrowRight} size="sm" />
-              </button>
-              <button
-                onClick={goServices}
-                className="bg-white/5 text-white border border-white/10 px-8 py-4 rounded-full text-base font-bold hover:bg-white/10 transition-all"
-                data-testid="button-view-services"
-              >
-                View Services
-              </button>
-            </div>
-
-            <div className="mt-12 flex items-center gap-6 border-t border-white/10 pt-8">
-              <div className="flex -space-x-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-10 h-10 rounded-full bg-[#1a1a1a] border-2 border-[#050505] flex items-center justify-center overflow-hidden">
-                    <img
-                      src={`https://api.dicebear.com/7.x/notionists/svg?seed=${i}&backgroundColor=transparent`}
-                      alt="Customer"
-                      className="w-full h-full object-cover opacity-80"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Icon icon={Star} size="sm" className="fill-[#8c52ff] text-[#8c52ff]" key={i} />
-                  ))}
-                </div>
-                <span className="text-sm text-white/60 font-medium">4.9/5 from 10,000+ washes</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Hero Visual */}
-          <div className="relative w-full aspect-square lg:aspect-auto lg:h-[700px] rounded-3xl border border-white/10 bg-[#0a0a0a] overflow-hidden shadow-2xl">
-            {/* Contained premium fluid background — sits behind the photo, framed by the card */}
-            <FluidHeroBackground subtle />
-            <img
-              src="/desktop/lambo.jpg"
-              alt="Dapr detailers working on a black Lamborghini"
-              className="absolute inset-0 w-full h-full object-cover opacity-55 mix-blend-luminosity"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
-
-            <div className="absolute top-8 left-8 right-8 flex justify-between items-start">
-              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 w-64 shadow-2xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[#8c52ff]/20 flex items-center justify-center">
-                    <Icon icon={Clock} size="md" className="text-[#8c52ff]" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/60 font-medium">Arriving in</p>
-                    <p className="text-lg font-bold">12 mins</p>
-                  </div>
-                </div>
-                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#8c52ff] w-3/4 rounded-full" />
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-8 right-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#8c52ff]">
-                  <img
-                    src="https://api.dicebear.com/7.x/notionists/svg?seed=Marcus&backgroundColor=transparent"
-                    alt="Detailer"
-                    className="w-full h-full bg-[#1a1a1a]"
-                  />
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-[#8c52ff] w-4 h-4 rounded-full border-2 border-black flex items-center justify-center">
-                  <Icon icon={CheckCircle2} className="text-white" />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-bold">Marcus T.</p>
-                <p className="text-xs text-white/60">Premium Detailer</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Logos Section */}
-      <section className="py-10 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-[1280px] mx-auto px-8">
-          <p className="text-center text-sm font-medium text-white/40 mb-8 uppercase tracking-widest">
-            Trusted by fleets &amp; professionals at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-12 lg:gap-24 opacity-40 grayscale">
-            {["Vivint", "Adobe", "Bill.com", "dōTERRA", "Lucid"].map((name, i) => (
-              <div key={i} className="text-xl font-bold tracking-tighter">
-                {name}
-              </div>
             ))}
-            <img src="/podium-logo.png" alt="Podium" className="h-6 w-auto invert" />
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="py-32 relative">
-        <div className="max-w-[1280px] mx-auto px-8">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Frictionless from tap to shine.</h2>
-            <p className="text-lg text-white/60">
-              We rebuilt the car wash experience around your time. No waiting in lines, no subpar results. Just seamless technology and expert detailers.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Step 1 */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
-              <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Icon icon={Smartphone} size="lg" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">1. Book in seconds</h3>
-              <p className="text-white/60 leading-relaxed mb-8">
-                Select your service, choose a time, and tell us where the car is parked. We handle the rest.
-              </p>
-              <div className="aspect-[4/3] rounded-2xl bg-[#111] border border-white/5 relative overflow-hidden flex items-center justify-center">
-                <div className="w-48 bg-black border border-white/10 rounded-2xl p-4 shadow-xl transform group-hover:-translate-y-2 transition-transform duration-500">
-                  <div className="h-4 w-20 bg-white/10 rounded mb-4" />
-                  <div className="space-y-2">
-                    <div className="h-10 w-full bg-white/5 rounded-lg border border-[#8c52ff]/30 flex items-center px-3">
-                      <div className="w-4 h-4 rounded-full border border-[#8c52ff] mr-2 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-[#8c52ff]" />
-                      </div>
-                      <div className="h-2 w-16 bg-white/40 rounded" />
-                    </div>
-                    <div className="h-10 w-full bg-white/5 rounded-lg border border-white/5 flex items-center px-3">
-                      <div className="w-4 h-4 rounded-full border border-white/20 mr-2" />
-                      <div className="h-2 w-24 bg-white/20 rounded" />
-                    </div>
-                  </div>
-                  <div className="mt-4 h-8 w-full bg-[#8c52ff] rounded-lg" />
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
-              <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Icon icon={MapPin} size="lg" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">2. Track live</h3>
-              <p className="text-white/60 leading-relaxed mb-8">
-                Watch your detailer en route on a live map. We bring our own water, power, and premium supplies.
-              </p>
-              <div className="aspect-[4/3] rounded-2xl bg-[#111] border border-white/5 relative overflow-hidden">
-                <img src="/desktop/dark-map.png" alt="Map" className="absolute inset-0 w-full h-full object-cover opacity-50" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111] to-transparent" />
-                <div className="absolute bottom-4 inset-x-4 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-center justify-between transform group-hover:translate-y-0 translate-y-1 transition-transform duration-500">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#8c52ff] flex items-center justify-center">
-                      <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                    </div>
-                    <div>
-                      <div className="h-2 w-12 bg-white/80 rounded mb-1.5" />
-                      <div className="h-1.5 w-20 bg-white/40 rounded" />
-                    </div>
-                  </div>
-                  <div className="text-xs font-bold text-[#8c52ff]">4 MIN</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 hover:border-white/10 transition-colors group">
-              <div className="w-12 h-12 rounded-xl bg-[#8c52ff]/10 text-[#8c52ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Icon icon={Star} size="lg" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">3. Enjoy the shine</h3>
-              <p className="text-white/60 leading-relaxed mb-8">
-                Get notified when your car is ready. Pay seamlessly through the app and drive a spotless car.
-              </p>
-              <div className="aspect-[4/3] rounded-2xl bg-[#111] border border-white/5 relative overflow-hidden">
-                <img
-                  src="/desktop/jeep-desert.jpg"
-                  alt="Dapr detailer washing a Jeep Gladiator in the desert"
-                  className="absolute inset-0 w-full h-full object-cover mix-blend-luminosity opacity-70 group-hover:scale-105 group-hover:mix-blend-normal transition-all duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="bg-[#8c52ff] text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transform translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                    <Icon icon={CheckCircle2} size="sm" /> Wash Complete
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Service Tiers */}
-      <section className="py-32 bg-[#020202] border-y border-white/5">
-        <div className="max-w-[1280px] mx-auto px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
-            <div className="max-w-2xl">
-              <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Expertise at every level.</h2>
-              <p className="text-lg text-white/60">
-                From a quick exterior refresh to a comprehensive showroom detail, select the perfect tier for your car's needs.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Essential Wash */}
-            <div className="flex flex-col p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
-              <h3 className="text-xl font-bold mb-2">Essential Wash</h3>
-              <p className="text-white/60 text-sm mb-6">A fast, gentle hand wash to keep your car looking sharp between deeper details.</p>
-              <div className="mb-2 flex items-baseline gap-3">
-                <span className="text-4xl font-bold">$39</span>
-                <span className="text-xs text-white/40 uppercase tracking-wider">30 min</span>
-              </div>
-              <ul className="space-y-4 mt-6 mb-8 flex-1">
-                {[
-                  "Gentle hand wash with pH-balanced soap",
-                  "Quick spray wax for added shine",
-                  "Wheel face rinse & tire wipe",
-                  "Interior vacuum",
-                  "Streak-free windows",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+            <div className="pt-6 space-y-3">
               <button
-                onClick={() => goBookWith("essential-wash")}
-                className="w-full py-3 rounded-full border border-white/10 font-bold hover:bg-white hover:text-black transition-colors"
-                data-testid="button-tier-essential-wash"
+                onClick={() => nav("/auth")}
+                className="w-full py-3.5 rounded-full border border-gray-200 text-base font-bold text-black hover:bg-gray-50 transition-colors"
               >
-                Select Essential Wash
+                Log in
               </button>
-            </div>
-
-            {/* Interior Detail (Highlighted) */}
-            <div className="flex flex-col p-8 rounded-3xl bg-gradient-to-b from-[#1a1033] to-[#0a0a0a] border border-[#8c52ff]/30 relative transform md:-translate-y-4 shadow-[0_0_40px_-15px_#8c52ff]">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#8c52ff] text-white text-xs font-bold px-3 py-1 rounded-full tracking-wider uppercase">
-                Most Popular
-              </div>
-              <h3 className="text-xl font-bold mb-2">Interior Detail</h3>
-              <p className="text-white/60 text-sm mb-6">A focused interior reset for built-up dust, crumbs, spills, and everyday mess.</p>
-              <div className="mb-2 flex items-baseline gap-3">
-                <span className="text-4xl font-bold">$89</span>
-                <span className="text-xs text-white/40 uppercase tracking-wider">60 min</span>
-              </div>
-              <ul className="space-y-4 mt-6 mb-8 flex-1">
-                {[
-                  "Full interior vacuum",
-                  "Dash, console, door panels & cup holders",
-                  "Seat cleaning",
-                  "Light stain treatment",
-                  "Interior windows cleaned",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
               <button
-                onClick={() => goBookWith("interior-detail")}
-                className="w-full py-3 rounded-full bg-[#8c52ff] font-bold hover:bg-[#7a42e5] transition-colors"
-                data-testid="button-tier-interior-detail"
+                onClick={() => nav("/auth")}
+                className="w-full py-3.5 rounded-full bg-black text-white text-base font-bold hover:bg-gray-900 transition-colors"
               >
-                Select Interior Detail
-              </button>
-            </div>
-
-            {/* Refresh Detail */}
-            <div className="flex flex-col p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
-              <h3 className="text-xl font-bold mb-2">Refresh Detail</h3>
-              <p className="text-white/60 text-sm mb-6">A complete inside-and-out refresh — Essential Wash plus Interior Detail with upgraded wheel work.</p>
-              <div className="mb-2 flex items-baseline gap-3">
-                <span className="text-4xl font-bold">$149</span>
-                <span className="text-xs text-white/40 uppercase tracking-wider">90 min</span>
-              </div>
-              <ul className="space-y-4 mt-6 mb-8 flex-1">
-                {[
-                  "Everything in Essential Wash",
-                  "Everything in Interior Detail",
-                  "More thorough wheel cleaning",
-                  "Tire shine",
-                  "Full inside-and-out refresh",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                    <Icon icon={CheckCircle2} size="md" className="text-[#8c52ff] shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => goBookWith("refresh-detail")}
-                className="w-full py-3 rounded-full border border-white/10 font-bold hover:bg-white hover:text-black transition-colors"
-                data-testid="button-tier-refresh-detail"
-              >
-                Select Refresh Detail
-              </button>
-            </div>
-          </div>
-
-          {/* Black Label upsell strip */}
-          <div className="mt-8 rounded-3xl border border-white/10 bg-[#0a0a0a] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-start md:items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#8c52ff]/15 text-[#8c52ff] flex items-center justify-center shrink-0">
-                <Icon icon={Crown} size="lg" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h4 className="text-lg font-bold">Dapr Black Label Detail</h4>
-                  <span className="text-xs font-semibold text-[#8c52ff] uppercase tracking-wider">Flagship</span>
-                </div>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Showroom-finish results from a senior detailer — paint decontamination, steam extraction, leather conditioning, and engine bay work.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6 md:shrink-0">
-              <div className="text-right">
-                <div className="text-3xl font-bold leading-none">$299</div>
-                <div className="text-xs text-white/40 uppercase tracking-wider mt-1">3 hrs</div>
-              </div>
-              <button
-                onClick={() => goBookWith("black-label")}
-                className="py-3 px-6 rounded-full bg-white text-black font-bold hover:bg-white/90 transition-colors whitespace-nowrap"
-                data-testid="button-tier-black-label"
-              >
-                Book Black Label
+                Create account
               </button>
             </div>
           </div>
         </div>
-      </section>
+      )}
+    </>
+  );
+}
 
-      {/* Value Prop / Image Feature */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="max-w-[1280px] mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="relative rounded-3xl overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[600px] border border-white/10">
-              <img src="/desktop/interior-car.jpg" alt="Detailed luxury car interior" className="w-full h-full object-cover opacity-80" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
+// ─── Booking widget ───────────────────────────────────────────────────────────
+function BookingWidget() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const [timing, setTiming] = useState<"asap" | "schedule">("asap");
+  const [vehicle, setVehicle] = useState("");
+  const addr = useAddressAutocomplete();
+  const boxRef = useRef<HTMLDivElement>(null);
 
-              <div className="absolute bottom-8 left-8 right-8 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Icon icon={Shield} size="xl" className="text-[#8c52ff]" />
-                  <h4 className="text-xl font-bold">Vetted Professionals</h4>
-                </div>
-                <p className="text-white/70 text-sm leading-relaxed">
-                  Only the top 5% of detailers make it onto our platform. Fully insured, extensively trained, and equipped with professional-grade tools.
-                </p>
-              </div>
-            </div>
+  useEffect(() => {
+    if (!addr.open) return;
+    const onClick = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) addr.setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [addr.open]);
 
-            <div className="max-w-xl">
-              <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6">Your driveway is the new detailing studio.</h2>
-              <p className="text-lg text-white/60 mb-8 leading-relaxed">
-                We bring our own spot-free water and independent power supply. We leave nothing behind but a perfectly clean car. No mess, no hassle, no waiting rooms.
-              </p>
+  const handleBook = () => setLocation(user ? "/" : "/auth");
 
-              <div className="space-y-6">
-                {[
-                  { title: "Self-Sufficient Vans", desc: "Our detailers arrive fully equipped with water and power." },
-                  { title: "Premium Products", desc: "We use only pH-balanced, high-end detailing chemicals." },
-                  { title: "Zero Scratch Guarantee", desc: "Two-bucket wash method and fresh microfibers every time." },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="mt-1 w-6 h-6 rounded-full bg-[#8c52ff]/20 flex items-center justify-center shrink-0">
-                      <Icon icon={CheckCircle2} size="sm" className="text-[#8c52ff]" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white mb-1">{item.title}</h4>
-                      <p className="text-sm text-white/60">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={goHowItWorks}
-                className="mt-10 flex items-center gap-2 text-[#8c52ff] font-bold hover:text-white transition-colors"
-                data-testid="button-learn-process"
-              >
-                Learn about our process <Icon icon={ChevronRight} size="sm" />
-              </button>
-            </div>
-          </div>
+  return (
+    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 w-full max-w-md">
+      {/* Location field */}
+      <div className="relative mb-3" ref={boxRef}>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Where should we come?
+        </label>
+        <div className="relative flex items-center border border-gray-200 rounded-2xl px-4 py-3.5 focus-within:border-[#8c52ff] focus-within:ring-2 focus-within:ring-[#8c52ff]/10 transition-all bg-gray-50/50">
+          <Icon icon={MapPin} size="sm" className="text-gray-400 mr-3 shrink-0" />
+          <input
+            type="text"
+            value={addr.input}
+            onChange={(e) => addr.setInput(e.target.value)}
+            onFocus={() => { if (addr.suggestions.length > 0) addr.setOpen(true); }}
+            placeholder="Home, work, or anywhere your car is"
+            className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+            data-testid="widget-location"
+            autoComplete="off"
+            onKeyDown={(e) => {
+              if (addr.open && addr.suggestions.length > 0) {
+                if (e.key === "ArrowDown") { e.preventDefault(); addr.setActiveIdx((i) => (i + 1) % addr.suggestions.length); }
+                if (e.key === "ArrowUp") { e.preventDefault(); addr.setActiveIdx((i) => (i <= 0 ? addr.suggestions.length - 1 : i - 1)); }
+                if (e.key === "Enter" && addr.activeIdx >= 0) { e.preventDefault(); addr.pick(addr.suggestions[addr.activeIdx]); return; }
+                if (e.key === "Escape") { e.preventDefault(); addr.setOpen(false); }
+              }
+              if (e.key === "Enter") handleBook();
+            }}
+          />
+          {addr.input && (
+            <button onClick={() => { addr.setInput(""); addr.setSuggestions([]); addr.setOpen(false); }} className="text-gray-300 hover:text-gray-500 ml-2">
+              <Icon icon={X} size="xs" />
+            </button>
+          )}
         </div>
-      </section>
+        {addr.open && (addr.suggestions.length > 0 || addr.loading) && (
+          <div className="absolute top-full mt-1 left-0 right-0 z-30 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden py-1">
+            {addr.loading && addr.suggestions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+            ) : addr.suggestions.map((s, idx) => (
+              <button
+                key={`${s.label}-${idx}`}
+                onMouseEnter={() => addr.setActiveIdx(idx)}
+                onMouseDown={(e) => { e.preventDefault(); addr.pick(s); }}
+                className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${idx === addr.activeIdx ? "bg-gray-50" : "hover:bg-gray-50"}`}
+              >
+                <Icon icon={MapPin} size="sm" className="text-[#8c52ff] mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-sm text-gray-800">{s.label}</div>
+                  {s.sub && <div className="text-xs text-gray-400">{s.sub}</div>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* CTA Section */}
-      <section className="py-32 relative border-t border-white/5">
-        <div className="absolute inset-0 bg-[#8c52ff]/5" />
-        <div className="max-w-[1280px] mx-auto px-8 relative z-10 text-center">
-          <h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">Ready for a Dapr clean?</h2>
-          <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12">
-            Join thousands of car owners who have upgraded to the most convenient detailing experience available.
-          </p>
+      {/* Vehicle field */}
+      <div className="mb-4">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Your vehicle
+        </label>
+        <div className="relative flex items-center border border-gray-200 rounded-2xl px-4 py-3.5 bg-gray-50/50 focus-within:border-[#8c52ff] focus-within:ring-2 focus-within:ring-[#8c52ff]/10 transition-all">
+          <Icon icon={Car} size="sm" className="text-gray-400 mr-3 shrink-0" />
+          <input
+            type="text"
+            value={vehicle}
+            onChange={(e) => setVehicle(e.target.value)}
+            placeholder="Year, make, model (e.g. 2022 Tesla Model 3)"
+            className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+            data-testid="widget-vehicle"
+          />
+        </div>
+      </div>
+
+      {/* Timing toggle */}
+      <div className="mb-5">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          When?
+        </label>
+        <div className="grid grid-cols-2 gap-2 bg-gray-100 rounded-2xl p-1">
           <button
-            onClick={goBook}
-            className="bg-white text-black px-10 py-5 rounded-full text-lg font-bold hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(255,255,255,0.5)]"
-            data-testid="button-book-cta"
+            onClick={() => setTiming("asap")}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              timing === "asap" ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-gray-700"
+            }`}
+            data-testid="widget-timing-asap"
           >
-            Book Your First Wash
+            <Icon icon={Zap} size="xs" />
+            ASAP
+          </button>
+          <button
+            onClick={() => setTiming("schedule")}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              timing === "schedule" ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-gray-700"
+            }`}
+            data-testid="widget-timing-schedule"
+          >
+            <Icon icon={Calendar} size="xs" />
+            Schedule
           </button>
         </div>
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={handleBook}
+        className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base hover:bg-gray-900 active:scale-[0.98] transition-all"
+        data-testid="widget-cta"
+      >
+        See services &amp; prices
+      </button>
+
+      <p className="text-center text-xs text-gray-400 mt-3">
+        Vetted Pros · At Home · On-Demand
+      </p>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function HomeDesktop() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  const goBook = () => setLocation(user ? "/" : "/auth");
+  const goServices = () => setLocation("/services");
+  const goCorporate = () => setLocation("/corporate");
+  const goBecomePro = () => setLocation("/become-a-pro");
+
+  return (
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
+      <NavBar />
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left */}
+            <div>
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8c52ff] mb-6">
+                <Icon icon={MapPin} size="xs" />
+                Car care in Phoenix
+              </div>
+              <h1 className="text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.05] text-black mb-5">
+                Your car,<br />cared for.
+              </h1>
+              <p className="text-lg lg:text-xl text-gray-500 mb-8 leading-relaxed max-w-lg">
+                Professional car care that comes to you. Book a vetted Dapr Pro at home, work, or wherever your car is.
+              </p>
+              <BookingWidget />
+            </div>
+
+            {/* Right — image placeholder */}
+            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] lg:aspect-auto lg:h-[620px] bg-gray-100 shadow-xl">
+              {/* Placeholder — swap src for final Dapr photography */}
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-50 flex items-center justify-center">
+                <div className="text-center px-8">
+                  <div className="w-20 h-20 rounded-full bg-[#8c52ff]/10 flex items-center justify-center mx-auto mb-4">
+                    <Icon icon={Car} size="xl" className="text-[#8c52ff]" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-medium">Dapr photography coming soon</p>
+                  <p className="text-xs text-gray-300 mt-1">A Dapr Pro arriving at your door</p>
+                </div>
+              </div>
+
+              {/* Floating "arriving" card */}
+              <div className="absolute top-6 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#8c52ff]/10 flex items-center justify-center">
+                  <Icon icon={Clock} size="sm" className="text-[#8c52ff]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Arriving in</p>
+                  <p className="text-sm font-bold text-black">12 minutes</p>
+                </div>
+              </div>
+
+              {/* Floating pro card */}
+              <div className="absolute bottom-6 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  <Icon icon={Users} size="sm" className="text-gray-500" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-black">Marcus T.</p>
+                  <div className="flex items-center gap-1">
+                    <Icon icon={Star} size="xs" className="text-[#8c52ff] fill-[#8c52ff]" />
+                    <span className="text-xs text-gray-500">4.98 · Dapr Pro</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-white/5 bg-[#020202]">
-        <div className="max-w-[1280px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <img src={dapprLogo} alt="Dapr" className="h-20 w-auto opacity-80" />
-          <div className="flex gap-6 text-sm text-white/40">
-            <button onClick={() => setLocation("/faq")} className="hover:text-white transition-colors" data-testid="link-faq">FAQ</button>
-            <button onClick={goCorporate} className="hover:text-white transition-colors" data-testid="link-corporate-footer">For Fleets</button>
-            <button onClick={goHowItWorks} className="hover:text-white transition-colors" data-testid="link-how-footer">How it Works</button>
+      {/* ── Trust bar ─────────────────────────────────────────────────────── */}
+      <section className="py-8 border-y border-gray-100 bg-gray-50/50">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-10 lg:gap-20 text-sm font-semibold text-gray-400">
+            {["4.9★ average rating", "10,000+ services completed", "Vetted & insured Pros", "No waiting — comes to you"].map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} Dapr. All rights reserved.</p>
+        </div>
+      </section>
+
+      {/* ── Explore Dapr ──────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Explore Dapr</h2>
+          <p className="text-gray-500 mb-10 text-lg">Everything you need for your car, at your door.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: Car,
+                title: "Get your car cared for",
+                desc: "Book mobile detailing from a vetted Dapr Pro.",
+                cta: "Book now",
+                action: goBook,
+                accent: "#8c52ff",
+                bg: "bg-[#8c52ff]/5",
+              },
+              {
+                icon: Calendar,
+                title: "Schedule ahead",
+                desc: "Choose a date and time that works for you.",
+                cta: "See times",
+                action: goBook,
+                accent: "#0a0a0a",
+                bg: "bg-gray-50",
+              },
+              {
+                icon: BarChart3,
+                title: "Fleet care",
+                desc: "Manage recurring vehicle care for your business.",
+                cta: "Learn more",
+                action: goCorporate,
+                accent: "#0a0a0a",
+                bg: "bg-gray-50",
+              },
+              {
+                icon: Shield,
+                title: "Become a Dapr Pro",
+                desc: "Earn money providing professional car care on your schedule.",
+                cta: "Apply now",
+                action: goBecomePro,
+                accent: "#0a0a0a",
+                bg: "bg-gray-50",
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className={`${card.bg} rounded-3xl p-6 flex flex-col hover:shadow-md transition-shadow border border-gray-100/50`}
+              >
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: card.accent === "#8c52ff" ? "#8c52ff18" : "#0a0a0a0e" }}
+                >
+                  <card.icon size={20} style={{ color: card.accent }} />
+                </div>
+                <h3 className="font-bold text-black text-base mb-2">{card.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed flex-1">{card.desc}</p>
+                <button
+                  onClick={card.action}
+                  className="mt-5 flex items-center gap-1.5 text-sm font-bold text-black hover:gap-2.5 transition-all"
+                >
+                  {card.cta} <Icon icon={ArrowRight} size="xs" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Schedule-ahead ────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-10">Plan ahead</h2>
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            {/* Scheduling card */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+              <h3 className="text-xl font-bold text-black mb-6">Schedule your Dapr Pro</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Date</label>
+                  <div className="flex items-center border border-gray-200 rounded-2xl px-4 py-3.5 bg-gray-50/50 gap-3">
+                    <Icon icon={Calendar} size="sm" className="text-gray-400" />
+                    <input type="date" className="flex-1 bg-transparent outline-none text-sm text-gray-700" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Time</label>
+                  <div className="flex items-center border border-gray-200 rounded-2xl px-4 py-3.5 bg-gray-50/50 gap-3">
+                    <Icon icon={Clock} size="sm" className="text-gray-400" />
+                    <select className="flex-1 bg-transparent outline-none text-sm text-gray-700 appearance-none">
+                      {["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"].map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</label>
+                  <div className="flex items-center border border-gray-200 rounded-2xl px-4 py-3.5 bg-gray-50/50 gap-3">
+                    <Icon icon={MapPin} size="sm" className="text-gray-400" />
+                    <input type="text" placeholder="Enter address" className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400" />
+                  </div>
+                </div>
+                <button
+                  onClick={goBook}
+                  className="w-full py-4 rounded-2xl bg-black text-white font-bold text-sm hover:bg-gray-900 active:scale-[0.98] transition-all mt-2"
+                  data-testid="schedule-cta"
+                >
+                  See availability
+                </button>
+              </div>
+            </div>
+
+            {/* Benefits card */}
+            <div className="space-y-4">
+              <p className="text-gray-500 text-lg leading-relaxed mb-6">
+                Book in advance and get a Dapr Pro exactly when your schedule allows — no waiting, no surprises.
+              </p>
+              {[
+                {
+                  icon: Calendar,
+                  title: "Choose a time that works for you",
+                  desc: "Book your service in advance. Morning, afternoon, or weekend — we fit your schedule.",
+                },
+                {
+                  icon: Navigation,
+                  title: "Your Pro comes to you",
+                  desc: "Home, work, apartment, or another approved location. We bring everything needed.",
+                },
+                {
+                  icon: Shield,
+                  title: "Vetted Dapr Pros",
+                  desc: "Providers are screened and approved before joining the platform.",
+                },
+              ].map((b) => (
+                <div key={b.title} className="flex gap-4 bg-white rounded-2xl p-5 border border-gray-100">
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+                    <b.icon size={18} className="text-[#8c52ff]" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-black text-sm mb-1">{b.title}</h4>
+                    <p className="text-gray-500 text-sm leading-relaxed">{b.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How Dapr works ────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-4">How Dapr works</h2>
+            <p className="text-gray-500 text-lg">Three simple steps to a cleaner car.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                num: "01",
+                icon: Car,
+                title: "Book your car",
+                desc: "Choose your vehicle, service, location, and time. Takes under two minutes.",
+              },
+              {
+                num: "02",
+                icon: Navigation,
+                title: "Meet your Pro",
+                desc: "A vetted Dapr Pro comes to your location fully equipped. Track them live.",
+              },
+              {
+                num: "03",
+                icon: Star,
+                title: "Get back to your day",
+                desc: "Track your appointment, get notified when done, and enjoy a clean car.",
+              },
+            ].map((step) => (
+              <div key={step.num} className="bg-gray-50 rounded-3xl p-8 hover:bg-gray-100/60 transition-colors">
+                <div className="text-4xl font-extrabold text-gray-200 mb-4 leading-none">{step.num}</div>
+                <div className="w-10 h-10 rounded-2xl bg-[#8c52ff]/10 flex items-center justify-center mb-4">
+                  <step.icon size={18} className="text-[#8c52ff]" />
+                </div>
+                <h3 className="font-bold text-black text-lg mb-2">{step.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Services ──────────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Services</h2>
+              <p className="text-gray-500 text-lg">From a quick refresh to a full detail — professional care for every car.</p>
+            </div>
+            <button
+              onClick={goServices}
+              className="flex items-center gap-2 text-sm font-bold text-black hover:text-[#8c52ff] transition-colors whitespace-nowrap"
+              data-testid="all-services"
+            >
+              See all services <Icon icon={ChevronRight} size="sm" />
+            </button>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                name: "Essential Wash",
+                price: "$39",
+                time: "30 min",
+                desc: "A fast, gentle hand wash to keep your car looking sharp.",
+                popular: false,
+              },
+              {
+                name: "Interior Detail",
+                price: "$89",
+                time: "60 min",
+                desc: "A focused interior reset — vacuum, surfaces, seats, and windows.",
+                popular: false,
+              },
+              {
+                name: "Refresh Detail",
+                price: "$149",
+                time: "90 min",
+                desc: "Full inside-and-out refresh. Our most popular complete service.",
+                popular: true,
+              },
+              {
+                name: "Dapr Black Label",
+                price: "$299",
+                time: "3 hrs",
+                desc: "Showroom-finish results from a senior detailer. Our flagship service.",
+                popular: false,
+              },
+            ].map((s) => (
+              <div
+                key={s.name}
+                className={`rounded-3xl p-6 flex flex-col bg-white border transition-shadow hover:shadow-md ${
+                  s.popular ? "border-[#8c52ff]/30 ring-1 ring-[#8c52ff]/20" : "border-gray-100"
+                }`}
+              >
+                {s.popular && (
+                  <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-wider mb-3">Most Popular</span>
+                )}
+                <h3 className="font-bold text-black text-base mb-1">{s.name}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed mb-4 flex-1">{s.desc}</p>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-2xl font-extrabold text-black">{s.price}</span>
+                  <span className="text-xs text-gray-400">{s.time}</span>
+                </div>
+                <button
+                  onClick={goBook}
+                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                    s.popular
+                      ? "bg-[#8c52ff] text-white hover:bg-[#7a42e5]"
+                      : "border border-gray-200 text-black hover:bg-gray-50"
+                  }`}
+                >
+                  Book {s.name}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Dapr for Fleets ───────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="bg-black rounded-[2rem] overflow-hidden">
+            <div className="grid lg:grid-cols-2 gap-0">
+              {/* Text side */}
+              <div className="p-10 lg:p-14 flex flex-col justify-center">
+                <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-4">For Business</span>
+                <h2 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-5">
+                  Dapr for Fleets
+                </h2>
+                <p className="text-gray-400 text-lg leading-relaxed mb-8">
+                  Keep your entire fleet spotless without lifting a finger. Recurring schedules, centralized billing, and dedicated support — built for growing businesses.
+                </p>
+                <div className="space-y-3 mb-10">
+                  {[
+                    "Recurring scheduled service",
+                    "Multi-vehicle management",
+                    "Centralized invoicing & reporting",
+                    "Dedicated account manager",
+                  ].map((f) => (
+                    <div key={f} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <CheckCircle2 size={15} className="text-[#8c52ff] shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={goCorporate}
+                  className="inline-flex items-center gap-2 self-start bg-white text-black px-6 py-3.5 rounded-full font-bold text-sm hover:bg-gray-100 transition-colors"
+                  data-testid="fleets-cta"
+                >
+                  Explore Dapr for Fleets <Icon icon={ArrowRight} size="xs" />
+                </button>
+              </div>
+              {/* Visual side */}
+              <div className="relative hidden lg:flex items-center justify-center bg-white/5 border-l border-white/10 min-h-[360px]">
+                <div className="grid grid-cols-2 gap-3 p-10 w-full">
+                  {[
+                    { label: "Vehicles", value: "24", sub: "Active fleet" },
+                    { label: "This month", value: "$1,840", sub: "Saved vs. lot wash" },
+                    { label: "Services", value: "96", sub: "Completed YTD" },
+                    { label: "Rating", value: "4.97★", sub: "Fleet average" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                      <p className="text-xs text-gray-500 font-medium mb-1">{stat.label}</p>
+                      <p className="text-2xl font-extrabold text-white">{stat.value}</p>
+                      <p className="text-xs text-gray-500 mt-1">{stat.sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Become a Pro ──────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-4 block">For Professionals</span>
+              <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-black mb-5">
+                Your skills.<br />Your schedule.<br />Your business.
+              </h2>
+              <p className="text-gray-500 text-lg leading-relaxed mb-8">
+                Join the Dapr Pro network and earn on your own terms. We connect you with customers — you bring the expertise.
+              </p>
+              <div className="space-y-4 mb-10">
+                {[
+                  { icon: Zap, title: "Set your own hours", desc: "Work when you want — full-time or part-time." },
+                  { icon: BarChart3, title: "Keep more of what you earn", desc: "Transparent pricing with no surprise deductions." },
+                  { icon: Users, title: "Grow your client base", desc: "Dapr handles marketing, booking, and payments." },
+                ].map((b) => (
+                  <div key={b.title} className="flex gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-[#8c52ff]/10 flex items-center justify-center shrink-0">
+                      <b.icon size={16} className="text-[#8c52ff]" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-black text-sm mb-0.5">{b.title}</h4>
+                      <p className="text-gray-500 text-sm">{b.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={goBecomePro}
+                className="inline-flex items-center gap-2 bg-black text-white px-7 py-4 rounded-full font-bold text-sm hover:bg-gray-900 transition-colors"
+                data-testid="become-pro-cta"
+              >
+                Become a Dapr Pro <Icon icon={ArrowRight} size="xs" />
+              </button>
+            </div>
+            {/* Visual placeholder */}
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#8c52ff]/10 to-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[440px] flex items-center justify-center border border-gray-100">
+              <div className="text-center px-8">
+                <div className="w-16 h-16 rounded-full bg-[#8c52ff]/15 flex items-center justify-center mx-auto mb-3">
+                  <Shield size={28} className="text-[#8c52ff]" />
+                </div>
+                <p className="text-sm text-gray-400 font-medium">Pro photography coming soon</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer className="bg-white border-t border-gray-100 pt-16 pb-10">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-3 lg:col-span-2">
+              <img src={dapprLogo} alt="Dapr" className="h-16 w-auto mb-4" />
+              <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+                Professional mobile car care, delivered to your door. Vetted Pros. On-demand or scheduled.
+              </p>
+            </div>
+
+            {/* Dapr */}
+            <div>
+              <h4 className="font-bold text-black text-sm mb-4">Dapr</h4>
+              <ul className="space-y-3 text-sm text-gray-500">
+                {[
+                  { label: "About Us", path: "/about" },
+                  { label: "Careers", path: "/careers" },
+                  { label: "Blog", path: "/blog" },
+                  { label: "Offers", path: "/first-wash-offer" },
+                ].map((l) => (
+                  <li key={l.label}><button onClick={() => setLocation(l.path)} className="hover:text-black transition-colors">{l.label}</button></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Customers */}
+            <div>
+              <h4 className="font-bold text-black text-sm mb-4">Customers</h4>
+              <ul className="space-y-3 text-sm text-gray-500">
+                {[
+                  { label: "Book a service", path: "/auth" },
+                  { label: "Help", path: "/faq" },
+                  { label: "Account", path: "/auth" },
+                ].map((l) => (
+                  <li key={l.label}><button onClick={() => setLocation(l.path)} className="hover:text-black transition-colors">{l.label}</button></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pros */}
+            <div>
+              <h4 className="font-bold text-black text-sm mb-4">Pros</h4>
+              <ul className="space-y-3 text-sm text-gray-500">
+                {[
+                  { label: "Become a Pro", path: "/become-a-pro" },
+                  { label: "Pro resources", path: "/faq" },
+                  { label: "Pro login", path: "/auth" },
+                ].map((l) => (
+                  <li key={l.label}><button onClick={() => setLocation(l.path)} className="hover:text-black transition-colors">{l.label}</button></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Business & Legal */}
+            <div>
+              <h4 className="font-bold text-black text-sm mb-4">Business</h4>
+              <ul className="space-y-3 text-sm text-gray-500 mb-6">
+                {[{ label: "Fleets", path: "/corporate" }].map((l) => (
+                  <li key={l.label}><button onClick={() => setLocation(l.path)} className="hover:text-black transition-colors">{l.label}</button></li>
+                ))}
+              </ul>
+              <h4 className="font-bold text-black text-sm mb-4">Legal</h4>
+              <ul className="space-y-3 text-sm text-gray-500">
+                {[
+                  { label: "Privacy Policy", path: "/privacy" },
+                  { label: "Terms of Service", path: "/terms" },
+                  { label: "Accessibility", path: "/faq" },
+                ].map((l) => (
+                  <li key={l.label}><button onClick={() => setLocation(l.path)} className="hover:text-black transition-colors">{l.label}</button></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr, Inc. All rights reserved.</p>
+            <div className="flex items-center gap-6 text-sm text-gray-400">
+              <button onClick={() => setLocation("/privacy")} className="hover:text-black transition-colors">Privacy</button>
+              <button onClick={() => setLocation("/terms")} className="hover:text-black transition-colors">Terms</button>
+              <button onClick={() => setLocation("/faq")} className="hover:text-black transition-colors">Help</button>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

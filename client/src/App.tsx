@@ -49,6 +49,7 @@ const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
 const IdVerificationPage = lazy(() => import("@/pages/provider-onboarding/id-verification"));
 const VehicleSetupPage = lazy(() => import("@/pages/provider-onboarding/vehicle-setup"));
 const BankInfoPage = lazy(() => import("@/pages/provider-onboarding/bank-info"));
+const BecomeAPro = lazy(() => import("@/pages/become-a-pro"));
 
 function PageLoader() {
   return (
@@ -152,6 +153,7 @@ function Router() {
           <Route path="/car-seat-cleaning" component={CarSeatCleaning} />
           <Route path="/faq" component={FAQ} />
           <Route path="/corporate" component={Corporate} />
+          <Route path="/become-a-pro" component={BecomeAPro} />
           <Route path="/privacy" component={PrivacyPolicy} />
           <Route path="/terms" component={TermsOfService} />
 
