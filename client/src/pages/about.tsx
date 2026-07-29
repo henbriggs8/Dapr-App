@@ -18,8 +18,8 @@ export default function AboutPage() {
               About Dapr
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.06] text-black mb-8">
-              Consumers can order food, rides, and groceries on demand, but car
-              care is still offline and messy.{" "}
+              You can order food, rides, and groceries on demand, but car care
+              is still offline and messy.{" "}
               <span className="text-[#8c52ff]">Dapr fixes that.</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-500 leading-relaxed max-w-2xl">
