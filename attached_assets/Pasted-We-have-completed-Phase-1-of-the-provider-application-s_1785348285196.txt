@@ -1,0 +1,176 @@
+We have completed Phase 1 of the provider application system. Before making changes, inspect the existing implementation and preserve all current API contracts and native SwiftUI compatibility.
+
+Current working system:
+
+* `provider_applications` table exists and is migrated
+* Admin Applications tab is working
+* `GET /api/provider-applications/me` is the native SwiftUI status endpoint
+* Existing application statuses:
+
+  * draft
+  * submitted
+  * under_review
+  * verification_requested
+  * verification_submitted
+  * approved_needs_setup
+  * rejected
+  * active_provider
+  * withdrawn
+* Existing admin transition rules must remain unchanged
+* Admin must NOT be able to manually transition someone to `active_provider`
+* The backend must remain the source of truth for provider/application status
+* Do not change or break existing customer or provider native app APIs
+
+Now implement Phase 2: provider verification and provider setup backend support.
+
+First inspect the existing database schema, auth patterns, Stripe integration, file/document storage patterns, user/provider models, and native API conventions. Report what already exists before implementing anything.
+
+Then implement the smallest safe backend foundation for:
+
+1. Verification submission
+
+When an application is in `verification_requested`, the provider needs to be able to submit the requested verification information/documents.
+
+Create a native-safe endpoint such as:
+
+POST /api/provider-applications/me/verification
+
+Auth:
+Authorization: Bearer <clerk_token>
+
+The endpoint should:
+
+* verify the authenticated user owns the application
+* only allow submission when status is `verification_requested`
+* save verification metadata/document references safely
+* transition the application to `verification_submitted`
+* never expose private verification data through public/provider-facing responses unnecessarily
+
+Do not invent a new file-storage architecture if one already exists. Inspect first and reuse the safest existing pattern. If there is no appropriate document-storage system, stop and explain the recommended approach before implementing storage.
+
+2. Provider setup
+
+Once an application reaches `approved_needs_setup`, the native app needs a setup flow before activation.
+
+Create or extend backend storage for provider setup fields such as:
+
+* profile/display name
+* profile photo reference if supported
+* phone
+* service area / ZIP codes
+* availability
+* vehicle/equipment readiness
+* payout onboarding status
+* required agreement acceptance timestamps
+
+Do not overbuild scheduling or dispatch logic here. This phase should only store the minimum information required to determine whether a provider is ready for activation.
+
+Create native-safe endpoints for:
+
+* GET current setup state
+* PATCH/save setup progress
+
+For example:
+
+GET /api/provider-setup/me
+PATCH /api/provider-setup/me
+
+Return explicit completion flags so SwiftUI does not need to recreate backend business logic.
+
+Example shape:
+
+{
+"setupComplete": false,
+"requirements": {
+"profileComplete": true,
+"serviceAreaComplete": true,
+"availabilityComplete": false,
+"payoutSetupComplete": false,
+"agreementsComplete": true
+}
+}
+
+Use the actual existing backend conventions rather than blindly copying this shape.
+
+3. Stripe Connect
+
+Inspect the existing Stripe implementation.
+
+We eventually need providers to receive payouts through Stripe Connect.
+
+Do NOT replace or interfere with the existing customer Stripe payment flow.
+
+If Stripe Connect is not currently implemented, build only the safe backend foundation needed to:
+
+* create/retrieve a connected account for an approved provider
+* generate the appropriate Stripe-hosted onboarding flow
+* retrieve onboarding/readiness status
+
+Keep all Stripe secret operations server-side.
+
+Do not mark payout setup complete simply because an account exists. Use Stripe's actual readiness/account status.
+
+4. Provider activation
+
+Create a server-side activation check.
+
+A provider may transition:
+
+approved_needs_setup → active_provider
+
+ONLY when all required setup conditions are satisfied.
+
+Activation should happen through backend-controlled completion logic, not an admin status button and not a value sent by the Swift app.
+
+When activation succeeds:
+
+* application status becomes `active_provider`
+* the appropriate user/provider flag such as `users.isProvider` is set
+* changes occur atomically if possible
+* repeated activation calls are idempotent
+
+Do not change the meaning of existing `users.isProvider` fields without inspecting their current usage first.
+
+5. Preserve the existing status endpoint
+
+Do not break:
+
+GET /api/provider-applications/me
+
+Once setup APIs exist, its existing response fields should remain compatible:
+
+canSubmitVerification
+canBeginProviderSetup
+isActiveProvider
+
+You may safely add fields if useful, but do not rename/remove existing ones.
+
+6. Security / API requirements
+
+For every provider-facing endpoint:
+
+* authenticate using the existing Clerk bearer-token pattern
+* derive user identity server-side
+* never trust user IDs/application IDs supplied by the client when `/me` can be used
+* validate request bodies
+* enforce status/state transitions server-side
+* avoid returning sensitive verification information
+* use existing API error conventions
+* maintain TypeScript correctness
+
+IMPORTANT:
+Do not modify the SwiftUI apps in this task.
+Do not redesign existing APIs unnecessarily.
+Do not touch unrelated booking/payment functionality.
+Do not migrate production data destructively.
+Do not commit or push anything.
+
+Before implementation, give me:
+
+1. what relevant infrastructure already exists
+2. proposed schema changes
+3. proposed endpoints
+4. Stripe Connect approach based on the existing Stripe architecture
+5. any risk of breaking the native API contract
+
+Then implement only after that inspection.
