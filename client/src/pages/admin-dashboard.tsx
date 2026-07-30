@@ -4,6 +4,15 @@ import { User, Booking, PricingConfig, ContactMessage, ProviderApplication } fro
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -138,6 +147,11 @@ interface ProviderVerificationMedia {
 function VehicleVerificationPanel({ application }: { application: ProviderApplication }) {
   const { toast } = useToast();
   const [viewUrls, setViewUrls] = useState<Record<number, string>>({});
+  const [pendingReview, setPendingReview] = useState<{
+    media: ProviderVerificationMedia;
+    status: "rejected" | "replacement_requested";
+  } | null>(null);
+  const [reviewReason, setReviewReason] = useState("");
   const queryKey = ["/api/admin/provider-applications", application.id, "vehicle-verification-media"];
   const { data, isLoading, error } = useQuery<{
     applicationId: number;
@@ -187,15 +201,36 @@ function VehicleVerificationPanel({ application }: { application: ProviderApplic
   };
 
   const review = (media: ProviderVerificationMedia, status: "approved" | "rejected" | "replacement_requested") => {
-    let reason: string | undefined;
-    if (status !== "approved") {
-      const entered = window.prompt(status === "replacement_requested"
-        ? "What must the provider replace or correct?"
-        : "Why is this media being rejected?");
-      if (!entered?.trim()) return;
-      reason = entered.trim();
+    if (status === "approved") {
+      reviewMutation.mutate({ mediaId: media.id, status });
+      return;
     }
-    reviewMutation.mutate({ mediaId: media.id, status, reason });
+    setReviewReason("");
+    setPendingReview({ media, status });
+  };
+
+  const closeReviewDialog = () => {
+    if (reviewMutation.isPending) return;
+    setPendingReview(null);
+    setReviewReason("");
+  };
+
+  const confirmReview = () => {
+    const reason = reviewReason.trim();
+    if (!pendingReview || !reason || reviewMutation.isPending) return;
+    reviewMutation.mutate(
+      {
+        mediaId: pendingReview.media.id,
+        status: pendingReview.status,
+        reason,
+      },
+      {
+        onSuccess: () => {
+          setPendingReview(null);
+          setReviewReason("");
+        },
+      },
+    );
   };
 
   const currentMedia = (data?.media ?? []).filter(item => item.isCurrent && !item.deletedAt);
@@ -279,6 +314,56 @@ function VehicleVerificationPanel({ application }: { application: ProviderApplic
           })}
         </div>
       )}
+      <Dialog
+        open={pendingReview !== null}
+        onOpenChange={open => {
+          if (!open) closeReviewDialog();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingReview?.status === "replacement_requested" ? "Request media replacement" : "Reject media"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingReview?.status === "replacement_requested"
+                ? "Explain what the provider must replace or correct."
+                : "Explain why this media is being rejected."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="verification-review-reason" className="text-sm font-medium">
+              Reason
+            </label>
+            <Textarea
+              id="verification-review-reason"
+              value={reviewReason}
+              onChange={event => setReviewReason(event.target.value)}
+              placeholder="Enter a clear reason"
+              disabled={reviewMutation.isPending}
+              required
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeReviewDialog} disabled={reviewMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant={pendingReview?.status === "rejected" ? "destructive" : "default"}
+              onClick={confirmReview}
+              disabled={!reviewReason.trim() || reviewMutation.isPending}
+            >
+              {reviewMutation.isPending
+                ? "Saving…"
+                : pendingReview?.status === "replacement_requested"
+                  ? "Request replacement"
+                  : "Reject media"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
