@@ -98,3 +98,6 @@ timeoutMs = 180000
 
 [agent]
 integrations = ["resend:1.0.0"]
+
+[objectStorage]
+defaultBucketId = "replit-objstore-927029d5-1bfb-489a-9a7f-01de42d514b1"
