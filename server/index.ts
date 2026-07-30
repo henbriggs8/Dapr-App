@@ -6,6 +6,7 @@ import zlib from "zlib";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import { serializeSafeLogJson } from "./log-redaction";
 
 // ── Startup configuration warnings ────────────────────────────────────────────
 if (!process.env.STRIPE_WEBHOOK_SECRET) {
@@ -473,7 +474,7 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: ${serializeSafeLogJson(capturedJsonResponse)}`;
       }
 
       if (logLine.length > 80) {

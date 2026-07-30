@@ -17,6 +17,8 @@ import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderSt
 import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
+import { approveVehicleVerification, registerProviderVerificationRoutes } from "./provider-verification-routes";
+import { VerificationMediaError, providerApplicationAdminAccess } from "./provider-verification-policy";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -26,13 +28,14 @@ function isAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 function requireProviderApplicationAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
+  const access = providerApplicationAdminAccess(req.user);
+  if (access === 401) {
     return res.status(401).json({
       code: "UNAUTHENTICATED",
       error: "Authentication required.",
     });
   }
-  if (!req.user.isAdmin) {
+  if (access === 403) {
     return res.status(403).json({
       code: "ADMIN_REQUIRED",
       error: "Admin access required.",
@@ -3142,8 +3145,6 @@ export function registerRoutes(app: Express): Server {
   const ADMIN_ALLOWED_TRANSITIONS: Record<string, string[]> = {
     submitted:              ["under_review"],
     under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
-    // Phase 2 — prepared but not yet surfaced in admin UI:
-    verification_requested: ["verification_submitted"],
     verification_submitted: ["approved_needs_setup", "rejected"],
     // active_provider set by controlled backend logic (setup completion), not direct admin action
   };
@@ -3466,6 +3467,15 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      if (existing.applicationStatus === "verification_submitted" && status === "approved_needs_setup") {
+        const approved = await approveVehicleVerification(
+          id,
+          req.user!.id,
+          typeof internalReviewNotes === "string" ? internalReviewNotes : undefined,
+        );
+        return res.json(approved);
+      }
+
       const now = new Date().toISOString();
       const updates: any = {
         applicationStatus: status,
@@ -3479,10 +3489,15 @@ export function registerRoutes(app: Express): Server {
       const updated = await storage.updateProviderApplication(id, updates);
       return res.json(updated);
     } catch (err) {
+      if (err instanceof VerificationMediaError) {
+        return res.status(err.status).json({ code: err.code, error: err.message, details: err.details });
+      }
       console.error("[admin/provider-applications] PATCH status error:", err);
       res.status(500).json({ error: "Failed to update application status" });
     }
   });
+
+  registerProviderVerificationRoutes(app, requireProviderApplicationAdmin);
 
   return httpServer;
 }

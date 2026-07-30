@@ -12,7 +12,10 @@
     "test:referrals": "tsx server/referrals.integration.test.ts",
     "test:arrive-now": "tsx --test server/asap-availability.test.ts server/time-slot-capacity.test.ts",
     "test:arrive-now:integration": "tsx server/arrive-now.integration.test.ts",
-    "test:payments": "tsx --test server/payment-service.test.ts"
+    "test:payments": "tsx --test server/payment-service.test.ts",
+    "test:provider-verification": "tsx --test server/provider-verification-policy.test.ts",
+    "test:provider-verification:storage": "tsx server/provider-verification-storage.integration.test.ts",
+    "cleanup:provider-verification": "tsx scripts/cleanup-provider-application-media.ts"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
@@ -57,6 +60,7 @@
     "@radix-ui/react-tooltip": "^1.1.3",
     "@react-google-maps/api": "^2.20.6",
     "@replit/connectors-sdk": "^0.4.1",
+    "@replit/object-storage": "^1.0.0",
     "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.5.0",

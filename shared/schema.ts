@@ -1,5 +1,5 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, json, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, text, serial, integer, boolean, doublePrecision, json, timestamp, uniqueIndex, index, check, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -283,6 +283,65 @@ export const providerApplications = pgTable("provider_applications", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const providerApplicationMedia = pgTable("provider_application_media", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").notNull()
+    .references(() => providerApplications.id, { onDelete: "cascade" }),
+  mediaType: text("media_type").notNull(),
+  objectKey: text("object_key").notNull().unique(),
+  mimeType: text("mime_type").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull(),
+  expectedChecksumSha256: text("expected_checksum_sha256"),
+  checksumSha256: text("checksum_sha256"),
+  uploadStatus: text("upload_status").notNull().default("pending"),
+  processingStatus: text("processing_status").notNull().default("pending"),
+  failureReason: text("failure_reason"),
+  version: integer("version").notNull(),
+  isCurrent: boolean("is_current").notNull().default(false),
+  supersedesMediaId: integer("supersedes_media_id")
+    .references((): AnyPgColumn => providerApplicationMedia.id, { onDelete: "set null" }),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  rejectionReason: text("rejection_reason"),
+  uploadExpiresAt: text("upload_expires_at").notNull(),
+  uploadedAt: text("uploaded_at"),
+  readyAt: text("ready_at"),
+  reviewedAt: text("reviewed_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  supersededAt: text("superseded_at"),
+  deletedAt: text("deleted_at"),
+  objectDeletedAt: text("object_deleted_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => ({
+  applicationLookup: index("provider_application_media_application_idx")
+    .on(table.applicationId),
+  cleanupLookup: index("provider_application_media_cleanup_idx")
+    .on(table.uploadStatus, table.uploadExpiresAt)
+    .where(sql`${table.objectDeletedAt} IS NULL`),
+  versionUnique: uniqueIndex("provider_application_media_version_unique")
+    .on(table.applicationId, table.mediaType, table.version),
+  currentUnique: uniqueIndex("provider_application_media_current_unique")
+    .on(table.applicationId, table.mediaType)
+    .where(sql`${table.isCurrent} = true AND ${table.deletedAt} IS NULL`),
+  mediaTypeCheck: check("provider_application_media_type_check",
+    sql`${table.mediaType} IN ('trunk_photo', 'back_seat_photo', 'walkaround_video')`),
+  mimeCheck: check("provider_application_media_mime_check",
+    sql`${table.mimeType} IN ('image/jpeg', 'image/png', 'image/heic', 'image/heif', 'video/mp4', 'video/quicktime')`),
+  sizeCheck: check("provider_application_media_size_check",
+    sql`${table.fileSizeBytes} > 0 AND ${table.fileSizeBytes} <= 104857600`),
+  checksumCheck: check("provider_application_media_checksum_check",
+    sql`${table.checksumSha256} IS NULL OR ${table.checksumSha256} ~ '^[a-f0-9]{64}$'`),
+  expectedChecksumCheck: check("provider_application_media_expected_checksum_check",
+    sql`${table.expectedChecksumSha256} IS NULL OR ${table.expectedChecksumSha256} ~ '^[a-f0-9]{64}$'`),
+  uploadStatusCheck: check("provider_application_media_upload_status_check",
+    sql`${table.uploadStatus} IN ('pending', 'uploading', 'uploaded', 'failed', 'abandoned')`),
+  processingStatusCheck: check("provider_application_media_processing_status_check",
+    sql`${table.processingStatus} IN ('pending', 'processing', 'ready', 'failed')`),
+  reviewStatusCheck: check("provider_application_media_review_status_check",
+    sql`${table.reviewStatus} IN ('pending', 'approved', 'rejected', 'replacement_requested')`),
+  versionCheck: check("provider_application_media_version_check", sql`${table.version} > 0`),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
@@ -413,6 +472,15 @@ export type ContactMessage = typeof contactMessages.$inferSelect;
 // Provider application types
 export type ProviderApplication = typeof providerApplications.$inferSelect;
 export type InsertProviderApplication = typeof providerApplications.$inferInsert;
+export type ProviderApplicationMedia = typeof providerApplicationMedia.$inferSelect;
+export type InsertProviderApplicationMedia = typeof providerApplicationMedia.$inferInsert;
+
+export const PROVIDER_APPLICATION_MEDIA_TYPES = [
+  "trunk_photo",
+  "back_seat_photo",
+  "walkaround_video",
+] as const;
+export type ProviderApplicationMediaType = typeof PROVIDER_APPLICATION_MEDIA_TYPES[number];
 
 export const APPLICATION_STATUSES = [
   "draft",
@@ -427,12 +495,10 @@ export const APPLICATION_STATUSES = [
 ] as const;
 export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 
-/** Transitions the admin panel is allowed to trigger in Phase 1 */
+/** Application transitions an admin is allowed to trigger. Provider verification submission is provider-owned. */
 export const ADMIN_ALLOWED_TRANSITIONS: Record<string, ApplicationStatus[]> = {
   submitted:              ["under_review"],
   under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
-  // Phase 2 — prepared but not yet surfaced in admin UI:
-  verification_requested: ["verification_submitted"],
   verification_submitted: ["approved_needs_setup", "rejected"],
   // active_provider is set by controlled backend logic (setup completion), not direct admin action
 };

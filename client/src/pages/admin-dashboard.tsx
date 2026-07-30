@@ -42,6 +42,10 @@ import {
   ChevronDown,
   ChevronUp,
   UserCircle,
+  Image as ImageIcon,
+  Video,
+  ShieldCheck,
+  XCircle,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -111,6 +115,172 @@ interface AnalyticsData {
     revenue: number;
     rating: number;
   }>;
+}
+
+interface ProviderVerificationMedia {
+  id: number;
+  applicationId: number;
+  mediaType: "trunk_photo" | "back_seat_photo" | "walkaround_video";
+  mimeType: string;
+  fileSizeBytes: number;
+  checksumSha256: string | null;
+  uploadStatus: string;
+  processingStatus: string;
+  version: number;
+  isCurrent: boolean;
+  reviewStatus: string;
+  rejectionReason: string | null;
+  uploadedAt: string | null;
+  readyAt: string | null;
+  deletedAt: string | null;
+}
+
+function VehicleVerificationPanel({ application }: { application: ProviderApplication }) {
+  const { toast } = useToast();
+  const [viewUrls, setViewUrls] = useState<Record<number, string>>({});
+  const queryKey = ["/api/admin/provider-applications", application.id, "vehicle-verification-media"];
+  const { data, isLoading, error } = useQuery<{
+    applicationId: number;
+    applicationStatus: string;
+    media: ProviderVerificationMedia[];
+  }>({
+    queryKey,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/admin/provider-applications/${application.id}/vehicle-verification/media`);
+      return response.json();
+    },
+  });
+  const reviewMutation = useMutation({
+    mutationFn: async ({ mediaId, status, reason }: { mediaId: number; status: string; reason?: string }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/admin/provider-applications/${application.id}/vehicle-verification/media/${mediaId}/review`,
+        { status, reason },
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/provider-applications"] });
+      toast({ title: "Media review saved" });
+    },
+    onError: (reviewError: Error) => {
+      toast({ title: "Unable to save review", description: reviewError.message, variant: "destructive" });
+    },
+  });
+
+  const requestView = async (mediaId: number) => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/provider-applications/${application.id}/vehicle-verification/media/${mediaId}/view-url`,
+      );
+      const body = await response.json();
+      setViewUrls(current => ({ ...current, [mediaId]: body.url }));
+    } catch (viewError) {
+      toast({
+        title: "Unable to open media",
+        description: viewError instanceof Error ? viewError.message : "Secure media access failed.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const review = (media: ProviderVerificationMedia, status: "approved" | "rejected" | "replacement_requested") => {
+    let reason: string | undefined;
+    if (status !== "approved") {
+      const entered = window.prompt(status === "replacement_requested"
+        ? "What must the provider replace or correct?"
+        : "Why is this media being rejected?");
+      if (!entered?.trim()) return;
+      reason = entered.trim();
+    }
+    reviewMutation.mutate({ mediaId: media.id, status, reason });
+  };
+
+  const currentMedia = (data?.media ?? []).filter(item => item.isCurrent && !item.deletedAt);
+  const slots = [
+    { type: "trunk_photo", label: "Trunk photo", icon: ImageIcon },
+    { type: "back_seat_photo", label: "Back-seat photo", icon: ImageIcon },
+    { type: "walkaround_video", label: "Walk-around video", icon: Video },
+  ] as const;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Vehicle verification</p>
+          <p className="text-xs text-gray-500">Private media · secure links expire after five minutes</p>
+        </div>
+        <Icon icon={ShieldCheck} size="sm" className="text-[#8c52ff]" />
+      </div>
+      {isLoading ? (
+        <div className="text-sm text-gray-400">Loading verification media…</div>
+      ) : error ? (
+        <div className="text-sm text-red-600">Verification media could not be loaded.</div>
+      ) : (
+        <div className="grid lg:grid-cols-3 gap-3">
+          {slots.map(slot => {
+            const media = currentMedia.find(item => item.mediaType === slot.type);
+            const viewUrl = media ? viewUrls[media.id] : undefined;
+            return (
+              <div key={slot.type} className="rounded-lg border border-gray-200 bg-white p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Icon icon={slot.icon} size="sm" className="text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-800">{slot.label}</span>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
+                    media?.reviewStatus === "approved" ? "bg-green-100 text-green-700" :
+                    media?.reviewStatus === "rejected" || media?.reviewStatus === "replacement_requested" ? "bg-red-100 text-red-700" :
+                    "bg-gray-100 text-gray-600"
+                  }`}>
+                    {media ? media.reviewStatus.replaceAll("_", " ") : "not uploaded"}
+                  </span>
+                </div>
+                {media ? (
+                  <>
+                    <p className="text-xs text-gray-500">
+                      {media.processingStatus} · {(media.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB · v{media.version}
+                    </p>
+                    {viewUrl && media.mediaType === "walkaround_video" && (
+                      <video src={viewUrl} controls preload="metadata" className="w-full rounded-md bg-black max-h-48" />
+                    )}
+                    {viewUrl && media.mediaType !== "walkaround_video" && (
+                      <img src={viewUrl} alt={slot.label} className="w-full rounded-md object-cover max-h-48" />
+                    )}
+                    {media.processingStatus === "ready" && (
+                      <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => requestView(media.id)}>
+                        <Icon icon={Eye} size="xs" className="mr-1" /> {viewUrl ? "Refresh secure view" : "Open secure view"}
+                      </Button>
+                    )}
+                    {application.applicationStatus === "verification_submitted" && media.processingStatus === "ready" && (
+                      <div className="grid grid-cols-3 gap-1">
+                        <Button type="button" size="sm" className="text-[10px] px-1 bg-green-600 hover:bg-green-700" disabled={reviewMutation.isPending} onClick={() => review(media, "approved")}>
+                          Approve
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" className="text-[10px] px-1" disabled={reviewMutation.isPending} onClick={() => review(media, "replacement_requested")}>
+                          Replace
+                        </Button>
+                        <Button type="button" size="sm" variant="destructive" className="text-[10px] px-1" disabled={reviewMutation.isPending} onClick={() => review(media, "rejected")}>
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                    {media.rejectionReason && (
+                      <p className="text-xs text-red-600 flex gap-1"><Icon icon={XCircle} size="xs" className="shrink-0 mt-0.5" />{media.rejectionReason}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400 py-6 text-center">No current upload</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
@@ -327,7 +497,6 @@ export default function AdminDashboard() {
   const ALLOWED_ADMIN_TRANSITIONS: Record<string, string[]> = {
     submitted:              ["under_review"],
     under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
-    verification_requested: ["verification_submitted"],
     verification_submitted: ["approved_needs_setup", "rejected"],
   };
 
@@ -416,6 +585,10 @@ export default function AdminDashboard() {
                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Notes</p>
                 <p className="text-sm text-gray-700 bg-white rounded-lg px-3 py-2 border border-gray-100">{app.notes}</p>
               </div>
+            )}
+
+            {["verification_requested", "verification_submitted", "approved_needs_setup", "rejected"].includes(app.applicationStatus) && (
+              <VehicleVerificationPanel application={app} />
             )}
 
             {/* Internal review notes */}
@@ -1088,7 +1261,7 @@ export default function AdminDashboard() {
                     <CardDescription>Review and manage Dapr Pro applicants</CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    {(["all", "submitted", "under_review", "verification_requested", "approved_needs_setup", "rejected"] as const).map(s => (
+                    {(["all", "submitted", "under_review", "verification_requested", "verification_submitted", "approved_needs_setup", "rejected"] as const).map(s => (
                       <button
                         key={s}
                         onClick={() => setAppStatusFilter(s)}
@@ -1102,6 +1275,7 @@ export default function AdminDashboard() {
                          s === "submitted" ? "New" :
                          s === "under_review" ? "In Review" :
                          s === "verification_requested" ? "Needs Verification" :
+                         s === "verification_submitted" ? "Verification Ready" :
                          s === "approved_needs_setup" ? "Approved" :
                          "Rejected"}
                         {s !== "all" && (
