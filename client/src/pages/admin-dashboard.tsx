@@ -64,7 +64,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 function relativeTime(ts: string | undefined): string {
   if (!ts) return "";
@@ -524,7 +524,7 @@ export default function AdminDashboard() {
     onStatusChange: (status: string, notes?: string) => void;
     isUpdating: boolean;
   }
-  function ApplicationRow({ app, onStatusChange, isUpdating }: ApplicationRowProps) {
+  const ApplicationRow = useCallback(function ApplicationRow({ app, onStatusChange, isUpdating }: ApplicationRowProps) {
     const [reviewNotes, setReviewNotes] = useState(app.internalReviewNotes || "");
     const isExpanded = expandedAppId === app.id;
     const allowed = ALLOWED_ADMIN_TRANSITIONS[app.applicationStatus] ?? [];
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
         )}
       </div>
     );
-  }
+  }, [expandedAppId]);
   useEffect(() => {
     if (pricingData) {
       setPricingForm({
