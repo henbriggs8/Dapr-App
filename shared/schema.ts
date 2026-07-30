@@ -498,10 +498,14 @@ export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 /** Application transitions an admin is allowed to trigger. Provider verification submission is provider-owned. */
 export const ADMIN_ALLOWED_TRANSITIONS: Record<string, ApplicationStatus[]> = {
   submitted:              ["under_review"],
-  under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+  under_review:           ["verification_requested", "rejected"],
   verification_submitted: ["approved_needs_setup", "rejected"],
   // active_provider is set by controlled backend logic (setup completion), not direct admin action
 };
+
+export function requiresGuardedVehicleVerificationApproval(status: string): boolean {
+  return status === "approved_needs_setup";
+}
 
 /** Human-readable labels for each status — safe to display to applicants */
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {

@@ -6,7 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
 import { sendNewBookingEmail } from "./email-service";
-import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema } from "@shared/schema";
+import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema, requiresGuardedVehicleVerificationApproval } from "@shared/schema";
 import type { User, Vehicle } from "@shared/schema";
 import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
@@ -3144,7 +3144,7 @@ export function registerRoutes(app: Express): Server {
   /** Status transition rules enforced server-side */
   const ADMIN_ALLOWED_TRANSITIONS: Record<string, string[]> = {
     submitted:              ["under_review"],
-    under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+    under_review:           ["verification_requested", "rejected"],
     verification_submitted: ["approved_needs_setup", "rejected"],
     // active_provider set by controlled backend logic (setup completion), not direct admin action
   };
@@ -3467,7 +3467,7 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      if (existing.applicationStatus === "verification_submitted" && status === "approved_needs_setup") {
+      if (requiresGuardedVehicleVerificationApproval(status)) {
         const approved = await approveVehicleVerification(
           id,
           req.user!.id,

@@ -144,7 +144,13 @@ interface ProviderVerificationMedia {
   deletedAt: string | null;
 }
 
-function VehicleVerificationPanel({ application }: { application: ProviderApplication }) {
+function VehicleVerificationPanel({
+  application,
+  onApprovalReadinessChange,
+}: {
+  application: ProviderApplication;
+  onApprovalReadinessChange: (isReady: boolean) => void;
+}) {
   const { toast } = useToast();
   const [viewUrls, setViewUrls] = useState<Record<number, string>>({});
   const [pendingReview, setPendingReview] = useState<{
@@ -239,6 +245,15 @@ function VehicleVerificationPanel({ application }: { application: ProviderApplic
     { type: "back_seat_photo", label: "Back-seat photo", icon: ImageIcon },
     { type: "walkaround_video", label: "Walk-around video", icon: Video },
   ] as const;
+  const isApprovalReady = application.applicationStatus === "verification_submitted"
+    && slots.every(slot => {
+      const media = currentMedia.find(item => item.mediaType === slot.type);
+      return media?.processingStatus === "ready" && media.reviewStatus === "approved";
+    });
+
+  useEffect(() => {
+    onApprovalReadinessChange(isApprovalReady);
+  }, [isApprovalReady, onApprovalReadinessChange]);
 
   return (
     <div className="space-y-3">
@@ -581,8 +596,15 @@ export default function AdminDashboard() {
 
   const ALLOWED_ADMIN_TRANSITIONS: Record<string, string[]> = {
     submitted:              ["under_review"],
-    under_review:           ["verification_requested", "approved_needs_setup", "rejected"],
+    under_review:           ["verification_requested", "rejected"],
     verification_submitted: ["approved_needs_setup", "rejected"],
+  };
+
+  const APP_ACTION_LABELS: Record<string, string> = {
+    under_review: "Begin Review",
+    verification_requested: "Request Vehicle Verification",
+    approved_needs_setup: "Approve Provider",
+    rejected: "Reject",
   };
 
   const APP_STATUS_LABELS: Record<string, string> = {
@@ -611,6 +633,7 @@ export default function AdminDashboard() {
   }
   const ApplicationRow = useCallback(function ApplicationRow({ app, onStatusChange, isUpdating }: ApplicationRowProps) {
     const [reviewNotes, setReviewNotes] = useState(app.internalReviewNotes || "");
+    const [isVehicleApprovalReady, setIsVehicleApprovalReady] = useState(false);
     const isExpanded = expandedAppId === app.id;
     const allowed = ALLOWED_ADMIN_TRANSITIONS[app.applicationStatus] ?? [];
     const expLabels: Record<string, string> = {
@@ -673,7 +696,10 @@ export default function AdminDashboard() {
             )}
 
             {["verification_requested", "verification_submitted", "approved_needs_setup", "rejected"].includes(app.applicationStatus) && (
-              <VehicleVerificationPanel application={app} />
+              <VehicleVerificationPanel
+                application={app}
+                onApprovalReadinessChange={setIsVehicleApprovalReady}
+              />
             )}
 
             {/* Internal review notes */}
@@ -694,10 +720,11 @@ export default function AdminDashboard() {
                 {allowed.map(targetStatus => {
                   const isApprove = targetStatus === "approved_needs_setup";
                   const isReject = targetStatus === "rejected";
+                  const isApproveUnavailable = isApprove && !isVehicleApprovalReady;
                   return (
                     <button
                       key={targetStatus}
-                      disabled={isUpdating}
+                      disabled={isUpdating || isApproveUnavailable}
                       onClick={() => onStatusChange(targetStatus, reviewNotes)}
                       className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-60 ${
                         isApprove ? "bg-green-600 text-white hover:bg-green-700" :
@@ -705,11 +732,14 @@ export default function AdminDashboard() {
                         "bg-[#8c52ff] text-white hover:bg-[#7a3fff]"
                       }`}
                     >
-                      → {APP_STATUS_LABELS[targetStatus] || targetStatus}
+                      → {APP_ACTION_LABELS[targetStatus] || APP_STATUS_LABELS[targetStatus] || targetStatus}
                     </button>
                   );
                 })}
               </div>
+            )}
+            {app.applicationStatus === "verification_submitted" && !isVehicleApprovalReady && (
+              <p className="text-xs text-gray-500">Approve all three current media items first.</p>
             )}
             {allowed.length === 0 && (
               <p className="text-xs text-gray-400 italic">No transitions available from this status.</p>
