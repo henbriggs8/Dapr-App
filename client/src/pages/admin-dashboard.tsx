@@ -144,6 +144,40 @@ interface ProviderVerificationMedia {
   deletedAt: string | null;
 }
 
+interface ProviderSetupResponse {
+  applicationId: number;
+  applicationStatus: string;
+  requiredServiceGuideVersion: string;
+  steps: {
+    vehicleVerification: { complete: boolean };
+    serviceGuide: {
+      complete: boolean;
+      requiredVersion: string;
+      acknowledgedVersion: string | null;
+      acknowledgedAt: string | null;
+    };
+    serviceArea: {
+      complete: boolean;
+      region: string | null;
+      zipCodes: string[];
+      maxTravelRadius: number | null;
+      confirmedAt: string | null;
+    };
+    training: {
+      complete: boolean;
+      completedAt: string | null;
+      completedBy: { id: number; name: string | null; email: string | null } | null;
+      notes: string | null;
+    };
+  };
+  activation: {
+    ready: boolean;
+    active: boolean;
+    blockers: string[];
+    activatedAt: string | null;
+  };
+}
+
 function VehicleVerificationPanel({
   application,
   onApprovalReadinessChange,
@@ -375,6 +409,180 @@ function VehicleVerificationPanel({
                 : pendingReview?.status === "replacement_requested"
                   ? "Request replacement"
                   : "Reject media"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ProviderSetupPanel({ application }: { application: ProviderApplication }) {
+  const { toast } = useToast();
+  const [trainingNotes, setTrainingNotes] = useState("");
+  const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
+  const queryKey = ["/api/admin/provider-applications", application.id, "setup"];
+  const { data, isLoading, error } = useQuery<ProviderSetupResponse>({
+    queryKey,
+    queryFn: async () => {
+      const response = await apiRequest(
+        "GET",
+        `/api/admin/provider-applications/${application.id}/setup`,
+      );
+      return response.json();
+    },
+  });
+  const trainingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/provider-applications/${application.id}/setup/training/complete`,
+        { notes: trainingNotes.trim() || undefined },
+      );
+      return response.json() as Promise<ProviderSetupResponse>;
+    },
+    onSuccess: () => {
+      setIsTrainingDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/provider-applications"] });
+      toast({ title: "Training marked complete" });
+    },
+    onError: (trainingError: Error) => {
+      toast({
+        title: "Unable to complete training",
+        description: trainingError.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading) {
+    return <p className="text-xs text-gray-500">Loading provider setup…</p>;
+  }
+  if (error || !data) {
+    return (
+      <p className="text-xs text-red-600">
+        {error instanceof Error ? error.message : "Provider setup could not be loaded."}
+      </p>
+    );
+  }
+
+  const rows = [
+    {
+      label: "Vehicle verification",
+      complete: data.steps.vehicleVerification.complete,
+      detail: data.steps.vehicleVerification.complete ? "All current media approved" : "Incomplete",
+    },
+    {
+      label: "Service guide",
+      complete: data.steps.serviceGuide.complete,
+      detail: data.steps.serviceGuide.complete
+        ? `Version ${data.steps.serviceGuide.acknowledgedVersion} acknowledged`
+        : `Waiting for version ${data.steps.serviceGuide.requiredVersion}`,
+    },
+    {
+      label: "Service area",
+      complete: data.steps.serviceArea.complete,
+      detail: data.steps.serviceArea.complete
+        ? `${data.steps.serviceArea.region} · ${data.steps.serviceArea.zipCodes.join(", ")} · ${data.steps.serviceArea.maxTravelRadius} mi`
+        : "Waiting for provider confirmation",
+    },
+    {
+      label: "Training / test job",
+      complete: data.steps.training.complete,
+      detail: data.steps.training.complete
+        ? `Completed by ${data.steps.training.completedBy?.name || data.steps.training.completedBy?.email || "admin"}`
+        : "Admin completion required",
+    },
+  ];
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Approved provider setup</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Activation is automatic only after every required step is complete.
+          </p>
+        </div>
+        <Badge variant={data.activation.active ? "default" : "secondary"}>
+          {data.activation.active ? "Active provider" : data.activation.ready ? "Ready" : "Setup pending"}
+        </Badge>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-2">
+        {rows.map(row => (
+          <div key={row.label} className="rounded-lg border border-gray-100 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <Icon
+                icon={row.complete ? CheckCircle2 : Clock}
+                size="sm"
+                className={row.complete ? "text-green-600" : "text-gray-400"}
+              />
+              <p className="text-xs font-semibold text-gray-800">{row.label}</p>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 ml-6">{row.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      {!data.steps.training.complete && application.applicationStatus === "approved_needs_setup" && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setIsTrainingDialogOpen(true)}
+        >
+          Mark Training Complete
+        </Button>
+      )}
+
+      {data.activation.active && data.activation.activatedAt && (
+        <p className="text-xs text-green-700">
+          Activated {new Date(data.activation.activatedAt).toLocaleString()}.
+        </p>
+      )}
+
+      <Dialog
+        open={isTrainingDialogOpen}
+        onOpenChange={open => {
+          if (!trainingMutation.isPending) setIsTrainingDialogOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark training complete?</DialogTitle>
+            <DialogDescription>
+              This records your admin account and may automatically activate the provider if every other setup requirement is complete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor={`training-notes-${application.id}`} className="text-sm font-medium">
+              Optional internal notes
+            </label>
+            <Textarea
+              id={`training-notes-${application.id}`}
+              value={trainingNotes}
+              onChange={event => setTrainingNotes(event.target.value)}
+              placeholder="Record test-job or training details"
+              maxLength={2000}
+              disabled={trainingMutation.isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsTrainingDialogOpen(false)}
+              disabled={trainingMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => trainingMutation.mutate()}
+              disabled={trainingMutation.isPending}
+            >
+              {trainingMutation.isPending ? "Saving…" : "Confirm Training Complete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -700,6 +908,10 @@ export default function AdminDashboard() {
                 application={app}
                 onApprovalReadinessChange={setIsVehicleApprovalReady}
               />
+            )}
+
+            {["approved_needs_setup", "active_provider"].includes(app.applicationStatus) && (
+              <ProviderSetupPanel application={app} />
             )}
 
             {/* Internal review notes */}

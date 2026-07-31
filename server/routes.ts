@@ -19,6 +19,7 @@ import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
 import { approveVehicleVerification, registerProviderVerificationRoutes } from "./provider-verification-routes";
 import { VerificationMediaError, providerApplicationAdminAccess } from "./provider-verification-policy";
+import { registerProviderSetupRoutes } from "./provider-setup-routes";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -3498,6 +3499,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   registerProviderVerificationRoutes(app, requireProviderApplicationAdmin);
+  registerProviderSetupRoutes(app, requireProviderApplicationAdmin);
 
   return httpServer;
 }

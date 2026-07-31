@@ -342,6 +342,49 @@ export const providerApplicationMedia = pgTable("provider_application_media", {
   versionCheck: check("provider_application_media_version_check", sql`${table.version} > 0`),
 }));
 
+export const providerApplicationSetup = pgTable("provider_application_setup", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").notNull()
+    .references(() => providerApplications.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  serviceGuideVersion: text("service_guide_version"),
+  serviceGuideAcknowledgedAt: text("service_guide_acknowledged_at"),
+  serviceAreaRegion: text("service_area_region"),
+  serviceAreaZipCodes: text("service_area_zip_codes").array(),
+  maxTravelRadius: integer("max_travel_radius"),
+  serviceAreaConfirmedAt: text("service_area_confirmed_at"),
+  trainingCompletedAt: text("training_completed_at"),
+  trainingCompletedBy: integer("training_completed_by")
+    .references(() => users.id),
+  trainingNotes: text("training_notes"),
+  activatedAt: text("activated_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => ({
+  applicationUnique: uniqueIndex("provider_application_setup_application_unique")
+    .on(table.applicationId),
+  userUnique: uniqueIndex("provider_application_setup_user_unique")
+    .on(table.userId),
+  radiusCheck: check("provider_application_setup_radius_check",
+    sql`${table.maxTravelRadius} IS NULL OR ${table.maxTravelRadius} BETWEEN 5 AND 50`),
+  guideAcknowledgementCheck: check("provider_application_setup_guide_ack_check",
+    sql`(${table.serviceGuideVersion} IS NULL AND ${table.serviceGuideAcknowledgedAt} IS NULL)
+      OR (${table.serviceGuideVersion} IS NOT NULL AND ${table.serviceGuideAcknowledgedAt} IS NOT NULL)`),
+  serviceAreaCheck: check("provider_application_setup_service_area_check",
+    sql`${table.serviceAreaConfirmedAt} IS NULL OR (
+      ${table.serviceAreaRegion} IS NOT NULL
+      AND btrim(${table.serviceAreaRegion}) <> ''
+      AND ${table.serviceAreaZipCodes} IS NOT NULL
+      AND cardinality(${table.serviceAreaZipCodes}) > 0
+      AND array_to_string(${table.serviceAreaZipCodes}, ',') ~ '^[0-9]{5}(,[0-9]{5})*$'
+      AND ${table.maxTravelRadius} BETWEEN 5 AND 50
+    )`),
+  trainingCompletionCheck: check("provider_application_setup_training_check",
+    sql`(${table.trainingCompletedAt} IS NULL AND ${table.trainingCompletedBy} IS NULL)
+      OR (${table.trainingCompletedAt} IS NOT NULL AND ${table.trainingCompletedBy} IS NOT NULL)`),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
@@ -474,6 +517,8 @@ export type ProviderApplication = typeof providerApplications.$inferSelect;
 export type InsertProviderApplication = typeof providerApplications.$inferInsert;
 export type ProviderApplicationMedia = typeof providerApplicationMedia.$inferSelect;
 export type InsertProviderApplicationMedia = typeof providerApplicationMedia.$inferInsert;
+export type ProviderApplicationSetup = typeof providerApplicationSetup.$inferSelect;
+export type InsertProviderApplicationSetup = typeof providerApplicationSetup.$inferInsert;
 
 export const PROVIDER_APPLICATION_MEDIA_TYPES = [
   "trunk_photo",
