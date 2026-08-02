@@ -1,0 +1,55 @@
+Apply and validate migration 0008 in the Development database only.
+
+Important:
+- Do not apply migration 0009.
+- Do not modify Production.
+- Do not publish or deploy.
+- Do not commit or push.
+- Do not remove users.push_token.
+- Preserve the legacy compatibility route.
+
+Before applying:
+1. Confirm the active database target is Development.
+2. Print the exact database host/database identifier in a redacted-safe form.
+3. Confirm push_devices does not yet exist.
+4. Confirm users.push_token still exists.
+5. Show the exact command you will use.
+6. Stop if there is any ambiguity about the database environment.
+
+Then apply only the schema changes represented by migration 0008_push_devices.sql using the project’s actual Development schema process.
+
+After applying, perform read-only verification:
+
+1. Confirm push_devices exists.
+2. Confirm users.push_token still exists.
+3. Show the push_devices columns, constraints, and indexes.
+4. Count:
+   - total push_devices rows
+   - enabled rows
+   - customer rows
+   - provider rows
+5. Compare:
+   - count of non-null, non-empty users.push_token values
+   - count of rows backfilled into push_devices
+6. Identify any legacy tokens that were not backfilled and explain why.
+7. Confirm duplicate tokens were handled safely.
+8. Confirm no Production schema or data changed.
+9. Confirm migration 0009 was not applied.
+10. Restart the Development workflow only if needed.
+11. Test these routes against Development:
+   - unauthenticated POST /api/push-devices/register returns 401
+   - authenticated registration succeeds
+   - repeated registration is idempotent
+   - DELETE /api/push-devices/current disables only the authenticated user’s token
+   - missing or malformed input returns controlled 400 responses
+12. Do not use a real Firebase send yet unless FIREBASE_SERVICE_ACCOUNT_JSON is already configured and I explicitly approve it.
+
+At completion report:
+- exact command used
+- Development verification results
+- row counts
+- route test results
+- confirmation that Production was untouched
+- confirmation that 0009 remains unapplied
+
+Do not publish, deploy, commit, push, modify Production, or apply migration 0009.
