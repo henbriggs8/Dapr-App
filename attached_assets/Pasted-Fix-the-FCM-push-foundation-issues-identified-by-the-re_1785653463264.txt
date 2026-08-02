@@ -1,0 +1,89 @@
+Fix the FCM push foundation issues identified by the read-only safety audit.
+
+Do not publish, deploy, run migrations, modify production data, commit, or push.
+
+Required fixes:
+
+1. Revise migrations/0008_push_devices.sql so it does NOT drop users.push_token.
+
+2. Add a safe backfill in the migration:
+   - Create push_devices first.
+   - Copy valid, non-empty users.push_token values into push_devices.
+   - Use:
+     - user_id from users.id
+     - app_type derived from the existing provider/user field if safely available
+     - otherwise default legacy registrations to customer and clearly document that choice
+     - platform = ios
+     - environment = production unless the existing data model provides a reliable environment
+     - notifications_enabled = true
+     - timestamps using existing defaults
+   - Use ON CONFLICT on fcm_token so the migration is idempotent.
+   - Preserve users.push_token as a deprecated column for now.
+   - Do not remove it in this migration.
+   - State that removal will happen in a later cleanup migration after native clients have re-registered.
+
+3. Fix the new TypeScript error:
+   server/push-device-routes.ts:58
+   Property isProvider does not exist on the current authenticated-user type.
+
+   Use the project’s real authenticated user type or safely fetch the required provider classification from the local user record.
+   Do not use any, unsafe casts, or duplicated user types.
+
+4. Review POST /api/push-devices/register appType handling.
+   - Do not blindly trust a client to classify itself as provider.
+   - Prefer deriving app_type from the authenticated local user where appropriate.
+   - If the same authenticated user can legitimately use both the customer and provider native apps, preserve the request appType but validate it against an explicit allowed app context rather than account role alone.
+   - Explain the chosen model before changing the contract.
+   - Preserve compatibility with the current customer app contract.
+
+5. Fix sendToTokens() so invalidDisabled accurately reports how many invalid or unregistered tokens were disabled.
+
+6. Prevent confusing database failures before the migration exists.
+   Choose the smallest safe approach:
+   - Keep routes registered, but detect PostgreSQL missing-table error for push_devices and return a controlled 503 response:
+     {
+       "code": "PUSH_UNAVAILABLE",
+       "error": "Push device storage is not configured."
+     }
+   - Do not leak SQL details.
+   - Do not hide other database errors.
+   - Do not create tables automatically at runtime.
+
+7. Add or update focused tests for:
+   - migration SQL preserves users.push_token
+   - backfill exists
+   - backfill skips null and empty tokens
+   - backfill handles duplicate FCM tokens safely
+   - compatibility route compiles with the correct authenticated-user type
+   - invalidDisabled count is accurate
+   - missing push_devices table returns controlled 503
+   - other database failures are not incorrectly converted into missing-schema errors
+   - appType validation/derivation behavior
+   - no real Firebase calls
+
+8. Run:
+   - npm run test:push
+   - npx drizzle-kit check
+   - npm run build
+   - npm run check
+   - git diff --check
+
+The repository-wide npm run check may still contain the known unrelated errors. Report:
+- all remaining errors
+- whether any error remains in files changed for the FCM task
+- whether the new push files are type-clean
+
+At completion report:
+1. Exact files changed
+2. Revised complete migration SQL
+3. Backfill behavior and assumptions
+4. Why users.push_token is preserved
+5. TypeScript fix
+6. appType trust model
+7. Missing-table error behavior
+8. Correct invalidDisabled behavior
+9. Test/build/check results
+10. Exact Development-only migration command, not executed
+11. Confirmation that no migration, deployment, publish, production write, commit, or push occurred
+
+Do not run migrations, publish, deploy, commit, push, or modify production data.
