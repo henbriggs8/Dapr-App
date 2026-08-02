@@ -1,0 +1,79 @@
+Before any commit, migration, publish, deployment, or secret setup, perform a read-only final safety audit of the FCM push foundation.
+
+Do not edit files during this audit.
+Do not run migrations.
+Do not publish, deploy, commit, push, or modify production data.
+
+Report the following exactly:
+
+1. Git status and full list of changed/untracked files.
+
+2. The exact new migration filename and its complete SQL contents.
+
+3. Confirm whether the migration has been applied to:
+   - Development database
+   - Production database
+   - Any other database
+   Answer yes or no for each and provide evidence.
+
+4. Explain exactly what happens to the legacy users.push_token column:
+   - Is the column dropped?
+   - Is existing token data copied into push_devices first?
+   - Could any currently stored tokens be lost?
+   - Is removal necessary for this phase?
+   - Would it be safer to leave the column temporarily and deprecate it?
+
+5. Show the final push_devices schema, including:
+   - column names and types
+   - defaults
+   - nullability
+   - foreign key behavior
+   - unique constraints
+   - indexes
+
+6. Show the exact request and response contracts for:
+   - POST /api/push-devices/register
+   - DELETE /api/push-devices/current
+   - POST /api/admin/push/test
+   - compatibility endpoint /api/user/push-token
+
+7. Confirm registration:
+   - derives user identity from Clerk authentication
+   - does not accept user_id
+   - reassigns an existing token safely
+   - re-enables a disabled token
+   - never returns or logs the full token
+
+8. Confirm the compatibility endpoint writes exclusively to push_devices and does not maintain a second token store.
+
+9. Show how Firebase Admin reads FIREBASE_SERVICE_ACCOUNT_JSON.
+   Confirm:
+   - server startup does not fail when absent or malformed
+   - credentials are never logged
+   - no credential file exists in the repository
+   - initialization occurs only once
+
+10. Show how invalid or unregistered Firebase tokens are detected and disabled.
+
+11. List the 16 pre-existing TypeScript errors with filenames and confirm none occur in files changed for this task.
+
+12. Confirm whether restarting the workflow:
+   - applied a migration
+   - published a deployment
+   - changed production data
+   - exposed any new route publicly before the schema exists
+
+13. Provide a concise diff-risk review identifying anything that could break:
+   - existing website behavior
+   - Clerk authentication
+   - admin access
+   - native clients
+   - database startup
+   - production deployment
+
+14. Recommend whether the safest next step is:
+   A. keep the migration as written,
+   B. revise it to preserve users.push_token temporarily,
+   C. add a data-copy/backfill before removing the legacy column.
+
+Do not make any changes. Return only the audit report.
