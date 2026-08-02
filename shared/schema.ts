@@ -26,9 +26,26 @@ export const users = pgTable("users", {
   freeWashCredits: integer("free_wash_credits").default(0),
   referredByCode: text("referred_by_code"),
   referralCreditBalanceCents: integer("referral_credit_balance_cents").notNull().default(0),
-  stripeCustomerId: text("stripe_customer_id"),
-  pushToken: text("push_token")
+  stripeCustomerId: text("stripe_customer_id")
 });
+
+export const pushDevices = pgTable("push_devices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fcmToken: text("fcm_token").notNull(),
+  appType: text("app_type").notNull(),
+  platform: text("platform").notNull(),
+  environment: text("environment").notNull(),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("push_devices_fcm_token_unique").on(table.fcmToken),
+  index("push_devices_enabled_user_idx").on(table.userId, table.notificationsEnabled),
+  index("push_devices_user_app_idx").on(table.userId, table.appType),
+  index("push_devices_last_seen_idx").on(table.lastSeenAt),
+]);
 
 export const pricingConfig = pgTable("pricing_config", {
   id: serial("id").primaryKey(),

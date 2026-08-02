@@ -93,7 +93,6 @@ export interface IStorage {
   updateUserProfile(id: number, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'address' | 'description' | 'profileImage'>>): Promise<User>;
   updateUser(id: number, updates: Partial<Pick<User, 'isProvider' | 'isAdmin'>>): Promise<User>;
   updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void>;
-  updateUserPushToken(id: number, token: string): Promise<void>;
   deleteUser(id: number): Promise<void>;
   getProviders(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
@@ -460,7 +459,6 @@ export class MemStorage implements IStorage {
       referredByCode: null,
       referralCreditBalanceCents: 0,
       stripeCustomerId: null,
-      pushToken: null,
     };
     this.users.set(id, user);
     return user;
@@ -492,11 +490,6 @@ export class MemStorage implements IStorage {
   async updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void> {
     const user = await this.getUser(id);
     if (user) this.users.set(id, { ...user, stripeCustomerId });
-  }
-
-  async updateUserPushToken(id: number, token: string): Promise<void> {
-    const user = await this.getUser(id);
-    if (user) this.users.set(id, { ...user, pushToken: token });
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -1716,10 +1709,6 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserStripeCustomerId(id: number, stripeCustomerId: string | null): Promise<void> {
     await db.update(users).set({ stripeCustomerId }).where(eq(users.id, id));
-  }
-
-  async updateUserPushToken(id: number, token: string): Promise<void> {
-    await db.update(users).set({ pushToken: token }).where(eq(users.id, id));
   }
 
   async deleteUser(id: number): Promise<void> {

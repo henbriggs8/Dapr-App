@@ -50,7 +50,7 @@ Before making any change that could affect a native app's API contract, clearly 
 - **Authentication**: Clerk (JWT verification), Passport.js (legacy)
 - **Payments**: Stripe (checkout, webhooks, verification)
 - **Real-time**: WebSocket server for provider location and booking updates
-- **Push Notifications**: APNs via backend token registration
+- **Push Notifications**: FCM via authenticated multi-device backend registration
 - **Deployment**: Replit (primary), Google Cloud Run (configured)
 
 ## External Dependencies
@@ -62,7 +62,7 @@ Before making any change that could affect a native app's API contract, clearly 
 - **Real-time**: WebSocket
 
 ## Data Model Highlights
-- `users` — customers and providers, with `isProvider`, `isAdmin`, `referralCode`, `freeWashCredits`, `pushToken`
+- `users` — customers and providers, with `isProvider`, `isAdmin`, `referralCode`, `freeWashCredits`
 - `bookings` — full booking lifecycle with status, stage, payment, assignment
 - `vehicles` — customer vehicles linked to bookings
 - `services` — three-tier pricing (basic, premium, full detail)

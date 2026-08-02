@@ -20,6 +20,9 @@ import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSl
 import { approveVehicleVerification, registerProviderVerificationRoutes } from "./provider-verification-routes";
 import { VerificationMediaError, providerApplicationAdminAccess } from "./provider-verification-policy";
 import { registerProviderSetupRoutes } from "./provider-setup-routes";
+import { DatabasePushDeviceRepository } from "./push-device-repository";
+import { PushService } from "./push-service";
+import { registerPushDeviceRoutes } from "./push-device-routes";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -227,6 +230,8 @@ async function recoverStaleStripeCustomerId(user: Express.User): Promise<string>
 }
 
 export function registerRoutes(app: Express): Server {
+  const pushDevices = new DatabasePushDeviceRepository();
+  registerPushDeviceRoutes(app, pushDevices, new PushService(pushDevices));
   setupAuth(app);
 
   const clients = new Map<number, WebSocket[]>();
@@ -1480,19 +1485,6 @@ export function registerRoutes(app: Express): Server {
     } catch {
       // If the check fails, report in-area so we don't block customers
       res.json({ inServiceArea: true, providerCount: 0, nearestProviderMiles: null });
-    }
-  });
-
-  // Save push notification token for the authenticated user
-  app.post("/api/user/push-token", resolveUserFromBearer, async (req, res) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    const { token, platform } = req.body || {};
-    if (!token || typeof token !== "string") return res.status(400).json({ error: "token is required" });
-    try {
-      await storage.updateUserPushToken(req.user.id, token);
-      res.json({ ok: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to store push token" });
     }
   });
 
