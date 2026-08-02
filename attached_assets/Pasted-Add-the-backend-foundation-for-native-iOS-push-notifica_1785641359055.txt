@@ -1,0 +1,254 @@
+Add the backend foundation for native iOS push notifications using Firebase Cloud Messaging.
+
+Important context:
+- This Replit project is the live Dapr website/API/backend.
+- The native Dapr customer SwiftUI app already integrates Firebase Messaging successfully.
+- A physical-iPhone test notification sent through Firebase Console worked.
+- The customer app already receives a valid FCM token.
+- Clerk remains the authentication system.
+- Stripe remains the payment system.
+- Firebase is only being added as the push-delivery provider.
+- Do not modify either native Swift app.
+- Do not publish, deploy, run production migrations, modify production data, commit, or push.
+
+Before making changes:
+1. Inspect the current repository architecture, server entry points, API route conventions, Clerk auth middleware, admin authorization, database schema, migration system, tests, environment handling, logging, and git status.
+2. Confirm how an authenticated Clerk user maps to the local users table.
+3. Confirm whether firebase-admin is already installed.
+4. Preserve all existing uncommitted work.
+5. Report the exact files, routes, schema objects, and dependency changes you plan to make before editing.
+6. Stop if the user mapping, database environment, migration workflow, or overlapping uncommitted changes are ambiguous.
+
+Goal:
+Implement the smallest safe backend foundation that:
+- stores FCM tokens against authenticated users,
+- lets the native app register and disable its token,
+- initializes Firebase Admin securely,
+- provides a tightly protected admin test-send route,
+- and creates a reusable internal push-notification service.
+
+Do not connect notifications to booking lifecycle events yet.
+
+DATABASE
+
+Add a push_devices table using the existing schema and migration conventions.
+
+Suggested fields:
+- id
+- user_id
+- fcm_token
+- app_type
+- platform
+- environment
+- notifications_enabled
+- last_seen_at
+- created_at
+- updated_at
+
+Requirements:
+- user_id must reference the existing users table using the project’s established ID type.
+- fcm_token must be unique.
+- app_type must support customer and provider.
+- platform must currently support ios.
+- environment must support development and production.
+- notifications_enabled defaults to true.
+- Use the existing timestamp conventions.
+- Add indexes for user_id, app_type, notifications_enabled, and last_seen_at.
+- Use foreign-key deletion behavior consistent with existing user-owned tables.
+- Create a new migration.
+- Do not run any migration.
+- Do not modify existing migrations.
+- Report the exact Development-only migration command without executing it.
+
+TOKEN REGISTRATION ROUTE
+
+Add:
+
+POST /api/push-devices/register
+
+Requirements:
+- Require the existing Clerk bearer-token authentication.
+- Derive the current user only from authenticated server context.
+- Never accept user_id from the request body.
+- Accept:
+  {
+    "fcmToken": "string",
+    "appType": "customer" | "provider",
+    "platform": "ios",
+    "environment": "development" | "production"
+  }
+- Validate using the project’s existing validation system.
+- Trim the token.
+- Reject empty, malformed, or unreasonably large token values.
+- Do not log the complete token.
+- Upsert by fcm_token.
+- Safely reassign a token to the currently authenticated user if it previously belonged to another user.
+- Set notifications_enabled = true.
+- Update last_seen_at and updated_at.
+- Return only:
+  {
+    "success": true
+  }
+- Never return the token.
+- Make repeated registration idempotent.
+
+TOKEN DISABLE ROUTE
+
+Add:
+
+DELETE /api/push-devices/current
+
+Request:
+  {
+    "fcmToken": "string"
+  }
+
+Requirements:
+- Require existing Clerk authentication.
+- Only act on a token assigned to the authenticated user.
+- Soft-disable it using notifications_enabled = false.
+- Update updated_at.
+- Do not log or return the full token.
+- Make repeated requests idempotent.
+- Prevent users from disabling another user’s token.
+
+FIREBASE ADMIN
+
+Install the official firebase-admin package.
+
+Create a centralized initializer using the project’s existing service/config structure.
+
+Requirements:
+- Initialize exactly once.
+- Read credentials only from:
+  FIREBASE_SERVICE_ACCOUNT_JSON
+- Parse the JSON safely.
+- Normalize escaped newlines in private_key only if necessary.
+- Use cert(parsedCredentials).
+- Never add a service-account JSON file to the repository.
+- Never hardcode credentials.
+- Never log credentials or private keys.
+- Do not crash unrelated routes when the secret is absent or malformed.
+- The server must still boot without Firebase configured.
+- Push-send operations should return a clear internal configuration error when Firebase is unavailable.
+- Do not create fake success behavior.
+
+PUSH SERVICE
+
+Create a reusable service with methods resembling:
+- isPushConfigured()
+- sendToTokens(...)
+- sendToUser(...)
+- disableInvalidToken(...)
+
+sendToUser must:
+- Accept a local user ID.
+- Optionally filter by app_type.
+- Load enabled matching tokens.
+- Send to all matching tokens.
+- Support title, body, and string-only custom data.
+- Handle partial Firebase failures.
+- Disable invalid or unregistered tokens.
+- Avoid logging full tokens.
+- Return:
+  {
+    attempted,
+    succeeded,
+    failed,
+    invalidTokensDisabled
+  }
+- Be designed so a push failure would not fail a future booking transaction.
+
+Do not connect this service to booking routes yet.
+
+ADMIN TEST ROUTE
+
+Add:
+
+POST /api/admin/push/test
+
+Request:
+  {
+    "fcmToken": "string",
+    "title": "string",
+    "body": "string",
+    "data": {
+      "route": "booking",
+      "bookingId": "optional-string",
+      "event": "test"
+    }
+  }
+
+Requirements:
+- Require existing Clerk authentication.
+- Require the existing local is_admin authorization.
+- Reuse the current admin middleware or authorization pattern.
+- Validate token, title, body, and string-only data values.
+- Do not log or return the full token.
+- Send through the centralized push service.
+- Return only a safe message ID or minimal success response.
+- Disable the stored token if Firebase reports it as invalid or unregistered.
+- Do not add an admin-dashboard UI in this task.
+- Do not create a public/general notification-sending endpoint.
+
+SECURITY REVIEW
+
+Confirm:
+- Registration and removal routes use Clerk auth.
+- Test route uses Clerk auth plus existing admin authorization.
+- No route accepts a client-provided user ID.
+- Tokens are not returned in ordinary API responses.
+- Existing user/admin serializers do not expose tokens.
+- Full tokens are not logged.
+- Firebase credentials remain server-only.
+- No credential file enters Git.
+- CORS behavior remains consistent with current native API routes.
+- Clerk, Stripe, booking, payment, storage, and Swift contracts remain unchanged.
+
+TESTS
+
+Use the existing test framework and mocking patterns.
+
+Add focused tests for:
+- unauthenticated registration rejection
+- successful registration
+- idempotent registration
+- token reassignment to the authenticated user
+- re-enabling a disabled token
+- disabling the authenticated user’s own token
+- preventing one user from disabling another user’s token
+- non-admin test-route rejection
+- admin test-route success with Firebase mocked
+- missing credentials not crashing unrelated routes
+- malformed credentials not crashing unrelated routes
+- invalid Firebase response disabling the stored token
+- API responses never including the full token
+- no automated test calling real Firebase
+
+VALIDATION
+
+Run:
+- dependency installation
+- TypeScript checking
+- relevant backend tests
+- migration/schema validation
+- production build
+- git diff --check
+
+At completion, report:
+1. Files changed
+2. Dependency added
+3. Schema and migration created
+4. Routes added
+5. Authentication and authorization behavior
+6. Firebase Admin initialization design
+7. Replit secret required
+8. Exact steps to generate and add the Firebase service-account credential
+9. Exact Development-only migration command, not executed
+10. Test and build results
+11. Any existing unrelated errors
+12. Remaining work before the native app can register its token
+13. The exact Swift request contract for POST /api/push-devices/register
+14. A proposed follow-up order for real booking notifications
+
+Do not publish, deploy, run migrations, modify production data, modify Swift code, commit, or push.
