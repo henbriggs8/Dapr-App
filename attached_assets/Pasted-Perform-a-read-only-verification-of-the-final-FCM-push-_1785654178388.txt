@@ -1,0 +1,81 @@
+Perform a read-only verification of the final FCM push foundation.
+
+Do not edit files.
+Do not run migrations.
+Do not deploy, publish, commit, push, modify secrets, or change database data.
+
+The staged migration 0009 must remain unapplied.
+
+Report:
+
+1. The complete current contents of:
+   - migrations/0008_push_devices.sql
+   - migrations/0009_push_legacy_cleanup.sql
+
+2. Confirm that migration 0008:
+   - creates push_devices
+   - backfills non-null and non-empty users.push_token values
+   - handles duplicate fcm_token values safely
+   - does not drop users.push_token
+   - can be applied before all native clients have re-registered
+
+3. Explain the exact legacy-token backfill values used for:
+   - app_type
+   - platform
+   - environment
+   - notifications_enabled
+   - timestamps
+
+4. Confirm migration 0009:
+   - is not applied anywhere
+   - only drops users.push_token
+   - is clearly documented as blocked until native adoption is verified
+   - is not automatically run by startup, build, or deployment scripts
+
+5. Run npm run check and list all TypeScript errors.
+
+Specifically confirm whether this previous new error is fixed:
+   server/push-device-routes.ts:58
+   Property isProvider does not exist on the authenticated-user type.
+
+6. Confirm whether any TypeScript error remains in:
+   - server/push-device-routes.ts
+   - server/push-device-repository.ts
+   - server/push-service.ts
+   - server/firebase-admin.ts
+   - any other new FCM file
+
+7. Show how POST /api/push-devices/register determines app_type.
+   Explain:
+   - whether appType comes from the client
+   - what validation prevents incorrect classification
+   - whether one account can legitimately use both customer and provider apps
+
+8. Show the exact missing-table handling.
+   Confirm that when push_devices does not exist:
+   - registration returns a controlled 503
+   - disable returns a controlled 503
+   - admin test behavior is controlled
+   - SQL/database details are not leaked
+   - unrelated database errors are not incorrectly converted to missing-schema errors
+
+9. Show the sendToTokens invalid-token logic.
+   Confirm invalidDisabled reports the actual number of registrations disabled.
+
+10. Run and report:
+   - npm run test:push
+   - npx drizzle-kit check
+   - npm run build
+   - npm run check
+   - git diff --check
+
+11. Confirm database state, read-only:
+   - Development has push_devices: yes/no
+   - Development still has users.push_token: yes/no
+   - Production has push_devices: yes/no
+   - Production still has users.push_token: yes/no
+   - migration 0009 has been applied anywhere: yes/no
+
+12. Give the exact safest next step after this verification.
+
+Do not make changes. Return only the audit report.

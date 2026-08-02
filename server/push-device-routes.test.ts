@@ -166,6 +166,21 @@ test("push migration preserves and backfills legacy tokens safely", async () => 
   assert.match(migration, /ON CONFLICT \("fcm_token"\) DO NOTHING/);
 });
 
+test("push cleanup migration drops only the legacy column and includes verification guidance", async () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const cleanup = await readFile(resolve(here, "../migrations/0009_push_legacy_cleanup.sql"), "utf8");
+  // Must drop the legacy column.
+  assert.match(cleanup, /ALTER TABLE "users" DROP COLUMN/i);
+  assert.match(cleanup, /"push_token"/);
+  // Must not drop the push_devices table or any of its columns.
+  assert.doesNotMatch(cleanup, /DROP TABLE/i);
+  assert.doesNotMatch(cleanup, /push_devices.*DROP COLUMN/i);
+  // Must carry the verification query so operators can confirm readiness.
+  assert.match(cleanup, /push_devices.*notifications_enabled/s);
+  // Staged comment must warn against premature application.
+  assert.match(cleanup, /DO NOT APPLY/i);
+});
+
 test("a user can idempotently disable only their own token", async () => {
   const { server, request, devices } = await testServer();
   try {

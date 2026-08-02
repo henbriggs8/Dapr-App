@@ -1,0 +1,29 @@
+-- Staged cleanup: remove the legacy push-token column from the users table.
+--
+-- DO NOT APPLY until:
+--   1. All native iOS clients have been updated and are registering through
+--      POST /api/push-devices/register (the multi-device endpoint).
+--   2. The legacy compatibility route POST /api/user/push-token has been removed
+--      from server/push-device-routes.ts.
+--   3. The push_devices table has been live in production for a reasonable
+--      settling period (at minimum one app release cycle after the update ships).
+--
+-- Verification queries to run BEFORE applying this migration:
+--
+--   -- Confirm every user with a legacy token has re-registered via the new endpoint.
+--   SELECT u.id, u.email
+--   FROM users u
+--   LEFT JOIN push_devices pd ON pd.user_id = u.id AND pd.notifications_enabled = true
+--   WHERE u.push_token IS NOT NULL
+--     AND btrim(u.push_token) <> ''
+--     AND pd.id IS NULL;
+--   -- This should return 0 rows before proceeding.
+--
+--   -- Confirm the push_devices table has active registrations.
+--   SELECT COUNT(*) FROM push_devices WHERE notifications_enabled = true;
+--   -- This should be a non-zero count matching active user population.
+--
+-- Apply with:
+--   npm run db:migrate   (or the project's standard migration runner)
+
+ALTER TABLE "users" DROP COLUMN IF EXISTS "push_token";
