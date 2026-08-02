@@ -48,6 +48,7 @@ export class PushService {
     if (!tokens.length) return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
     const sender = this.senderFactory();
     let delivered = 0;
+    let invalidDisabled = 0;
     let failed = 0;
     for (const token of tokens) {
       try {
@@ -60,11 +61,12 @@ export class PushService {
       } catch (error: any) {
         if (INVALID_TOKEN_CODES.has(error?.code)) {
           await this.devices.disableByToken(token);
+          invalidDisabled++;
         }
         failed++;
       }
     }
-    return { attempted: tokens.length, delivered, invalidDisabled: 0, failed };
+    return { attempted: tokens.length, delivered, invalidDisabled, failed };
   }
 
   async sendToUser(input: PushDeliveryInput): Promise<PushDeliverySummary> {

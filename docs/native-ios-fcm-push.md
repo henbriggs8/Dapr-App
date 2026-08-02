@@ -4,6 +4,11 @@ The backend now stores every native FCM registration as an enabled or disabled
 device, rather than keeping one token on the user record. It does not yet send
 booking or other lifecycle notifications.
 
+The legacy `users.push_token` column is retained temporarily for a safe client
+transition. Migration `0008_push_devices.sql` backfills valid non-empty legacy
+tokens into `push_devices`; it does not remove the legacy column. A separate
+cleanup migration can remove that column after native clients have re-registered.
+
 ## Server configuration
 
 Set the server-only `FIREBASE_SERVICE_ACCOUNT_JSON` secret to the complete JSON
@@ -42,10 +47,12 @@ Content-Type: application/json
 ```
 
 `appType` is `customer` or `provider`; `environment` is `development` or
-`production`. The success DTO is always `{ "success": true }` and never returns a
-token. Repeating registration is safe: it refreshes activity, re-enables a
-previously disabled device, and reassigns the device to the authenticated
-local user if required.
+`production`. Customer registration is valid for any authenticated account.
+`provider` registration is accepted only for an authenticated provider account;
+provider accounts may still register their customer app. The success DTO is
+always `{ "success": true }` and never returns a token. Repeating registration
+is safe: it refreshes activity, re-enables a previously disabled device, and
+reassigns the device to the authenticated local user if required.
 
 To stop receiving pushes on a device:
 
@@ -58,6 +65,9 @@ Content-Type: application/json
 ```
 
 This operation is idempotent and only affects a token owned by the caller.
+Before the schema migration is applied, push-device storage routes return
+`503 PUSH_UNAVAILABLE` with `Push device storage is not configured.` rather
+than exposing database details.
 
 ## Existing native clients
 

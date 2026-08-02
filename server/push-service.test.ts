@@ -75,7 +75,7 @@ test("token-targeted sends disable a stored invalid registration", async () => {
     async send() { throw { code: "messaging/invalid-registration-token" }; },
   } as any));
   assert.deepEqual(await service.sendToTokens(["stored-token"], { title: "Title", body: "Body" }), {
-    attempted: 1, delivered: 0, invalidDisabled: 0, failed: 1,
+    attempted: 1, delivered: 0, invalidDisabled: 1, failed: 1,
   });
   assert.deepEqual(disabled, ["stored-token"]);
 });

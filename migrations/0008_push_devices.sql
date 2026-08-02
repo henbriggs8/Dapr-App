@@ -19,4 +19,20 @@ CREATE INDEX "push_devices_enabled_user_idx" ON "push_devices" ("user_id", "noti
 CREATE INDEX "push_devices_user_app_idx" ON "push_devices" ("user_id", "app_type");
 CREATE INDEX "push_devices_last_seen_idx" ON "push_devices" ("last_seen_at");
 
-ALTER TABLE "users" DROP COLUMN IF EXISTS "push_token";
+-- Preserve the legacy column during the native-client transition. A later cleanup
+-- migration may remove users.push_token only after clients have re-registered.
+-- Legacy registrations have no reliable environment metadata, so they are
+-- treated as production iOS registrations. The existing is_provider field
+-- determines the app type.
+INSERT INTO "push_devices" ("user_id", "fcm_token", "app_type", "platform", "environment", "notifications_enabled")
+SELECT
+  "id",
+  btrim("push_token"),
+  CASE WHEN "is_provider" THEN 'provider' ELSE 'customer' END,
+  'ios',
+  'production',
+  true
+FROM "users"
+WHERE "push_token" IS NOT NULL
+  AND btrim("push_token") <> ''
+ON CONFLICT ("fcm_token") DO NOTHING;

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { createServer } from "node:http";
 import test from "node:test";
 import express from "express";
@@ -9,11 +12,14 @@ import type { PushService } from "./push-service";
 
 const TOKEN = "token_abcdefghijklmnopqrstuvwxyz.0123456789";
 
-function fakeRepository(): PushDeviceRepository & { calls: Array<{ method: string; args: unknown[] }> } {
+function fakeRepository(registerError?: unknown): PushDeviceRepository & { calls: Array<{ method: string; args: unknown[] }> } {
   const calls: Array<{ method: string; args: unknown[] }> = [];
   return {
     calls,
-    async register(input) { calls.push({ method: "register", args: [input] }); },
+    async register(input) {
+      if (registerError) throw registerError;
+      calls.push({ method: "register", args: [input] });
+    },
     async disableForUser(userId, token) {
       calls.push({ method: "disableForUser", args: [userId, token] });
       return false;
@@ -24,8 +30,8 @@ function fakeRepository(): PushDeviceRepository & { calls: Array<{ method: strin
   };
 }
 
-async function testServer() {
-  const devices = fakeRepository();
+async function testServer(registerError?: unknown) {
+  const devices = fakeRepository(registerError);
   const sendCalls: unknown[] = [];
   const pushService = { async sendToTokens(tokens: string[], input: unknown) {
     sendCalls.push(input);
@@ -35,11 +41,15 @@ async function testServer() {
   app.use(express.json());
   app.use((req, _res, next) => {
     const actor = req.get("x-test-actor");
-    if (actor === "user") (req as any).user = { id: 7, isAdmin: false };
-    if (actor === "admin") (req as any).user = { id: 99, isAdmin: true };
+    if (actor === "user") (req as any).user = { id: 7, isAdmin: false, isProvider: false };
+    if (actor === "provider") (req as any).user = { id: 8, isAdmin: false, isProvider: true };
+    if (actor === "admin") (req as any).user = { id: 99, isAdmin: true, isProvider: false };
     next();
   });
   registerPushDeviceRoutes(app, devices, pushService);
+  app.use((_error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    res.status(500).json({ code: "INTERNAL_ERROR" });
+  });
   const server = createServer(app);
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -72,17 +82,88 @@ test("push registration requires auth, safely validates, and never returns token
       method: "POST", headers: { "Content-Type": "application/json", "x-test-actor": "user" },
       body: JSON.stringify({ fcmToken: TOKEN, appType: "provider", platform: "ios", environment: "production" }),
     });
+    assert.equal(response.status, 400);
+
+    response = await request("/api/push-devices/register", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-test-actor": "user" },
+      body: JSON.stringify({ fcmToken: TOKEN, appType: "customer", platform: "ios", environment: "production" }),
+    });
     assert.equal(response.status, 200);
     const body = await response.json() as Record<string, unknown>;
     assert.deepEqual(body, { success: true });
     assert.equal(JSON.stringify(body).includes(TOKEN), false);
     assert.deepEqual(devices.calls[0], {
       method: "register",
-      args: [{ userId: 7, fcmToken: TOKEN, appType: "provider", platform: "ios", environment: "production" }],
+      args: [{ userId: 7, fcmToken: TOKEN, appType: "customer", platform: "ios", environment: "production" }],
     });
   } finally {
     server.close();
   }
+});
+
+test("a provider can register either provider or customer app context", async () => {
+  const { server, request, devices } = await testServer();
+  try {
+    for (const appType of ["provider", "customer"]) {
+      const response = await request("/api/push-devices/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-test-actor": "provider" },
+        body: JSON.stringify({ fcmToken: `${TOKEN}${appType}`, appType, platform: "ios", environment: "development" }),
+      });
+      assert.equal(response.status, 200);
+    }
+    assert.equal(devices.calls.length, 2);
+  } finally {
+    server.close();
+  }
+});
+
+test("missing push_devices schema receives a controlled unavailable response", async () => {
+  const { server, request } = await testServer({
+    code: "42P01",
+    table: "push_devices",
+    message: 'relation "push_devices" does not exist',
+  });
+  try {
+    const response = await request("/api/push-devices/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "user" },
+      body: JSON.stringify({ fcmToken: TOKEN, appType: "customer", platform: "ios", environment: "development" }),
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      code: "PUSH_UNAVAILABLE",
+      error: "Push device storage is not configured.",
+    });
+  } finally {
+    server.close();
+  }
+});
+
+test("other push storage failures are not converted into missing-schema responses", async () => {
+  const { server, request } = await testServer({ code: "08006", message: "connection failure" });
+  try {
+    const response = await request("/api/push-devices/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "user" },
+      body: JSON.stringify({ fcmToken: TOKEN, appType: "customer", platform: "ios", environment: "development" }),
+    });
+    assert.equal(response.status, 500);
+    assert.notEqual(response.status, 503);
+  } finally {
+    server.close();
+  }
+});
+
+test("push migration preserves and backfills legacy tokens safely", async () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const migration = await readFile(resolve(here, "../migrations/0008_push_devices.sql"), "utf8");
+  assert.doesNotMatch(migration, /DROP\s+COLUMN/i);
+  assert.match(migration, /INSERT INTO "push_devices"/);
+  assert.match(migration, /"push_token" IS NOT NULL/);
+  assert.match(migration, /btrim\("push_token"\) <> ''/);
+  assert.match(migration, /CASE WHEN "is_provider" THEN 'provider' ELSE 'customer' END/);
+  assert.match(migration, /ON CONFLICT \("fcm_token"\) DO NOTHING/);
 });
 
 test("a user can idempotently disable only their own token", async () => {
