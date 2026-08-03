@@ -1,0 +1,36 @@
+The Development push-device registration layer is complete and all push tests pass.
+
+Next, prepare and validate the Firebase Admin sending layer in Development only.
+
+Do not make any Production changes or send a notification until the required Development Firebase secret is configured.
+
+Please:
+
+1. Inspect `server/firebase-admin.ts`, `server/push-service.ts`, and `POST /api/admin/push/test`.
+2. Confirm the exact expected format for the `FIREBASE_SERVICE_ACCOUNT_JSON` Replit secret.
+3. Confirm the code safely parses JSON stored either as raw JSON or, only if already supported, a documented encoded format. Do not weaken credential validation merely to accept malformed secrets.
+4. Ensure Firebase Admin initializes lazily and only once.
+5. Ensure missing or invalid credentials produce a safe server error without logging the service-account JSON, private key, access tokens, or full FCM tokens.
+6. Confirm the admin test route:
+
+   * Requires verified admin authentication.
+   * Sends only to the requested authenticated user or explicitly selected Development test user.
+   * Filters devices to `environment = development`.
+   * Respects `enabled = true`.
+   * Keeps customer and provider app types separate.
+   * Cannot broadcast to all users.
+7. Confirm the sending service handles Firebase responses per token and disables tokens reported as invalid, unregistered, or no longer usable.
+8. Confirm no legacy `users.push_token` fallback is used.
+9. Add or update focused tests for:
+
+   * Missing Firebase credentials.
+   * Invalid Firebase credentials.
+   * Successful Development send.
+   * Invalid-token disabling.
+   * Production-device exclusion.
+   * Admin authorization.
+10. Run the focused tests and TypeScript checks.
+
+Before editing, report any gaps you find and the files you expect to modify. Then make the smallest safe patch.
+
+Do not send a real notification yet. Do not modify secrets yourself, deploy, publish, access Production, change database schema, run `db:push`, apply migration 0009, commit, or push to GitHub.

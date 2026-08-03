@@ -33,10 +33,10 @@ function fakeRepository(registerError?: unknown): PushDeviceRepository & { calls
 async function testServer(registerError?: unknown) {
   const devices = fakeRepository(registerError);
   const sendCalls: unknown[] = [];
-  const pushService = { async sendToTokens(tokens: string[], input: unknown) {
+  const pushService = { async send(input: unknown) {
     sendCalls.push(input);
     return { attempted: 1, delivered: 1, invalidDisabled: 0, failed: 0 };
-  }} as PushService;
+  }} as unknown as PushService;
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
@@ -303,7 +303,7 @@ test("the legacy registration route safely writes only to the multi-device store
 
 test("admin test sends enforce authentication and admin access without exposing tokens", async () => {
   const { server, request, sendCalls } = await testServer();
-  const payload = { fcmToken: TOKEN, title: "Test", body: "Push test" };
+  const payload = { userId: 7, appType: "customer", title: "Test", body: "Push test" };
   try {
     let response = await request("/api/admin/push/test", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
@@ -318,7 +318,23 @@ test("admin test sends enforce authentication and admin access without exposing 
     });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { success: true, attempted: 1, delivered: 1, invalidDisabled: 0, failed: 0 });
-    assert.deepEqual(sendCalls, [{ fcmToken: TOKEN, title: "Test", body: "Push test" }]);
+    // The admin test path targets one explicit user's development devices only.
+    assert.deepEqual(sendCalls, [{
+      userId: 7,
+      appType: "customer",
+      environment: "development",
+      title: "Test",
+      body: "Push test",
+      data: undefined,
+    }]);
+
+    // A raw-token payload is no longer accepted (no arbitrary-token sends).
+    response = await request("/api/admin/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "admin" },
+      body: JSON.stringify({ fcmToken: TOKEN, title: "Test", body: "Push test" }),
+    });
+    assert.equal(response.status, 400);
   } finally {
     server.close();
   }

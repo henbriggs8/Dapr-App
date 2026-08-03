@@ -22,7 +22,7 @@ export type EnabledPushDevice = {
 export interface PushDeviceRepository {
   register(input: RegisterPushDeviceInput): Promise<void>;
   disableForUser(userId: number, fcmToken: string): Promise<boolean>;
-  enabledForUser(userId: number, appType?: PushAppType): Promise<EnabledPushDevice[]>;
+  enabledForUser(userId: number, appType?: PushAppType, environment?: PushEnvironment): Promise<EnabledPushDevice[]>;
   disableById(id: number): Promise<void>;
   disableByToken(fcmToken: string): Promise<void>;
 }
@@ -57,9 +57,10 @@ export class DatabasePushDeviceRepository implements PushDeviceRepository {
     return result.length > 0;
   }
 
-  async enabledForUser(userId: number, appType?: PushAppType): Promise<EnabledPushDevice[]> {
+  async enabledForUser(userId: number, appType?: PushAppType, environment?: PushEnvironment): Promise<EnabledPushDevice[]> {
     const conditions = [eq(pushDevices.userId, userId), eq(pushDevices.notificationsEnabled, true)];
     if (appType) conditions.push(eq(pushDevices.appType, appType));
+    if (environment) conditions.push(eq(pushDevices.environment, environment));
     return db.select({
       id: pushDevices.id,
       fcmToken: pushDevices.fcmToken,

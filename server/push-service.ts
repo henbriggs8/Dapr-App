@@ -1,6 +1,6 @@
 import { getMessaging } from "firebase-admin/messaging";
 import { FirebaseConfigurationError, getFirebaseApp } from "./firebase-admin";
-import type { PushAppType, PushDeviceRepository } from "./push-device-repository";
+import type { PushAppType, PushDeviceRepository, PushEnvironment } from "./push-device-repository";
 
 const INVALID_TOKEN_CODES = new Set([
   "messaging/invalid-registration-token",
@@ -13,6 +13,7 @@ export type PushDeliveryInput = {
   body: string;
   data?: Record<string, string>;
   appType?: PushAppType;
+  environment?: PushEnvironment;
 };
 
 export type PushDeliverySummary = {
@@ -70,7 +71,7 @@ export class PushService {
   }
 
   async sendToUser(input: PushDeliveryInput): Promise<PushDeliverySummary> {
-    const devices = await this.devices.enabledForUser(input.userId, input.appType);
+    const devices = await this.devices.enabledForUser(input.userId, input.appType, input.environment);
     if (!devices.length) return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
 
     const sender = this.senderFactory();

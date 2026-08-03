@@ -17,7 +17,8 @@ const legacyRegisterSchema = z.object({
   platform: z.literal("ios").optional(),
 }).strict();
 const testSchema = z.object({
-  fcmToken,
+  userId: z.number().int().positive(),
+  appType: z.enum(["customer", "provider"]),
   title: z.string().trim().min(1).max(120),
   body: z.string().trim().min(1).max(500),
   data: z.record(z.string().max(100), z.string().max(500)).optional(),
@@ -115,7 +116,16 @@ export function registerPushDeviceRoutes(app: Express, devices: PushDeviceReposi
     const parsed = testSchema.safeParse(req.body);
     if (!parsed.success) return invalidRequest(res);
     try {
-      const result = await pushService.sendToTokens([parsed.data.fcmToken], parsed.data);
+      // Test sends target one explicitly selected user's stored, enabled
+      // development devices only. There is no broadcast path.
+      const result = await pushService.send({
+        userId: parsed.data.userId,
+        appType: parsed.data.appType,
+        environment: "development",
+        title: parsed.data.title,
+        body: parsed.data.body,
+        data: parsed.data.data,
+      });
       res.status(200).json({ success: true, ...result });
     } catch (error) {
       console.error("[push] admin test delivery failed:", error instanceof Error ? error.name : "unknown");

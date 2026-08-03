@@ -22,6 +22,36 @@ test("invalid Firebase service-account JSON fails only when delivery initializes
   else process.env.FIREBASE_SERVICE_ACCOUNT_JSON = original;
 });
 
+test("development test sends succeed and exclude production devices via the repository filter", async () => {
+  const queries: unknown[] = [];
+  const sent: string[] = [];
+  const repository: PushDeviceRepository = {
+    async register() {},
+    async disableForUser() { return false; },
+    async enabledForUser(userId, appType, environment) {
+      queries.push([userId, appType, environment]);
+      // The repository applies the environment filter; production-registered
+      // devices are never returned for a development-scoped send.
+      return [{ id: 11, fcmToken: "dev-device-token", appType: "customer" }];
+    },
+    async disableById() {},
+    async disableByToken() {},
+  };
+  const service = new PushService(repository, () => ({
+    async send(message: any) { sent.push(message.token); return "id"; },
+  } as any));
+  const result = await service.send({
+    userId: 7,
+    appType: "customer",
+    environment: "development",
+    title: "Title",
+    body: "Body",
+  });
+  assert.deepEqual(result, { attempted: 1, delivered: 1, invalidDisabled: 0, failed: 0 });
+  assert.deepEqual(queries, [[7, "customer", "development"]]);
+  assert.deepEqual(sent, ["dev-device-token"]);
+});
+
 test("invalid Firebase registration tokens are disabled and omitted from results", async () => {
   const disabled: number[] = [];
   const repository: PushDeviceRepository = {
