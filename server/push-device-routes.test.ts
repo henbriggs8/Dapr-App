@@ -181,6 +181,89 @@ test("push cleanup migration drops only the legacy column and includes verificat
   assert.match(cleanup, /DO NOT APPLY/i);
 });
 
+test("repeated registration of the same token is idempotent and refreshes the device", async () => {
+  // Stateful store mirroring the repository's ON CONFLICT (fcm_token) upsert.
+  const store = new Map<string, { userId: number; appType: string; environment: string; enabled: boolean }>();
+  const devices: PushDeviceRepository = {
+    async register(input) {
+      store.set(input.fcmToken, {
+        userId: input.userId,
+        appType: input.appType,
+        environment: input.environment,
+        enabled: true,
+      });
+    },
+    async disableForUser(userId, token) {
+      const device = store.get(token);
+      if (!device || device.userId !== userId || !device.enabled) return false;
+      device.enabled = false;
+      return true;
+    },
+    async enabledForUser() { return []; },
+    async disableById() {},
+    async disableByToken() {},
+  };
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    const actor = req.get("x-test-actor");
+    if (actor === "user") (req as any).user = { id: 7, isAdmin: false, isProvider: false };
+    if (actor === "provider") (req as any).user = { id: 8, isAdmin: false, isProvider: true };
+    next();
+  });
+  registerPushDeviceRoutes(app, devices, { async sendToTokens() {
+    return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
+  }} as unknown as PushService);
+  const server = createServer(app);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const request = (path: string, init?: RequestInit) => fetch(`http://127.0.0.1:${address.port}${path}`, init);
+  try {
+    const register = (actor: string, body: Record<string, unknown>) => request("/api/push-devices/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": actor },
+      body: JSON.stringify(body),
+    });
+
+    // Duplicate registration: same user, same token, twice -> one device.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await register("user", { fcmToken: TOKEN, appType: "customer", platform: "ios", environment: "development" });
+      assert.equal(response.status, 200);
+    }
+    assert.equal(store.size, 1);
+    assert.deepEqual(store.get(TOKEN), { userId: 7, appType: "customer", environment: "development", enabled: true });
+
+    // Token refresh after the device changes hands: the token is reassigned,
+    // re-enabled, and updated in place -- never duplicated.
+    let disable = await request("/api/push-devices/current", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-test-actor": "user" },
+      body: JSON.stringify({ fcmToken: TOKEN }),
+    });
+    assert.equal(disable.status, 200);
+    assert.equal(store.get(TOKEN)?.enabled, false);
+
+    const refreshed = await register("provider", { fcmToken: TOKEN, appType: "provider", platform: "ios", environment: "production" });
+    assert.equal(refreshed.status, 200);
+    assert.equal(store.size, 1);
+    assert.deepEqual(store.get(TOKEN), { userId: 8, appType: "provider", environment: "production", enabled: true });
+
+    // App-type separation: the original customer cannot disable the token the
+    // provider now owns.
+    disable = await request("/api/push-devices/current", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-test-actor": "user" },
+      body: JSON.stringify({ fcmToken: TOKEN }),
+    });
+    assert.equal(disable.status, 200); // idempotent response
+    assert.deepEqual(store.get(TOKEN), { userId: 8, appType: "provider", environment: "production", enabled: true });
+  } finally {
+    server.close();
+  }
+});
+
 test("a user can idempotently disable only their own token", async () => {
   const { server, request, devices } = await testServer();
   try {
