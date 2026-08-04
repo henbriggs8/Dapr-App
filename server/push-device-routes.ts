@@ -19,10 +19,15 @@ const legacyRegisterSchema = z.object({
 const testSchema = z.object({
   userId: z.number().int().positive(),
   appType: z.enum(["customer", "provider"]),
+  environment: z.enum(["development", "production"]).default("development"),
   title: z.string().trim().min(1).max(120),
   body: z.string().trim().min(1).max(500),
   data: z.record(z.string().max(100), z.string().max(500)).optional(),
-}).strict();
+}).strict().refine(
+  // Production test sends are deliberately limited to customer devices.
+  (value) => value.environment !== "production" || value.appType === "customer",
+  { message: "Production test sends may only target customer devices." },
+);
 
 function authenticatedUser(req: Request, res: Response): Express.User | undefined {
   if (!req.user) {
@@ -117,11 +122,12 @@ export function registerPushDeviceRoutes(app: Express, devices: PushDeviceReposi
     if (!parsed.success) return invalidRequest(res);
     try {
       // Test sends target one explicitly selected user's stored, enabled
-      // development devices only. There is no broadcast path.
+      // devices in a single explicit environment (default: development).
+      // There is no broadcast path, and production is customer-only.
       const result = await pushService.send({
         userId: parsed.data.userId,
         appType: parsed.data.appType,
-        environment: "development",
+        environment: parsed.data.environment,
         title: parsed.data.title,
         body: parsed.data.body,
         data: parsed.data.data,

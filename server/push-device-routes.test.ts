@@ -339,3 +339,53 @@ test("admin test sends enforce authentication and admin access without exposing 
     server.close();
   }
 });
+
+test("admin production test sends target only customer production devices for one user", async () => {
+  const { server, request, sendCalls } = await testServer();
+  try {
+    // Explicit production environment is passed through to the send.
+    let response = await request("/api/admin/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "admin" },
+      body: JSON.stringify({ userId: 7, appType: "customer", environment: "production", title: "Test", body: "Prod test" }),
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(sendCalls, [{
+      userId: 7,
+      appType: "customer",
+      environment: "production",
+      title: "Test",
+      body: "Prod test",
+      data: undefined,
+    }]);
+
+    // Provider devices can never be targeted in production.
+    response = await request("/api/admin/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "admin" },
+      body: JSON.stringify({ userId: 7, appType: "provider", environment: "production", title: "Test", body: "Prod test" }),
+    });
+    assert.equal(response.status, 400);
+
+    // An invalid environment value is rejected.
+    response = await request("/api/admin/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "admin" },
+      body: JSON.stringify({ userId: 7, appType: "customer", environment: "all", title: "Test", body: "Prod test" }),
+    });
+    assert.equal(response.status, 400);
+
+    // A missing userId (would-be broadcast) is rejected.
+    response = await request("/api/admin/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "admin" },
+      body: JSON.stringify({ appType: "customer", environment: "production", title: "Test", body: "Prod test" }),
+    });
+    assert.equal(response.status, 400);
+
+    // Only the one production call reached the push service.
+    assert.equal(sendCalls.length, 1);
+  } finally {
+    server.close();
+  }
+});
