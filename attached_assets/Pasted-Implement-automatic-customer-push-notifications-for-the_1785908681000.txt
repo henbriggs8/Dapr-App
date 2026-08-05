@@ -1,0 +1,76 @@
+Implement automatic customer push notifications for the booking lifecycle using the existing Firebase Admin service and push_devices table.
+
+First inspect and report:
+
+The authoritative backend trigger point for each event:
+booking confirmed/paid
+provider assigned/accepted
+provider on the way
+provider arrived
+service started
+service completed
+booking canceled
+Which events already have any notification or email side effects.
+The exact customer user ID available at each trigger.
+How duplicate/retried lifecycle requests are currently handled.
+The files expected to change.
+
+Then implement the smallest safe automatic-notification layer.
+
+Send only after the corresponding database mutation succeeds:
+
+Booking confirmed:
+Title: Booking confirmed
+Body: Your Dapr service is confirmed.
+Provider assigned:
+Title: Detailer matched
+Body: A Dapr detailer has accepted your booking.
+On the way:
+Title: Your detailer is on the way
+Body: Your Dapr detailer is heading to you.
+Arrived:
+Title: Your detailer has arrived
+Body: Your Dapr detailer is ready to begin.
+Service started:
+Title: Service started
+Body: Your vehicle service is now in progress.
+Service completed:
+Title: Service complete
+Body: Your vehicle is ready.
+Canceled:
+Title: Booking canceled
+Body: Your Dapr booking has been canceled.
+
+Requirements:
+
+Send only to the booking customer’s enabled devices with:
+app_type = customer
+the same environment as the running backend
+Never send to provider devices.
+Never use legacy users.push_token.
+Firebase delivery failure must not roll back or fail the successful booking mutation.
+Disable permanently invalid/unregistered tokens using the existing safe token-handling logic.
+Do not include address, phone, payment details, customer name, or other sensitive information.
+Include only safe data needed for routing:
+bookingId
+destination = booking_tracking or booking_details
+event
+Prevent duplicate notifications when an identical transition is retried or the same status is already stored.
+Preserve current lifecycle guards, payments, cancellations, and timers.
+Keep Development and Production delivery separated.
+
+Add focused tests for:
+
+every lifecycle notification,
+duplicate transition suppression,
+provider-device exclusion,
+environment separation,
+Firebase failure not affecting booking success,
+invalid-token disabling,
+no notification when the database transition fails.
+
+Run the focused push tests, booking lifecycle tests, relevant TypeScript checks, and git diff --check.
+
+Use Development only for any live test. Send at most one controlled notification per lifecycle event to my Development customer account.
+
+Do not touch Production, change schema, run migrations, publish, commit, or push until I review.

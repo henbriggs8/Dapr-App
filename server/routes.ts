@@ -23,6 +23,7 @@ import { registerProviderSetupRoutes } from "./provider-setup-routes";
 import { DatabasePushDeviceRepository } from "./push-device-repository";
 import { PushService } from "./push-service";
 import { registerPushDeviceRoutes } from "./push-device-routes";
+import { createBookingNotifier, lifecycleEventForStatusChange } from "./booking-notifications";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -231,7 +232,9 @@ async function recoverStaleStripeCustomerId(user: Express.User): Promise<string>
 
 export function registerRoutes(app: Express): Server {
   const pushDevices = new DatabasePushDeviceRepository();
-  registerPushDeviceRoutes(app, pushDevices, new PushService(pushDevices));
+  const pushService = new PushService(pushDevices);
+  registerPushDeviceRoutes(app, pushDevices, pushService);
+  const notifyBookingCustomer = createBookingNotifier(pushService);
   setupAuth(app);
 
   const clients = new Map<number, WebSocket[]>();
@@ -1426,7 +1429,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid booking ID" });
       }
       
+      // Read the prior status only to suppress duplicate notifications on
+      // retried admin cancellations; the mutation behavior is unchanged.
+      const existing = await storage.getBookingById(bookingId);
       const updatedBooking = await storage.updateBookingStatus(bookingId, 'cancelled');
+      if (existing && existing.status !== 'cancelled') {
+        void notifyBookingCustomer("cancelled", updatedBooking);
+      }
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error cancelling booking:", error);
@@ -1456,6 +1465,8 @@ export function registerRoutes(app: Express): Server {
         }
       }
       const updated = await storage.updateBookingStatus(bookingId, "cancelled");
+      // Guard above rejects already-cancelled bookings, so this fires once.
+      void notifyBookingCustomer("cancelled", updated);
       res.json(updated);
     } catch (error) {
       console.error("Error cancelling booking:", error);
@@ -1644,6 +1655,9 @@ export function registerRoutes(app: Express): Server {
 
       // Assign the job to this provider
       const updatedBooking = await storage.assignBookingToProvider(bookingId, req.user.id, { acceptedByProvider: true });
+
+      // The atomic assignment guard means this runs exactly once per booking.
+      void notifyBookingCustomer("assigned", updatedBooking);
       
       // Notify via WebSocket that job was accepted
       const notification = {
@@ -1836,7 +1850,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Service cannot be started in the current booking state" });
       }
       const booking = await storage.startServiceTimer(id);
-      
+
+      // Set-once startTime doubles as the duplicate guard for retries.
+      if (!existing.startTime) void notifyBookingCustomer("started", booking);
+
       // Notify the customer via WebSocket if they're connected
       if (booking.userId) {
         const userClients = clients.get(booking.userId) || [];
@@ -1880,7 +1897,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Only an in-progress booking can be completed" });
       }
       const booking = await storage.completeServiceTimer(id);
-      
+
+      // Set-once endTime doubles as the duplicate guard for retries.
+      if (!existing.endTime) void notifyBookingCustomer("completed", booking);
+
       // Notify the customer via WebSocket if they're connected
       if (booking.userId) {
         const userClients = clients.get(booking.userId) || [];
@@ -2099,7 +2119,11 @@ export function registerRoutes(app: Express): Server {
       } as any);
 
       if (intent.status === 'succeeded') {
+        // Atomically claim the unpaid → paid transition BEFORE the info update
+        // so the confirmed push cannot duplicate against a racing webhook.
+        const newlyPaid = await storage.claimPaidTransition(id);
         await storage.updateBookingPaymentInfo(id, { isPaid: true, paymentStatus: 'completed' });
+        if (newlyPaid) void notifyBookingCustomer("confirmed", booking);
         return res.json({ success: true });
       }
       if (intent.status === 'requires_action') {
@@ -2143,6 +2167,11 @@ export function registerRoutes(app: Express): Server {
             (paymentMethod && !booking.paymentMethod);
           
           if (needsUpdate) {
+            // Atomically claim the unpaid → paid transition BEFORE the info
+            // update so the confirmed push cannot duplicate against a racing
+            // webhook. paymentMethod-only back-fills claim nothing and stay
+            // silent.
+            const newlyPaid = await storage.claimPaidTransition(booking.id);
             await storage.updateBookingPaymentInfo(booking.id, {
               isPaid: true,
               paymentStatus: 'completed',
@@ -2153,6 +2182,7 @@ export function registerRoutes(app: Express): Server {
             if (!booking.isPaid) {
               await storage.updateBookingStatus(booking.id, 'confirmed');
             }
+            if (newlyPaid) void notifyBookingCustomer("confirmed", booking);
           }
           
           return res.json({
@@ -2202,6 +2232,8 @@ export function registerRoutes(app: Express): Server {
           const userClients = clients.get(result.booking.userId) || [];
           const notification = JSON.stringify({ type: 'payment_completed', bookingId: result.booking.id });
           userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
+          // newlyPaid is computed under an advisory lock, so this fires once.
+          void notifyBookingCustomer("confirmed", result.booking);
         }
       };
 
@@ -2417,6 +2449,11 @@ export function registerRoutes(app: Express): Server {
       // Update the booking status
       const booking = await storage.updateBookingStatus(id, status, stage);
 
+      // Notify only on a real status change (stage-only or same-status retries
+      // are suppressed by comparing against the previously stored status).
+      const lifecycleEvent = lifecycleEventForStatusChange(existing.status, status);
+      if (lifecycleEvent) void notifyBookingCustomer(lifecycleEvent, booking);
+
       if (status === 'completed') {
         try {
           await storage.awardReferralForCompletedBooking(booking.id);
@@ -2465,6 +2502,9 @@ export function registerRoutes(app: Express): Server {
       }
       const { baseDurationMinutes = 60 } = req.body;
       const booking = await storage.markArrived(id, baseDurationMinutes);
+
+      // Set-once arrivalTime doubles as the duplicate guard for retries.
+      if (!existing.arrivalTime) void notifyBookingCustomer("arrived", booking);
       // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
       const arrivedMsg = JSON.stringify({
         type: 'provider_arrived',

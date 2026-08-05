@@ -105,6 +105,36 @@ try {
     await db.delete(bookings).where(eq(bookings.id, stageRow.id));
   }
 
+  // 7. Concurrent unpaid→paid claims: exactly one caller wins, so the
+  //    confirmed push can never duplicate across webhook/confirm/verify paths.
+  const [payRow] = await db
+    .insert(bookings)
+    .values({
+      userId: -1,
+      serviceId: -1,
+      priceTier: "basic",
+      timestamp: new Date().toISOString(),
+      serviceLocation: "lifecycle-test-paid-claim",
+      serviceLocationType: "home",
+      status: "awaiting_payment",
+      isPaid: false,
+      fulfillmentMode: "asap",
+    })
+    .returning();
+  try {
+    const claims = await Promise.all([
+      storage.claimPaidTransition(payRow.id),
+      storage.claimPaidTransition(payRow.id),
+      storage.claimPaidTransition(payRow.id),
+    ]);
+    assert.equal(claims.filter(Boolean).length, 1, "exactly one concurrent claim must win");
+    assert.equal(await storage.claimPaidTransition(payRow.id), false, "later retries must not claim again");
+    const paidReload = await storage.getBookingById(payRow.id);
+    assert.equal(paidReload!.isPaid, true);
+  } finally {
+    await db.delete(bookings).where(eq(bookings.id, payRow.id));
+  }
+
   console.log("booking lifecycle integration test: all assertions passed");
   await db.delete(bookings).where(eq(bookings.id, row.id));
   process.exit(0);

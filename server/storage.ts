@@ -177,6 +177,10 @@ export interface IStorage {
   updateTimeSlot(id: number, updates: Partial<TimeSlot>): Promise<TimeSlot>;
   
   // Payment methods
+  /** Atomically flips isPaid false→true. Returns true only for the single
+   *  caller that performed the transition — used to dedupe paid/confirmed
+   *  notifications across concurrent payment-confirmation paths. */
+  claimPaidTransition(bookingId: number): Promise<boolean>;
   updateBookingPaymentInfo(
     bookingId: number, 
     paymentInfo: {
@@ -1381,6 +1385,13 @@ export class MemStorage implements IStorage {
   }
   
   // Payment methods
+  async claimPaidTransition(bookingId: number): Promise<boolean> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking || booking.isPaid) return false;
+    this.bookings.set(bookingId, { ...booking, isPaid: true });
+    return true;
+  }
+
   async updateBookingPaymentInfo(
     bookingId: number, 
     paymentInfo: {
@@ -2494,6 +2505,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, bookingId))
       .returning();
     return booking;
+  }
+
+  async claimPaidTransition(bookingId: number): Promise<boolean> {
+    const claimed = await db
+      .update(bookings)
+      .set({ isPaid: true })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false)))
+      .returning({ id: bookings.id });
+    return claimed.length > 0;
   }
 
   async updateBookingPaymentInfo(
