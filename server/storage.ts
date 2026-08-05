@@ -110,7 +110,7 @@ export interface IStorage {
   
   // Booking assignment system methods
   getNearbyProviders(latitude: number, longitude: number, radius: number): Promise<User[]>;
-  assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking>;
+  assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking>;
   acceptBooking(bookingId: number, providerId: number): Promise<Booking>;
   rejectBooking(bookingId: number, providerId: number): Promise<Booking>;
   getPassedJobs(): Promise<Booking[]>;
@@ -669,10 +669,14 @@ export class MemStorage implements IStorage {
       return updatedBooking;
     }
     
+    const derivedStage = stage
+      || (status === "arrived" || status === "in_progress" || status === "completed" ? status : booking.currentStage);
     const updatedBooking = {
       ...booking,
       status,
-      currentStage: stage || booking.currentStage,
+      currentStage: derivedStage,
+      // Record arrival exactly once; retries keep the original time.
+      arrivalTime: status === "arrived" ? (booking.arrivalTime || new Date().toISOString()) : booking.arrivalTime,
       notes: booking.notes
     };
     
@@ -887,13 +891,13 @@ export class MemStorage implements IStorage {
       throw new Error('Booking not found');
     }
     
-    // Update booking with start time
-    const startTime = new Date().toISOString();
+    // Set the service start exactly once; retries keep the original time.
+    const startTime = booking.startTime || new Date().toISOString();
     const updatedBooking = {
       ...booking,
       startTime,
       status: 'in_progress',
-      currentStage: booking.currentStage || 'on_the_way'
+      currentStage: 'in_progress'
     };
     
     this.bookings.set(bookingId, updatedBooking);
@@ -910,11 +914,13 @@ export class MemStorage implements IStorage {
       throw new Error('Cannot complete service that has not been started');
     }
     
-    // Calculate duration
-    const endTime = new Date().toISOString();
+    // Complete exactly once: a retry keeps the original endTime and duration.
+    const endTime = booking.endTime || new Date().toISOString();
     const startTime = new Date(booking.startTime);
     const endTimeDate = new Date(endTime);
-    const serviceDuration = Math.round((endTimeDate.getTime() - startTime.getTime()) / (1000 * 60));
+    const serviceDuration = booking.endTime && booking.serviceDuration != null
+      ? booking.serviceDuration
+      : Math.round((endTimeDate.getTime() - startTime.getTime()) / (1000 * 60));
     
     // Get service details to calculate provider earnings
     const service = await this.getServiceById(booking.serviceId);
@@ -1217,7 +1223,7 @@ export class MemStorage implements IStorage {
     return deg * (Math.PI/180);
   }
   
-  async assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking> {
+  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
     if (!booking) {
       throw new Error('Booking not found');
@@ -1240,7 +1246,10 @@ export class MemStorage implements IStorage {
       ...booking,
       providerId,
       status: 'assigned',
+      currentStage: 'assigned',
       assignedAt: now.toISOString(),
+      // Only a provider's own accept action records acceptance (set-once).
+      acceptedAt: options?.acceptedByProvider ? (booking.acceptedAt || now.toISOString()) : booking.acceptedAt,
       assignmentExpiry: expiryTime.toISOString()
     };
     
@@ -1851,8 +1860,18 @@ export class DatabaseStorage implements IStorage {
 
   async updateBookingStatus(id: number, status: string, stage?: string): Promise<Booking> {
     const updates: any = { status };
-    if (stage) updates.currentStage = stage;
-    
+    if (stage) {
+      updates.currentStage = stage;
+    } else if (status === "arrived" || status === "in_progress" || status === "completed") {
+      // Keep the visible progress stage in sync with lifecycle statuses so it
+      // never lags behind (e.g. stuck at "arrived" after start/complete).
+      updates.currentStage = status;
+    }
+    if (status === "arrived") {
+      // Record arrival exactly once; idempotent retries keep the original time.
+      updates.arrivalTime = sql`COALESCE(${bookings.arrivalTime}, ${new Date().toISOString()})`;
+    }
+
     const [booking] = await db
       .update(bookings)
       .set(updates)
@@ -2080,14 +2099,22 @@ export class DatabaseStorage implements IStorage {
     return deg * (Math.PI / 180);
   }
 
-  async assignBookingToProvider(bookingId: number, providerId: number): Promise<Booking> {
+  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking> {
     // Atomic update: only succeeds if the booking is still pending and unassigned
     const [booking] = await db
       .update(bookings)
       .set({
         providerId,
         status: 'assigned',
+        currentStage: 'assigned',
         assignedAt: new Date().toISOString(),
+        // Only a provider's own accept action records acceptance. Admin/manual
+        // assignment leaves acceptedAt for the later explicit acceptBooking
+        // step. Set-once: COALESCE protects an existing timestamp, and the
+        // atomic WHERE guard means a retry can never match this row again.
+        ...(options?.acceptedByProvider
+          ? { acceptedAt: sql`COALESCE(${bookings.acceptedAt}, ${new Date().toISOString()})` }
+          : {}),
         assignmentExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         trackingEnabled: true
       })
@@ -2362,7 +2389,9 @@ export class DatabaseStorage implements IStorage {
       .update(bookings)
       .set({
         status: 'in_progress',
-        startTime: new Date().toISOString()
+        currentStage: 'in_progress',
+        // Set the service start exactly once; retries keep the original time.
+        startTime: sql`COALESCE(${bookings.startTime}, ${new Date().toISOString()})`
       })
       .where(eq(bookings.id, bookingId))
       .returning();
@@ -2375,14 +2404,18 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Booking not found or service not started');
     }
 
+    // Complete exactly once: a retry keeps the original endTime and duration.
     const startTime = new Date(booking.startTime);
-    const endTime = new Date();
-    const serviceDuration = Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // in minutes
+    const endTime = booking.endTime ? new Date(booking.endTime) : new Date();
+    const serviceDuration = booking.endTime && booking.serviceDuration != null
+      ? booking.serviceDuration
+      : Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // in minutes
 
     const [updatedBooking] = await db
       .update(bookings)
       .set({
         status: 'completed',
+        currentStage: 'completed',
         endTime: endTime.toISOString(),
         serviceDuration
       })

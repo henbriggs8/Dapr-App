@@ -1643,7 +1643,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Assign the job to this provider
-      const updatedBooking = await storage.assignBookingToProvider(bookingId, req.user.id);
+      const updatedBooking = await storage.assignBookingToProvider(bookingId, req.user.id, { acceptedByProvider: true });
       
       // Notify via WebSocket that job was accepted
       const notification = {

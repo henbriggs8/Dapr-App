@@ -18,6 +18,8 @@
     "test:provider-setup": "tsx --test server/provider-setup-policy.test.ts server/provider-setup-routes.test.ts",
     "test:provider-setup:integration": "tsx server/provider-setup.integration.test.ts",
     "test:push": "tsx --test server/push-device-routes.test.ts server/push-service.test.ts",
+    "test:booking-lifecycle": "tsx server/booking-lifecycle.integration.test.ts",
+    "test:booking-acceptance": "tsx server/booking-acceptance.integration.test.ts",
     "cleanup:provider-verification": "tsx scripts/cleanup-provider-application-media.ts"
   },
   "dependencies": {
