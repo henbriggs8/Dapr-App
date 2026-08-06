@@ -307,7 +307,16 @@ function DesktopFAQ() {
                 </div>
                 <div className="flex items-center gap-3 text-gray-600 text-sm">
                   <Icon icon={Phone} size="sm" className="text-[#8c52ff] shrink-0" />
-                  We can call you back if you prefer
+                  <span>
+                    Call or text us at{" "}
+                    <a
+                      href="tel:+14803317873"
+                      className="font-semibold text-[#8c52ff] hover:underline"
+                      data-testid="link-help-phone"
+                    >
+                      (480) 331-7873
+                    </a>
+                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-6 pt-6 border-t border-gray-100">
