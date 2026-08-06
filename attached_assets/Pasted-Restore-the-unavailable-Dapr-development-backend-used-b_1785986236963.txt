@@ -1,0 +1,77 @@
+Restore the unavailable Dapr development backend used by the native customer and provider iOS Debug builds.
+
+Current failing development URL:
+https://829e669a-3b46-4f0e-a7bc-a98fb2c86644-00-3clukctxtlxtt.janeway.replit.dev
+
+Confirmed behavior:
+- GET /api/services returns HTTP 502 with an empty body.
+- Provider Debug sign-in reaches Clerk successfully.
+- Clerk token acquisition returns HTTP 200.
+- The provider app sends:
+  POST /api/auth/clerk-sync
+  Authorization: Bearer <valid token>
+  Body: {"isProvider":false}
+- The development URL returns HTTP 502 before the backend handles the request.
+- Production at https://dapper-pros.replit.app is healthy and must not be modified or used for Debug testing.
+
+Goal:
+Restore a working development deployment for native Debug builds without changing production.
+
+Before making changes:
+1. Identify the exact Replit development workspace/deployment that previously served the Janeway URL.
+2. Inspect its current run/deployment status, recent logs, crash output, port binding, health checks, and environment configuration.
+3. Confirm which branch and commit the development workspace currently contains.
+4. Confirm it is configured for the development database and development secrets.
+5. Do not print or expose secret values.
+6. Do not run migrations, modify database records, or republish production.
+
+Diagnose whether the 502 is caused by:
+- the development server not running,
+- a crashed process,
+- incorrect start command,
+- failure to bind to the expected host or port,
+- missing environment variables,
+- dependency/build failure,
+- Replit deployment expiration or replacement,
+- or the Janeway URL no longer pointing to an active deployment.
+
+Then take the smallest safe action:
+
+Preferred outcome:
+- Restart or republish the existing development deployment at the same URL.
+
+If the existing Janeway URL cannot be restored:
+- Create or identify a replacement development deployment URL.
+- Keep it connected only to the development database and development environment.
+- Do not use the production database or production deployment.
+- Report the replacement URL, but do not modify the native iOS repositories yet.
+
+Required validation:
+1. Confirm the development server starts without runtime errors.
+2. Confirm a harmless root or health request returns HTTP 200.
+3. Confirm GET /api/services returns HTTP 200 with valid JSON.
+4. Confirm POST /api/auth/clerk-sync reaches the application instead of returning a proxy-level 502.
+   - Do not expose bearer tokens.
+   - An application-level 200, 400, or 401 proves routing is working; a 502 does not.
+5. Confirm development logs show the request reaching the backend.
+6. Confirm production remains unchanged and healthy.
+7. Confirm no migrations or database writes were performed unless explicitly required and approved.
+
+Report:
+- Root cause of the 502.
+- Whether the original URL was restored.
+- Exact active development URL.
+- Branch and commit deployed.
+- Development database/environment confirmation using redacted metadata only.
+- Endpoint validation results.
+- Any files changed.
+- Whether a republish occurred.
+- Any remaining uncertainty.
+
+Do not:
+- Modify production.
+- Change database schemas or data.
+- Change Clerk configuration.
+- Change API contracts.
+- Change native Swift code.
+- Commit or push unrelated changes.
