@@ -1,0 +1,55 @@
+Apply the verified Refresh Detail description update to Production and commit the matching seed change.
+
+Production database change:
+Update only the existing services record where:
+- id = 2
+- name = 'Refresh Detail'
+
+Change only the description to exactly:
+
+Basic interior cleaning with an upgraded exterior clean.
+
+Interior includes vacuuming, wipe-down, seats, cupholders, and dashboard cleaning.
+
+Exterior includes a hand wash, spray wax, and cleaning of the wheels and tires.
+
+Safety requirements:
+1. Confirm the target is the Production database before writing, using redacted connection metadata only.
+2. Read the current Production row first and confirm:
+   - id = 2
+   - name = Refresh Detail
+   - current description is the old wording
+3. Use a narrowly scoped update requiring both id = 2 and name = 'Refresh Detail'.
+4. Confirm exactly one row was affected.
+5. Do not change price, duration, active status, name, service ID, add-ons, or any other service.
+6. Do not create a migration or schema change.
+
+Validation:
+- Production GET /api/services returns the new description for Refresh Detail.
+- Refresh Detail remains price 149 and duration 90.
+- All other services are unchanged.
+- The customer app will receive the new copy without a new iOS build.
+
+Then handle the source change:
+1. Review the existing uncommitted `server/storage.ts` seed-description change.
+2. Confirm it changes only the Refresh Detail fallback description.
+3. Run:
+   - git diff --check
+   - relevant backend tests or TypeScript validation available for this file
+4. Commit only that seed change with:
+
+Update Refresh Detail description
+
+5. Push it to origin/main.
+6. Do not include unrelated files or uploaded specification files.
+
+Report:
+- Redacted Production target confirmation.
+- Before-and-after Production description.
+- Number of rows affected.
+- Production endpoint validation.
+- Commit hash and push result.
+- Final git status.
+- Any unrelated existing failures or uncertainty.
+
+Do not modify customer or provider Swift code, deploy unrelated backend changes, run migrations, or change any other production data.
