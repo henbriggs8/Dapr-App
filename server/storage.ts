@@ -71,7 +71,7 @@ export const TIER_SEEDS: InsertService[] = [
   },
   {
     name: "Refresh Detail",
-    description: "Complete interior/exterior refresh with upgraded wheels and tire shine",
+    description: "Basic interior cleaning with an upgraded exterior clean.\n\nInterior includes vacuuming, wipe-down, seats, cupholders, and dashboard cleaning.\n\nExterior includes a hand wash, spray wax, and cleaning of the wheels and tires.",
     price: 149,
     duration: 90,
     category: "standard",
