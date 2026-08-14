@@ -688,7 +688,7 @@ export default function CareersPage() {
       {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className="border-t border-gray-100 py-8">
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-          <span>© {new Date().getFullYear()} Dapr, Inc. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Dapr Enterprises, Inc. All rights reserved.</span>
           <div className="flex gap-5">
             <button onClick={() => nav("/privacy")} className="hover:text-black transition-colors">Privacy</button>
             <button onClick={() => nav("/terms")} className="hover:text-black transition-colors">Terms</button>

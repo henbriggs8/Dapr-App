@@ -305,7 +305,7 @@ export default function BecomeAPro() {
             </div>
           </div>
           <div className="border-t border-gray-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr, Inc. All rights reserved.</p>
+            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr Enterprises, Inc. All rights reserved.</p>
           </div>
         </div>
       </footer>
