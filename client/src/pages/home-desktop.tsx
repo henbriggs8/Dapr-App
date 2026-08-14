@@ -345,6 +345,27 @@ export default function HomeDesktop() {
       {/* ── How Dapr works: Book → Match → Track ─────────────────────────── */}
       <ProductJourneySection />
 
+      {/* ── App download CTA — mobile only, after Book→Match→Track ───────── */}
+      <section className="lg:hidden pb-14 px-4 sm:px-6">
+        <div className="flex flex-col items-center text-center gap-4">
+          <p className="text-sm text-gray-500">Ready to try it yourself?</p>
+          <a
+            href="https://apps.apple.com/app/id6784130029"
+            className="flex items-center gap-3 bg-black text-white rounded-2xl px-4 py-3 w-fit hover:bg-gray-900 active:scale-[0.98] transition-all"
+            aria-label="Download Dapr on the App Store"
+          >
+            {/* Apple logo */}
+            <svg viewBox="0 0 814 1000" className="w-6 h-6 fill-white shrink-0" aria-hidden="true">
+              <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-47.4-150.1-110.7C60.7 728.8 27.5 637.3 27.5 549.9c0-151.3 98.7-231.3 196.3-231.3 52 0 95.2 34.2 127.7 34.2 31.1 0 79.7-36.5 139.5-36.5 22.3 0 108.2 2 164.2 86.9zm-125.6-156.4c27.3-32.4 45.8-77.4 45.8-122.4 0-6.3-.6-12.7-1.9-18.4-43.2 1.7-93.3 28.7-124.8 65.4-23.3 26.2-46.5 71-46.5 116.7 0 7 1.3 14.1 1.9 16.3 2.6.4 6.7 1.1 10.8 1.1 38.7 0 85.5-25.3 114.7-58.7z" />
+            </svg>
+            <div className="text-left">
+              <p className="text-[10px] font-medium text-white/70 leading-none mb-0.5">Download on the</p>
+              <p className="text-base font-bold leading-none">App Store</p>
+            </div>
+          </a>
+        </div>
+      </section>
+
       {/* ── Services ──────────────────────────────────────────────────────── */}
       <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
