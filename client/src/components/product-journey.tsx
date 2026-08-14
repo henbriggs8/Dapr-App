@@ -135,10 +135,14 @@ export default function ProductJourneySection() {
       requestAnimationFrame(update);
     };
     update();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    // Capture-phase listener on document: the page scrolls on <body> (the
+    // global CSS gives html/body height:100% + overflow-x:hidden), and
+    // element scroll events do NOT bubble to window — capture catches
+    // scrolling regardless of which container actually scrolls.
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
     window.addEventListener("resize", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("scroll", onScroll, { capture: true } as EventListenerOptions);
       window.removeEventListener("resize", onScroll);
     };
   }, []);
