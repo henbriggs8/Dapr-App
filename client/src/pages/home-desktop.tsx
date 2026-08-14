@@ -302,7 +302,7 @@ export default function HomeDesktop() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
               {/* Floating "arriving" card */}
-              <div className="absolute top-6 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 hidden sm:flex items-center gap-3">
+              <div className="absolute top-3 left-3 sm:top-6 sm:left-6 bg-white rounded-xl sm:rounded-2xl shadow-lg px-3 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3">
                 <div className="w-9 h-9 rounded-full bg-[#8c52ff]/10 flex items-center justify-center">
                   <Icon icon={Clock} size="sm" className="text-[#8c52ff]" />
                 </div>
@@ -313,7 +313,7 @@ export default function HomeDesktop() {
               </div>
 
               {/* Floating pro card */}
-              <div className="absolute bottom-6 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 hidden sm:flex items-center gap-3">
+              <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 bg-white rounded-xl sm:rounded-2xl shadow-lg px-3 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3">
                 <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                   <Icon icon={Users} size="sm" className="text-gray-500" />
                   <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
