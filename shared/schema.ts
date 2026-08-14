@@ -250,6 +250,32 @@ export const contactMessages = pgTable("contact_messages", {
   resolvedAt: text("resolved_at"),
 });
 
+// ── Career Applications ──────────────────────────────────────────────────────
+export const careerApplications = pgTable("career_applications", {
+  id: serial("id").primaryKey(),
+  role: text("role").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  linkedinUrl: text("linkedin_url"),
+  portfolioUrl: text("portfolio_url"),
+  resumeObjectKey: text("resume_object_key").notNull(),
+  resumeFileName: text("resume_file_name").notNull(),
+  whyDapr: text("why_dapr").notNull(),
+  relevantExperience: text("relevant_experience").notNull(),
+  roleSpecificAnswer: text("role_specific_answer").notNull(),
+  availableStart: text("available_start").notNull(),
+  authorizedToWorkUs: boolean("authorized_to_work_us").notNull(),
+  requiresSponsorship: boolean("requires_sponsorship").notNull(),
+  referralSource: text("referral_source"),
+  status: text("status").notNull().default("new"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 // ── Provider Applications ────────────────────────────────────────────────────
 export const providerApplications = pgTable("provider_applications", {
   id: serial("id").primaryKey(),
@@ -528,6 +554,29 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
 });
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+
+export const careerApplicationFieldsSchema = createInsertSchema(careerApplications)
+  .omit({ id: true, resumeObjectKey: true, resumeFileName: true, status: true, createdAt: true, updatedAt: true })
+  .extend({
+    role: z.string().min(1, "Position is required"),
+    firstName: z.string().trim().min(1, "First name is required").max(100),
+    lastName: z.string().trim().min(1, "Last name is required").max(100),
+    email: z.string().trim().email("Valid email is required").max(254),
+    phone: z.string().trim().min(7, "Phone number is required").max(30),
+    city: z.string().trim().min(1, "City is required").max(100),
+    state: z.string().trim().min(2, "State is required").max(50),
+    linkedinUrl: z.string().trim().url("LinkedIn must be a valid URL").max(500).optional().or(z.literal("")).transform(v => v || null).nullable(),
+    portfolioUrl: z.string().trim().url("Portfolio must be a valid URL").max(500).optional().or(z.literal("")).transform(v => v || null).nullable(),
+    whyDapr: z.string().trim().min(10, "Please tell us why you're interested").max(5000),
+    relevantExperience: z.string().trim().min(10, "Please tell us about your experience").max(5000),
+    roleSpecificAnswer: z.string().trim().min(10, "Please answer the role question").max(5000),
+    availableStart: z.string().trim().min(1, "Start availability is required").max(200),
+    authorizedToWorkUs: z.boolean(),
+    requiresSponsorship: z.boolean(),
+    referralSource: z.string().trim().max(500).optional().or(z.literal("")).transform(v => v || null).nullable(),
+  });
+export type CareerApplicationFields = z.infer<typeof careerApplicationFieldsSchema>;
+export type CareerApplication = typeof careerApplications.$inferSelect;
 
 // Provider application types
 export type ProviderApplication = typeof providerApplications.$inferSelect;

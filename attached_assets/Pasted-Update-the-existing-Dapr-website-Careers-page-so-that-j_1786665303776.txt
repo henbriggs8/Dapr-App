@@ -1,0 +1,272 @@
+Update the existing Dapr website Careers page so that job applications are handled through an on-page application form instead of opening the user's email client.
+
+Before making changes, inspect the existing Careers page, job-card components, routing, backend/API structure, database schema/migration conventions, email utilities, and file-storage utilities. Reuse existing patterns wherever possible and do not make unrelated changes.
+
+## Desired user experience
+
+Currently each open-role card has an "Apply →" action that opens an email link.
+
+Replace that behavior.
+
+When a user clicks **Apply →** on a specific job:
+
+1. Smooth-scroll to a new **Apply to Dapr** application section below the open-role cards.
+2. Automatically populate the application with the exact role they clicked.
+3. Visually show the selected position at the top of the form.
+4. Move focus/accessibility appropriately to the application section.
+5. Do not require the applicant to select the position again unless we intentionally provide a "Change position" option.
+
+Keep the visual design consistent with the existing Dapr careers page:
+
+* Same typography
+* Same purple accent color
+* Same border radius
+* Same form/input styling used elsewhere on the website
+* Clean white background
+* Generous spacing
+* Mobile responsive
+
+## Application fields
+
+Add these fields:
+
+### Basic information
+
+* Position — automatically populated from the clicked job
+* First name — required
+* Last name — required
+* Email — required and validated
+* Phone number — required
+* City — required
+* State — required
+
+### Links
+
+* LinkedIn URL — optional
+* Portfolio / GitHub / Personal Website URL — optional
+
+### Resume
+
+* Resume upload — required
+* Accept PDF, DOC, and DOCX
+* Set a reasonable maximum file size
+* Validate both client-side and server-side
+* Do not store resumes in a publicly accessible URL or public bucket
+
+### Application questions
+
+Required:
+
+**Why are you interested in joining Dapr?**
+
+Use a textarea.
+
+Required:
+
+**Tell us about something you've done that makes you a strong fit for this role.**
+
+Use a textarea.
+
+### Role-specific question
+
+Display one additional required question depending on the selected position.
+
+**Senior Full-Stack Engineer**
+"Tell us about a product or feature you owned from idea to production. What did you personally build?"
+
+**iOS Engineer (Swift / SwiftUI)**
+"Share an iOS app, GitHub project, or Swift/SwiftUI project you've worked on and briefly explain your contribution."
+
+**Fleet Sales Manager**
+"Tell us about your experience selling B2B. What is the largest or most meaningful account you've personally closed?"
+
+**Customer Success Lead**
+"Tell us about a customer relationship or account you were responsible for retaining or growing."
+
+**Field Operations Manager**
+"Tell us about an operation, workforce, or field team you've managed and roughly how large it was."
+
+**Detail Technician**
+"How many years of professional detailing experience do you have, and what detailing services are you comfortable performing?"
+
+**Growth Marketing Manager**
+"Tell us about a growth experiment or campaign you ran. What did you do and what was the result?"
+
+### Availability
+
+* When could you start? — required
+
+### Employment eligibility
+
+* Are you authorized to work in the United States? — Yes / No, required
+* Will you now or in the future require employment sponsorship? — Yes / No, required
+
+### Optional
+
+* How did you hear about Dapr?
+
+## Submission
+
+Add a primary CTA:
+
+**Submit application →**
+
+While submitting:
+
+* Disable duplicate submissions
+* Show a loading state
+* Preserve entered data if an API request fails
+
+On success, replace or update the form with a polished confirmation:
+
+**Application received**
+
+"Thanks for your interest in Dapr. We've received your application and will reach out if there's a fit."
+
+Do not imply that every applicant will receive an interview or response.
+
+## Backend / database
+
+Create a proper backend endpoint and database persistence for applications. Do not send the application only through the browser or an email link.
+
+Follow the project's existing migration conventions.
+
+Create a table similar to:
+
+career_applications
+
+Include fields such as:
+
+* id
+* role
+* first_name
+* last_name
+* email
+* phone
+* city
+* state
+* linkedin_url
+* portfolio_url
+* resume storage reference/path
+* why_dapr
+* relevant_experience
+* role_specific_answer
+* available_start_date / availability
+* authorized_to_work_us
+* requires_sponsorship
+* referral_source
+* status
+* created_at
+* updated_at
+
+Use an application status that can support a future admin system, with an initial value such as:
+
+`new`
+
+Do not expose internal database IDs or storage paths unnecessarily to the client.
+
+## Resume security
+
+Resume files contain personal information.
+
+Use the application's existing private-file/storage architecture if one exists.
+
+Requirements:
+
+* Private storage only
+* No permanently public resume URLs
+* Server-side upload validation
+* Sanitize/generated storage filenames rather than trusting the applicant's raw filename
+* Store a storage key/reference in the database
+* Design it so a future admin dashboard can retrieve a resume using authenticated/signed access
+
+Do not weaken any existing storage or authentication security to implement this.
+
+## Spam / abuse protection
+
+Because this is a public unauthenticated form:
+
+* Add server-side validation
+* Add reasonable rate limiting if the project already has a rate-limit pattern
+* Reject malformed payloads
+* Prevent duplicate rapid submissions
+* Never trust client-side validation alone
+
+Do not require applicants to create a Dapr customer account.
+
+## Notification
+
+After a successful submission, use the project's existing email infrastructure, if available, to notify the appropriate internal Dapr email that a new application was received.
+
+The notification should include:
+
+* Applicant name
+* Position
+* Email
+* Phone
+* City/state
+* Date submitted
+
+Do not attach the resume to the notification email unless the existing architecture already safely supports that. Prefer keeping the resume in private application storage.
+
+Failure to send the internal notification should not delete or lose an application that has already been successfully stored.
+
+## Existing job cards
+
+Keep all existing job listings and filtering behavior intact.
+
+The currently displayed jobs are:
+
+* Senior Full-Stack Engineer
+* iOS Engineer (Swift / SwiftUI)
+* Fleet Sales Manager
+* Customer Success Lead
+* Field Operations Manager
+* Detail Technician
+* Growth Marketing Manager
+
+Each Apply button must pass the correct role into the application form.
+
+Do not hard-code role handling in multiple disconnected places if the existing page has a central jobs data structure. Prefer deriving both the job card and application role from the same source of truth.
+
+## Important constraints
+
+Do not:
+
+* Change unrelated pages
+* Change existing authentication behavior
+* Change production secrets
+* Modify unrelated database tables
+* Remove the careers category filters
+* Change job descriptions unless necessary for this feature
+* Deploy or publish automatically unless that is already explicitly part of the current task
+
+## Verification
+
+After implementation:
+
+1. Test Apply on every job card.
+2. Verify the correct job is populated.
+3. Verify smooth scrolling works.
+4. Test required-field validation.
+5. Test invalid emails and URLs.
+6. Test resume type and file-size validation.
+7. Test successful submission.
+8. Verify the database row is created correctly.
+9. Verify the resume remains private.
+10. Test failed API requests.
+11. Verify duplicate clicks don't create duplicate applications.
+12. Test desktop and mobile layouts.
+13. Run the project's existing tests/type checks/build checks.
+
+When finished, give me:
+
+* A concise summary of what changed
+* Files changed
+* Database migration created
+* API endpoint created
+* How resumes are stored
+* Whether email notifications were implemented
+* Any environment variables or secrets that still need to be configured
+* Testing/build results
+* Anything I need to do manually before publishing

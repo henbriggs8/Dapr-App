@@ -18,6 +18,7 @@ import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQ
 import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
 import { approveVehicleVerification, registerProviderVerificationRoutes } from "./provider-verification-routes";
+import { registerCareerApplicationRoutes } from "./career-application-routes";
 import { VerificationMediaError, providerApplicationAdminAccess } from "./provider-verification-policy";
 import { registerProviderSetupRoutes } from "./provider-setup-routes";
 import { DatabasePushDeviceRepository } from "./push-device-repository";
@@ -3531,6 +3532,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   registerProviderVerificationRoutes(app, requireProviderApplicationAdmin);
+  registerCareerApplicationRoutes(app);
   registerProviderSetupRoutes(app, requireProviderApplicationAdmin);
 
   return httpServer;
