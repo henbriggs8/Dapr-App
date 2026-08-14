@@ -1,0 +1,198 @@
+The Book → Match → Track section is very close now. Do not redesign it or change any styling/copy.
+
+I recorded the current behavior and there is one remaining structural issue:
+
+The phone stays sticky correctly during Book, but as Match enters, the entire phone begins scrolling upward and leaves the viewport.
+
+This is NOT primarily an IntersectionObserver timing issue. Please inspect the DOM/CSS structure and fix the sticky containing block.
+
+1. Fix the sticky structure
+
+On desktop, the structure should conceptually be:
+
+ProductJourneySection
+
+→ journeyGrid
+
+→ LEFT COLUMN containing all three steps
+
+Book
+Match
+Track
+
+→ RIGHT COLUMN containing one single sticky phone
+
+The right-side phone must be a sibling of the entire three-step left column — not contained inside the Book step or any wrapper whose height ends before Match/Track.
+
+The parent containing the left steps + right phone should naturally span the full combined height of Book + Match + Track.
+
+The phone should remain sticky until that entire parent ends.
+
+Please specifically inspect for any ancestor of the sticky phone that has:
+
+overflow: hidden
+overflow: auto
+overflow: scroll
+a fixed/max height that ends early
+transform
+filter
+contain: layout
+contain: paint
+
+Any of those may be creating the wrong sticky containing context.
+
+Do not globally remove overflow styles. Only correct the Product Journey structure if necessary.
+
+2. Vertically center the phone instead of guessing a top offset
+
+Rather than continuing to tune arbitrary values like top: 100px, make the sticky phone area occupy the usable viewport below the navigation.
+
+Conceptually:
+
+.phoneSticky {
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+}
+
+Adapt this to the project's existing CSS/Tailwind setup.
+
+The result I want is:
+
+The phone remains in exactly the same vertical position while Book, Match and Track scroll past it.
+
+Only after Track is finished should the phone naturally scroll away with the section.
+
+Do not animate the physical phone's Y position between stages.
+
+3. Make stage activation based on the viewport center
+
+The current activation timing is close, but instead of loosely triggering when a step enters the viewport, determine which Book/Match/Track step is closest to the vertical center of the viewport.
+
+Conceptually:
+
+const viewportCenter = window.innerHeight / 2;
+
+
+activeStep = steps.reduce((closest, step) => {
+  const rect = step.getBoundingClientRect();
+  const stepCenter = rect.top + rect.height / 2;
+  const distance = Math.abs(stepCenter - viewportCenter);
+  // choose the step with the smallest distance
+});
+
+Implement this efficiently using the project's existing React patterns and requestAnimationFrame if necessary.
+
+This should make the relationship feel exact:
+
+Book text closest to center → Book screen
+
+Match text closest to center → Match screen
+
+Track text closest to center → Track screen
+
+Avoid adding a new dependency.
+
+4. Make the screenshot transition slightly quicker
+
+The current transition feels just a fraction behind the scroll.
+
+Make the screenshot crossfade roughly 220–280ms instead of a slower 400–500ms transition.
+
+Keep it subtle:
+
+opacity fade
+maximum ~4–6px vertical motion if already present
+no movement of the actual phone
+5. Correct the screenshot positioning inside the phone
+
+The supplied screenshots are essentially the same aspect ratio:
+
+approximately 0.46 width : height
+
+Do not crop them to force them into a generic device ratio.
+
+Make the inner screen area match the source screenshot ratio and preserve the complete screenshot:
+
+no object-fit: cover cropping
+use the original image aspect ratio
+object-fit: contain or natural sizing
+no additional arbitrary top/bottom crop
+no stretching
+even bezel spacing around the screen
+
+The black device frame should be built around the screenshot rather than forcing the screenshot into an incorrectly proportioned frame.
+
+The existing screenshot files themselves should NOT be edited.
+
+Desired behavior
+
+When scrolling:
+
+BOOK
+
+Book text approaches center
+phone is centered on the right
+Book screen shown
+
+↓
+
+MATCH
+
+Book text scrolls away
+phone does not move
+Match text approaches center
+screen quickly crossfades to Match
+
+↓
+
+TRACK
+
+phone remains in identical position
+Track text approaches center
+screen quickly crossfades to Track
+
+↓
+
+After Track finishes:
+
+the sticky behavior ends naturally
+the phone leaves with the Product Journey section
+
+There should never be a point between Book and Track where the active text is visible but the phone has already scrolled out of view.
+
+Scope
+
+Make the smallest possible frontend-only change.
+
+Do not modify:
+
+hero
+navigation
+product copy
+colors
+fonts
+section styling
+screenshots
+APIs
+backend
+booking
+matching
+tracking backend
+Clerk
+Stripe
+database
+
+Do not commit, push, deploy or publish.
+
+Afterward, tell me:
+
+What was causing the sticky phone to stop early.
+Which files changed.
+What CSS/React logic was changed.
+Confirm the phone now stays fixed through all three stages.
+Confirm no backend or product functionality was modified.

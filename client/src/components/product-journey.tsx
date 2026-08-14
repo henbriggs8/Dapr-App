@@ -74,14 +74,14 @@ export function DaprPhoneFrame({
             src={stage.image}
             alt={stage.alt}
             loading="eager"
-            className={`absolute inset-0 h-full w-full object-cover object-top ${
+            className={`absolute inset-0 h-full w-full object-contain ${
               reducedMotion
                 ? ""
-                : "transition-all duration-[450ms] ease-out"
+                : "transition-all duration-[250ms] ease-out"
             } ${
               i === activeIndex
                 ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-2"
+                : "opacity-0 translate-y-1"
             }`}
             data-testid={`phone-screen-${stage.id}`}
           />
@@ -109,21 +109,38 @@ export default function ProductJourneySection() {
   const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const idx = Number((entry.target as HTMLElement).dataset.stageIndex);
-          if (!Number.isNaN(idx)) setActiveIndex(idx);
+    // The active stage is whichever step's text block is closest to the
+    // vertical center of the viewport — an exact scroll↔screen relationship,
+    // throttled to one computation per animation frame.
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const viewportCenter = window.innerHeight / 2;
+      let closest = 0;
+      let closestDistance = Infinity;
+      stageRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const distance = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closest = i;
         }
-      },
-      // Narrow activation band around the vertical center of the viewport:
-      // a stage becomes active only when its text is the dominant content
-      // (roughly 45–50% down the screen), not when it barely enters.
-      { rootMargin: "-48% 0px -48% 0px", threshold: 0 }
-    );
-    stageRefs.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
+      });
+      setActiveIndex((prev) => (prev === closest ? prev : closest));
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   return (
@@ -172,16 +189,17 @@ export default function ProductJourneySection() {
             ))}
           </div>
           <div className="relative">
-            {/* One persistent phone: sticks ~110px below the top of the
-                viewport for the full height of the three stages, then
-                releases with the end of the section. Width is capped by
-                viewport height so the whole phone always fits on screen
-                and never drifts or gets pulled out of view. */}
-            <div className="sticky top-[110px] flex justify-center">
+            {/* One persistent phone: the sticky box occupies the full usable
+                viewport below the fixed 64px nav and vertically centers the
+                phone, so it holds an identical position while all three
+                stages scroll past, releasing only when the section ends.
+                Width is capped by viewport height so the whole phone always
+                fits on screen. */}
+            <div className="sticky top-16 h-[calc(100vh-4rem)] self-start flex items-center justify-center">
               <DaprPhoneFrame
                 activeIndex={activeIndex}
                 reducedMotion={reducedMotion}
-                className="w-[min(380px,calc((100vh-160px)*0.47))]"
+                className="w-[min(380px,calc((100vh-140px)*0.46))]"
               />
             </div>
           </div>

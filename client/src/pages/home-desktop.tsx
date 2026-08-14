@@ -247,7 +247,10 @@ export default function HomeDesktop() {
   const goBecomePro = () => setLocation("/become-a-pro");
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans overflow-x-hidden">
+    // overflow-x-clip (not hidden) — `hidden` turns this div into a scroll
+    // container, which breaks position:sticky for descendants (the product
+    // journey phone). `clip` clips identically without doing that.
+    <div className="min-h-screen bg-white text-gray-900 font-sans overflow-x-clip">
       <SiteNav active="home" />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
