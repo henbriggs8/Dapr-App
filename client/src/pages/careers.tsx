@@ -39,7 +39,7 @@ const ROLES: Role[] = [
   {
     title: "Senior Full-Stack Engineer",
     dept: "Engineering",
-    location: "Remote (US)",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Laptop,
     blurb:
@@ -50,7 +50,7 @@ const ROLES: Role[] = [
   {
     title: "iOS Engineer (Swift / SwiftUI)",
     dept: "Engineering",
-    location: "Remote (US)",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Laptop,
     blurb:
@@ -61,7 +61,7 @@ const ROLES: Role[] = [
   {
     title: "Fleet Sales Manager",
     dept: "Sales",
-    location: "Salt Lake City, UT",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: BarChart3,
     blurb:
@@ -72,7 +72,7 @@ const ROLES: Role[] = [
   {
     title: "Customer Success Lead",
     dept: "Sales",
-    location: "Salt Lake City, UT · Hybrid",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Users,
     blurb:
@@ -83,7 +83,7 @@ const ROLES: Role[] = [
   {
     title: "Field Operations Manager",
     dept: "Operations",
-    location: "Salt Lake City, UT",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Wrench,
     blurb:
@@ -94,7 +94,7 @@ const ROLES: Role[] = [
   {
     title: "Detail Technician",
     dept: "Operations",
-    location: "Salt Lake City, UT",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Wrench,
     blurb:
@@ -105,7 +105,7 @@ const ROLES: Role[] = [
   {
     title: "Growth Marketing Manager",
     dept: "Marketing",
-    location: "Remote (US)",
+    location: "Mesa, AZ",
     type: "Full-time",
     icon: Megaphone,
     blurb:
