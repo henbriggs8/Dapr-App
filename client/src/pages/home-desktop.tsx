@@ -798,7 +798,7 @@ export default function HomeDesktop() {
           </div>
 
           <div className="border-t border-gray-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr, Inc. All rights reserved.</p>
+            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Dapr Enterprises, Inc. All rights reserved.</p>
             <div className="flex items-center gap-6 text-sm text-gray-400">
               <button onClick={() => setLocation("/privacy")} className="hover:text-black transition-colors">Privacy</button>
               <button onClick={() => setLocation("/terms")} className="hover:text-black transition-colors">Terms</button>
