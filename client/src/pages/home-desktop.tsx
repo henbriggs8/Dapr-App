@@ -265,7 +265,7 @@ export default function HomeDesktop() {
                 <span className="block">You Are.</span>
               </h1>
               <p className="text-base lg:text-xl text-gray-500 mb-6 lg:mb-8 leading-relaxed max-w-lg">
-                Professional car care that comes to you. Book a vetted Dapr Pro at home, work, or wherever your car is.
+                Book trusted local car care at home, work, or wherever you're parked.
               </p>
 
               {/* ── App Store strip — mobile only ───────────────────────── */}
