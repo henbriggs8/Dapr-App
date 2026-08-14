@@ -48,9 +48,10 @@ const STAGES: JourneyStage[] = [
   },
 ];
 
-/** Screenshots are pre-cropped to ~1:2.05; the frame fixes the ratio so
- *  there is no layout shift while images load. */
-const SCREEN_ASPECT = "aspect-[10/20.5]";
+/** All three screenshots are pre-normalized to 720×~1475, so the inner
+ *  screen viewport uses that exact ratio — no visible cropping — and the
+ *  fixed ratio prevents layout shift while images load. */
+const SCREEN_ASPECT = "aspect-[720/1475]";
 
 export function DaprPhoneFrame({
   activeIndex,
@@ -116,8 +117,10 @@ export default function ProductJourneySection() {
           if (!Number.isNaN(idx)) setActiveIndex(idx);
         }
       },
-      // A stage becomes active when it crosses the vertical middle of the viewport.
-      { rootMargin: "-45% 0px -45% 0px", threshold: 0 }
+      // Narrow activation band around the vertical center of the viewport:
+      // a stage becomes active only when its text is the dominant content
+      // (roughly 45–50% down the screen), not when it barely enters.
+      { rootMargin: "-48% 0px -48% 0px", threshold: 0 }
     );
     stageRefs.current.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
@@ -169,11 +172,16 @@ export default function ProductJourneySection() {
             ))}
           </div>
           <div className="relative">
-            <div className="sticky top-0 h-screen flex items-center justify-center">
+            {/* One persistent phone: sticks ~110px below the top of the
+                viewport for the full height of the three stages, then
+                releases with the end of the section. Width is capped by
+                viewport height so the whole phone always fits on screen
+                and never drifts or gets pulled out of view. */}
+            <div className="sticky top-[110px] flex justify-center">
               <DaprPhoneFrame
                 activeIndex={activeIndex}
                 reducedMotion={reducedMotion}
-                className="w-[340px] xl:w-[380px]"
+                className="w-[min(380px,calc((100vh-160px)*0.47))]"
               />
             </div>
           </div>

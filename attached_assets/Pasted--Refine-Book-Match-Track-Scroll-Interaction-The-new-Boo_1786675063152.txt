@@ -1,0 +1,236 @@
+# Refine Book → Match → Track Scroll Interaction
+
+The new Book → Match → Track section looks good visually. **Do not redesign it.** I only want to refine the sticky-phone behavior, scroll timing, and screenshot alignment.
+
+Please inspect the existing implementation before making changes and make the smallest frontend-only adjustments necessary.
+
+## IMPORTANT
+
+Keep exactly as-is:
+
+* Overall section design
+* Typography
+* Colors
+* Background
+* Copy
+* Book → Match → Track concept
+* Existing screenshot assets
+* Homepage sections above and below this section
+* All backend/API/auth/booking/payment functionality
+
+Do not touch any backend, API, database, Clerk, Stripe, booking, matching, or tracking logic.
+
+This is a visual frontend refinement only.
+
+---
+
+# 1. Make the iPhone Truly Sticky Through All 3 Steps
+
+Right now, the phone is positioned correctly at first, but while scrolling from Book → Match → Track it gets pulled upward/out of the viewport and then appears again.
+
+That breaks the illusion that this is one persistent Dapr phone progressing through the customer journey.
+
+I want:
+
+**ONE persistent iPhone**
+
+that stays in approximately the same position on the right side while the user scrolls through:
+
+1. Book
+2. Match
+3. Track
+
+Only the screenshot inside the phone should change.
+
+The phone should begin sticking when the first Book step enters the main product-story area.
+
+It should remain sticky continuously through Match and Track.
+
+It should release naturally only after the Track step is finished.
+
+Do not render a separate phone for each step.
+
+Structurally, the desktop section should behave roughly like:
+
+* left column = all three scrolling text steps
+* right column = one sticky phone container spanning the entire height of those three steps
+
+Please inspect whether an ancestor `overflow: hidden`, `overflow: auto`, incorrect wrapper height, or the current component structure is preventing `position: sticky` from spanning the entire journey.
+
+Do not remove intentional overflow styling elsewhere on the homepage.
+
+---
+
+# 2. Keep the Phone Vertically Stable
+
+The phone should not noticeably drift up or down as the active step changes.
+
+On desktop, position it comfortably below the navigation and approximately centered within the usable viewport.
+
+Use an appropriate sticky top offset based on the existing header.
+
+A target around **90–120px from the top** may work, but inspect the actual layout rather than blindly using that number.
+
+The phone should never collide with the navbar.
+
+It should also not disappear above the viewport between stages.
+
+---
+
+# 3. Fix Screenshot Alignment Inside the Phone
+
+The actual Dapr screenshots currently look slightly cropped inside the device.
+
+For example, the Book screenshot's original top/status area is being cut off.
+
+Do NOT crop the real screenshots simply to make them fill an incorrectly proportioned phone frame.
+
+Preserve the screenshot's original aspect ratio.
+
+Please:
+
+* inspect the actual aspect ratio of each supplied screenshot
+* make the phone's inner screen viewport match that ratio closely
+* avoid `object-fit: cover` if it crops the screenshot
+* prefer natural image sizing / `object-fit: contain` or an equivalent solution
+* use `object-position: center top` if needed
+* make sure the screenshot fills the usable screen naturally without stretching
+* keep the phone bezel/frame thin and understated
+
+The goal is for the screenshot to look like it genuinely belongs on that iPhone rather than an image being cropped inside a generic phone mockup.
+
+Do not redraw or modify the app UI.
+
+---
+
+# 4. Slightly Refine the Phone Proportions
+
+The current phone frame appears a little wider/shorter than the source Dapr screenshots.
+
+Adjust the device proportions so they more closely match the screenshots.
+
+Do this subtly.
+
+Do NOT dramatically enlarge the phone or create a different visual design.
+
+The screenshots should determine the inner display ratio, not the other way around.
+
+---
+
+# 5. Improve When Book → Match → Track Changes
+
+The stage change is close, but I want it to feel more intentional.
+
+The next screen should become active when the corresponding text reaches roughly the **middle portion of the viewport**, not immediately when a tiny part of the next section enters.
+
+A good mental model:
+
+When **Book in a few taps** is the dominant text on screen → show BOOK.
+
+When **Meet your Dapr Pro** reaches approximately 45–50% down the viewport and becomes the dominant step → transition to MATCH.
+
+When **Know exactly what's happening** reaches approximately 45–50% down the viewport → transition to TRACK.
+
+Please tune the existing IntersectionObserver or scroll logic rather than replacing it unnecessarily.
+
+If using IntersectionObserver, a narrow activation zone near the center of the viewport is preferable to a broad threshold that fires too early.
+
+Something conceptually similar to a centered `rootMargin` activation zone is appropriate, but use whatever works cleanly with the existing implementation.
+
+---
+
+# 6. Keep the Screen Transition Very Subtle
+
+When the active step changes:
+
+* fade between screenshots
+* optionally use a very small vertical movement
+* roughly 350–500ms
+* no phone movement
+
+The **phone stays still**.
+
+The **screen changes**.
+
+That distinction is important.
+
+Do not add:
+
+* spinning
+* 3D rotation
+* bouncing
+* large zooms
+* dramatic parallax
+* new gradients
+* decorative effects
+
+---
+
+# 7. Keep the Scroll Distance Reasonable
+
+The current amount of whitespace is close, so do not dramatically change the overall pacing.
+
+Each Book/Match/Track step should have enough height for the active state to feel deliberate, roughly in the area of **75–90vh**, but use the existing layout as the starting point.
+
+The user should not encounter a long empty area where:
+
+* the previous text has already left
+* the next text has not arrived
+* and the phone has disappeared
+
+At virtually every point through the product journey there should be:
+
+**one meaningful text step + the persistent phone**
+
+visible together.
+
+---
+
+# Desired Final Effect
+
+Scrolling should feel like this:
+
+BOOK text enters
+→ phone settles into its sticky position
+→ Book screen is visible
+
+Continue scrolling
+→ phone does not move
+→ Meet your Dapr Pro reaches the center activation area
+→ screen softly transitions to Match
+
+Continue scrolling
+→ phone still does not move
+→ Track copy reaches the center activation area
+→ screen softly transitions to Track
+
+Continue past Track
+→ phone naturally releases with the end of the section
+
+It should feel like **one Dapr app moving through a journey**, not three individual screenshot sections.
+
+---
+
+# Mobile
+
+Do not change the current mobile implementation unless these desktop fixes negatively affect mobile.
+
+The sticky behavior described above is primarily for desktop.
+
+Preserve a simple, readable mobile Book → Match → Track flow.
+
+---
+
+# Verification
+
+After making the changes:
+
+1. Tell me exactly which frontend files changed.
+2. Confirm no backend/API/auth/payment/booking files changed.
+3. Test the section at a desktop viewport around 1440px wide.
+4. Verify the phone stays visible continuously from Book through Track.
+5. Verify each screenshot is no longer unintentionally cropped.
+6. Verify the phone remains in the same vertical position during screenshot transitions.
+7. Verify Book → Match → Track switches near the middle of the viewport.
+8. Run the normal frontend/build checks.
+9. Do not commit, push, deploy, or publish anything.
