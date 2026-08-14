@@ -1,0 +1,429 @@
+# Replit Prompt — Dapr “Book → Match → Track” Sticky iPhone Section
+
+I want to add a new premium product-story section to the **Dapr marketing website only**.
+
+The goal is to make the website feel like a polished consumer technology startup inspired by the restraint of Apple, the clarity of Uber, and the product storytelling of Stripe.
+
+## CRITICAL SAFETY / SCOPE RULES
+
+This is a **frontend marketing-site change only**.
+
+Before making changes, inspect the current codebase and identify the homepage/marketing components involved.
+
+Do **not** modify:
+
+* Any `/api/*` routes
+* Backend/server logic
+* Database schema
+* Database migrations
+* Clerk authentication behavior
+* Stripe/payment logic
+* Booking creation logic
+* Provider matching logic
+* Customer tracking logic
+* Service catalog APIs
+* Pricing calculations
+* Admin routes
+* Provider routes
+* Native iOS apps
+* Existing API request/response contracts
+* Production environment variables
+* Deployment configuration
+
+Do not refactor unrelated working code.
+
+Do not change the functionality of existing Login, Create Account, Book, Become a Pro, or App Store links.
+
+This section should simply **visually demonstrate the existing Dapr product using screenshots**.
+
+---
+
+# New Section
+
+Create a premium scroll-driven section built around:
+
+## Book → Match → Track
+
+The concept is:
+
+On desktop, there is **one large iPhone on the right side of the screen**.
+
+The iPhone stays sticky while the user scrolls through three large text sections on the left.
+
+As each section becomes active, the screenshot displayed inside the same iPhone smoothly changes.
+
+Do NOT show three phones side-by-side.
+
+The same phone should feel like it is progressing through the Dapr customer journey.
+
+---
+
+# Step 1 — BOOK
+
+Headline:
+
+**Book in a few taps**
+
+Supporting copy:
+
+**Set your location, choose your timing, and schedule car care around your day.**
+
+Use the supplied Dapr screenshot showing:
+
+**Location and time**
+
+The important visible elements are:
+
+* Location and time
+* Service address
+* Arrive now
+* Continue button
+
+Label this stage:
+
+**01 — BOOK**
+
+---
+
+# Step 2 — MATCH
+
+Headline:
+
+**Meet your Dapr Pro**
+
+Supporting copy:
+
+**Dapr confirms availability and matches you with a vetted local Pro.**
+
+Use the supplied screenshot showing:
+
+**Matching you with a Dapr pro**
+
+The important visible elements are:
+
+* Matching you with a Dapr pro
+* Confirming availability
+* Purple matching animation
+* Booking summary
+
+IMPORTANT:
+
+The screenshot currently contains internal/debug-looking text similar to:
+
+“Real backend booking #116 created”
+
+Do not recreate or emphasize that text in any marketing UI.
+
+If modifying the source image itself is outside scope, crop/mask that portion of the screenshot in the website presentation so the internal debug copy is not prominently visible.
+
+Do not change actual backend code to remove it.
+
+Label this stage:
+
+**02 — MATCH**
+
+---
+
+# Step 3 — TRACK
+
+Headline:
+
+**Know exactly what's happening**
+
+Supporting copy:
+
+**Follow your service from confirmation to arrival to completion.**
+
+Use the supplied screenshot showing:
+
+**Tracking**
+
+The important visible elements are:
+
+* Dapr Pro
+* Customer car
+* Booking confirmed
+* Detailer matched
+* On the way
+* Arrived
+* Service started
+* Completed
+
+Label this stage:
+
+**03 — TRACK**
+
+---
+
+# Desktop Layout
+
+The section should be spacious and editorial.
+
+Use approximately:
+
+* Left side: 40–45%
+* Right side: 55–60%
+
+The text scrolls normally on the left.
+
+The iPhone remains sticky on the right for the duration of the Book → Match → Track section.
+
+Each text stage should take roughly **70–90vh** of vertical space so the transition has room to breathe.
+
+Do not make the user scroll an excessive amount.
+
+The product section should feel intentional rather than gimmicky.
+
+---
+
+# Phone Presentation
+
+Create one reusable device-frame component.
+
+The iPhone should:
+
+* Be large
+* Look realistic but understated
+* Use the actual supplied Dapr screenshots
+* Have a thin dark device frame
+* Have realistic rounded corners
+* Have a subtle shadow
+* Have no oversized fake reflections
+* Have no neon glow
+* Have no purple gradient halo
+* Have no floating decorative emojis/shapes
+* Have no fake UI generated around the screenshot
+
+The Dapr UI itself is the visual centerpiece.
+
+Do not alter or redesign the actual app interfaces.
+
+---
+
+# Screenshot Transition
+
+When a new stage becomes active, transition the screenshot inside the phone.
+
+Use a sophisticated but restrained animation such as:
+
+* slight fade
+* very subtle vertical movement
+* approximately 350–500ms transition
+
+Avoid:
+
+* spinning phone
+* dramatic 3D rotation
+* bouncing
+* excessive parallax
+* flashy zooming
+* glitch effects
+* artificial loading animations
+
+The physical iPhone itself should mostly stay still.
+
+Only the product screen should transition.
+
+---
+
+# Active Stage Behavior
+
+Use IntersectionObserver or the project's existing animation solution to determine which left-side stage is active.
+
+Prefer native browser/CSS solutions when practical.
+
+If Framer Motion or another animation library is **already installed**, it is okay to use it.
+
+Do not add a large dependency solely for this section.
+
+As the user scrolls:
+
+BOOK becomes active → booking screenshot appears.
+
+MATCH becomes active → matching screenshot appears.
+
+TRACK becomes active → tracking screenshot appears.
+
+Optionally, make inactive text slightly muted while the active stage uses full black text and Dapr purple for the small stage label.
+
+Keep this subtle.
+
+---
+
+# Section Styling
+
+Use Dapr's existing visual language.
+
+Preferred appearance:
+
+* Warm cream/off-white background
+* Nearly black headline text
+* Muted warm gray body copy
+* Dapr purple used sparingly as an accent
+* Large typography
+* Generous whitespace
+* Minimal borders
+* Extremely subtle shadows
+
+Do not introduce an unrelated color palette.
+
+Do not make the section look like a generic AI/SaaS template.
+
+Specifically avoid:
+
+* giant purple gradients
+* glowing blobs
+* excessive rounded bento boxes
+* fake dashboard charts
+* glassmorphism everywhere
+* animated particles
+* floating feature cards
+* stock AI artwork
+
+The product screenshots should provide most of the visual complexity.
+
+---
+
+# Intro to the Section
+
+Above the Book → Match → Track experience, add a restrained introduction.
+
+Small eyebrow:
+
+**HOW DAPR WORKS**
+
+Main headline:
+
+**Car care, without the car wash.**
+
+Supporting copy:
+
+**Book from your phone, get matched with a local Dapr Pro, and follow the service from start to finish.**
+
+Keep this section centered or slightly left aligned with plenty of whitespace before the interactive product sequence begins.
+
+---
+
+# Mobile Behavior
+
+Do not force the desktop sticky layout onto small screens if it causes poor usability.
+
+For mobile:
+
+* Keep the Book → Match → Track storytelling
+* Use the same reusable phone component
+* Show one stage at a time vertically
+* Place the relevant phone shot near its corresponding text
+* Keep the phone large enough to read
+* Do not show three tiny phones in a row
+* Do not create horizontal scrolling
+* Do not interfere with normal page scrolling
+
+The experience should still clearly communicate:
+
+Book
+↓
+Match
+↓
+Track
+
+Tablet behavior can use whichever version provides the cleanest layout.
+
+---
+
+# Responsive / Performance Requirements
+
+Make sure:
+
+* Images preserve their aspect ratio
+* Screenshots do not become blurry
+* Images are appropriately optimized
+* There is no major layout shift when images load
+* Scroll performance remains smooth
+* The sticky section does not cause body overflow
+* Safari/iPhone scrolling works properly
+* Chrome works properly
+* Reduced Motion accessibility preferences are respected
+* Semantic headings are used appropriately
+
+If `prefers-reduced-motion` is enabled, switch screenshots without elaborate animation.
+
+---
+
+# Important Product Philosophy
+
+This section should communicate that Dapr is a **real consumer product**, not simply a detailing company.
+
+The website should visually demonstrate:
+
+**Book → Match → Track**
+
+rather than explaining Dapr through long paragraphs.
+
+Aim for:
+
+**Apple restraint + Uber clarity + Stripe product confidence**
+
+Do not directly copy any company's website.
+
+Maintain Dapr's own brand.
+
+---
+
+# Implementation Approach
+
+Before editing:
+
+1. Inspect the current homepage and component structure.
+2. Determine the safest location for this new section.
+3. Identify the current styling system and reuse it.
+4. Confirm which existing files need to change.
+5. Keep the implementation isolated to marketing/frontend components.
+6. Do not rewrite the homepage unnecessarily.
+
+Then implement the section.
+
+Create reusable components where appropriate, such as:
+
+* `ProductJourneySection`
+* `ProductJourneyStep`
+* `DaprPhoneFrame`
+
+Names can follow the project's existing conventions instead if different naming makes more sense.
+
+Keep the code maintainable and straightforward.
+
+---
+
+# Screenshot Assets
+
+Use the real Dapr screenshots I provide for:
+
+1. BOOK — Location and time
+2. MATCH — Matching you with a Dapr Pro
+3. TRACK — Tracking/service status
+
+Do not use AI-generated Dapr UI.
+
+Do not redraw the screenshots.
+
+Do not change real customer/backend functionality merely to make the screenshots prettier.
+
+The images are marketing assets only.
+
+---
+
+# Final Verification
+
+When finished:
+
+1. Show me exactly which files were changed.
+2. Confirm no backend/API/database/auth/payment files were modified.
+3. Confirm existing booking functionality was not changed.
+4. Confirm existing Login/Create Account/App Store links still behave exactly as before.
+5. Run the project's normal frontend/type/build checks.
+6. Report any errors without making unrelated fixes.
+7. Provide a concise description of how the new scroll interaction works.
+8. Do not commit, push, deploy, publish, or modify production unless I explicitly ask afterward.
+
+I want to review the finished section locally/through the Replit preview before making any additional changes.
