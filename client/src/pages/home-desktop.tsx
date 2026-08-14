@@ -19,6 +19,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { useAuth } from "@/hooks/use-auth";
 import SiteNav from "@/components/site-nav";
+import ProductJourneySection from "@/components/product-journey";
 
 const dapprLogo = "/dapr-logo.svg";
 
@@ -337,6 +338,9 @@ export default function HomeDesktop() {
           </div>
         </div>
       </section>
+
+      {/* ── How Dapr works: Book → Match → Track ─────────────────────────── */}
+      <ProductJourneySection />
 
       {/* ── Explore Dapr ──────────────────────────────────────────────────── */}
       <section className="py-14 lg:py-28">
