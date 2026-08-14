@@ -345,6 +345,84 @@ export default function HomeDesktop() {
       {/* ── How Dapr works: Book → Match → Track ─────────────────────────── */}
       <ProductJourneySection />
 
+      {/* ── Services ──────────────────────────────────────────────────────── */}
+      <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 lg:mb-12 gap-4 lg:gap-6">
+            <div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Services</h2>
+              <p className="text-gray-500 text-base lg:text-lg">From a quick refresh to a full detail — professional care for every car.</p>
+            </div>
+            <button
+              onClick={goServices}
+              className="flex items-center gap-2 text-sm font-bold text-black hover:text-[#8c52ff] transition-colors whitespace-nowrap"
+              data-testid="all-services"
+            >
+              See all services <Icon icon={ChevronRight} size="sm" />
+            </button>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                name: "Essential Wash",
+                price: "$39",
+                time: "30 min",
+                desc: "A fast, gentle hand wash to keep your car looking sharp.",
+                popular: false,
+              },
+              {
+                name: "Interior Detail",
+                price: "$89",
+                time: "60 min",
+                desc: "A focused interior reset — vacuum, surfaces, seats, and windows.",
+                popular: false,
+              },
+              {
+                name: "Refresh Detail",
+                price: "$149",
+                time: "90 min",
+                desc: "Full inside-and-out refresh. Our most popular complete service.",
+                popular: true,
+              },
+              {
+                name: "Dapr Black Label",
+                price: "$299",
+                time: "3 hrs",
+                desc: "Showroom-finish results from a senior detailer. Our flagship service.",
+                popular: false,
+              },
+            ].map((s) => (
+              <div
+                key={s.name}
+                className={`rounded-3xl p-6 flex flex-col bg-white border transition-shadow hover:shadow-md ${
+                  s.popular ? "border-[#8c52ff]/30 ring-1 ring-[#8c52ff]/20" : "border-gray-100"
+                }`}
+              >
+                {s.popular && (
+                  <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-wider mb-3">Most Popular</span>
+                )}
+                <h3 className="font-bold text-black text-base mb-1">{s.name}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed mb-4 flex-1">{s.desc}</p>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-2xl font-extrabold text-black">{s.price}</span>
+                  <span className="text-xs text-gray-400">{s.time}</span>
+                </div>
+                <button
+                  onClick={goBook}
+                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                    s.popular
+                      ? "bg-[#8c52ff] text-white hover:bg-[#7a42e5]"
+                      : "border border-gray-200 text-black hover:bg-gray-50"
+                  }`}
+                >
+                  Book {s.name}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Explore Dapr ──────────────────────────────────────────────────── */}
       <section className="py-14 lg:py-28">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -535,83 +613,6 @@ export default function HomeDesktop() {
         </div>
       </section>
 
-      {/* ── Services ──────────────────────────────────────────────────────── */}
-      <section className="py-14 lg:py-28 bg-gray-50/60 border-y border-gray-100">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 lg:mb-12 gap-4 lg:gap-6">
-            <div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-black mb-3">Services</h2>
-              <p className="text-gray-500 text-base lg:text-lg">From a quick refresh to a full detail — professional care for every car.</p>
-            </div>
-            <button
-              onClick={goServices}
-              className="flex items-center gap-2 text-sm font-bold text-black hover:text-[#8c52ff] transition-colors whitespace-nowrap"
-              data-testid="all-services"
-            >
-              See all services <Icon icon={ChevronRight} size="sm" />
-            </button>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                name: "Essential Wash",
-                price: "$39",
-                time: "30 min",
-                desc: "A fast, gentle hand wash to keep your car looking sharp.",
-                popular: false,
-              },
-              {
-                name: "Interior Detail",
-                price: "$89",
-                time: "60 min",
-                desc: "A focused interior reset — vacuum, surfaces, seats, and windows.",
-                popular: false,
-              },
-              {
-                name: "Refresh Detail",
-                price: "$149",
-                time: "90 min",
-                desc: "Full inside-and-out refresh. Our most popular complete service.",
-                popular: true,
-              },
-              {
-                name: "Dapr Black Label",
-                price: "$299",
-                time: "3 hrs",
-                desc: "Showroom-finish results from a senior detailer. Our flagship service.",
-                popular: false,
-              },
-            ].map((s) => (
-              <div
-                key={s.name}
-                className={`rounded-3xl p-6 flex flex-col bg-white border transition-shadow hover:shadow-md ${
-                  s.popular ? "border-[#8c52ff]/30 ring-1 ring-[#8c52ff]/20" : "border-gray-100"
-                }`}
-              >
-                {s.popular && (
-                  <span className="text-xs font-bold text-[#8c52ff] uppercase tracking-wider mb-3">Most Popular</span>
-                )}
-                <h3 className="font-bold text-black text-base mb-1">{s.name}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed mb-4 flex-1">{s.desc}</p>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-2xl font-extrabold text-black">{s.price}</span>
-                  <span className="text-xs text-gray-400">{s.time}</span>
-                </div>
-                <button
-                  onClick={goBook}
-                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                    s.popular
-                      ? "bg-[#8c52ff] text-white hover:bg-[#7a42e5]"
-                      : "border border-gray-200 text-black hover:bg-gray-50"
-                  }`}
-                >
-                  Book {s.name}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── Dapr for Fleets ───────────────────────────────────────────────── */}
       <section className="py-14 lg:py-28">
