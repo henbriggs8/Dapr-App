@@ -21,6 +21,7 @@
     "test:booking-lifecycle": "tsx server/booking-lifecycle.integration.test.ts",
     "test:booking-acceptance": "tsx server/booking-acceptance.integration.test.ts",
     "test:booking-notifications": "tsx --test server/booking-notifications.test.ts",
+    "test:paid-booking-notifications": "tsx server/paid-booking-notifications.integration.test.ts",
     "cleanup:provider-verification": "tsx scripts/cleanup-provider-application-media.ts"
   },
   "dependencies": {

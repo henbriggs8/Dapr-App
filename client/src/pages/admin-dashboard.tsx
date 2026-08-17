@@ -93,6 +93,19 @@ interface AdminBooking extends Booking {
   serviceName?: string;
 }
 
+interface BookingNotificationEvent {
+  id: number;
+  eventType: string;
+  recipient: string;
+  notificationType: string;
+  status: "pending" | "processing" | "sent" | "failed";
+  providerMessageId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  sentAt: string | null;
+  failedAt: string | null;
+}
+
 interface EarningsData {
   totalRevenue: number;
   monthlyRevenue: number;
@@ -600,6 +613,7 @@ export default function AdminDashboard() {
   const [supportFilter, setSupportFilter] = useState<"open" | "all" | "resolved">("open");
   const [appStatusFilter, setAppStatusFilter] = useState("all");
   const [expandedAppId, setExpandedAppId] = useState<number | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
 
   // Role-based access check
   if (!user?.isAdmin) {
@@ -623,6 +637,14 @@ export default function AdminDashboard() {
       return await res.json();
     },
     refetchInterval: 15000,
+  });
+  const { data: bookingNotificationEvents = [], isLoading: notificationEventsLoading } = useQuery<BookingNotificationEvent[]>({
+    queryKey: ["/api/admin/bookings", selectedBooking?.id, "notification-events"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/admin/bookings/${selectedBooking!.id}/notification-events`);
+      return response.json();
+    },
+    enabled: selectedBooking !== null,
   });
 
   // Fetch provider status (auto-refresh)
@@ -1165,7 +1187,7 @@ export default function AdminDashboard() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedBooking(booking)}>
                 <Icon icon={Eye} size="sm" className="mr-2" />
                 View Details
               </DropdownMenuItem>
@@ -1710,6 +1732,40 @@ export default function AdminDashboard() {
                 />
               </CardContent>
             </Card>
+            <Dialog open={selectedBooking !== null} onOpenChange={open => !open && setSelectedBooking(null)}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Booking #{selectedBooking?.bookingRef || selectedBooking?.id}</DialogTitle>
+                  <DialogDescription>Payment and notification history</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                    <div><p className="text-xs text-gray-500">Status</p><p className="font-medium">{selectedBooking?.status}</p></div>
+                    <div><p className="text-xs text-gray-500">Payment</p><p className="font-medium">{selectedBooking?.paymentStatus || "pending"}</p></div>
+                  </div>
+                  <div>
+                    <p className="font-medium mb-2">Notification history</p>
+                    {notificationEventsLoading ? <p className="text-gray-500">Loading history…</p> : bookingNotificationEvents.length === 0 ? (
+                      <p className="text-gray-500">No notification events recorded for this booking.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookingNotificationEvents.map(event => (
+                          <div key={event.id} className="rounded-lg border border-gray-200 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-medium">New Paid Booking email</p>
+                              <Badge variant={event.status === "sent" ? "default" : event.status === "failed" ? "destructive" : "secondary"}>{event.status}</Badge>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{event.recipient} · {new Date(event.sentAt || event.failedAt || event.createdAt).toLocaleString()}</p>
+                            {event.providerMessageId && <p className="text-xs text-gray-500 mt-1">Resend ID: {event.providerMessageId}</p>}
+                            {event.errorMessage && <p className="text-xs text-red-600 mt-1">Reason: {event.errorMessage}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Earnings Tab */}

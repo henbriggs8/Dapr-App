@@ -3,27 +3,37 @@ import { Resend } from "resend";
 const NOTIFY_EMAIL = "henry@autodapr.com";
 const FROM_EMAIL = "Dapr <notifications@autodapr.com>";
 
-export interface BookingEmailParams {
+export interface PaidBookingEmailParams {
   bookingId: number;
   customerName: string;
   customerEmail?: string | null;
   customerPhone?: string | null;
   serviceLocation: string;
   serviceName?: string;
-  totalPrice?: number;
+  amountPaidCents?: number | null;
   date?: string | null;
   time?: string | null;
   priceTier?: string | null;
   addOns?: any[];
+  vehicle?: string | null;
+  providerName?: string | null;
+  bookingStatus?: string | null;
+  paymentStatus?: string | null;
+  paymentReference?: string | null;
+  paymentConfirmedAt?: string | null;
+  adminBookingUrl?: string | null;
+  idempotencyKey: string;
+  recipient: string;
 }
 
-export async function sendNewBookingEmail(params: BookingEmailParams): Promise<void> {
+/** Sends the one operational email created by booking.payment_completed. */
+export async function sendPaidBookingEmail(params: PaidBookingEmailParams): Promise<{ messageId: string }> {
   const addOnsList = params.addOns && params.addOns.length > 0
     ? `<ul style="margin:4px 0 0 16px;padding:0;">${params.addOns.map((a: any) => `<li>${escapeHtml(a.name || a.id || String(a))}</li>`).join("")}</ul>`
     : "<em>None</em>";
 
-  const totalDisplay = params.totalPrice != null
-    ? `$${(params.totalPrice / 100).toFixed(2)}`
+  const totalDisplay = params.amountPaidCents != null
+    ? `$${(params.amountPaidCents / 100).toFixed(2)}`
     : "—";
 
   const html = `
@@ -33,7 +43,7 @@ export async function sendNewBookingEmail(params: BookingEmailParams): Promise<v
 <body style="font-family:sans-serif;background:#f4f4f5;margin:0;padding:24px;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
     <div style="background:#8c52ff;padding:20px 28px;">
-      <h2 style="margin:0;color:#fff;font-size:20px;">New Booking — Dapr #${params.bookingId}</h2>
+       <h2 style="margin:0;color:#fff;font-size:20px;">New Paid Booking — Dapr #${params.bookingId}</h2>
     </div>
     <div style="padding:28px;">
       <table style="width:100%;border-collapse:collapse;font-size:15px;">
@@ -43,10 +53,17 @@ export async function sendNewBookingEmail(params: BookingEmailParams): Promise<v
         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Service</td><td style="padding:8px 0;">${escapeHtml(params.serviceName || "—")}</td></tr>
         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Tier</td><td style="padding:8px 0;">${escapeHtml(params.priceTier || "—")}</td></tr>
         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Add-ons</td><td style="padding:8px 0;">${addOnsList}</td></tr>
+         ${params.vehicle ? `<tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Vehicle</td><td style="padding:8px 0;">${escapeHtml(params.vehicle)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Location</td><td style="padding:8px 0;">${escapeHtml(params.serviceLocation)}</td></tr>
         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Date / Time</td><td style="padding:8px 0;">${[params.date, params.time].filter(Boolean).map(s => escapeHtml(s!)).join(" at ") || "—"}</td></tr>
-        <tr style="border-top:1px solid #e5e7eb;"><td style="padding:12px 0;color:#6b7280;vertical-align:top;">Total</td><td style="padding:12px 0;font-weight:700;font-size:20px;color:#8c52ff;">${totalDisplay}</td></tr>
+         ${params.providerName ? `<tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Assigned Pro</td><td style="padding:8px 0;">${escapeHtml(params.providerName)}</td></tr>` : ""}
+         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Booking status</td><td style="padding:8px 0;">${escapeHtml(params.bookingStatus || "confirmed")}</td></tr>
+         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Payment status</td><td style="padding:8px 0;">${escapeHtml(params.paymentStatus || "completed")}</td></tr>
+         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Payment reference</td><td style="padding:8px 0;">${escapeHtml(params.paymentReference || "—")}</td></tr>
+         <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Confirmed at</td><td style="padding:8px 0;">${escapeHtml(params.paymentConfirmedAt || "—")}</td></tr>
+         <tr style="border-top:1px solid #e5e7eb;"><td style="padding:12px 0;color:#6b7280;vertical-align:top;">Amount paid</td><td style="padding:12px 0;font-weight:700;font-size:20px;color:#8c52ff;">${totalDisplay}</td></tr>
       </table>
+       ${params.adminBookingUrl ? `<div style="margin-top:20px;"><a href="${escapeHtml(params.adminBookingUrl)}" style="display:inline-block;background:#8c52ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Open booking in Admin</a></div>` : ""}
     </div>
     <div style="padding:14px 28px;background:#f9fafb;font-size:12px;color:#9ca3af;text-align:center;">
       Sent automatically by Dapr — do not reply to this email.
@@ -57,22 +74,20 @@ export async function sendNewBookingEmail(params: BookingEmailParams): Promise<v
 
   const client = getResendClient();
   if (!client) {
-    console.warn("[email] RESEND_API_KEY not set — skipping booking notification email.");
-    return;
+    throw new Error("RESEND_API_KEY is not configured");
   }
-
-  const { error } = await client.emails.send({
+  const { data, error } = await client.emails.send({
     from: FROM_EMAIL,
-    to: [NOTIFY_EMAIL],
-    subject: `New Booking #${params.bookingId} — ${params.customerName}`,
+    to: [params.recipient],
+    subject: `New Paid Booking #${params.bookingId} — ${params.serviceName || "Service"} — ${totalDisplay}`,
     html,
-  });
+  }, { idempotencyKey: params.idempotencyKey });
 
   if (error) {
-    console.error(`[email] Failed to send booking notification #${params.bookingId}:`, error);
-  } else {
-    console.log(`[email] Booking notification sent for #${params.bookingId}`);
+    throw new Error(typeof error.message === "string" ? error.message : "Resend rejected the paid booking email");
   }
+  if (!data?.id) throw new Error("Resend did not return an email message ID");
+  return { messageId: data.id };
 }
 
 let resend: Resend | null = null;

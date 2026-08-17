@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
-import { bookingQuotes, bookings, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
+import { bookingQuotes, bookings, notificationEvents, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
 import { db } from "./db";
 import { NativeContractError } from "./native-contract-error";
 import { getEligibleOnlineProviderCount } from "./asap-availability";
@@ -371,6 +371,21 @@ export async function markNativeBookingPaid(bookingId: number, intentId: string,
       status: newlyPaid ? "confirmed" : booking.status,
       ...(paymentMethod ? { paymentMethod } : {}),
     }).where(eq(bookings.id, bookingId)).returning();
+    if (newlyPaid) {
+      await tx.insert(notificationEvents).values({
+        eventType: "booking.payment_completed",
+        bookingId: updated.id,
+        userId: updated.userId,
+        providerId: updated.providerId,
+        recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
+        channel: "email",
+        provider: "resend",
+        notificationType: "paid_booking_admin",
+        status: "pending",
+        idempotencyKey: `booking.payment_completed:${updated.id}:admin`,
+        metadata: { paymentReference: intentId },
+      }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+    }
     return { booking: updated, newlyPaid };
   });
 }
@@ -388,6 +403,59 @@ export async function confirmZeroAmountBooking(bookingId: number) {
       paymentDate: new Date().toISOString(),
       status: "confirmed",
     }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
+    if (booking) {
+      await tx.insert(notificationEvents).values({
+        eventType: "booking.payment_completed",
+        bookingId: booking.id,
+        userId: booking.userId,
+        providerId: booking.providerId,
+        recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
+        channel: "email",
+        provider: "resend",
+        notificationType: "paid_booking_admin",
+        status: "pending",
+        idempotencyKey: `booking.payment_completed:${booking.id}:admin`,
+        metadata: { paymentReference: "zero_amount" },
+      }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+    }
     return booking;
+  });
+}
+
+/** Redeems one free-wash credit and records payment completion atomically. */
+export async function redeemFreeWashCreditBooking(bookingId: number, userId: number) {
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
+    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!booking) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+    if (booking.userId !== userId) throw new NativeContractError(403, "BOOKING_ACCESS_DENIED", "Booking does not belong to this account.");
+    if (booking.isPaid) return { booking, newlyPaid: false };
+    const [credit] = await tx.update(users).set({
+      freeWashCredits: sql`${users.freeWashCredits} - 1`,
+    }).where(and(eq(users.id, userId), gt(users.freeWashCredits, 0))).returning({ id: users.id });
+    if (!credit) throw new NativeContractError(400, "NO_FREE_WASH_CREDITS", "No free wash credits available.");
+    const now = new Date().toISOString();
+    const [updated] = await tx.update(bookings).set({
+      isPaid: true,
+      paymentStatus: "completed",
+      paymentDate: now,
+      paymentMethod: "free_credit",
+      status: "confirmed",
+    }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
+    if (!updated) return { booking, newlyPaid: false };
+    await tx.insert(notificationEvents).values({
+      eventType: "booking.payment_completed",
+      bookingId: updated.id,
+      userId: updated.userId,
+      providerId: updated.providerId,
+      recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
+      channel: "email",
+      provider: "resend",
+      notificationType: "paid_booking_admin",
+      status: "pending",
+      idempotencyKey: `booking.payment_completed:${updated.id}:admin`,
+      metadata: { paymentReference: "free_wash_credit" },
+    }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+    return { booking: updated, newlyPaid: true };
   });
 }

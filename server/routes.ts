@@ -5,7 +5,6 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
 import { safeUser, setupAuth } from "./auth";
 import { ReferralError, storage } from "./storage";
-import { sendNewBookingEmail } from "./email-service";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema, requiresGuardedVehicleVerificationApproval } from "@shared/schema";
 import type { User, Vehicle } from "@shared/schema";
 import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
@@ -14,7 +13,7 @@ import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
 import { canAccessBookingTracking, canMutateAssignedBooking, isAllowedProviderStage, isAllowedProviderStatusTransition, serializeAvailableJob, serializePublicProvider, unknownAddOnIds } from "./booking-route-safety";
-import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
+import { attachNativePaymentIntent, confirmZeroAmountBooking, createBookingFromQuote, createNativeQuote, markNativeBookingPaid, NativeContractError, nativePaymentStatus, redeemFreeWashCreditBooking, refundReferralCreditsForFailedPayment, serializeQuote } from "./native-payment-contract";
 import { getAsapAvailability } from "./asap-availability";
 import { publishTimeSlotCapacity, TimeSlotCapacityConflictError, unpublishTimeSlotCapacity } from "./time-slot-capacity";
 import { approveVehicleVerification, registerProviderVerificationRoutes } from "./provider-verification-routes";
@@ -25,6 +24,7 @@ import { DatabasePushDeviceRepository } from "./push-device-repository";
 import { PushService } from "./push-service";
 import { registerPushDeviceRoutes } from "./push-device-routes";
 import { createBookingNotifier, lifecycleEventForStatusChange } from "./booking-notifications";
+import { dispatchPaidBookingNotifications, getBookingNotificationEvents } from "./paid-booking-notifications";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -236,6 +236,10 @@ export function registerRoutes(app: Express): Server {
   const pushService = new PushService(pushDevices);
   registerPushDeviceRoutes(app, pushDevices, pushService);
   const notifyBookingCustomer = createBookingNotifier(pushService);
+  void dispatchPaidBookingNotifications().catch(error => console.error("[notification] Initial outbox pass failed:", error));
+  setInterval(() => {
+    void dispatchPaidBookingNotifications().catch(error => console.error("[notification] Outbox retry pass failed:", error));
+  }, 60_000).unref();
   setupAuth(app);
 
   const clients = new Map<number, WebSocket[]>();
@@ -585,6 +589,7 @@ export function registerRoutes(app: Express): Server {
       const amountCents = booking.amount ?? Math.round((booking.totalPrice ?? 0) * 100);
       if (amountCents === 0) {
         const paid = await confirmZeroAmountBooking(booking.id);
+        if (paid) void dispatchPaidBookingNotifications();
         return res.json({ bookingId, amountCents: 0, paymentStatus: paid?.paymentStatus ?? "paid", clientSecret: null });
       }
       if (booking.stripeSessionId) {
@@ -834,27 +839,6 @@ export function registerRoutes(app: Express): Server {
       };
 
       const newBooking = await storage.createBooking(booking);
-
-      // Send booking notification email to admin
-      try {
-        const customer = await storage.getUser(booking.userId);
-        const service = await storage.getServiceById(booking.serviceId);
-        await sendNewBookingEmail({
-          bookingId: newBooking.id,
-          customerName: [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || customer?.email || "Unknown",
-          customerEmail: customer?.email,
-          customerPhone: customer?.phone,
-          serviceLocation: booking.serviceLocation,
-          serviceName: service?.name,
-          totalPrice: booking.totalPrice,
-          date: booking.date,
-          time: booking.time,
-          priceTier: booking.priceTier,
-          addOns: booking.addOns as any[],
-        });
-      } catch (emailErr) {
-        console.error("[email] Booking notification failed (non-fatal):", emailErr);
-      }
 
       // Update time slot bookings count
       try {
@@ -1276,6 +1260,22 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error fetching admin bookings:", error);
       res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  app.get("/api/admin/bookings/:id/notification-events", isAdmin, async (req, res) => {
+    const bookingId = Number(req.params.id);
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return res.status(400).json({ error: "Invalid booking ID" });
+    }
+    try {
+      if (!await storage.getBookingById(bookingId)) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      res.json(await getBookingNotificationEvents(bookingId));
+    } catch (error) {
+      console.error("[notification] Failed to load booking notification history:", error);
+      res.status(500).json({ error: "Failed to load notification history" });
     }
   });
 
@@ -2013,16 +2013,19 @@ export function registerRoutes(app: Express): Server {
       
       // Handle free wash credit redemption
       if (req.body.useFreeWashCredit) {
-        const consumed = await storage.consumeFreeWashCredit(req.user.id);
-        if (!consumed) {
-          return res.status(400).json({ error: 'No free wash credits available.' });
+        try {
+          const result = await redeemFreeWashCreditBooking(booking.id, req.user.id);
+          if (result.newlyPaid) {
+            void notifyBookingCustomer("confirmed", result.booking);
+            void dispatchPaidBookingNotifications();
+          }
+          return res.json({ paymentUrl: null, free: true });
+        } catch (error) {
+          if (error instanceof NativeContractError) {
+            return res.status(error.status).json({ error: error.message, code: error.code });
+          }
+          throw error;
         }
-        await storage.updateBookingPaymentInfo(booking.id, {
-          isPaid: true,
-          paymentStatus: 'completed',
-          paymentDate: new Date().toISOString(),
-        });
-        return res.json({ paymentUrl: null, free: true });
       }
 
       // Resolve or create a Stripe customer for this user (works for both Clerk and non-Clerk users)
@@ -2120,11 +2123,11 @@ export function registerRoutes(app: Express): Server {
       } as any);
 
       if (intent.status === 'succeeded') {
-        // Atomically claim the unpaid → paid transition BEFORE the info update
-        // so the confirmed push cannot duplicate against a racing webhook.
-        const newlyPaid = await storage.claimPaidTransition(id);
-        await storage.updateBookingPaymentInfo(id, { isPaid: true, paymentStatus: 'completed' });
-        if (newlyPaid) void notifyBookingCustomer("confirmed", booking);
+        const result = await markNativeBookingPaid(id, intent.id);
+        if (result?.newlyPaid) {
+          void notifyBookingCustomer("confirmed", result.booking);
+          void dispatchPaidBookingNotifications();
+        }
         return res.json({ success: true });
       }
       if (intent.status === 'requires_action') {
@@ -2162,28 +2165,14 @@ export function registerRoutes(app: Express): Server {
         const { isPaid, paymentMethod } = await getPaymentDetails(intentId);
         
         if (isPaid) {
-          // Build the update — always back-fill paymentMethod if it was missing
-          const needsUpdate =
-            !booking.isPaid ||
-            (paymentMethod && !booking.paymentMethod);
-          
-          if (needsUpdate) {
-            // Atomically claim the unpaid → paid transition BEFORE the info
-            // update so the confirmed push cannot duplicate against a racing
-            // webhook. paymentMethod-only back-fills claim nothing and stay
-            // silent.
-            const newlyPaid = await storage.claimPaidTransition(booking.id);
-            await storage.updateBookingPaymentInfo(booking.id, {
-              isPaid: true,
-              paymentStatus: 'completed',
-              paymentDate: booking.paymentDate || new Date().toISOString(),
-              ...(paymentMethod ? { paymentMethod } : {}),
-            });
-            
-            if (!booking.isPaid) {
-              await storage.updateBookingStatus(booking.id, 'confirmed');
+          if (!booking.isPaid) {
+            const result = await markNativeBookingPaid(booking.id, intentId, paymentMethod);
+            if (result?.newlyPaid) {
+              void notifyBookingCustomer("confirmed", result.booking);
+              void dispatchPaidBookingNotifications();
             }
-            if (newlyPaid) void notifyBookingCustomer("confirmed", booking);
+          } else if (paymentMethod && !booking.paymentMethod) {
+            await storage.updateBookingPaymentInfo(booking.id, { paymentMethod });
           }
           
           return res.json({
@@ -2235,6 +2224,7 @@ export function registerRoutes(app: Express): Server {
           userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
           // newlyPaid is computed under an advisory lock, so this fires once.
           void notifyBookingCustomer("confirmed", result.booking);
+            void dispatchPaidBookingNotifications();
         }
       };
 

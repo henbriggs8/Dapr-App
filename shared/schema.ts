@@ -173,6 +173,40 @@ export const bookings = pgTable("bookings", {
   providerNotes: text("provider_notes") // Optional provider notes about the job
 });
 
+/**
+ * Durable outbox records for important operational notifications. The
+ * idempotency key is the permanent source of truth; external providers are
+ * only a secondary layer of deduplication.
+ */
+export const notificationEvents = pgTable("notification_events", {
+  id: serial("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  bookingId: integer("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  providerId: integer("provider_id").references(() => users.id, { onDelete: "set null" }),
+  recipient: text("recipient").notNull(),
+  channel: text("channel").notNull().default("email"),
+  provider: text("provider").notNull().default("resend"),
+  notificationType: text("notification_type").notNull(),
+  status: text("status").notNull().default("pending"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  idempotencyKey: text("idempotency_key").notNull(),
+  providerMessageId: text("provider_message_id"),
+  errorMessage: text("error_message"),
+  metadata: json("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  firstAttemptedAt: timestamp("first_attempted_at", { withTimezone: true }),
+  lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+  nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+  claimToken: text("claim_token"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  failedAt: timestamp("failed_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("notification_events_idempotency_unique").on(table.idempotencyKey),
+  index("notification_events_booking_created_idx").on(table.bookingId, table.createdAt),
+  index("notification_events_delivery_queue_idx").on(table.status, table.lastAttemptedAt),
+]);
+
 export const bookingQuotes = pgTable("booking_quotes", {
   id: text("id").primaryKey(),
   userId: integer("user_id").notNull(),
