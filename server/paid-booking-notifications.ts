@@ -96,12 +96,15 @@ async function sendClaimedDelivery(event: typeof notificationEvents.$inferSelect
 
 /** Runs a bounded outbox pass. It is safe to call after every paid transition
  * and on a timer; the durable claim and idempotency key do the deduplication. */
-export async function dispatchPaidBookingNotifications(limit = 10): Promise<void> {
+export async function dispatchPaidBookingNotifications(
+  limit = 10,
+  deliver: (event: typeof notificationEvents.$inferSelect) => Promise<{ messageId: string }> = sendClaimedDelivery,
+): Promise<void> {
   for (let i = 0; i < limit; i += 1) {
     const event = await claimNextDelivery();
     if (!event) return;
     try {
-      const { messageId } = await sendClaimedDelivery(event);
+      const { messageId } = await deliver(event);
       await db.update(notificationEvents).set({
         status: "sent",
         providerMessageId: messageId,
