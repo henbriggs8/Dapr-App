@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { bookings, notificationEvents, users } from "@shared/schema";
 import { db } from "./db";
 import { markNativeBookingPaid } from "./native-payment-contract";
-import { dispatchPaidBookingNotifications } from "./paid-booking-notifications";
+import { runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
 
 async function run() {
   const marker = `notification-outbox-test-${Date.now()}`;
@@ -39,6 +39,21 @@ async function run() {
     assert.equal(rows[0].status, "pending");
     assert.equal(rows[0].idempotencyKey, `booking.payment_completed:${booking.id}:admin`);
 
+    // The operational gate never changes payment/outbox state and never invokes
+    // the sender. Restore the process environment before testing the real race.
+    const originalDispatchGate = process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED;
+    process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED = "false";
+    let disabledResendCalls = 0;
+    await runPaidBookingNotificationDispatch(async () => {
+      disabledResendCalls += 1;
+      return { messageId: "must-not-send" };
+    });
+    assert.equal(disabledResendCalls, 0);
+    const [stillPending] = await db.select().from(notificationEvents).where(eq(notificationEvents.id, rows[0].id));
+    assert.equal(stillPending.status, "pending");
+    if (originalDispatchGate === undefined) delete process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED;
+    else process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED = originalDispatchGate;
+
     // Two workers race to drain the same one-row outbox. The injected sender
     // stands in for Resend: only the worker holding the conditional DB lease
     // may invoke it, so this test never sends any email.
@@ -48,8 +63,8 @@ async function run() {
       return { messageId: "test-resend-message-id" };
     };
     await Promise.all([
-      dispatchPaidBookingNotifications(1, fakeResend),
-      dispatchPaidBookingNotifications(1, fakeResend),
+      runPaidBookingNotificationDispatch(fakeResend),
+      runPaidBookingNotificationDispatch(fakeResend),
     ]);
     assert.equal(resendCalls, 1, "the losing worker must not call Resend");
     const finalRows = await db.select().from(notificationEvents).where(eq(notificationEvents.idempotencyKey, rows[0].idempotencyKey));

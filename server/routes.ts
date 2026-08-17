@@ -24,7 +24,7 @@ import { DatabasePushDeviceRepository } from "./push-device-repository";
 import { PushService } from "./push-service";
 import { registerPushDeviceRoutes } from "./push-device-routes";
 import { createBookingNotifier, lifecycleEventForStatusChange } from "./booking-notifications";
-import { dispatchPaidBookingNotifications, getBookingNotificationEvents } from "./paid-booking-notifications";
+import { getBookingNotificationEvents, runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -236,9 +236,9 @@ export function registerRoutes(app: Express): Server {
   const pushService = new PushService(pushDevices);
   registerPushDeviceRoutes(app, pushDevices, pushService);
   const notifyBookingCustomer = createBookingNotifier(pushService);
-  void dispatchPaidBookingNotifications().catch(error => console.error("[notification] Initial outbox pass failed:", error));
+  void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Initial outbox pass failed:", error));
   setInterval(() => {
-    void dispatchPaidBookingNotifications().catch(error => console.error("[notification] Outbox retry pass failed:", error));
+    void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Outbox retry pass failed:", error));
   }, 60_000).unref();
   setupAuth(app);
 
@@ -589,7 +589,7 @@ export function registerRoutes(app: Express): Server {
       const amountCents = booking.amount ?? Math.round((booking.totalPrice ?? 0) * 100);
       if (amountCents === 0) {
         const paid = await confirmZeroAmountBooking(booking.id);
-        if (paid) void dispatchPaidBookingNotifications();
+        if (paid) void runPaidBookingNotificationDispatch();
         return res.json({ bookingId, amountCents: 0, paymentStatus: paid?.paymentStatus ?? "paid", clientSecret: null });
       }
       if (booking.stripeSessionId) {
@@ -2017,7 +2017,7 @@ export function registerRoutes(app: Express): Server {
           const result = await redeemFreeWashCreditBooking(booking.id, req.user.id);
           if (result.newlyPaid) {
             void notifyBookingCustomer("confirmed", result.booking);
-            void dispatchPaidBookingNotifications();
+            void runPaidBookingNotificationDispatch();
           }
           return res.json({ paymentUrl: null, free: true });
         } catch (error) {
@@ -2126,7 +2126,7 @@ export function registerRoutes(app: Express): Server {
         const result = await markNativeBookingPaid(id, intent.id);
         if (result?.newlyPaid) {
           void notifyBookingCustomer("confirmed", result.booking);
-          void dispatchPaidBookingNotifications();
+          void runPaidBookingNotificationDispatch();
         }
         return res.json({ success: true });
       }
@@ -2169,7 +2169,7 @@ export function registerRoutes(app: Express): Server {
             const result = await markNativeBookingPaid(booking.id, intentId, paymentMethod);
             if (result?.newlyPaid) {
               void notifyBookingCustomer("confirmed", result.booking);
-              void dispatchPaidBookingNotifications();
+              void runPaidBookingNotificationDispatch();
             }
           } else if (paymentMethod && !booking.paymentMethod) {
             await storage.updateBookingPaymentInfo(booking.id, { paymentMethod });
@@ -2224,7 +2224,7 @@ export function registerRoutes(app: Express): Server {
           userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
           // newlyPaid is computed under an advisory lock, so this fires once.
           void notifyBookingCustomer("confirmed", result.booking);
-            void dispatchPaidBookingNotifications();
+            void runPaidBookingNotificationDispatch();
         }
       };
 

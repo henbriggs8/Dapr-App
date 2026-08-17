@@ -8,6 +8,13 @@ const STALE_PROCESSING_MS = 10 * 60 * 1000;
 const FAILURE_SUMMARY_MAX_LENGTH = 500;
 const RETRY_CAP_MS = 60 * 60 * 1000;
 
+export function isPaidBookingNotificationDispatchEnabled(): boolean {
+  const configured = process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED?.trim().toLowerCase();
+  // Preserve the existing notification behavior unless an operator explicitly
+  // disables delivery. Events are always recorded, independently of this gate.
+  return !["false", "0", "off", "no"].includes(configured ?? "");
+}
+
 function safeErrorSummary(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message.replace(/[\r\n]+/g, " ").slice(0, FAILURE_SUMMARY_MAX_LENGTH);
@@ -126,6 +133,19 @@ export async function dispatchPaidBookingNotifications(
       console.error(`[notification] Paid booking email failed for booking ${event.bookingId}:`, summary);
     }
   }
+}
+
+/** The single safe entry point for both the API process and a scheduled
+ * deployment. When disabled, it intentionally leaves pending rows untouched. */
+export async function runPaidBookingNotificationDispatch(
+  deliver?: (event: typeof notificationEvents.$inferSelect) => Promise<{ messageId: string }>,
+): Promise<{ enabled: boolean }> {
+  if (!isPaidBookingNotificationDispatchEnabled()) {
+    console.info("[notification] Dispatcher is disabled by BOOKING_NOTIFICATION_DISPATCH_ENABLED.");
+    return { enabled: false };
+  }
+  await dispatchPaidBookingNotifications(10, deliver);
+  return { enabled: true };
 }
 
 export async function getBookingNotificationEvents(bookingId: number) {

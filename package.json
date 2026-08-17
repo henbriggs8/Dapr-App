@@ -22,6 +22,8 @@
     "test:booking-acceptance": "tsx server/booking-acceptance.integration.test.ts",
     "test:booking-notifications": "tsx --test server/booking-notifications.test.ts",
     "test:paid-booking-notifications": "tsx server/paid-booking-notifications.integration.test.ts",
+    "notifications:dispatch": "tsx scripts/dispatch-paid-booking-notifications.ts",
+    "db:preflight": "tsx scripts/production-database-preflight.ts",
     "cleanup:provider-verification": "tsx scripts/cleanup-provider-application-media.ts"
   },
   "dependencies": {
