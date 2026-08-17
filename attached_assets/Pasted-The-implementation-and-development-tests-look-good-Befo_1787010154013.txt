@@ -1,0 +1,187 @@
+The implementation and development tests look good.
+
+Before making any production changes, give me a final production deployment review and exact deployment plan.
+
+Do NOT deploy, migrate production, send an email, or charge Stripe yet.
+
+## 1. Final implementation summary
+
+Give me the exact:
+
+* files added
+* files modified
+* migration file created
+* database tables/indexes/constraints added
+* environment variables added or changed
+* old booking-created email code removed/disabled
+* new paid-booking trigger location
+* worker/dispatcher location
+* admin notification-history UI location
+
+## 2. Confirm every payment path
+
+Explicitly confirm whether EACH of these eventually reaches the same authoritative paid-finalization logic:
+
+* Stripe `payment_intent.succeeded`
+* Stripe `checkout.session.completed`
+* payment verification endpoint
+* native app/server verification
+* free credit / account credit / promotional credit path
+* any $0 booking path
+* any other payment path you found
+
+For each, tell me what function ultimately performs the authoritative paid transition.
+
+I particularly want confirmation that the free-credit issue found during implementation has been fixed.
+
+## 3. Production database migration safety
+
+Show me:
+
+* the exact migration filename
+* what SQL/schema changes it performs
+* whether it is additive or destructive
+* whether it locks or rewrites an existing large table
+* whether existing bookings are affected
+* whether existing booking/payment columns change
+* whether the migration is safe to run while the current production app is live
+* whether the migration can safely run before the new application version is deployed
+
+I want the production migration to be backward-compatible with the currently running app if possible.
+
+## 4. Database target verification
+
+We previously discovered that the shell migration URL and the application's runtime database URL were not the same.
+
+Before production migration, identify exactly:
+
+* which environment variable the production application actually uses for its database connection
+* which environment variable the migration command uses
+* whether they currently resolve to the same production database
+* how you will verify the database target without printing credentials
+
+Do not run the migration until this is unequivocally verified.
+
+## 5. Environment variables
+
+List all environment variables required by the new implementation.
+
+Include whether each currently exists in production.
+
+Especially confirm:
+
+`RESEND_API_KEY`
+
+`BOOKING_NOTIFICATION_EMAIL`
+
+and any new worker/outbox configuration values.
+
+Do not print secret values.
+
+If `BOOKING_NOTIFICATION_EMAIL` is missing, tell me what fallback currently occurs.
+
+## 6. Worker execution
+
+Explain exactly how notifications get processed in production.
+
+I want to know:
+
+* what starts the dispatcher
+* how often it runs
+* whether it runs on app startup
+* whether it runs continuously
+* whether multiple Replit instances can run it safely
+* what happens when the server restarts
+* how pending records resume
+* how failed notifications retry
+* how stale `processing` notifications recover
+* whether a permanently failing notification can block other notifications
+
+## 7. Resend protection
+
+Confirm the exact deterministic Resend idempotency key used for the paid-booking admin email.
+
+Confirm that retries of the same logical notification always reuse the same key.
+
+Also confirm that the database UNIQUE constraint remains the permanent logical deduplication mechanism.
+
+## 8. Production rollout order
+
+Give me the exact safest rollout order.
+
+I expect something similar to:
+
+1. Verify production environment variables
+2. Verify production database target
+3. Run migration
+4. Verify new table/indexes
+5. Deploy application
+6. Verify server startup
+7. Verify outbox worker health
+8. Create one controlled real paid booking
+9. Verify booking paid exactly once
+10. Verify one `booking.payment_completed` record
+11. Verify one admin notification
+12. Verify one Resend message ID
+13. Verify Admin history
+14. Check logs for errors
+
+Tell me if you recommend a different order and why.
+
+## 9. Rollback plan
+
+Explain what we do if:
+
+### Application deployment fails
+
+Can we roll the application back while leaving the new database table in place?
+
+### Notification worker has a bug
+
+Can we disable notification dispatch without affecting booking/payment processing?
+
+### Resend fails
+
+Confirm payment remains fully operational.
+
+### Migration fails
+
+Explain the safe recovery approach.
+
+Do not create a destructive rollback unless absolutely necessary.
+
+## 10. Final production smoke test
+
+After deployment, I want to make ONE controlled legitimate Dapr booking/payment and verify:
+
+* exactly one booking
+* correct payment
+* booking paid/confirmed
+* one `booking.payment_completed` event
+* one notification row
+* one actual internal email
+* Resend ID stored
+* Admin history displays it
+* no old `New Booking` creation-time email
+* no duplicate push/email
+* no server errors
+
+Do not perform the test yet.
+
+## 11. Final go/no-go
+
+Finish with:
+
+### GO
+
+Anything that is verified and ready.
+
+### BLOCKERS
+
+Anything I must fix or configure before production.
+
+### WATCH ITEMS
+
+Things that are acceptable for MVP but worth improving later.
+
+Again: this step is read-only. Do not deploy or modify production yet.
