@@ -1,0 +1,275 @@
+I want you to perform a complete audit of every Resend email/notification trigger currently implemented in the Dapr codebase, then add a new reliable trigger for successfully paid bookings.
+
+Do not make assumptions about the current implementation. Inspect the existing frontend, backend, database, Stripe payment flow, Resend integration, cron/background jobs if any, and all API endpoints first.
+
+## Part 1 — Audit Every Current Resend Trigger
+
+Find every place in the codebase where Resend is used or where an email/notification is triggered.
+
+Search for things including:
+
+* Resend imports / SDK usage
+* `resend.emails.send`
+* email helper functions
+* notification services
+* booking emails
+* provider emails
+* customer emails
+* admin emails
+* payment emails
+* application emails
+* account/auth emails if applicable
+* scheduled emails
+* webhook-triggered emails
+
+Give me a complete table containing:
+
+1. Trigger/event name
+2. What causes it to fire
+3. Recipient
+4. Email subject/template
+5. File/function where it is implemented
+6. Whether it runs client-side or server-side
+7. Whether it is idempotent
+8. Whether failures are logged
+9. Whether retries could accidentally send duplicate emails
+10. Any trigger that appears broken, unused, duplicated, or unsafe
+
+Do not change anything yet until you have completed the audit.
+
+## Part 2 — Add a Booking Payment Completed Event
+
+I want a new event whenever a customer successfully completes payment for a booking.
+
+The event should represent:
+
+`booking.payment_completed`
+
+This must only occur once the backend has authoritative confirmation that Stripe payment succeeded.
+
+DO NOT trigger this based solely on:
+
+* the user reaching a payment success screen
+* an iOS callback
+* a frontend state change
+* a redirect
+* the customer closing/reopening the app
+
+Use the existing authoritative backend Stripe/payment verification flow.
+
+Inspect the existing booking/payment architecture and determine the safest location to emit this event.
+
+The payment flow must remain idempotent.
+
+If Stripe, the customer app, or our API retries the request, we must NOT create duplicate bookings, duplicate payment events, or duplicate emails.
+
+## Part 3 — Send an Internal Dapr Email When Payment Completes
+
+When `booking.payment_completed` occurs, send an internal Resend email so we know a new paid booking has been created.
+
+Use the existing Dapr operational/admin email address if one already exists in environment variables/config.
+
+Do not hardcode a new email if there is already an established admin/operations recipient.
+
+The email should clearly contain:
+
+### New Paid Booking
+
+* Booking ID
+* Customer name
+* Customer email
+* Customer phone if available
+* Service booked
+* Vehicle information
+* Service address
+* Booking date
+* Booking time
+* Amount paid
+* Stripe PaymentIntent ID / payment reference
+* Assigned provider if one exists
+* Booking status
+* Payment status
+* Timestamp payment was confirmed
+
+Also include a direct Admin booking link if the Dapr admin dashboard already has a booking detail route.
+
+Do not expose unnecessary sensitive payment information.
+
+Never include full card information.
+
+## Part 4 — Create Notification/Event Tracking
+
+I don't want Resend emails to be invisible side effects.
+
+I want us to be able to track exactly what notifications have occurred.
+
+First inspect whether we already have a notification log, event log, audit log, email log, or similar database structure.
+
+If one already exists, extend/reuse it instead of unnecessarily creating another system.
+
+If none exists, propose and implement a lightweight table similar to:
+
+`notification_events`
+
+Suggested fields:
+
+* id
+* event_type
+* booking_id nullable
+* user_id nullable
+* provider_id nullable
+* recipient
+* channel (`email`)
+* provider (`resend`)
+* template / notification_type
+* status (`pending`, `sent`, `failed`)
+* provider_message_id
+* error_message nullable
+* metadata JSON
+* idempotency_key
+* created_at
+* sent_at
+* failed_at
+
+Use the project's existing naming conventions and database architecture rather than blindly copying those field names.
+
+For the paid booking notification, create a deterministic idempotency key such as:
+
+`booking.payment_completed:{booking_id}:admin`
+
+or another equivalent reliable key.
+
+There should only ever be one successful internal notification for the same booking/payment event unless we intentionally resend it.
+
+## Part 5 — Logging and Error Handling
+
+An email failure must NEVER cause a successful customer payment or booking confirmation to fail.
+
+Payment/booking completion is the primary transaction.
+
+Email is a secondary side effect.
+
+If Resend fails:
+
+* preserve the successful booking/payment
+* record the notification as failed
+* log the error
+* make the failure observable
+* do not return an incorrect payment failure to the customer
+
+Use the existing logging infrastructure where possible.
+
+## Part 6 — Verify Existing Triggers
+
+While doing this work, check all existing notification triggers for the same concerns:
+
+* Could they fire twice?
+* Could frontend retries cause duplicate emails?
+* Are there emails being sent before a database transaction actually succeeds?
+* Are there emails with no failure logging?
+* Are Resend API errors swallowed?
+* Are emails being triggered from client-side code that should be server-side?
+* Are there multiple competing implementations for the same event?
+
+Fix obvious reliability problems only when the correction is low risk.
+
+If changing an existing trigger would materially change product behavior, tell me before changing that behavior.
+
+## Part 7 — Admin Tracking
+
+Inspect the existing Dapr admin dashboard.
+
+If there is a reasonable place to expose this without a large redesign, add a small notification/event history to the relevant booking detail view showing:
+
+* event
+* recipient
+* status
+* timestamp
+* Resend message ID if available
+* failure reason if failed
+
+For example:
+
+Payment completed — Aug 17, 4:32 PM
+Admin booking email — Sent — Aug 17, 4:32 PM
+Customer confirmation — Sent — Aug 17, 4:32 PM
+
+Do not build an unnecessarily large notification management system for this MVP.
+
+The goal is simply to make important booking events observable.
+
+## Part 8 — Testing
+
+Test at minimum:
+
+1. Successful payment sends exactly one email.
+2. Re-running payment verification does not send another email.
+3. Refreshing/reopening the customer app does not send another email.
+4. Duplicate Stripe webhook/event delivery does not create duplicate notifications.
+5. Failed Resend request does not undo or fail the booking.
+6. Notification failure is recorded.
+7. Resend's returned email/message ID is stored when available.
+8. Existing booking/payment behavior still works.
+9. Existing notification triggers still work.
+
+Do not make a real production charge for testing.
+
+Use existing test infrastructure / Stripe test mode where appropriate.
+
+## Important Constraints
+
+* Do not change pricing.
+* Do not change Stripe configuration unnecessarily.
+* Do not change booking business logic unless required for reliability.
+* Do not change authentication.
+* Do not change iOS app behavior unless required.
+* Do not expose API secrets.
+* Keep Resend API keys server-side.
+* Do not create duplicate bookings.
+* Do not make payment confirmation dependent on Resend.
+* Preserve the existing authoritative payment verification architecture.
+* Follow existing project conventions.
+* Create a database migration if schema changes are required.
+* Do not deploy or publish anything without telling me exactly what will be changed first.
+
+## Final Report
+
+When finished, give me:
+
+### Existing Notification Map
+
+A table of every existing trigger and what it does.
+
+### Changes Made
+
+Every file and database table changed.
+
+### Paid Booking Flow
+
+Show me the exact sequence:
+
+Stripe payment succeeds
+→ backend verifies payment
+→ booking becomes paid/confirmed
+→ `booking.payment_completed` recorded
+→ notification record created
+→ Resend email attempted
+→ Resend result stored
+
+### Idempotency
+
+Explain exactly how duplicate emails are prevented.
+
+### Tracking
+
+Show me exactly where I can now see whether an email was sent, failed, or never triggered.
+
+### Environment Variables
+
+List every Resend/email-related environment variable being used, but DO NOT print secret values.
+
+### Issues Found
+
+List any notification/email triggers that are currently broken, questionable, duplicated, or should be improved later.
+
+Before making changes, start by showing me your audit findings and your proposed implementation approach.
