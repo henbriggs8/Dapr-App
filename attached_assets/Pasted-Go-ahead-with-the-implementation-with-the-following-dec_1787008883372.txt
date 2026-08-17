@@ -1,0 +1,212 @@
+Go ahead with the implementation with the following decisions/adjustments:
+
+1. Replace the current creation-time internal booking email.
+
+Remove/disable the current internal New Booking email that fires from POST /api/bookings when the booking record is first created.
+
+Do NOT remove or change creation of the booking record itself.
+
+I only want the operational/admin booking email to fire after authoritative backend confirmation that payment succeeded.
+
+An abandoned/unpaid booking should therefore create no internal booking email.
+
+If useful for future analytics, you may preserve/record booking.created as an event, but it should not trigger the admin booking email.
+
+2. Use booking.payment_completed as the paid-booking source of truth.
+
+Create this event atomically with the existing successful unpaid → paid transition.
+
+I want exactly one durable event for each booking becoming paid.
+
+The intended flow is:
+
+Stripe confirms successful payment
+→ backend finalizes payment
+→ booking unpaid → paid
+→ booking.payment_completed recorded atomically
+→ pending notification delivery created
+→ transaction commits
+→ New Paid Booking email attempted
+→ Resend result recorded
+
+3. Use TWO layers of email idempotency.
+
+Use the database unique idempotency key as the permanent source of deduplication.
+
+Example:
+
+booking.payment_completed:{bookingId}:admin
+
+Also pass a deterministic Resend idempotencyKey when calling resend.emails.send.
+
+Do not rely exclusively on Resend idempotency because external provider idempotency has a limited retention window.
+
+The database must remain authoritative for whether this logical notification has already successfully been sent.
+
+4. Add the notification_events table.
+
+Proceed with the lightweight outbox/event table you proposed.
+
+I want it to support at minimum:
+
+event type
+booking ID
+user ID if applicable
+provider ID if applicable
+recipient
+channel
+email provider
+notification/template type
+pending / processing / sent / failed status
+attempt count
+deterministic unique idempotency key
+Resend message ID
+safe error summary
+metadata JSON
+created timestamp
+first attempted timestamp
+most recent attempted timestamp
+sent timestamp
+failed timestamp
+
+Adapt names/types to the existing database conventions.
+
+Put a UNIQUE constraint/index on the idempotency key.
+
+5. Make sending concurrency-safe.
+
+I don't want two server processes, webhook deliveries, or verification requests to be able to claim the same notification simultaneously.
+
+Use the existing database architecture to safely claim a pending notification before sending.
+
+Make the transition something conceptually like:
+
+pending/failed → processing → sent
+
+and make claims atomic.
+
+Handle stale processing records safely in case the process crashes during delivery.
+
+6. Email failure cannot affect payment success.
+
+The payment transaction and booking paid state are authoritative.
+
+Resend is a secondary side effect.
+
+If Resend is unavailable:
+
+booking stays paid
+customer still receives successful payment response
+notification is marked failed
+failure is observable
+it can be retried safely
+
+Never roll back a Stripe-confirmed booking because email failed.
+
+7. Centralize the admin booking recipient.
+
+Introduce:
+
+BOOKING_NOTIFICATION_EMAIL
+
+rather than leaving the recipient scattered/hardcoded throughout the codebase.
+
+For migration safety you may use the existing internal booking recipient as the fallback, but document that fallback clearly.
+
+Do not print secrets.
+
+8. Build the New Paid Booking email.
+
+Subject should be easy to scan, something approximately like:
+
+New Paid Booking #123 — Refresh Detail — $149
+
+Include:
+
+booking ID
+amount paid
+customer name
+customer email
+customer phone
+service
+vehicle
+address
+appointment date
+appointment time
+provider if assigned
+booking status
+payment status
+Stripe PaymentIntent/payment reference
+payment confirmed timestamp
+direct admin booking link if available
+
+No card details or sensitive payment information.
+
+9. Add the small Admin notification history.
+
+Proceed with the proposed compact history UI.
+
+I want to be able to open a booking and quickly see something like:
+
+Payment completed — 4:32 PM
+
+New Paid Booking email — Sent — 4:32 PM
+
+Resend ID: abc123
+
+or:
+
+New Paid Booking email — Failed — 4:32 PM
+
+Reason: ...
+
+Don't turn this into a large notification-management dashboard.
+
+10. Leave the other email flows alone for now.
+
+Do not redesign support, career applications, or provider application emails in this pass.
+
+The new infrastructure should be designed so those notifications can migrate to it later, but don't expand the implementation scope right now.
+
+11. Test all payment entry paths.
+
+Specifically verify that all of these converge on the same one-time paid transition:
+
+Stripe payment_intent.succeeded
+Stripe checkout.session.completed
+customer payment verification endpoint
+native in-app confirmation/server verification
+duplicate Stripe webhook
+repeated verification request
+app reopened after payment
+
+Every scenario must result in at most:
+
+1 booking
+
+1 booking.payment_completed event
+
+1 admin paid-booking notification
+
+1 actual email
+
+12. Do not deploy yet.
+
+Implement the code and migration, run the relevant tests/build checks, and then stop.
+
+Before deployment, report back with:
+
+files changed
+migration created
+schema added
+exact old booking-email behavior removed
+exact new trigger location
+transaction/idempotency design
+Resend idempotency implementation
+retry behavior
+admin UI changes
+test results
+environment variables I need to add/change
+anything that still concerns you
+
+Do not publish, deploy, run a production migration, send a real production email, or make a real Stripe charge yet.
