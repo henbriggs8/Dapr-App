@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   profileImage: text("profile_image"),
   currentStatus: text("current_status").default('offline'),
   lastLocationUpdate: text("last_location_update"),
+  lastOnlineAt: timestamp("last_online_at", { withTimezone: true }),
+  lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }),
   referralCode: text("referral_code").unique(),
   freeWashCredits: integer("free_wash_credits").default(0),
   referredByCode: text("referred_by_code"),

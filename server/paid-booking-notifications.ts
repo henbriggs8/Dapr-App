@@ -1,12 +1,37 @@
-import { and, asc, eq, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { bookings, notificationEvents, services, users, vehicles } from "@shared/schema";
 import { db } from "./db";
 import { sendPaidBookingEmail } from "./email-service";
+import { DatabasePushDeviceRepository, type PushEnvironment } from "./push-device-repository";
+import { PushService } from "./push-service";
+import { loadProviderEligibility } from "./provider-eligibility";
 
 const STALE_PROCESSING_MS = 10 * 60 * 1000;
 const FAILURE_SUMMARY_MAX_LENGTH = 500;
 const RETRY_CAP_MS = 60 * 60 * 1000;
+const SUPPORTED_NOTIFICATION_TYPES = [
+  "paid_booking_admin",
+  "provider_job_available_fanout",
+  "provider_job_available",
+  "provider_job_assigned",
+  "provider_job_cancelled",
+] as const;
+
+function pushEnvironment(): PushEnvironment {
+  const configured = process.env.PUSH_NOTIFICATION_ENVIRONMENT;
+  if (configured === "production" || configured === "development") return configured;
+  return process.env.NODE_ENV === "production" ? "production" : "development";
+}
+
+function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = radians(lat2 - lat1);
+  const dLon = radians(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export function isPaidBookingNotificationDispatchEnabled(): boolean {
   const configured = process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED?.trim().toLowerCase();
@@ -29,7 +54,7 @@ async function claimNextDelivery() {
     .select({ id: notificationEvents.id })
     .from(notificationEvents)
     .where(and(
-      eq(notificationEvents.notificationType, "paid_booking_admin"),
+      inArray(notificationEvents.notificationType, [...SUPPORTED_NOTIFICATION_TYPES]),
       or(
         and(eq(notificationEvents.status, "pending"), or(lt(notificationEvents.nextAttemptAt, now), sql`${notificationEvents.nextAttemptAt} IS NULL`)),
         and(eq(notificationEvents.status, "failed"), or(lt(notificationEvents.nextAttemptAt, now), sql`${notificationEvents.nextAttemptAt} IS NULL`)),
@@ -61,7 +86,7 @@ async function claimNextDelivery() {
   return claimed ? { ...claimed, claimToken } : undefined;
 }
 
-async function sendClaimedDelivery(event: typeof notificationEvents.$inferSelect) {
+async function sendAdminEmail(event: typeof notificationEvents.$inferSelect) {
   if (!event.bookingId) throw new Error("Paid booking notification is missing its booking ID");
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, event.bookingId)).limit(1);
   if (!booking) throw new Error("Booking no longer exists");
@@ -101,6 +126,77 @@ async function sendClaimedDelivery(event: typeof notificationEvents.$inferSelect
   });
 }
 
+async function fanOutAvailableJob(event: typeof notificationEvents.$inferSelect) {
+  if (!event.bookingId) throw new Error("Provider job event is missing its booking ID");
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, event.bookingId)).limit(1);
+  if (!booking || !booking.isPaid || booking.status !== "confirmed" || booking.providerId) {
+    return { messageId: "skipped:not-available" };
+  }
+  const previous = new Set(Array.isArray(booking.previousProviders) ? booking.previousProviders as number[] : []);
+  const candidates = await db.select({ id: users.id, latitude: users.latitude, longitude: users.longitude })
+    .from(users).where(eq(users.isProvider, true));
+  let inserted = 0;
+  for (const provider of candidates) {
+    if (previous.has(provider.id)) continue;
+    const eligibility = await loadProviderEligibility(provider.id);
+    if (!eligibility?.result.eligible) continue;
+    if (booking.serviceLatitude != null && booking.serviceLongitude != null) {
+      if (provider.latitude == null || provider.longitude == null) continue;
+      if (distanceMiles(provider.latitude, provider.longitude, booking.serviceLatitude, booking.serviceLongitude) > 15) continue;
+    }
+    const result = await db.insert(notificationEvents).values({
+      eventType: "provider.job_available",
+      bookingId: booking.id,
+      userId: booking.userId,
+      providerId: provider.id,
+      recipient: `provider:${provider.id}`,
+      channel: "push",
+      provider: "firebase",
+      notificationType: "provider_job_available",
+      status: "pending",
+      idempotencyKey: `provider.job_available:${booking.id}:provider:${provider.id}`,
+      metadata: { event: "provider.job_available", bookingId: String(booking.id) },
+    }).onConflictDoNothing({ target: notificationEvents.idempotencyKey }).returning({ id: notificationEvents.id });
+    inserted += result.length;
+  }
+  return { messageId: `fanout:${inserted}` };
+}
+
+async function sendProviderPush(event: typeof notificationEvents.$inferSelect) {
+  if (!event.bookingId || !event.providerId) throw new Error("Provider push is missing its booking or provider ID");
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, event.bookingId)).limit(1);
+  if (!booking) return { messageId: "skipped:missing-booking" };
+  if (event.notificationType === "provider_job_available") {
+    const previous = Array.isArray(booking.previousProviders) ? booking.previousProviders as number[] : [];
+    const eligibility = await loadProviderEligibility(event.providerId);
+    if (!eligibility?.result.eligible || !booking.isPaid || booking.status !== "confirmed" || booking.providerId || previous.includes(event.providerId)) {
+      return { messageId: "skipped:no-longer-eligible" };
+    }
+  } else if (event.notificationType === "provider_job_assigned" && booking.providerId !== event.providerId) {
+    return { messageId: "skipped:reassigned" };
+  }
+  const content = event.notificationType === "provider_job_cancelled"
+    ? { title: "Booking cancelled", body: "An assigned booking was cancelled." }
+    : event.notificationType === "provider_job_assigned"
+      ? { title: "New assignment", body: "A booking has been assigned to you." }
+      : { title: "New job available", body: "A nearby paid job is available." };
+  const result = await new PushService(new DatabasePushDeviceRepository()).send({
+    userId: event.providerId,
+    appType: "provider",
+    environment: pushEnvironment(),
+    ...content,
+    data: { event: event.eventType, bookingId: String(event.bookingId) },
+  });
+  if (result.failed > 0) throw new Error(`Provider push failed for ${result.failed} device(s)`);
+  return { messageId: result.delivered > 0 ? `firebase:${result.delivered}` : "skipped:no-device" };
+}
+
+async function sendClaimedDelivery(event: typeof notificationEvents.$inferSelect) {
+  if (event.notificationType === "paid_booking_admin") return sendAdminEmail(event);
+  if (event.notificationType === "provider_job_available_fanout") return fanOutAvailableJob(event);
+  return sendProviderPush(event);
+}
+
 /** Runs a bounded outbox pass. It is safe to call after every paid transition
  * and on a timer; the durable claim and idempotency key do the deduplication. */
 export async function dispatchPaidBookingNotifications(
@@ -119,7 +215,7 @@ export async function dispatchPaidBookingNotifications(
         sentAt: new Date(),
         claimToken: null,
       }).where(and(eq(notificationEvents.id, event.id), eq(notificationEvents.status, "processing"), eq(notificationEvents.claimToken, event.claimToken)));
-      console.log(`[notification] Paid booking email sent for booking ${event.bookingId}`);
+      console.log(`[notification] ${event.notificationType} delivered for booking ${event.bookingId}`);
     } catch (error) {
       const summary = safeErrorSummary(error);
       const delayMs = Math.min(RETRY_CAP_MS, 30_000 * (2 ** Math.min(event.attemptCount, 7)));
@@ -130,7 +226,7 @@ export async function dispatchPaidBookingNotifications(
         nextAttemptAt: new Date(Date.now() + delayMs),
         claimToken: null,
       }).where(and(eq(notificationEvents.id, event.id), eq(notificationEvents.status, "processing"), eq(notificationEvents.claimToken, event.claimToken)));
-      console.error(`[notification] Paid booking email failed for booking ${event.bookingId}:`, summary);
+      console.error(`[notification] ${event.notificationType} failed for booking ${event.bookingId}:`, summary);
     }
   }
 }

@@ -14,6 +14,34 @@ const QUOTE_TTL_MS = 15 * 60 * 1000;
 const PAYMENT_TTL_MS = 30 * 60 * 1000;
 const REFERRAL_DISCOUNT_CENTS = 2_000;
 
+function paidBookingOutboxRows(booking: Booking, paymentReference: string) {
+  return [{
+    eventType: "booking.payment_completed",
+    bookingId: booking.id,
+    userId: booking.userId,
+    providerId: booking.providerId,
+    recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
+    channel: "email",
+    provider: "resend",
+    notificationType: "paid_booking_admin",
+    status: "pending",
+    idempotencyKey: `booking.payment_completed:${booking.id}:admin`,
+    metadata: { paymentReference },
+  }, {
+    eventType: "provider.job_available",
+    bookingId: booking.id,
+    userId: booking.userId,
+    providerId: null,
+    recipient: "provider_marketplace",
+    channel: "push",
+    provider: "firebase",
+    notificationType: "provider_job_available_fanout",
+    status: "pending",
+    idempotencyKey: `booking.payment_completed:${booking.id}:provider_job_available`,
+    metadata: { event: "provider.job_available", bookingId: String(booking.id) },
+  }];
+}
+
 const nativeQuoteCommonSchema = z.object({
   serviceId: z.number().int().positive(),
   vehicleId: z.number().int().positive(),
@@ -372,19 +400,8 @@ export async function markNativeBookingPaid(bookingId: number, intentId: string,
       ...(paymentMethod ? { paymentMethod } : {}),
     }).where(eq(bookings.id, bookingId)).returning();
     if (newlyPaid) {
-      await tx.insert(notificationEvents).values({
-        eventType: "booking.payment_completed",
-        bookingId: updated.id,
-        userId: updated.userId,
-        providerId: updated.providerId,
-        recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
-        channel: "email",
-        provider: "resend",
-        notificationType: "paid_booking_admin",
-        status: "pending",
-        idempotencyKey: `booking.payment_completed:${updated.id}:admin`,
-        metadata: { paymentReference: intentId },
-      }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+      await tx.insert(notificationEvents).values(paidBookingOutboxRows(updated, intentId))
+        .onConflictDoNothing({ target: notificationEvents.idempotencyKey });
     }
     return { booking: updated, newlyPaid };
   });
@@ -404,19 +421,8 @@ export async function confirmZeroAmountBooking(bookingId: number) {
       status: "confirmed",
     }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
     if (booking) {
-      await tx.insert(notificationEvents).values({
-        eventType: "booking.payment_completed",
-        bookingId: booking.id,
-        userId: booking.userId,
-        providerId: booking.providerId,
-        recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
-        channel: "email",
-        provider: "resend",
-        notificationType: "paid_booking_admin",
-        status: "pending",
-        idempotencyKey: `booking.payment_completed:${booking.id}:admin`,
-        metadata: { paymentReference: "zero_amount" },
-      }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+      await tx.insert(notificationEvents).values(paidBookingOutboxRows(booking, "zero_amount"))
+        .onConflictDoNothing({ target: notificationEvents.idempotencyKey });
     }
     return booking;
   });
@@ -443,19 +449,8 @@ export async function redeemFreeWashCreditBooking(bookingId: number, userId: num
       status: "confirmed",
     }).where(and(eq(bookings.id, bookingId), eq(bookings.isPaid, false))).returning();
     if (!updated) return { booking, newlyPaid: false };
-    await tx.insert(notificationEvents).values({
-      eventType: "booking.payment_completed",
-      bookingId: updated.id,
-      userId: updated.userId,
-      providerId: updated.providerId,
-      recipient: process.env.BOOKING_NOTIFICATION_EMAIL || "henry@autodapr.com",
-      channel: "email",
-      provider: "resend",
-      notificationType: "paid_booking_admin",
-      status: "pending",
-      idempotencyKey: `booking.payment_completed:${updated.id}:admin`,
-      metadata: { paymentReference: "free_wash_credit" },
-    }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+    await tx.insert(notificationEvents).values(paidBookingOutboxRows(updated, "free_wash_credit"))
+      .onConflictDoNothing({ target: notificationEvents.idempotencyKey });
     return { booking: updated, newlyPaid: true };
   });
 }

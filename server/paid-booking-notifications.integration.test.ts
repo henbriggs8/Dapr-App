@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
-import { and, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { bookings, notificationEvents, users } from "@shared/schema";
 import { db } from "./db";
 import { markNativeBookingPaid } from "./native-payment-contract";
-import { runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
+import { dispatchPaidBookingNotifications, runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
 
 async function run() {
   const marker = `notification-outbox-test-${Date.now()}`;
-  const [user] = await db.insert(users).values({
-    username: marker,
-    password: "test-only",
-  }).returning();
+  // Raw SQL deliberately lists only legacy columns so this pre-migration test
+  // can verify outbox compatibility without applying the presence migration.
+  const insertedUser = await db.execute(sql`
+    INSERT INTO users (username, password) VALUES (${marker}, 'test-only') RETURNING id
+  `);
+  const user = { id: Number((insertedUser.rows[0] as { id: number }).id) };
   const [booking] = await db.insert(bookings).values({
     userId: user.id,
     serviceId: -1,
@@ -25,19 +27,20 @@ async function run() {
   }).returning();
   try {
     // Mirrors duplicate webhook / verify delivery: only the first caller may
-    // finalize payment, and it creates exactly one durable outbox row.
+    // finalize payment, and it creates one admin delivery plus one Provider
+    // marketplace fanout event in the same transaction.
     const [first, second] = await Promise.all([
       markNativeBookingPaid(booking.id, "pi_notification_test"),
       markNativeBookingPaid(booking.id, "pi_notification_test"),
     ]);
     assert.equal([first, second].filter(result => result?.newlyPaid).length, 1);
-    const rows = await db.select().from(notificationEvents).where(and(
-      eq(notificationEvents.bookingId, booking.id),
-      eq(notificationEvents.eventType, "booking.payment_completed"),
-    ));
-    assert.equal(rows.length, 1);
-    assert.equal(rows[0].status, "pending");
-    assert.equal(rows[0].idempotencyKey, `booking.payment_completed:${booking.id}:admin`);
+    const rows = await db.select().from(notificationEvents).where(eq(notificationEvents.bookingId, booking.id));
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map(row => row.idempotencyKey).sort(), [
+      `booking.payment_completed:${booking.id}:admin`,
+      `booking.payment_completed:${booking.id}:provider_job_available`,
+    ]);
+    const adminRow = rows.find(row => row.notificationType === "paid_booking_admin")!;
 
     // The operational gate never changes payment/outbox state and never invokes
     // the sender. Restore the process environment before testing the real race.
@@ -49,14 +52,13 @@ async function run() {
       return { messageId: "must-not-send" };
     });
     assert.equal(disabledResendCalls, 0);
-    const [stillPending] = await db.select().from(notificationEvents).where(eq(notificationEvents.id, rows[0].id));
+    const [stillPending] = await db.select().from(notificationEvents).where(eq(notificationEvents.id, adminRow.id));
     assert.equal(stillPending.status, "pending");
     if (originalDispatchGate === undefined) delete process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED;
     else process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED = originalDispatchGate;
 
-    // Two workers race to drain the same one-row outbox. The injected sender
-    // stands in for Resend: only the worker holding the conditional DB lease
-    // may invoke it, so this test never sends any email.
+    // Two workers race to drain the same two-row outbox. The injected delivery
+    // adapter prevents any email or push and verifies each lease is exclusive.
     let resendCalls = 0;
     const fakeResend = async () => {
       resendCalls += 1;
@@ -66,14 +68,39 @@ async function run() {
       runPaidBookingNotificationDispatch(fakeResend),
       runPaidBookingNotificationDispatch(fakeResend),
     ]);
-    assert.equal(resendCalls, 1, "the losing worker must not call Resend");
-    const finalRows = await db.select().from(notificationEvents).where(eq(notificationEvents.idempotencyKey, rows[0].idempotencyKey));
+    assert.equal(resendCalls, 2, "each of the two outbox events is delivered once across racing workers");
+    const finalRows = await db.select().from(notificationEvents).where(eq(notificationEvents.idempotencyKey, adminRow.idempotencyKey));
     assert.equal(finalRows.length, 1, "deterministic key must still map to one notification record");
     assert.equal(finalRows[0].status, "sent");
     assert.equal(finalRows[0].providerMessageId, "test-resend-message-id");
     const [reloaded] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     assert.equal(reloaded.isPaid, true);
     assert.equal(reloaded.status, "confirmed");
+
+    // A delivery adapter failure changes only its outbox row. Payment remains
+    // authoritative and the event stays independently retryable.
+    const [failureEvent] = await db.insert(notificationEvents).values({
+      eventType: "booking.payment_completed",
+      bookingId: booking.id,
+      userId: user.id,
+      recipient: "test-only@example.invalid",
+      channel: "email",
+      provider: "injected-test",
+      notificationType: "paid_booking_admin",
+      status: "pending",
+      createdAt: new Date(0),
+      idempotencyKey: `booking.payment_completed:${booking.id}:forced_failure`,
+      metadata: {},
+    }).returning();
+    await dispatchPaidBookingNotifications(1, async () => {
+      throw new Error("injected notification failure");
+    });
+    const [failed] = await db.select().from(notificationEvents).where(eq(notificationEvents.id, failureEvent.id));
+    assert.equal(failed.status, "failed");
+    assert.match(failed.errorMessage ?? "", /injected notification failure/);
+    const [stillPaid] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    assert.equal(stillPaid.isPaid, true);
+    assert.equal(stillPaid.status, "confirmed");
     console.log("paid booking notification integration test: all assertions passed");
   } finally {
     await db.delete(bookings).where(eq(bookings.id, booking.id));

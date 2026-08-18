@@ -31,7 +31,9 @@ test("provider mutations require assignment unless the actor is an admin", () =>
 });
 
 test("provider status and stage values are allowlisted", () => {
-  assert.equal(isAllowedProviderStatusTransition("confirmed", "in_progress"), true);
+  assert.equal(isAllowedProviderStatusTransition("confirmed", "in_progress"), false);
+  assert.equal(isAllowedProviderStatusTransition("on_the_way", "arrived"), true);
+  assert.equal(isAllowedProviderStatusTransition("arrived", "in_progress"), true);
   assert.equal(isAllowedProviderStatusTransition("confirmed", "completed"), false);
   assert.equal(isAllowedProviderStage("quality_check"), true);
   assert.equal(isAllowedProviderStage("drop_table"), false);
@@ -72,34 +74,29 @@ test("available jobs expose only the provider offer contract", () => {
   const job = serializeAvailableJob({
     id: 31,
     serviceId: 4,
-    serviceLocation: "Service area",
+    serviceLocationType: "home",
     date: "2026-07-24",
     time: "ASAP",
-    totalPrice: 285,
+    fulfillmentMode: "asap",
+    providerEarnings: 15000,
     serviceDuration: 180,
-    notes: "Gate code on arrival",
-    userId: 10,
-    vehicleId: 44,
-    paymentId: "pi_private",
-    stripeSessionId: "cs_private",
-    paymentStatus: "completed",
   } as any, {
-    customerFirstName: "Taylor",
-    vehicleLabel: "2024 Honda Civic",
-    distance: 2.4,
+    serviceName: "Premium detail",
+    vehicleSummary: "2024 Honda Civic",
+    distanceMiles: 2.4,
   });
 
   assert.deepEqual(Object.keys(job).sort(), [
-    "customerFirstName",
     "date",
-    "distance",
+    "distanceMiles",
+    "estimatedDurationMinutes",
+    "fulfillmentMode",
     "id",
-    "notes",
-    "serviceDuration",
+    "payoutCents",
+    "serviceArea",
     "serviceId",
-    "serviceLocation",
+    "serviceName",
     "time",
-    "totalPrice",
-    "vehicleLabel",
+    "vehicleSummary",
   ]);
 });

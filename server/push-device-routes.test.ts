@@ -30,7 +30,7 @@ function fakeRepository(registerError?: unknown): PushDeviceRepository & { calls
   };
 }
 
-async function testServer(registerError?: unknown) {
+async function testServer(registerError?: unknown, providerEligible?: (userId: number) => Promise<boolean>) {
   const devices = fakeRepository(registerError);
   const sendCalls: unknown[] = [];
   const pushService = { async send(input: unknown) {
@@ -46,7 +46,7 @@ async function testServer(registerError?: unknown) {
     if (actor === "admin") (req as any).user = { id: 99, isAdmin: true, isProvider: false };
     next();
   });
-  registerPushDeviceRoutes(app, devices, pushService);
+  registerPushDeviceRoutes(app, devices, pushService, { providerEligible });
   app.use((_error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     res.status(500).json({ code: "INTERNAL_ERROR" });
   });
@@ -113,6 +113,28 @@ test("a provider can register either provider or customer app context", async ()
       assert.equal(response.status, 200);
     }
     assert.equal(devices.calls.length, 2);
+  } finally {
+    server.close();
+  }
+});
+
+test("provider app registration requires an active Provider identity", async () => {
+  const { server, request, devices } = await testServer(undefined, async () => false);
+  try {
+    const response = await request("/api/push-devices/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "provider" },
+      body: JSON.stringify({ fcmToken: TOKEN, appType: "provider", platform: "ios", environment: "development" }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal(devices.calls.length, 0);
+
+    const customerContext = await request("/api/push-devices/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-test-actor": "provider" },
+      body: JSON.stringify({ fcmToken: `${TOKEN}customer`, appType: "customer", platform: "ios", environment: "development" }),
+    });
+    assert.equal(customerContext.status, 200, "Provider users retain the independent Customer app context");
   } finally {
     server.close();
   }

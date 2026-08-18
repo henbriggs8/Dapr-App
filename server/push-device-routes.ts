@@ -61,7 +61,12 @@ function appTypeForUser(user: Express.User, requestedAppType: PushAppType): Push
   return requestedAppType;
 }
 
-export function registerPushDeviceRoutes(app: Express, devices: PushDeviceRepository, pushService: PushService) {
+export function registerPushDeviceRoutes(
+  app: Express,
+  devices: PushDeviceRepository,
+  pushService: PushService,
+  options: { providerEligible?: (userId: number) => Promise<boolean> } = {},
+) {
   app.post("/api/push-devices/register", resolveUserFromBearer, async (req, res, next) => {
     const user = authenticatedUser(req, res);
     if (!user) return;
@@ -70,6 +75,9 @@ export function registerPushDeviceRoutes(app: Express, devices: PushDeviceReposi
     const appType = appTypeForUser(user, parsed.data.appType);
     if (!appType) return invalidRequest(res);
     try {
+      if (appType === "provider" && options.providerEligible && !(await options.providerEligible(user.id))) {
+        return res.status(403).json({ code: "PROVIDER_NOT_ACTIVE", error: "Provider approval and setup must be active." });
+      }
       await devices.register({ userId: user.id, ...parsed.data, appType });
       res.status(200).json({ success: true });
     } catch (error) {
@@ -86,6 +94,9 @@ export function registerPushDeviceRoutes(app: Express, devices: PushDeviceReposi
     const parsed = legacyRegisterSchema.safeParse(req.body);
     if (!parsed.success) return invalidRequest(res);
     try {
+      if (user.isProvider && options.providerEligible && !(await options.providerEligible(user.id))) {
+        return res.status(403).json({ code: "PROVIDER_NOT_ACTIVE", error: "Provider approval and setup must be active." });
+      }
       await devices.register({
         userId: user.id,
         fcmToken: parsed.data.token,

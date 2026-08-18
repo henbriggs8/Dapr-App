@@ -25,6 +25,8 @@ import { PushService } from "./push-service";
 import { registerPushDeviceRoutes } from "./push-device-routes";
 import { createBookingNotifier, lifecycleEventForStatusChange } from "./booking-notifications";
 import { getBookingNotificationEvents, runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
+import { loadProviderEligibility, setProviderAvailability, touchProviderHeartbeat } from "./provider-eligibility";
+import { passMarketplaceBooking, providerHasPassed } from "./provider-marketplace";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -234,7 +236,9 @@ async function recoverStaleStripeCustomerId(user: Express.User): Promise<string>
 export function registerRoutes(app: Express): Server {
   const pushDevices = new DatabasePushDeviceRepository();
   const pushService = new PushService(pushDevices);
-  registerPushDeviceRoutes(app, pushDevices, pushService);
+  registerPushDeviceRoutes(app, pushDevices, pushService, {
+    providerEligible: async userId => (await loadProviderEligibility(userId, false))?.result.eligible ?? false,
+  });
   const notifyBookingCustomer = createBookingNotifier(pushService);
   void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Initial outbox pass failed:", error));
   setInterval(() => {
@@ -267,6 +271,13 @@ export function registerRoutes(app: Express): Server {
     if (!canMutateAssignedBooking(req.user, booking)) {
       res.status(403).json({ code: "BOOKING_ASSIGNMENT_REQUIRED", error: "Only the assigned provider or an admin can update this booking" });
       return null;
+    }
+    if (!req.user.isAdmin) {
+      const eligibility = await loadProviderEligibility(req.user.id, false);
+      if (!eligibility?.result.eligible) {
+        res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider approval and setup must be active." });
+        return null;
+      }
     }
     return booking;
   };
@@ -398,7 +409,16 @@ export function registerRoutes(app: Express): Server {
     if (!req.user) return res.sendStatus(401);
 
     const { latitude, longitude } = req.body;
+    if (typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ code: "INVALID_COORDINATES", error: "Valid latitude and longitude are required." });
+    }
+    const eligibility = await loadProviderEligibility(req.user.id);
+    if (!eligibility?.result.eligible) {
+      return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider must be active, online, and present." });
+    }
     await storage.updateProviderLocation(req.user.id, latitude, longitude);
+    await touchProviderHeartbeat(req.user.id);
     res.json({ success: true });
   });
 
@@ -409,6 +429,10 @@ export function registerRoutes(app: Express): Server {
       const bookingId = parseInt(req.params.bookingId);
       const { latitude, longitude } = req.body;
       if (isNaN(bookingId)) return res.status(400).json({ error: "Invalid booking ID" });
+      if (typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90
+        || typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        return res.status(400).json({ code: "INVALID_COORDINATES", error: "Valid latitude and longitude are required." });
+      }
       const existing = await loadProviderMutableBooking(req, res, bookingId);
       if (!existing) return;
       if (!["assigned", "confirmed", "on_the_way", "arrived", "in_progress"].includes(existing.status)) {
@@ -416,6 +440,7 @@ export function registerRoutes(app: Express): Server {
       }
       
       const booking = await storage.updateProviderLocationForBooking(bookingId, latitude, longitude);
+      await touchProviderHeartbeat(req.user.id);
       
       // Broadcast location update via WebSocket
       const message = JSON.stringify({
@@ -443,19 +468,41 @@ export function registerRoutes(app: Express): Server {
     if (status !== "online" && status !== "offline") {
       return res.status(400).json({ code: "INVALID_PROVIDER_STATUS", error: "Provider status must be online or offline" });
     }
-    const currentProvider = await storage.getUser(req.user.id);
-    if (!currentProvider || currentProvider.currentStatus === "inactive") {
-      return res.status(403).json({ code: "PROVIDER_INACTIVE", error: "An administrator must reactivate this provider account." });
+    const eligibility = await loadProviderEligibility(req.user.id, false);
+    if (!eligibility?.result.eligible) {
+      return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider approval and setup must be active." });
     }
-    const user = await storage.updateProviderStatus(req.user.id, status);
+    const user = await setProviderAvailability(req.user.id, status);
     res.json(user);
+  });
+
+  app.patch("/api/provider/heartbeat", resolveUserFromBearer, isProvider, async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const eligibility = await loadProviderEligibility(req.user.id, false);
+    if (!eligibility?.result.eligible) {
+      return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider approval and setup must be active." });
+    }
+    if (eligibility.user.currentStatus !== "online") {
+      return res.status(409).json({ code: "PROVIDER_OFFLINE", error: "Go online before sending a presence heartbeat." });
+    }
+    const presence = await touchProviderHeartbeat(req.user.id);
+    res.json({ success: true, lastHeartbeatAt: presence?.lastHeartbeatAt ?? null });
   });
 
   app.patch("/api/provider/location", isProvider, async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const { latitude, longitude } = req.body;
+    if (typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ code: "INVALID_COORDINATES", error: "Valid latitude and longitude are required." });
+    }
+    const eligibility = await loadProviderEligibility(req.user.id);
+    if (!eligibility?.result.eligible) {
+      return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider must be active, online, and present." });
+    }
     await storage.updateProviderLocation(req.user.id, latitude, longitude);
+    await touchProviderHeartbeat(req.user.id);
     
     // Return the updated user object
     const updatedUser = await storage.getUser(req.user.id);
@@ -1414,7 +1461,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid booking ID or provider ID" });
       }
       
-      const updatedBooking = await storage.assignBookingToProvider(bookingId, providerId);
+      const updatedBooking = await storage.assignBookingToProvider(bookingId, providerId, { notifyProvider: true });
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error reassigning booking:", error);
@@ -1579,8 +1626,11 @@ export function registerRoutes(app: Express): Server {
     if (!req.user || !req.user.isProvider) return res.sendStatus(401);
 
     try {
-      const provider = await storage.getUser(req.user.id);
-      if (!provider) return res.sendStatus(401);
+      const eligibility = await loadProviderEligibility(req.user.id);
+      if (!eligibility?.result.eligible) {
+        return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider is not eligible for marketplace jobs." });
+      }
+      const provider = eligibility.user;
 
       const unassignedBookings = await storage.getUnassignedBookings();
 
@@ -1588,17 +1638,16 @@ export function registerRoutes(app: Express): Server {
 
       // Filter out any jobs this provider has already passed on
       const unseenBookings = unassignedBookings.filter((b) => {
-        const prev = Array.isArray(b.previousProviders) ? (b.previousProviders as number[]) : [];
-        return !prev.includes(req.user!.id);
+        return !providerHasPassed(b.previousProviders, req.user!.id);
       });
 
-      // Batch-load unique customers and vehicles for the visible bookings
-      const uniqueUserIds = [...new Set(unseenBookings.map(b => b.userId))];
-      const uniqueVehicleIds = [...new Set(unseenBookings.map(b => b.vehicleId).filter(Boolean))] as number[];
+      // Batch-load only safe service and vehicle summaries for visible jobs.
+      const uniqueVehicleIds = Array.from(new Set(unseenBookings.map(b => b.vehicleId).filter(Boolean))) as number[];
+      const uniqueServiceIds = Array.from(new Set(unseenBookings.map(b => b.serviceId)));
 
-      const [customerMap, vehicleMap] = await Promise.all([
-        Promise.all(uniqueUserIds.map(id => storage.getUser(id))).then(users =>
-          Object.fromEntries(users.filter(Boolean).map(u => [u!.id, u!]))
+      const [serviceMap, vehicleMap] = await Promise.all([
+        Promise.all(uniqueServiceIds.map(id => storage.getServiceById(id))).then(items =>
+          Object.fromEntries(items.filter(Boolean).map(item => [item!.id, item!]))
         ),
         Promise.all(uniqueVehicleIds.map(id => storage.getVehicleById(id))).then(vs =>
           Object.fromEntries(vs.filter(Boolean).map(v => [v!.id, v!]))
@@ -1609,15 +1658,12 @@ export function registerRoutes(app: Express): Server {
       for (const booking of unseenBookings) {
         const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
 
-        const customer = customerMap[booking.userId];
-        const firstName = customer?.name ? customer.name.split(' ')[0] : null;
-
         const vehicle = booking.vehicleId ? vehicleMap[booking.vehicleId] : null;
-        const vehicleLabel = vehicle
-          ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.color ? ` · ${vehicle.color}` : ''}`
+        const vehicleSummary = vehicle
+          ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
           : null;
 
-        const details = { customerFirstName: firstName, vehicleLabel, distance: null as number | null };
+        const details = { serviceName: serviceMap[booking.serviceId]?.name ?? null, vehicleSummary, distanceMiles: null as number | null };
 
         if (providerHasLocation && bookingHasLocation) {
           const distance = calculateDistance(
@@ -1626,7 +1672,10 @@ export function registerRoutes(app: Express): Server {
             booking.serviceLatitude!,
             booking.serviceLongitude!
           );
-          details.distance = Math.round(distance * 10) / 10;
+          details.distanceMiles = Math.round(distance * 10) / 10;
+          if (distance > 15) continue;
+        } else if (bookingHasLocation) {
+          continue;
         }
         jobs.push(serializeAvailableJob(booking, details));
       }
@@ -1643,6 +1692,10 @@ export function registerRoutes(app: Express): Server {
     if (!req.user || !req.user.isProvider) return res.sendStatus(401);
 
     try {
+      const eligibility = await loadProviderEligibility(req.user.id);
+      if (!eligibility?.result.eligible) {
+        return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider is not eligible to accept marketplace jobs." });
+      }
       const bookingId = parseInt(req.params.bookingId);
       if (isNaN(bookingId)) {
         return res.status(400).json({ error: "Invalid booking ID" });
@@ -1686,18 +1739,22 @@ export function registerRoutes(app: Express): Server {
     if (!req.user || !req.user.isProvider) return res.sendStatus(401);
 
     try {
+      const eligibility = await loadProviderEligibility(req.user.id);
+      if (!eligibility?.result.eligible) {
+        return res.status(403).json({ code: eligibility?.result.code ?? "PROVIDER_REQUIRED", error: "Provider is not eligible to pass marketplace jobs." });
+      }
       const bookingId = parseInt(req.params.bookingId);
       if (isNaN(bookingId)) {
         return res.status(400).json({ error: "Invalid booking ID" });
       }
 
       // Add this provider to the rejected list for this booking
-      const updatedBooking = await storage.rejectBooking(bookingId, req.user.id);
+      await passMarketplaceBooking(bookingId, req.user.id);
       
       res.json({ success: true, message: "Job rejected" });
     } catch (error) {
       console.error("Error rejecting job:", error);
-      res.status(500).json({ error: "Failed to reject job" });
+      res.status(409).json({ code: "JOB_UNAVAILABLE", error: "Job is no longer available" });
     }
   });
 
@@ -1847,7 +1904,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const existing = await loadProviderMutableBooking(req, res, id);
       if (!existing) return;
-      if (!["assigned", "confirmed", "arrived"].includes(existing.status)) {
+      if (existing.status !== "arrived" && !(existing.status === "in_progress" && existing.startTime)) {
         return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Service cannot be started in the current booking state" });
       }
       const booking = await storage.startServiceTimer(id);
@@ -2488,7 +2545,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const existing = await loadProviderMutableBooking(req, res, id);
       if (!existing) return;
-      if (!["assigned", "confirmed", "on_the_way"].includes(existing.status)) {
+      if (!["assigned", "confirmed", "on_the_way", "arrived"].includes(existing.status)) {
         return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Arrival cannot be recorded in the current booking state" });
       }
       const { baseDurationMinutes = 60 } = req.body;
@@ -2759,7 +2816,7 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
-      const booking = await storage.assignBookingToProvider(bookingId, providerId);
+      const booking = await storage.assignBookingToProvider(bookingId, providerId, { notifyProvider: true });
       
       // Notify the provider
       const providerClients = clients.get(providerId) || [];

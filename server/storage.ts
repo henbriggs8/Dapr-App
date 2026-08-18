@@ -1,4 +1,4 @@
-import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, providerApplications, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress, ProviderApplication, InsertProviderApplication } from "@shared/schema";
+import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, providerApplications, notificationEvents, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress, ProviderApplication, InsertProviderApplication } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, gt, lt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -110,7 +110,7 @@ export interface IStorage {
   
   // Booking assignment system methods
   getNearbyProviders(latitude: number, longitude: number, radius: number): Promise<User[]>;
-  assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking>;
+  assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean; notifyProvider?: boolean }): Promise<Booking>;
   acceptBooking(bookingId: number, providerId: number): Promise<Booking>;
   rejectBooking(bookingId: number, providerId: number): Promise<Booking>;
   getPassedJobs(): Promise<Booking[]>;
@@ -447,6 +447,8 @@ export class MemStorage implements IStorage {
       ratingCount: 0,
       currentStatus: insertUser.currentStatus || 'offline',
       lastLocationUpdate: new Date().toISOString(),
+      lastOnlineAt: null,
+      lastHeartbeatAt: null,
       latitude: insertUser.latitude || null,
       longitude: insertUser.longitude || null,
       description: insertUser.description || null,
@@ -623,7 +625,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.bookings.values()).filter(
       (booking) => 
         booking.providerId === providerId && 
-        ['confirmed', 'in_progress', 'assigned'].includes(booking.status)
+        ['assigned', 'confirmed', 'on_the_way', 'arrived', 'in_progress'].includes(booking.status)
     );
   }
 
@@ -897,9 +899,12 @@ export class MemStorage implements IStorage {
     
     // Set the service start exactly once; retries keep the original time.
     const startTime = booking.startTime || new Date().toISOString();
+    const estimatedCompletionTime = booking.estimatedCompletionTime
+      || new Date(new Date(startTime).getTime() + (booking.serviceDuration || 60) * 60 * 1000).toISOString();
     const updatedBooking = {
       ...booking,
       startTime,
+      estimatedCompletionTime,
       status: 'in_progress',
       currentStage: 'in_progress'
     };
@@ -1227,7 +1232,7 @@ export class MemStorage implements IStorage {
     return deg * (Math.PI/180);
   }
   
-  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking> {
+  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean; notifyProvider?: boolean }): Promise<Booking> {
     const booking = await this.getBookingById(bookingId);
     if (!booking) {
       throw new Error('Booking not found');
@@ -1846,7 +1851,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(bookings.providerId, providerId),
-          inArray(bookings.status, ['assigned', 'confirmed', 'in_progress'])
+          inArray(bookings.status, ['assigned', 'confirmed', 'on_the_way', 'arrived', 'in_progress'])
         )
       );
   }
@@ -1883,12 +1888,27 @@ export class DatabaseStorage implements IStorage {
       updates.arrivalTime = sql`COALESCE(${bookings.arrivalTime}, ${new Date().toISOString()})`;
     }
 
-    const [booking] = await db
-      .update(bookings)
-      .set(updates)
-      .where(eq(bookings.id, id))
-      .returning();
-    return booking;
+    return db.transaction(async tx => {
+      const [before] = await tx.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+      if (!before) throw new Error("Booking not found");
+      const [booking] = await tx.update(bookings).set(updates).where(eq(bookings.id, id)).returning();
+      if (status === "cancelled" && before.status !== "cancelled" && before.providerId) {
+        await tx.insert(notificationEvents).values({
+          eventType: "provider.job_cancelled",
+          bookingId: booking.id,
+          userId: booking.userId,
+          providerId: before.providerId,
+          recipient: `provider:${before.providerId}`,
+          channel: "push",
+          provider: "firebase",
+          notificationType: "provider_job_cancelled",
+          status: "pending",
+          idempotencyKey: `booking:${booking.id}:provider:${before.providerId}:cancelled`,
+          metadata: { event: "provider.job_cancelled", bookingId: String(booking.id) },
+        }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+      }
+      return booking;
+    });
   }
 
   async getPricingConfig(): Promise<PricingConfig> {
@@ -2110,9 +2130,10 @@ export class DatabaseStorage implements IStorage {
     return deg * (Math.PI / 180);
   }
 
-  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean }): Promise<Booking> {
-    // Atomic update: only succeeds if the booking is still pending and unassigned
-    const [booking] = await db
+  async assignBookingToProvider(bookingId: number, providerId: number, options?: { acceptedByProvider?: boolean; notifyProvider?: boolean }): Promise<Booking> {
+    return db.transaction(async tx => {
+    // Atomic update: only succeeds if the booking is still paid, confirmed, and unassigned.
+    const [booking] = await tx
       .update(bookings)
       .set({
         providerId,
@@ -2141,7 +2162,23 @@ export class DatabaseStorage implements IStorage {
     if (!booking) {
       throw new Error('Job is no longer available');
     }
+    if (options?.notifyProvider) {
+      await tx.insert(notificationEvents).values({
+        eventType: "provider.job_assigned",
+        bookingId: booking.id,
+        userId: booking.userId,
+        providerId,
+        recipient: `provider:${providerId}`,
+        channel: "push",
+        provider: "firebase",
+        notificationType: "provider_job_assigned",
+        status: "pending",
+        idempotencyKey: `booking:${booking.id}:provider:${providerId}:assigned`,
+        metadata: { event: "provider.job_assigned", bookingId: String(booking.id) },
+      }).onConflictDoNothing({ target: notificationEvents.idempotencyKey });
+    }
     return booking;
+    });
   }
 
   async acceptBooking(bookingId: number, providerId: number): Promise<Booking> {
@@ -2396,16 +2433,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async startServiceTimer(bookingId: number): Promise<Booking> {
+    const existing = await this.getBookingById(bookingId);
+    if (!existing) throw new Error("Booking not found");
+    const startTime = existing.startTime || new Date().toISOString();
+    const estimatedCompletionTime = existing.estimatedCompletionTime
+      || new Date(new Date(startTime).getTime() + (existing.serviceDuration || 60) * 60 * 1000).toISOString();
     const [booking] = await db
       .update(bookings)
       .set({
         status: 'in_progress',
         currentStage: 'in_progress',
         // Set the service start exactly once; retries keep the original time.
-        startTime: sql`COALESCE(${bookings.startTime}, ${new Date().toISOString()})`
+        startTime: sql`COALESCE(${bookings.startTime}, ${startTime})`,
+        estimatedCompletionTime: sql`COALESCE(${bookings.estimatedCompletionTime}, ${estimatedCompletionTime})`,
       })
-      .where(eq(bookings.id, bookingId))
+      .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ["arrived", "in_progress"])))
       .returning();
+    if (!booking) throw new Error("Booking is not ready to start");
     return booking;
   }
 
@@ -2740,20 +2784,19 @@ export class DatabaseStorage implements IStorage {
 
   async markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking> {
     const arrivalTime = new Date().toISOString();
-    const estimatedCompletionTime = new Date(Date.now() + baseDurationMinutes * 60 * 1000).toISOString();
     const [booking] = await db
       .update(bookings)
       .set({
-        arrivalTime,
-        estimatedCompletionTime,
+        arrivalTime: sql`COALESCE(${bookings.arrivalTime}, ${arrivalTime})`,
+        estimatedCompletionTime: null,
         extraTimeMinutes: 0,
         timeAdjustments: [],
-        status: 'in_progress',
-        startTime: arrivalTime,
-        currentStage: 'setting_up',
+        status: 'arrived',
+        currentStage: 'arrived',
       })
-      .where(eq(bookings.id, bookingId))
+      .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ["assigned", "confirmed", "on_the_way", "arrived"])))
       .returning();
+    if (!booking) throw new Error("Booking is not ready for arrival");
     return booking;
   }
 
@@ -2769,14 +2812,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking> {
     const [existing] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-    if (!existing || !existing.arrivalTime) throw new Error('Booking not found or not yet arrived');
+    if (!existing || !existing.startTime) throw new Error('Booking not found or service not yet started');
 
     const extraTimeMinutes = adjustments
       .filter((a) => a.selected)
       .reduce((sum: number, a: any) => sum + a.minutes, 0);
 
     const estimatedCompletionTime = new Date(
-      new Date(existing.arrivalTime).getTime() +
+      new Date(existing.startTime).getTime() +
       ((existing.serviceDuration || 60) + extraTimeMinutes) * 60 * 1000
     ).toISOString();
 

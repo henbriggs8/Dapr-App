@@ -40,14 +40,16 @@ const [row] = await db
 
 try {
   // 1. Marking arrived sets status, stage, and arrivalTime.
-  const arrived = await storage.updateBookingStatus(row.id, "arrived");
+  const arrived = await storage.markArrived(row.id, 60);
   assert.equal(arrived.status, "arrived");
   assert.equal(arrived.currentStage, "arrived");
   assert.ok(arrived.arrivalTime, "arrivalTime must be populated on arrival");
+  assert.equal(arrived.startTime, null, "arrival must not start billable service time");
+  assert.equal(arrived.estimatedCompletionTime, null, "completion estimate begins when service starts");
 
   // 2. An idempotent arrived retry preserves the original arrivalTime.
   await new Promise((r) => setTimeout(r, 20));
-  const arrivedRetry = await storage.updateBookingStatus(row.id, "arrived");
+  const arrivedRetry = await storage.markArrived(row.id, 60);
   assert.equal(arrivedRetry.arrivalTime, arrived.arrivalTime, "retry must not reset arrivalTime");
 
   // 3. Starting service updates status, stage, and startTime once.
@@ -55,6 +57,7 @@ try {
   assert.equal(started.status, "in_progress");
   assert.equal(started.currentStage, "in_progress");
   assert.ok(started.startTime, "startTime must be populated on start");
+  assert.ok(started.estimatedCompletionTime, "completion estimate begins when service starts");
   assert.equal(started.arrivalTime, arrived.arrivalTime, "start must not disturb arrivalTime");
 
   await new Promise((r) => setTimeout(r, 20));

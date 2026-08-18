@@ -491,7 +491,10 @@ app.use((req, res, next) => {
 (async () => {
   // Add health check endpoint first
   app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
+    res.status(200).json({
+      status: 'ok',
+      ...(process.env.DAPR_BUILD_SHA ? { build: process.env.DAPR_BUILD_SHA } : {}),
+    });
   });
 
   // Add a root endpoint that Replit can detect

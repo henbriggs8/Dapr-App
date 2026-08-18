@@ -10,7 +10,7 @@ type PublicProvider = Pick<
 
 type AvailableJob = Pick<
   Booking,
-  "id" | "serviceId" | "serviceLocation" | "date" | "time" | "totalPrice" | "serviceDuration" | "notes"
+  "id" | "serviceId" | "serviceLocationType" | "date" | "time" | "fulfillmentMode" | "providerEarnings" | "serviceDuration"
 >;
 
 export function serializePublicProvider(provider: PublicProvider) {
@@ -27,20 +27,20 @@ export function serializePublicProvider(provider: PublicProvider) {
 
 export function serializeAvailableJob(
   booking: AvailableJob,
-  details: { customerFirstName: string | null; vehicleLabel: string | null; distance: number | null },
+  details: { serviceName: string | null; vehicleSummary: string | null; distanceMiles: number | null },
 ) {
   return {
     id: booking.id,
     serviceId: booking.serviceId,
-    serviceLocation: booking.serviceLocation,
+    serviceName: details.serviceName,
+    serviceArea: booking.serviceLocationType,
     date: booking.date,
     time: booking.time,
-    totalPrice: booking.totalPrice,
-    serviceDuration: booking.serviceDuration,
-    notes: booking.notes,
-    customerFirstName: details.customerFirstName,
-    vehicleLabel: details.vehicleLabel,
-    distance: details.distance,
+    fulfillmentMode: booking.fulfillmentMode,
+    estimatedDurationMinutes: booking.serviceDuration,
+    payoutCents: booking.providerEarnings,
+    vehicleSummary: details.vehicleSummary,
+    distanceMiles: details.distanceMiles,
   };
 }
 
@@ -54,8 +54,8 @@ export function canMutateAssignedBooking(actor: BookingActor, booking: BookingAc
 
 const PROVIDER_STATUS_TRANSITIONS: Record<string, readonly string[]> = {
   assigned: ["confirmed", "on_the_way"],
-  confirmed: ["on_the_way", "in_progress"],
-  on_the_way: ["arrived", "in_progress"],
+  confirmed: ["on_the_way"],
+  on_the_way: ["arrived"],
   arrived: ["in_progress"],
   in_progress: ["completed"],
 };
