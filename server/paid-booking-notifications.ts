@@ -17,6 +17,15 @@ const SUPPORTED_NOTIFICATION_TYPES = [
   "provider_job_assigned",
   "provider_job_cancelled",
 ] as const;
+/** Provider delivery types gated by PROVIDER_NOTIFICATION_DISPATCH_ENABLED.
+ * They cover provider.job_available (fanout + per-provider), provider.job_assigned,
+ * and provider.job_cancelled. paid_booking_admin is intentionally excluded. */
+const PROVIDER_NOTIFICATION_TYPES = [
+  "provider_job_available_fanout",
+  "provider_job_available",
+  "provider_job_assigned",
+  "provider_job_cancelled",
+] as const;
 
 function pushEnvironment(): PushEnvironment {
   const configured = process.env.PUSH_NOTIFICATION_ENVIRONMENT;
@@ -40,6 +49,24 @@ export function isPaidBookingNotificationDispatchEnabled(): boolean {
   return !["false", "0", "off", "no"].includes(configured ?? "");
 }
 
+/** Provider push delivery is a controlled rollout: it stays OFF unless an
+ * operator explicitly enables it. When off, provider outbox rows are never
+ * claimed — they remain pending/retryable and are not marked sent or failed.
+ * The paid-booking admin email is governed only by
+ * BOOKING_NOTIFICATION_DISPATCH_ENABLED and is unaffected by this switch. */
+export function isProviderNotificationDispatchEnabled(): boolean {
+  const configured = process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED?.trim().toLowerCase();
+  return ["true", "1", "on", "yes"].includes(configured ?? "");
+}
+
+function claimableNotificationTypes(): string[] {
+  return isProviderNotificationDispatchEnabled()
+    ? [...SUPPORTED_NOTIFICATION_TYPES]
+    : SUPPORTED_NOTIFICATION_TYPES.filter(
+        type => !(PROVIDER_NOTIFICATION_TYPES as readonly string[]).includes(type),
+      );
+}
+
 function safeErrorSummary(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message.replace(/[\r\n]+/g, " ").slice(0, FAILURE_SUMMARY_MAX_LENGTH);
@@ -50,11 +77,12 @@ function safeErrorSummary(error: unknown): string {
 async function claimNextDelivery() {
   const now = new Date();
   const staleBefore = new Date(now.getTime() - STALE_PROCESSING_MS);
+  const claimableTypes = claimableNotificationTypes();
   const [candidate] = await db
     .select({ id: notificationEvents.id })
     .from(notificationEvents)
     .where(and(
-      inArray(notificationEvents.notificationType, [...SUPPORTED_NOTIFICATION_TYPES]),
+      inArray(notificationEvents.notificationType, claimableTypes),
       or(
         and(eq(notificationEvents.status, "pending"), or(lt(notificationEvents.nextAttemptAt, now), sql`${notificationEvents.nextAttemptAt} IS NULL`)),
         and(eq(notificationEvents.status, "failed"), or(lt(notificationEvents.nextAttemptAt, now), sql`${notificationEvents.nextAttemptAt} IS NULL`)),
@@ -206,6 +234,20 @@ export async function dispatchPaidBookingNotifications(
   for (let i = 0; i < limit; i += 1) {
     const event = await claimNextDelivery();
     if (!event) return;
+    // Recheck the provider rollout gate after the claim: the flag may have
+    // been disabled between selection and delivery. Release the row untouched
+    // (pending, attempt not counted) instead of attempting provider delivery.
+    if (
+      (PROVIDER_NOTIFICATION_TYPES as readonly string[]).includes(event.notificationType)
+      && !isProviderNotificationDispatchEnabled()
+    ) {
+      await db.update(notificationEvents).set({
+        status: "pending",
+        attemptCount: sql`greatest(${notificationEvents.attemptCount} - 1, 0)`,
+        claimToken: null,
+      }).where(and(eq(notificationEvents.id, event.id), eq(notificationEvents.status, "processing"), eq(notificationEvents.claimToken, event.claimToken)));
+      continue;
+    }
     try {
       const { messageId } = await deliver(event);
       await db.update(notificationEvents).set({

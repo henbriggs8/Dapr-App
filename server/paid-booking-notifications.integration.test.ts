@@ -57,22 +57,96 @@ async function run() {
     if (originalDispatchGate === undefined) delete process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED;
     else process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED = originalDispatchGate;
 
-    // Two workers race to drain the same two-row outbox. The injected delivery
-    // adapter prevents any email or push and verifies each lease is exclusive.
+    // Provider delivery is a controlled rollout: with the provider switch at
+    // its default (unset = OFF), only the admin email may be claimed. Two
+    // workers race to drain the outbox; the injected delivery adapter
+    // prevents any email or push and verifies each lease is exclusive.
+    const originalProviderGate = process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED;
+    delete process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED;
+    // The admin email gate is explicitly enabled so this section tests the
+    // provider switch independently of the process environment.
+    process.env.BOOKING_NOTIFICATION_DISPATCH_ENABLED = "true";
     let resendCalls = 0;
-    const fakeResend = async () => {
+    const deliveredTypes: string[] = [];
+    const fakeResend = async (event: { notificationType: string }) => {
       resendCalls += 1;
+      deliveredTypes.push(event.notificationType);
       return { messageId: "test-resend-message-id" };
     };
     await Promise.all([
       runPaidBookingNotificationDispatch(fakeResend),
       runPaidBookingNotificationDispatch(fakeResend),
     ]);
-    assert.equal(resendCalls, 2, "each of the two outbox events is delivered once across racing workers");
+    assert.equal(resendCalls, 1, "provider switch off: only the admin email is delivered across racing workers");
+    assert.deepEqual(deliveredTypes, ["paid_booking_admin"]);
     const finalRows = await db.select().from(notificationEvents).where(eq(notificationEvents.idempotencyKey, adminRow.idempotencyKey));
     assert.equal(finalRows.length, 1, "deterministic key must still map to one notification record");
     assert.equal(finalRows[0].status, "sent");
     assert.equal(finalRows[0].providerMessageId, "test-resend-message-id");
+    // The provider fanout row is untouched while provider delivery is off:
+    // still pending, never attempted, never marked sent or failed.
+    const [fanoutWhileOff] = await db.select().from(notificationEvents)
+      .where(eq(notificationEvents.idempotencyKey, `booking.payment_completed:${booking.id}:provider_job_available`));
+    assert.equal(fanoutWhileOff.status, "pending");
+    assert.equal(fanoutWhileOff.attemptCount, 0, "provider rows must not be claimed while the switch is off");
+
+    // Explicitly disabling the provider switch behaves the same as unset.
+    process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED = "false";
+    let disabledProviderCalls = 0;
+    await runPaidBookingNotificationDispatch(async () => {
+      disabledProviderCalls += 1;
+      return { messageId: "must-not-send" };
+    });
+    assert.equal(disabledProviderCalls, 0, "no deliverable rows remain while provider delivery is off");
+
+    // Turning the switch off mid-run stops provider delivery immediately:
+    // the gate is re-evaluated for every claim, so a provider row is left
+    // pending even when the same dispatch pass started with the switch on.
+    process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED = "true";
+    const [midRunEvent] = await db.insert(notificationEvents).values({
+      eventType: "provider.job_assigned",
+      bookingId: booking.id,
+      userId: user.id,
+      providerId: user.id,
+      recipient: `provider:${user.id}`,
+      channel: "push",
+      provider: "firebase",
+      notificationType: "provider_job_assigned",
+      status: "pending",
+      createdAt: new Date(1),
+      idempotencyKey: `provider.job_assigned:${booking.id}:midrun-test`,
+      metadata: {},
+    }).returning();
+    const midRunTypes: string[] = [];
+    await dispatchPaidBookingNotifications(10, async (event: { notificationType: string }) => {
+      midRunTypes.push(event.notificationType);
+      // Simulate an operator flipping the switch off while work is in flight.
+      process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED = "false";
+      return { messageId: "midrun-test-id" };
+    });
+    assert.equal(midRunTypes.length, 1, "only the first claim happens before the flip stops provider work");
+    const [midRunRow] = await db.select().from(notificationEvents).where(eq(notificationEvents.id, midRunEvent.id));
+    const [fanoutMidRun] = await db.select().from(notificationEvents)
+      .where(eq(notificationEvents.idempotencyKey, `booking.payment_completed:${booking.id}:provider_job_available`));
+    // Exactly one of the two provider rows was delivered before the flip; the
+    // other must remain pending with no recorded attempt.
+    const untouched = midRunRow.status === "sent" ? fanoutMidRun : midRunRow;
+    assert.equal(untouched.status, "pending");
+    assert.equal(untouched.attemptCount, 0, "the undelivered provider row is never claimed after the flip");
+
+    // Enabling the provider switch releases only the provider rows.
+    process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED = "true";
+    const enabledTypes: string[] = [];
+    await runPaidBookingNotificationDispatch(async (event: { notificationType: string }) => {
+      enabledTypes.push(event.notificationType);
+      return { messageId: "test-provider-fanout-id" };
+    });
+    assert.deepEqual(enabledTypes, ["provider_job_available_fanout"], "enabling delivers only the pending provider work");
+    const [fanoutAfterOn] = await db.select().from(notificationEvents)
+      .where(eq(notificationEvents.idempotencyKey, `booking.payment_completed:${booking.id}:provider_job_available`));
+    assert.equal(fanoutAfterOn.status, "sent");
+    if (originalProviderGate === undefined) delete process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED;
+    else process.env.PROVIDER_NOTIFICATION_DISPATCH_ENABLED = originalProviderGate;
     const [reloaded] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     assert.equal(reloaded.isPaid, true);
     assert.equal(reloaded.status, "confirmed");
