@@ -2,8 +2,9 @@ import express from "express";
 import type { Express } from "express";
 import { Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from 'ws';
-import { safeUser, setupAuth } from "./auth";
+import { attachAuthenticatedWebSocketServer } from "./authenticated-websocket";
+import { setupAuth } from "./auth";
+import { registerClerkAccountRoutes } from "./clerk-account-routes";
 import { ReferralError, storage } from "./storage";
 import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, insertTimeSlotSchema, insertVehicleSchema, insertContactMessageSchema, requiresGuardedVehicleVerificationApproval } from "@shared/schema";
 import type { User, Vehicle } from "@shared/schema";
@@ -26,7 +27,9 @@ import { registerPushDeviceRoutes } from "./push-device-routes";
 import { createBookingNotifier, lifecycleEventForStatusChange } from "./booking-notifications";
 import { getBookingNotificationEvents, runPaidBookingNotificationDispatch } from "./paid-booking-notifications";
 import { loadProviderEligibility, setProviderAvailability, touchProviderHeartbeat } from "./provider-eligibility";
+import { approveLegacyProvider, LegacyProviderApprovalError } from "./legacy-provider-approval";
 import { passMarketplaceBooking, providerHasPassed } from "./provider-marketplace";
+import { BookingLifecycleError, canUseAdminLifecycle, nextAdminLifecycleAction, transitionBookingLifecycle, type BookingLifecycleAction } from "./booking-lifecycle";
 
 function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.isAdmin) {
@@ -244,18 +247,72 @@ export function registerRoutes(app: Express): Server {
   setInterval(() => {
     void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Outbox retry pass failed:", error));
   }, 60_000).unref();
-  setupAuth(app);
+  const sessionMiddleware = setupAuth(app, storage);
+  registerClerkAccountRoutes(app, {
+    verifyToken: token => clerkClient.verifyToken(token),
+    getClerkUser: id => clerkClient.users.getUser(id),
+    getUserByUsername: username => storage.getUserByUsername(username),
+    createUser: input => storage.createUser(input),
+  });
 
-  const clients = new Map<number, WebSocket[]>();
+  const httpServer = createServer(app);
+  const realtime = attachAuthenticatedWebSocketServer(httpServer, {
+    sessionMiddleware,
+    readSession: id => new Promise((resolve, reject) => {
+      storage.sessionStore.get(id, (error, session) => error ? reject(error) : resolve(session));
+    }),
+    getUser: id => storage.getUser(id),
+    getUserByUsername: username => storage.getUserByUsername(username),
+    verifyToken: token => clerkClient.verifyToken(token),
+  });
 
   const sendBookingEvent = (booking: { userId: number; providerId?: number | null }, payload: unknown) => {
     const participantIds = new Set([booking.userId, booking.providerId].filter((id): id is number => typeof id === "number"));
-    const message = JSON.stringify(payload);
-    participantIds.forEach(userId => {
-      (clients.get(userId) || []).forEach(client => {
-        if (client.readyState === WebSocket.OPEN) client.send(message);
+    void realtime.sendToUsers(Array.from(participantIds), payload);
+  };
+
+  const lifecycleDependencies = {
+    markOnTheWay: (bookingId: number) => storage.markOnTheWay(bookingId),
+    markArrived: (bookingId: number, baseDurationMinutes: number) => storage.markArrived(bookingId, baseDurationMinutes),
+    startServiceTimer: (bookingId: number) => storage.startServiceTimer(bookingId),
+    completeServiceTimer: (bookingId: number) => storage.completeServiceTimer(bookingId),
+    notifyCustomer: async (event: any, booking: any) => {
+      await notifyBookingCustomer(event, booking);
+    },
+    publishUpdate: (action: BookingLifecycleAction, booking: any) => {
+      if (action === "arrived") {
+        sendBookingEvent(booking, {
+          type: "provider_arrived",
+          bookingId: booking.id,
+          arrivalTime: booking.arrivalTime,
+          estimatedCompletionTime: booking.estimatedCompletionTime,
+          extraTimeMinutes: booking.extraTimeMinutes,
+          timeAdjustments: booking.timeAdjustments,
+        });
+        return;
+      }
+      sendBookingEvent(booking, {
+        type: "booking_update",
+        booking: {
+          id: booking.id,
+          status: booking.status,
+          stage: booking.currentStage || null,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          serviceDuration: booking.serviceDuration,
+        },
       });
-    });
+    },
+    afterCompletion: async (booking: any) => {
+      try {
+        await storage.awardReferralForCompletedBooking(booking.id);
+      } catch (error) {
+        console.error("Referral credit error:", error);
+      }
+    },
+    audit: (entry: unknown) => {
+      console.info("[booking-lifecycle]", JSON.stringify(entry));
+    },
   };
 
   const loadProviderMutableBooking = async (req: Request, res: Response, bookingId: number) => {
@@ -910,19 +967,8 @@ export function registerRoutes(app: Express): Server {
           
           if (!newBooking.isPaid || newBooking.status !== 'confirmed') return res.status(201).json(newBooking);
           // Notify nearby providers only after payment verification and confirmation.
-          const jobNotification = {
-            type: 'new_job_available',
-            booking: newBooking,
-            providersNotified: nearbyProviders.length
-          };
-          
-          // Send to all nearby providers
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify(jobNotification));
-            }
-          });
-          
+          void realtime.notifyMarketplace("new_job_available", nearbyProviders.map(provider => provider.id));
+
           console.log(`Notified ${nearbyProviders.length} nearby providers about new booking ${newBooking.id}`);
         } catch (error) {
           console.error("Error finding nearby providers:", error);
@@ -1286,7 +1332,7 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/admin/bookings", isAdmin, async (req, res) => {
     try {
-      const bookings = await storage.getUnassignedBookings();
+      const bookings = await storage.getAdminDispatchBookings();
       const allBookings = [];
       
       // Get all bookings and enrich with user/provider names
@@ -1307,6 +1353,55 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error fetching admin bookings:", error);
       res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  app.post("/api/admin/bookings/:id/lifecycle", isAdmin, async (req, res) => {
+    if (!canUseAdminLifecycle(req.user)) {
+      return res.status(403).json({ code: "ADMIN_REQUIRED", error: "Admin access required" });
+    }
+
+    const bookingId = Number(req.params.id);
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return res.status(400).json({ code: "INVALID_BOOKING_ID", error: "Invalid booking ID" });
+    }
+
+    const action = req.body?.action as BookingLifecycleAction;
+    if (!["on_the_way", "arrived", "start", "complete"].includes(action)) {
+      return res.status(400).json({ code: "INVALID_LIFECYCLE_ACTION", error: "Unsupported lifecycle action" });
+    }
+
+    try {
+      const booking = await storage.getBookingById(bookingId);
+      if (!booking) {
+        return res.status(404).json({ code: "BOOKING_NOT_FOUND", error: "Booking not found" });
+      }
+
+      const nextAction = nextAdminLifecycleAction(booking.status);
+      const retryTarget =
+        (action === "on_the_way" && booking.status === "on_the_way") ||
+        (action === "arrived" && booking.status === "arrived") ||
+        (action === "start" && booking.status === "in_progress") ||
+        (action === "complete" && booking.status === "completed");
+      if (nextAction !== action && !retryTarget) {
+        return res.status(409).json({
+          code: "INVALID_LIFECYCLE_TRANSITION",
+          error: "Only the next valid lifecycle action can be applied.",
+        });
+      }
+
+      const updated = await transitionBookingLifecycle(lifecycleDependencies, {
+        booking,
+        action,
+        actor: { type: "admin", id: req.user!.id },
+      });
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof BookingLifecycleError) {
+        return res.status(error.status).json({ code: error.code, error: error.message });
+      }
+      console.error("Admin lifecycle transition failed:", error);
+      res.status(409).json({ code: "LIFECYCLE_TRANSITION_FAILED", error: error instanceof Error ? error.message : "Transition failed" });
     }
   });
 
@@ -1461,7 +1556,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid booking ID or provider ID" });
       }
       
-      const updatedBooking = await storage.assignBookingToProvider(bookingId, providerId, { notifyProvider: true });
+      const updatedBooking = await storage.assignBookingToProvider(bookingId, providerId, {
+        acceptedByProvider: true,
+        notifyProvider: false,
+      });
+      void notifyBookingCustomer("assigned", updatedBooking);
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error reassigning booking:", error);
@@ -1721,11 +1820,8 @@ export function registerRoutes(app: Express): Server {
         providerName: req.user.name || req.user.username
       };
       
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(notification));
-        }
-      });
+      sendBookingEvent(updatedBooking, notification);
+      void realtime.notifyMarketplace("available_jobs_changed");
 
       res.json(updatedBooking);
     } catch (error) {
@@ -1801,70 +1897,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
-  
-  // Set up WebSocket server for real-time notifications
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client connected');
-    // We'll set this when the client sends an auth message
-    let userId: number | null = null;
-    
-    ws.on('message', (message: string) => {
-      try {
-        const data = JSON.parse(message);
-        
-        // Handle client authentication/registration
-        if (data.type === 'auth' && typeof data.userId === 'number') {
-          // Ensure userId is never null after this point
-          const userIdValue = data.userId;
-          userId = userIdValue;
-          
-          // Store client connection for this user
-          if (!clients.has(userIdValue)) {
-            clients.set(userIdValue, []);
-          }
-          
-          const userConnections = clients.get(userIdValue);
-          if (userConnections) {
-            userConnections.push(ws);
-          }
-          
-          console.log(`WebSocket client authenticated for user ${userId}`);
-          
-          // Send confirmation
-          ws.send(JSON.stringify({
-            type: 'auth_confirmed',
-            userId
-          }));
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
-    });
-    
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-      
-      // Remove client from connections
-      if (userId) {
-        const userClients = clients.get(userId) || [];
-        const index = userClients.indexOf(ws);
-        if (index !== -1) {
-          userClients.splice(index, 1);
-        }
-        
-        // Remove user entry if no more connections
-        if (userClients.length === 0) {
-          clients.delete(userId);
-        }
-      }
-    });
-  });
-  
-  // This section was moved to the end of the file
-  
   // Provider earnings and metrics endpoints
   app.get('/api/provider/earnings', async (req, res) => {
     if (!req.user?.isProvider) {
@@ -1896,105 +1928,46 @@ export function registerRoutes(app: Express): Server {
   // Service timer endpoints
   app.post('/api/bookings/:id/start', async (req, res) => {
     const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).send('Invalid booking ID');
-    }
-    
+    if (isNaN(id)) return res.status(400).send('Invalid booking ID');
+
     try {
       const existing = await loadProviderMutableBooking(req, res, id);
       if (!existing) return;
-      if (existing.status !== "arrived" && !(existing.status === "in_progress" && existing.startTime)) {
-        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Service cannot be started in the current booking state" });
-      }
-      const booking = await storage.startServiceTimer(id);
-
-      // Set-once startTime doubles as the duplicate guard for retries.
-      if (!existing.startTime) void notifyBookingCustomer("started", booking);
-
-      // Notify the customer via WebSocket if they're connected
-      if (booking.userId) {
-        const userClients = clients.get(booking.userId) || [];
-        
-        if (userClients.length > 0) {
-          const notification = JSON.stringify({
-            type: 'booking_update',
-            booking: {
-              id: booking.id,
-              status: booking.status,
-              stage: booking.currentStage || null,
-              startTime: booking.startTime
-            }
-          });
-          
-          userClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(notification);
-            }
-          });
-        }
-      }
-      
+      const booking = await transitionBookingLifecycle(lifecycleDependencies, {
+        booking: existing,
+        action: "start",
+        actor: { type: "provider", id: req.user!.id },
+      });
       res.json(booking);
     } catch (error) {
+      if (error instanceof BookingLifecycleError) {
+        return res.status(error.status).json({ code: error.code, error: error.message });
+      }
       res.status(404).send(error instanceof Error ? error.message : 'Booking not found');
     }
   });
-  
+
   app.post('/api/bookings/:id/complete', async (req, res) => {
     const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).send('Invalid booking ID');
-    }
-    
+    if (isNaN(id)) return res.status(400).send('Invalid booking ID');
+
     try {
       const existing = await loadProviderMutableBooking(req, res, id);
       if (!existing) return;
-      if (existing.status !== "in_progress") {
-        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Only an in-progress booking can be completed" });
-      }
-      const booking = await storage.completeServiceTimer(id);
-
-      // Set-once endTime doubles as the duplicate guard for retries.
-      if (!existing.endTime) void notifyBookingCustomer("completed", booking);
-
-      // Notify the customer via WebSocket if they're connected
-      if (booking.userId) {
-        const userClients = clients.get(booking.userId) || [];
-        
-        if (userClients.length > 0) {
-          const notification = JSON.stringify({
-            type: 'booking_update',
-            booking: {
-              id: booking.id,
-              status: booking.status,
-              stage: booking.currentStage || null,
-              endTime: booking.endTime,
-              serviceDuration: booking.serviceDuration
-            }
-          });
-          
-          userClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(notification);
-            }
-          });
-        }
-      }
-      
-      try {
-        await storage.awardReferralForCompletedBooking(booking.id);
-      } catch (e) {
-        console.error('Referral credit error:', e);
-      }
-
+      const booking = await transitionBookingLifecycle(lifecycleDependencies, {
+        booking: existing,
+        action: "complete",
+        actor: { type: "provider", id: req.user!.id },
+      });
       res.json(booking);
     } catch (error) {
+      if (error instanceof BookingLifecycleError) {
+        return res.status(error.status).json({ code: error.code, error: error.message });
+      }
       res.status(404).send(error instanceof Error ? error.message : 'Booking not found or timer not started');
     }
   });
-  
+
   // Payment endpoints
   app.post('/api/bookings/:id/create-payment', async (req, res) => {
     // Support Clerk bearer token in addition to Passport session
@@ -2276,9 +2249,7 @@ export function registerRoutes(app: Express): Server {
       const markBookingPaid = async (bookingId: number, intentId: string, detectedMethod?: string | null) => {
         const result = await markNativeBookingPaid(bookingId, intentId, detectedMethod);
         if (result?.newlyPaid) {
-          const userClients = clients.get(result.booking.userId) || [];
-          const notification = JSON.stringify({ type: 'payment_completed', bookingId: result.booking.id });
-          userClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(notification); });
+          void realtime.sendToUsers([result.booking.userId], { type: 'payment_completed', bookingId: result.booking.id });
           // newlyPaid is computed under an advisory lock, so this fires once.
           void notifyBookingCustomer("confirmed", result.booking);
             void runPaidBookingNotificationDispatch();
@@ -2361,24 +2332,14 @@ export function registerRoutes(app: Express): Server {
       
       // Notify the provider via WebSocket if they're connected
       if (updatedBooking.providerId) {
-        const providerClients = clients.get(updatedBooking.providerId) || [];
-        
-        if (providerClients.length > 0) {
-          const notification = JSON.stringify({
-            type: 'rating_received',
-            booking: {
-              id: updatedBooking.id,
-              rating: updatedBooking.rating,
-              ratingComment: updatedBooking.ratingComment
-            }
-          });
-          
-          providerClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(notification);
-            }
-          });
-        }
+        void realtime.sendToUsers([updatedBooking.providerId], {
+          type: 'rating_received',
+          booking: {
+            id: updatedBooking.id,
+            rating: updatedBooking.rating,
+            ratingComment: updatedBooking.ratingComment
+          }
+        });
       }
       
       res.json(updatedBooking);
@@ -2494,6 +2455,23 @@ export function registerRoutes(app: Express): Server {
       if (stage !== undefined && !isAllowedProviderStage(stage)) {
         return res.status(400).json({ code: "INVALID_BOOKING_STAGE", error: "Unsupported booking stage" });
       }
+      const lifecycleAction: BookingLifecycleAction | null =
+        status === "on_the_way" ? "on_the_way" :
+        status === "arrived" ? "arrived" :
+        status === "in_progress" ? "start" :
+        status === "completed" ? "complete" : null;
+      if (lifecycleAction && stage === undefined) {
+        const booking = await transitionBookingLifecycle(lifecycleDependencies, {
+          booking: existing,
+          action: lifecycleAction,
+          actor: {
+            type: req.user!.isAdmin ? "admin" : "provider",
+            id: req.user!.id,
+          },
+        });
+        return res.json(booking);
+      }
+
       // Update the booking status
       const booking = await storage.updateBookingStatus(id, status, stage);
 
@@ -2512,24 +2490,14 @@ export function registerRoutes(app: Express): Server {
       
       // Notify the customer via WebSocket if they're connected
       if (booking.userId) {
-        const userClients = clients.get(booking.userId) || [];
-        
-        if (userClients.length > 0) {
-          const notification = JSON.stringify({
-            type: 'booking_update',
-            booking: {
-              id: booking.id,
-              status: booking.status,
-              stage: booking.currentStage || null,
-            }
-          });
-          
-          userClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(notification);
-            }
-          });
-        }
+        void realtime.sendToUsers([booking.userId], {
+          type: 'booking_update',
+          booking: {
+            id: booking.id,
+            status: booking.status,
+            stage: booking.currentStage || null,
+          }
+        });
       }
       
       res.json(booking);
@@ -2538,33 +2506,26 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Provider marks arrival — sets arrivalTime, calculates initial ETA, notifies customer
+  // Provider marks arrival — provider auth/assignment remain above the shared transition.
   app.post('/api/bookings/:id/arrive', async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' });
     try {
       const existing = await loadProviderMutableBooking(req, res, id);
       if (!existing) return;
-      if (!["assigned", "confirmed", "on_the_way", "arrived"].includes(existing.status)) {
-        return res.status(409).json({ code: "INVALID_BOOKING_STATE", error: "Arrival cannot be recorded in the current booking state" });
-      }
       const { baseDurationMinutes = 60 } = req.body;
-      const booking = await storage.markArrived(id, baseDurationMinutes);
-
-      // Set-once arrivalTime doubles as the duplicate guard for retries.
-      if (!existing.arrivalTime) void notifyBookingCustomer("arrived", booking);
-      // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
-      const arrivedMsg = JSON.stringify({
-        type: 'provider_arrived',
-        bookingId: booking.id,
-        arrivalTime: booking.arrivalTime,
-        estimatedCompletionTime: booking.estimatedCompletionTime,
-        extraTimeMinutes: booking.extraTimeMinutes,
-        timeAdjustments: booking.timeAdjustments,
+      const booking = await transitionBookingLifecycle(lifecycleDependencies, {
+        booking: existing,
+        action: "arrived",
+        actor: { type: "provider", id: req.user!.id },
+        baseDurationMinutes,
+        allowProviderArrivalShortcut: true,
       });
-      sendBookingEvent(booking, JSON.parse(arrivedMsg));
       res.json(booking);
     } catch (error) {
+      if (error instanceof BookingLifecycleError) {
+        return res.status(error.status).json({ code: error.code, error: error.message });
+      }
       res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to mark arrival' });
     }
   });
@@ -2603,7 +2564,7 @@ export function registerRoutes(app: Express): Server {
       const { adjustments, providerNotes } = req.body;
       if (!Array.isArray(adjustments)) return res.status(400).json({ error: 'adjustments must be an array' });
       const booking = await storage.updateTimeAdjustments(id, adjustments, providerNotes);
-      // Broadcast to ALL WebSocket clients (tracking page uses an unauthenticated socket)
+      // Deliver ETA updates only to authenticated booking participants.
       const etaMsg = JSON.stringify({
         type: 'eta_update',
         bookingId: booking.id,
@@ -2721,25 +2682,15 @@ export function registerRoutes(app: Express): Server {
       
       // Notify the customer about the accepted booking
       if (booking.userId) {
-        const userClients = clients.get(booking.userId) || [];
-        
-        if (userClients.length > 0) {
-          const notification = JSON.stringify({
-            type: 'booking_accepted',
-            booking: {
-              id: booking.id,
-              status: booking.status,
-              providerId: booking.providerId,
-              acceptedAt: booking.acceptedAt
-            }
-          });
-          
-          userClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(notification);
-            }
-          });
-        }
+        void realtime.sendToUsers([booking.userId], {
+          type: 'booking_accepted',
+          booking: {
+            id: booking.id,
+            status: booking.status,
+            providerId: booking.providerId,
+            acceptedAt: booking.acceptedAt
+          }
+        });
       }
       
       res.json(booking);
@@ -2784,19 +2735,10 @@ export function registerRoutes(app: Express): Server {
           await storage.assignBookingToProvider(booking.id, newProvider.id);
           
           // Notify the new provider
-          const providerClients = clients.get(newProvider.id) || [];
-          if (providerClients.length > 0) {
-            const notification = JSON.stringify({
-              type: 'new_assignment',
-              bookingId: booking.id
-            });
-            
-            providerClients.forEach(client => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(notification);
-              }
-            });
-          }
+          void realtime.sendToUsers([newProvider.id], {
+            type: 'new_assignment',
+            bookingId: booking.id
+          });
         }
       }
       
@@ -2816,22 +2758,17 @@ export function registerRoutes(app: Express): Server {
     }
     
     try {
-      const booking = await storage.assignBookingToProvider(bookingId, providerId, { notifyProvider: true });
+      const booking = await storage.assignBookingToProvider(bookingId, providerId, {
+        acceptedByProvider: true,
+        notifyProvider: false,
+      });
+      void notifyBookingCustomer("assigned", booking);
       
       // Notify the provider
-      const providerClients = clients.get(providerId) || [];
-      if (providerClients.length > 0) {
-        const notification = JSON.stringify({
-          type: 'new_assignment',
-          bookingId: booking.id
-        });
-        
-        providerClients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(notification);
-          }
-        });
-      }
+      void realtime.sendToUsers([providerId], {
+        type: 'new_assignment',
+        bookingId: booking.id
+      });
       
       res.json(booking);
     } catch (error) {
@@ -2855,122 +2792,6 @@ export function registerRoutes(app: Express): Server {
       res.json(jobs);
     } catch (error) {
       res.status(500).send(error instanceof Error ? error.message : 'Failed to get passed jobs');
-    }
-  });
-
-  // Backend-assisted sign-up completion — used when a stale sign-up has an unverified
-  // email stuck to it and the user does not want to verify email.
-  // Creates the user via Clerk admin API and returns a short-lived sign-in token.
-  app.post('/api/auth/clerk/complete-signup', async (req: Request, res: Response) => {
-    try {
-      const { email, phoneNumber, firstName, lastName, password } = req.body as {
-        email?: string;
-        phoneNumber?: string;
-        firstName: string;
-        lastName: string;
-        password?: string;
-      };
-      if (!phoneNumber && !email) return res.status(400).json({ error: 'Email or phone number required' });
-
-      // Check if user already exists by phone (primary identifier)
-      let clerkUser: any = null;
-      if (phoneNumber) {
-        try {
-          const byPhone = await clerkClient.users.getUserList({ phoneNumber: [phoneNumber] });
-          const byPhoneArr: any[] = Array.isArray(byPhone) ? byPhone : ((byPhone as any).data ?? []);
-          clerkUser = byPhoneArr[0] ?? null;
-        } catch { /* fall through */ }
-      }
-
-      // Also check by email if provided and not found by phone
-      if (!clerkUser && email) {
-        try {
-          const byEmail = await clerkClient.users.getUserList({ emailAddress: [email] });
-          const byEmailArr: any[] = Array.isArray(byEmail) ? byEmail : ((byEmail as any).data ?? []);
-          clerkUser = byEmailArr[0] ?? null;
-        } catch { /* getUserList may throw — fall through to create */ }
-      }
-
-      if (!clerkUser) {
-        const createParams: any = {
-          firstName: firstName || 'New',
-          lastName: lastName || 'User',
-          skipPasswordChecks: true,
-          skipPasswordRequirement: true,
-        };
-        if (phoneNumber) createParams.phoneNumber = [phoneNumber];
-        if (email) createParams.emailAddress = [email];
-        if (password) createParams.password = password;
-        clerkUser = await clerkClient.users.createUser(createParams);
-      } else if (password) {
-        // Update password on existing user
-        await clerkClient.users.updateUser(clerkUser.id, { password, skipPasswordChecks: true });
-      }
-
-      return res.json({ userId: clerkUser.id });
-    } catch (err: any) {
-      console.error('clerk/complete-signup error:', err);
-      // Extract the most useful message from a Clerk API error
-      const clerkMsg: string =
-        err?.errors?.[0]?.longMessage ??
-        err?.errors?.[0]?.message ??
-        err?.message ??
-        'Failed to complete sign-up';
-      // Surface "already exists" as a friendly message
-      const friendly = /already.*exist|taken|duplicate/i.test(clerkMsg)
-        ? 'An account with that email already exists. Please sign in instead.'
-        : clerkMsg;
-      return res.status(500).json({ error: friendly });
-    }
-  });
-
-  // Clerk user sync - creates/fetches user in local DB and establishes session
-  app.post('/api/auth/clerk-sync', clerkAuthMiddleware, async (req: ClerkRequest, res: Response) => {
-    try {
-      if (!req.auth) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const clerkUserId = req.auth.userId;
-      
-      // Get Clerk user info
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
-      
-      // Check if we already have a user with this Clerk ID (stored in username for now)
-      const clerkUsername = `clerk_${clerkUserId}`;
-      let user = await storage.getUserByUsername(clerkUsername);
-      
-      if (!user) {
-        // Create a new user in our database
-        const email = clerkUser.emailAddresses[0]?.emailAddress;
-        const phone = clerkUser.phoneNumbers[0]?.phoneNumber;
-        const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ');
-        
-        user = await storage.createUser({
-          username: clerkUsername,
-          password: Math.random().toString(36), // Random password, won't be used
-          isProvider: false,
-          isAdmin: false,
-          name: name || 'User',
-          email: email || null,
-          phone: phone || null
-        });
-      }
-      // Client-supplied role/provider/admin fields are intentionally ignored.
-      // Provider/admin access is determined solely by backend-owned DB fields.
-      
-      // Establish passport session for this user
-      await new Promise<void>((resolve, reject) => {
-        req.login(user, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      
-      res.json(safeUser(user));
-    } catch (error) {
-      console.error('Clerk sync error:', error);
-      res.status(500).json({ error: 'Failed to sync Clerk user' });
     }
   });
 
@@ -3493,6 +3314,32 @@ export function registerRoutes(app: Express): Server {
    * GET /api/admin/provider-applications
    * List all applications. Optional ?status= filter.
    */
+  app.post("/api/admin/providers/:userId/legacy-approve", requireProviderApplicationAdmin, async (req, res) => {
+    const userId = Number(req.params.userId);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      return res.status(400).json({
+        code: "INVALID_USER_ID",
+        error: "A valid user ID is required.",
+      });
+    }
+
+    try {
+      const result = await approveLegacyProvider(userId, req.user!.id);
+      return res.json(result);
+    } catch (error) {
+      if (error instanceof LegacyProviderApprovalError) {
+        return res.status(error.status).json({
+          code: error.code,
+          error: error.message,
+        });
+      }
+      console.error("[admin/providers] Legacy approval error:", error);
+      return res.status(500).json({
+        code: "LEGACY_APPROVAL_FAILED",
+        error: "Failed to approve legacy Provider.",
+      });
+    }
+  });
   app.get("/api/admin/provider-applications", requireProviderApplicationAdmin, async (req, res) => {
     try {
       const status = typeof req.query.status === "string" ? req.query.status : undefined;

@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User, Booking, PricingConfig, ContactMessage, ProviderApplication } from "@shared/schema";
+import { isAdminDispatchCandidate } from "@shared/admin-dispatch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,47 @@ interface AdminBooking extends Booking {
   customerName?: string;
   providerName?: string;
   serviceName?: string;
+}
+
+type AdminLifecycleAction = "on_the_way" | "arrived" | "start" | "complete";
+
+function nextAdminLifecycleAction(status: string): AdminLifecycleAction | null {
+  switch (status) {
+    case "assigned": case "confirmed": return "on_the_way";
+    case "on_the_way": return "arrived";
+    case "arrived": return "start";
+    case "in_progress": return "complete";
+    default: return null;
+  }
+}
+
+function lifecycleStatusLabel(status: string): string {
+  return ({
+    assigned: "Assigned",
+    confirmed: "Assigned",
+    on_the_way: "On the way",
+    arrived: "Arrived",
+    in_progress: "Service in progress",
+    completed: "Completed",
+  } as Record<string, string>)[status] ?? status;
+}
+
+function lifecycleActionLabel(action: AdminLifecycleAction): string {
+  return ({
+    on_the_way: "Mark On the Way",
+    arrived: "Mark Arrived",
+    start: "Start Service",
+    complete: "Complete Service",
+  } as Record<AdminLifecycleAction, string>)[action];
+}
+
+function latestLifecycleTimestamp(booking: AdminBooking): string | null {
+  const value = booking.endTime || booking.startTime || booking.arrivalTime ||
+    booking.acceptedAt || booking.assignedAt;
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString();
 }
 
 interface BookingNotificationEvent {
@@ -614,6 +656,8 @@ export default function AdminDashboard() {
   const [appStatusFilter, setAppStatusFilter] = useState("all");
   const [expandedAppId, setExpandedAppId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
+  const [completionBooking, setCompletionBooking] = useState<AdminBooking | null>(null);
+  const [legacyApprovalUser, setLegacyApprovalUser] = useState<User | null>(null);
 
   // Role-based access check
   if (!user?.isAdmin) {
@@ -686,7 +730,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch provider applications
-  const { data: providerApplications = [], isLoading: appsLoading } = useQuery<ProviderApplication[]>({
+  const { data: providerApplications = [], isLoading: appsLoading, isSuccess: applicationsLoaded } = useQuery<ProviderApplication[]>({
     queryKey: ["/api/admin/provider-applications"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/provider-applications");
@@ -709,6 +753,34 @@ export default function AdminDashboard() {
     },
   });
 
+  const legacyApprovalMutation = useMutation({
+    mutationFn: async (target: User) => {
+      const res = await apiRequest("POST", `/api/admin/providers/${target.id}/legacy-approve`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to approve legacy Provider");
+      }
+      return res.json() as Promise<{
+        userId: number;
+        providerName: string;
+        applicationId: number;
+        applicationStatus: "active_provider";
+        created: boolean;
+      }>;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/provider-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setLegacyApprovalUser(null);
+      toast({
+        title: result.created ? "Legacy Provider approved" : "Provider already approved",
+        description: `Application #${result.applicationId} is active_provider.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Legacy approval failed", description: error.message, variant: "destructive" });
+    },
+  });
   // Fetch contact messages
   const { data: contactMessages = [], isLoading: messagesLoading } = useQuery<ContactMessage[]>({
     queryKey: ["/api/admin/contact-messages"],
@@ -807,6 +879,28 @@ export default function AdminDashboard() {
     onError: (error: Error) => {
       toast({
         title: "Failed to cancel booking",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const lifecycleMutation = useMutation({
+    mutationFn: async ({ bookingId, action }: { bookingId: number; action: AdminLifecycleAction }) => {
+      const res = await apiRequest("POST", `/api/admin/bookings/${bookingId}/lifecycle`, { action });
+      return await res.json();
+    },
+    onSuccess: (_booking, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      setCompletionBooking(null);
+      toast({
+        title: lifecycleActionLabel(variables.action) + " complete",
+        description: "The customer-facing booking state has been updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lifecycle update failed",
         description: error.message,
         variant: "destructive",
       });
@@ -1077,6 +1171,7 @@ export default function AdminDashboard() {
         const user = row.original;
         const isActive = user.currentStatus !== "inactive";
         
+        const canLegacyApprove = applicationsLoaded && user.isProvider && isActive && !providerApplications.some(application => application.userId === user.id);
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1107,6 +1202,15 @@ export default function AdminDashboard() {
                   </>
                 )}
               </DropdownMenuItem>
+              {canLegacyApprove && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLegacyApprovalUser(user)}>
+                    <Icon icon={ShieldCheck} size="sm" className="mr-2" />
+                    Approve Legacy Provider
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -1315,8 +1419,13 @@ export default function AdminDashboard() {
           <TabsContent value="dispatch" className="space-y-4">
             {/* Live Stats Bar */}
             {(() => {
-              const unassigned = bookings.filter(b => b.status === "pending" && !b.providerId);
-              const active = bookings.filter(b => b.status === "in_progress" || b.status === "accepted");
+              const unassigned = bookings.filter(isAdminDispatchCandidate);
+                const activeStatuses = new Set(["assigned", "confirmed", "on_the_way", "arrived", "in_progress"]);
+                const active = bookings.filter(b =>
+                  b.isPaid === true &&
+                  Boolean(b.providerId) &&
+                  activeStatuses.has(b.status)
+      );
               const onlineProviders = providerStatus.onlineProvidersList ?? [];
               const todayCompleted = bookings.filter(b => {
                 const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
@@ -1443,9 +1552,8 @@ export default function AdminDashboard() {
                             <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border bg-blue-50/30">
                               <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm">#{job.id} — {job.serviceName || job.priceTier}</span>
-                                  <Badge className="text-xs bg-blue-500">
-                                    {job.status === "in_progress" ? "Washing" : "Accepted"}
+                                    <span className="font-semibold text-sm">{job.bookingRef || `#${job.id}`} – {job.serviceName || job.priceTier}</span>                                  <Badge className="text-xs bg-blue-500">
+                                      {lifecycleStatusLabel(job.status)}
                                   </Badge>
                                 </div>
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
@@ -1453,8 +1561,28 @@ export default function AdminDashboard() {
                                 </p>
                                 <p className="text-xs text-gray-500">Customer: {job.customerName || `User #${job.userId}`}</p>
                                 <p className="text-xs text-gray-500">Pro: {job.providerName || `Provider #${job.providerId}`}</p>
+                                <p className="text-xs text-gray-500">Scheduled: {job.date ? `${job.date} ${job.time ?? ""}`.trim() : "ASAP"}</p>
+                                {latestLifecycleTimestamp(job) && <p className="text-xs text-gray-400">Latest lifecycle update: {latestLifecycleTimestamp(job)}</p>}
                               </div>
                               <div className="ml-3">
+                                {nextAdminLifecycleAction(job.status) && (
+                                  <Button
+                                    size="sm"
+                                    className="mb-2"
+                                    disabled={lifecycleMutation.isPending}
+                                    onClick={() => {
+                                      const action = nextAdminLifecycleAction(job.status);
+                                      if (!action) return;
+                                      if (action === "complete") {
+        setCompletionBooking(job);
+        return;
+      }
+                                      lifecycleMutation.mutate({ bookingId: job.id, action });
+                                    }}
+                                  >
+                                    {lifecycleActionLabel(nextAdminLifecycleAction(job.status)!)}
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2184,6 +2312,80 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+        <Dialog
+          open={legacyApprovalUser !== null}
+          onOpenChange={(open) => {
+            if (!open && !legacyApprovalMutation.isPending) setLegacyApprovalUser(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve legacy Provider?</DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-4 text-left">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {legacyApprovalUser?.name || legacyApprovalUser?.username}
+                    </p>
+                    <p>User ID: {legacyApprovalUser?.id}</p>
+                  </div>
+                  <p>
+                    This Provider predates the current application workflow. Approving will create
+                    an administrative active Provider record without modifying their online status
+                    or marketplace availability.
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                disabled={legacyApprovalMutation.isPending}
+                onClick={() => setLegacyApprovalUser(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!legacyApprovalUser || legacyApprovalMutation.isPending}
+                onClick={() => legacyApprovalUser && legacyApprovalMutation.mutate(legacyApprovalUser)}
+              >
+                Approve Legacy Provider
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={completionBooking !== null}
+          onOpenChange={(open) => {
+            if (!open) setCompletionBooking(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete this service?</DialogTitle>
+              <DialogDescription>
+                The customer will see this booking as completed, and all normal completion side effects will run.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCompletionBooking(null)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={lifecycleMutation.isPending}
+                onClick={() => {
+                  if (!completionBooking) return;
+                  lifecycleMutation.mutate(
+                    { bookingId: completionBooking.id, action: "complete" },
+                    { onSuccess: () => setCompletionBooking(null) },
+                  );
+                }}
+              >
+                Complete Service
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

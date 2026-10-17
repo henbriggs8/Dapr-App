@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-17",
+  "scope": "Phase 1 source reconciliation only; not a deployment authorization",
+  "github_base": "8f95ee9d7d269b32f3e53db8b85d63a10efe2cb5",
+  "replit_published_commit": "a07de6bd321c926734954da69109acffc881e26a",
+  "replit_published_tree": "72705e2b708e204ee917ca59c683769af697e99e",
+  "replit_runtime_build": "b1c94f30-b6eb-4d0e-a676-807c182320c1",
+  "source_recovery": {
+    "result": "PASS: reconstructed complete 839-entry tracked tree equals Replit tree SHA",
+    "method": "GitHub/local 8f95ee9 base + previously recovered nine application-file changes + two publication files freshly recovered from Replit; full git write-tree equality",
+    "original_commit_metadata": "raw commit rehashes to exact a07de6b tip",
+    "limitations": [
+      "Backend runtime binary not independently hashed",
+      "Original intermediate Replit commit history not imported; final content tree is fully verified"
+    ]
+  },
+  "candidate_changes": [
+    "Preserve booking lifecycle and admin lifecycle endpoint",
+    "Preserve paid/unassigned admin dispatch filtering and active job UI",
+    "Preserve locked/idempotent legacy Provider approval",
+    "Retain final P0 verified-token registration, retired unsafe signup, authenticated WebSockets and removal of privileged credential seeding",
+    "Retain final type-only/build-install corrections",
+    "Add isolated npm run test:unit entrypoint without inherited live credentials or non-loopback network access"
+  ],
+  "intentional_difference_from_exact_production_snapshot": {
+    "security_patch": "f350a1d54424aa2395756a9bbcaddd3bc5075e43249348c7b30bb70b176dcb83",
+    "non_runtime_attachment": "New historical account-repair instruction attachment retained in exact local recovery snapshot, excluded from public candidate; no runtime code references it",
+    "verification_and_provenance": "New unit runner/network guard and these docs"
+  },
+  "functionality_status": {
+    "booking_lifecycle": "VERIFIED published source preserved; unit/mocked transitions pass; real DB concurrency and external notification side effects unverified",
+    "admin_dispatch": "VERIFIED published filter/UI/helper and regression tests preserved byte-for-byte",
+    "provider_approval": "VERIFIED published implementation/tests preserved byte-for-byte; advisory-lock behavior tested with fake DB only",
+    "security": "VERIFIED candidate security checks pass; not claimed deployed in production",
+    "payments_push_media": "Published integration source preserved; unit/wire tests pass; real provider service tests and storage/database integrations unrun",
+    "native_apps": "76 Provider mocked simulator tests, 7 Customer routing checks, 8 Customer API fixture checks pass; exact distributed builds not confirmed"
+  },
+  "verification": {
+    "clean_locked_install": "798 packages, Node 20.20.0, original lockfile",
+    "backend_unit_mocked_tests": {
+      "passed": 117,
+      "failed": 0
+    },
+    "production_mode_security_tests": {
+      "passed": 20,
+      "failed": 0
+    },
+    "typecheck": "PASS, zero diagnostics",
+    "build": "PASS, synthetic build configuration only; dist is not a release artifact",
+    "provider_simulator_tests": {
+      "passed": 76,
+      "failed": 0,
+      "configuration": "Clerk disabled, invalid API host, mocked URLProtocol"
+    },
+    "customer_routing_checks": {
+      "passed": 7,
+      "failed": 0
+    },
+    "customer_fixture_checks": {
+      "passed": 8,
+      "failed": 0
+    },
+    "not_run": [
+      "Seven database/object-storage integration test files: prohibited writes under current authorization",
+      "Real Clerk/Stripe/Firebase/APNs end-to-end checks",
+      "Real-device/exact-distribution binary tests",
+      "Linux deployment/runtime rehearsal"
+    ]
+  },
+  "unpublished_work": {
+    "original_local_backend": "Preserved separately on local-only recovery/local-backend-wip-2026-10-17 branch, plus binary patch/untracked archive",
+    "local_changed_paths": 33,
+    "ledger": "docs/local-source-difference-ledger.csv",
+    "replit_editor": "Untouched; six tracked modifications and seven untracked paths fingerprinted; not treated as production source",
+    "policy": "Do not silently change 70% published provider formulas to local 65/35 work or merge unfinished compensation/location/serialization/email changes. Preserve for separately reviewed follow-up."
+  },
+  "native_repository_access": "Both configured GitHub remote reads return 404; no remote native source authority asserted",
+  "production_safety": "No production edits, deploys, database changes, secret/config changes or running backend service changes. GitHub main not overwritten."
+}

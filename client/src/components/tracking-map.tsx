@@ -1,3 +1,5 @@
+import { connectAuthenticatedSocket } from "@/lib/authenticated-websocket";
+import { getClerkToken, resolveWsUrl } from "@/lib/queryClient";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Clock, Navigation, Car, Phone, Star, CheckCircle, ChevronDown, Droplets, Wind, Package, Paintbrush, Eye, Award } from "lucide-react";
@@ -471,57 +473,55 @@ export default function TrackingMap({ bookingId, onClose }: TrackingMapProps) {
 
   // WebSocket
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const socket = connectAuthenticatedSocket({
+      url: resolveWsUrl("/ws"),
+      getToken: getClerkToken,
+      onStatus: status => setWsConnected(status === "connected"),
+      onMessage: (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-    socket.onopen = () => setWsConnected(true);
+          if (data.type === "location_update" && data.bookingId === bookingId) {
+            setLiveTracking((prev) => ({
+              providerLocation: { lat: data.latitude, lng: data.longitude },
+              customerLocation: prev?.customerLocation || trackingData?.customerLocation || null,
+              eta: data.eta,
+              distance: data.distance,
+              lastUpdate: new Date().toISOString(),
+            }));
+            setLastPing(new Date());
+          }
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+          if (data.type === "provider_arrived" && data.bookingId === bookingId) {
+            setArrivalStatus((prev) => ({
+              ...prev,
+              arrived: true,
+              arrivalTime: data.arrivalTime,
+              estimatedCompletionTime: data.estimatedCompletionTime,
+            }));
+            setCurrentStage("setting_up");
+            setLastPing(new Date());
+          }
 
-        if (data.type === "location_update" && data.bookingId === bookingId) {
-          setLiveTracking((prev) => ({
-            providerLocation: { lat: data.latitude, lng: data.longitude },
-            customerLocation: prev?.customerLocation || trackingData?.customerLocation || null,
-            eta: data.eta,
-            distance: data.distance,
-            lastUpdate: new Date().toISOString(),
-          }));
-          setLastPing(new Date());
+          if (data.type === "stage_update" && data.bookingId === bookingId) {
+            if (data.stage) setCurrentStage(data.stage);
+            setLastPing(new Date());
+          }
+
+          if (data.type === "eta_update" && data.bookingId === bookingId) {
+            setArrivalStatus((prev) => ({
+              ...prev,
+              estimatedCompletionTime: data.estimatedCompletionTime,
+              extraTimeMinutes: data.extraTimeMinutes || 0,
+              adjustmentDetails: data.adjustments?.filter((a: any) => a.selected) || [],
+              providerNotes: data.providerNotes,
+            }));
+          }
+        } catch (err) {
+          console.error("Tracking WS error:", err);
         }
-
-        if (data.type === "provider_arrived" && data.bookingId === bookingId) {
-          setArrivalStatus((prev) => ({
-            ...prev,
-            arrived: true,
-            arrivalTime: data.arrivalTime,
-            estimatedCompletionTime: data.estimatedCompletionTime,
-          }));
-          setCurrentStage("setting_up");
-          setLastPing(new Date());
-        }
-
-        if (data.type === "stage_update" && data.bookingId === bookingId) {
-          if (data.stage) setCurrentStage(data.stage);
-          setLastPing(new Date());
-        }
-
-        if (data.type === "eta_update" && data.bookingId === bookingId) {
-          setArrivalStatus((prev) => ({
-            ...prev,
-            estimatedCompletionTime: data.estimatedCompletionTime,
-            extraTimeMinutes: data.extraTimeMinutes || 0,
-            adjustmentDetails: data.adjustments?.filter((a: any) => a.selected) || [],
-            providerNotes: data.providerNotes,
-          }));
-        }
-      } catch (err) {
-        console.error("Tracking WS error:", err);
-      }
-    };
-
-    socket.onclose = () => setWsConnected(false);
+      },
+    });
     return () => socket.close();
   }, [bookingId, trackingData]);
 

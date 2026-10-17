@@ -1,3 +1,4 @@
+import { advanceClerkSignUp } from "@/lib/clerk-sign-up";
 import { useEffect, useMemo, useState } from 'react';
 import { SiApple } from 'react-icons/si';
 import { Capacitor } from '@capacitor/core';
@@ -758,6 +759,8 @@ function ProfileInfoScreen({
         />
       </div>
 
+      <div id="clerk-captcha" />
+
       {(localError || error) && <ErrorBanner msg={localError || error} />}
 
       <button
@@ -1139,6 +1142,20 @@ function AuthFlow() {
     }
   };
 
+  const continueSignUp = async (attempt: NonNullable<typeof signUp>) => {
+    const next = await advanceClerkSignUp(attempt);
+    setOtpCode('');
+    setSignUpNeedsEmail(next.step === 'emailOtp');
+    if (next.step === 'complete') {
+      await setSignUpActive!({ session: next.sessionId });
+      setStep('welcome');
+    } else {
+      setMode('signUp');
+      if (next.step === 'phoneOtp') setOtpPhoneHint(attempt.phoneNumber ?? '');
+      setStep(next.step);
+    }
+  };
+
   const handleProfileInfoNext = async () => {
     setError('');
     setLoading(true);
@@ -1151,7 +1168,7 @@ function AuthFlow() {
         localStorage.setItem('pendingSignUpEmail', signUpEmail.trim());
       }
 
-      // Mark provider intent so App.tsx ClerkSyncInner passes isProvider:true on first sync
+      // Preserve provider navigation intent; the server never grants roles from this hint.
       if (isProviderMode) localStorage.setItem('pendingIsProvider', '1');
 
       // Determine whether we have a valid phone (≥10 digits) or are using email only.
@@ -1164,36 +1181,16 @@ function AuthFlow() {
         throw new Error('Please enter a valid email address to continue.');
       }
 
-      // Create the user via our backend admin API — phone is optional when email is provided.
-      const resp = await fetch(resolveUrl('/api/auth/clerk/complete-signup'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: signUpEmail.trim() || undefined,
-          phoneNumber: validE164,
-          firstName: signUpFirstName.trim() || 'New',
-          lastName: signUpLastName.trim() || 'User',
-          password: signUpPassword,
-        }),
-      });
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body.error ?? 'Could not create account. Please try again.');
-      }
-
-      // Sign in directly with the right identifier + password — no OTP needed.
-      const result = await signIn!.create({
-        identifier: signInIdentifier,
+      // Clerk creates the identity and verifies required identifiers. An existing
+      // account must sign in or use Clerk recovery; signup cannot reset its password.
+      const result = await signUp!.create({
+        emailAddress: signUpEmail.trim() || undefined,
+        phoneNumber: validE164,
+        firstName: signUpFirstName.trim() || 'New',
+        lastName: signUpLastName.trim() || 'User',
         password: signUpPassword,
       });
-      if (result.status === 'complete') {
-        await setSignInActive!({ session: result.createdSessionId });
-        setStep('welcome');
-        return;
-      }
-      // Fallback: if Clerk needs something else, go to password screen
-      setMode('signIn');
-      setStep('password');
+      await continueSignUp(result);
     } catch (err: any) {
       setError(err.message ?? clerkError(err));
     } finally {
@@ -1271,13 +1268,7 @@ function AuthFlow() {
     try {
       if (mode === 'signUp') {
         const result = await signUp!.attemptPhoneNumberVerification({ code: otpCode });
-        if (result.status === 'complete') {
-          await setSignUpActive!({ session: result.createdSessionId });
-          setOtpCode('');
-          setStep('welcome');
-        } else {
-          setError(`Verification failed (${result.status}). Please try again.`);
-        }
+        await continueSignUp(result);
       } else if (isSecondFactor) {
         // Password was the first factor; this OTP is the second factor (2FA)
         const result = await signIn!.attemptSecondFactor({ strategy: 'phone_code', code: otpCode });
@@ -1317,13 +1308,7 @@ function AuthFlow() {
       if (signUpNeedsEmail) {
         // Verifying email as part of sign-up completion
         const result = await signUp!.attemptEmailAddressVerification({ code: otpCode });
-        if (result.status === 'complete') {
-          setSignUpNeedsEmail(false);
-          await setSignUpActive!({ session: result.createdSessionId });
-          setStep('welcome');
-        } else {
-          setError(`Verification incomplete (status: ${result.status}). Please try again.`);
-        }
+        await continueSignUp(result);
       } else {
         // Sign-in via email code
         const result = await signIn!.attemptFirstFactor({

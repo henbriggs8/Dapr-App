@@ -8,6 +8,8 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
+    "test:unit": "node scripts/test-unit.mjs",
+    "test:security": "node --import tsx --test server/auth-security.test.ts server/storage-security.test.ts server/client-auth-security.test.ts",
     "db:push": "drizzle-kit push",
     "test:referrals": "tsx server/referrals.integration.test.ts",
     "test:arrive-now": "tsx --test server/asap-availability.test.ts server/time-slot-capacity.test.ts",

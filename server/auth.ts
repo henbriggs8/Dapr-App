@@ -4,7 +4,7 @@ import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
+import type { IStorage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
@@ -57,7 +57,11 @@ export function safeUser(user: SelectUser) {
   };
 }
 
-export function setupAuth(app: Express) {
+export function setupAuth(
+  app: Express,
+  storage: Pick<IStorage, "sessionStore" | "getUser" | "getUserByUsername">,
+  verifyToken: (token: string) => Promise<{ sub: string }> = token => clerkClient.verifyToken(token),
+) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || (() => { throw new Error("SESSION_SECRET env var is not set"); })(),
     resave: false,
@@ -69,13 +73,17 @@ export function setupAuth(app: Express) {
     app.set("trust proxy", 1);
   }
 
-  app.use(session(sessionSettings));
+  const sessionMiddleware = session(sessionSettings);
+  app.use(sessionMiddleware);
   app.use(passport.initialize());
   app.use(passport.session());
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username.trim().toLowerCase());
+      const normalizedUsername = username.trim().toLowerCase();
+      // Clerk identities can only authenticate through Clerk, never a local password.
+      if (normalizedUsername.startsWith("clerk_")) return done(null, false);
+      const user = await storage.getUserByUsername(normalizedUsername);
       if (!user || !user.password || !(await comparePasswords(password, user.password))) {
         return done(null, false);
       } else {
@@ -88,41 +96,6 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     const user = await storage.getUser(id);
     done(null, user);
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      console.log("Registration attempt for username:", req.body.username);
-      
-      // Validate required fields
-      if (!req.body.username || !req.body.password) {
-        console.log("Missing required fields:", { username: !!req.body.username, password: !!req.body.password });
-        return res.status(400).json({ error: "Username and password are required" });
-      }
-
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        console.log("Username already exists:", req.body.username);
-        return res.status(400).json({ error: "Username already exists" });
-      }
-
-      const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
-      });
-
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return next(err);
-        }
-        console.log("User registered and logged in successfully:", user.id);
-        res.status(201).json(safeUser(user));
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ error: "Internal server error during registration" });
-    }
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
@@ -147,7 +120,7 @@ export function setupAuth(app: Express) {
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       try {
-        const verified = await clerkClient.verifyToken(token);
+        const verified = await verifyToken(token);
         if (verified?.sub) {
           const clerkUsername = `clerk_${verified.sub}`;
           const user = await storage.getUserByUsername(clerkUsername);
@@ -160,4 +133,5 @@ export function setupAuth(app: Express) {
 
     return res.sendStatus(401);
   });
+  return sessionMiddleware;
 }
