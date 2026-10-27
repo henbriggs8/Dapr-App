@@ -18,6 +18,8 @@ export default defineConfig({
   },
   root: path.resolve(__dirname, "client"),
   build: {
+    // Preserve the Vite 5 browser targets when updating the build tooling.
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {

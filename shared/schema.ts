@@ -547,15 +547,15 @@ export const insertClerkStripeMappingSchema = createInsertSchema(clerkStripeMapp
 // Extend the booking schema with validation for location type
 export const bookingFormSchema = insertBookingSchema.extend({
   serviceLocationType: z.enum(['home', 'work', 'other'], {
-    required_error: "Please select a location type",
+    error: issue => issue.input === undefined ? "Please select a location type" : undefined,
   }),
   serviceLocation: z.string().min(1, "Address is required"),
   zipCode: z.string().min(5, "ZIP code must be at least 5 digits").optional(),
   serviceId: z.number({
-    required_error: "Service ID is required",
+    error: issue => issue.input === undefined ? "Service ID is required" : undefined,
   }),
   timeSlotId: z.number({
-    required_error: "Time slot ID is required",
+    error: issue => issue.input === undefined ? "Time slot ID is required" : undefined,
   }),
 });
 

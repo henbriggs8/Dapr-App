@@ -8,8 +8,8 @@
   {
     "id": "M2",
     "gate": "merge/readiness",
-    "issue": "Remote PR #19 baseline has 45 dependency findings (4 critical, 24 high); local follow-up reduces production-dependency audit to 16 (0 critical, 7 high, 8 moderate, 1 low)",
-    "required": "Remaining high findings must be remediated or have explicit owner/security disposition before readiness. Keep the CI high/critical gate active. Local dependency fixes have not been pushed; do not credit them to the remote PR."
+    "issue": "Local follow-up resolves all seven production high dependency findings plus the development Vite high: zero high/critical in both audit scopes. Production dependencies retain 8 moderate and 3 low; full audit retains 14 moderate and 3 low.",
+    "required": "Exact CI dependency audit gate passes locally without suppression. Review scoped override and coordinated Drizzle/Zod/form/build-tool upgrades. Re-run real PostgreSQL and Linux/container checks on the final tree only after authorization. Changes are unpushed; prior remote PR checks do not certify this tree."
   },
   {
     "id": "M3",

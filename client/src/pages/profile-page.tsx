@@ -39,13 +39,13 @@ const profileSchema = insertUserSchema.extend({
   phone: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
   description: z.string().optional(),
-  latitude: z.coerce.number().optional(),
-  longitude: z.coerce.number().optional(),
+  latitude: z.coerce.number<number>().optional(),
+  longitude: z.coerce.number<number>().optional(),
 });
 
 const vehicleSchema = insertVehicleSchema.extend({
   userId: z.number().optional(),
-  year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
+  year: z.coerce.number<number>().min(1900).max(new Date().getFullYear() + 1),
   make: z.string().min(1, "Make is required"),
   model: z.string().min(1, "Model is required"),
   color: z.string().optional().or(z.literal("")),

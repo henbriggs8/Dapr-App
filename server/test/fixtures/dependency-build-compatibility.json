@@ -1,0 +1,13 @@
+{
+  "baseline": "9f822292852ecf6e10de6d53051ebcb72ee25abd",
+  "themeStyles": [
+    ":root {\n      --background: 0 0% 100%;\n--foreground: 20 14.3% 4.1%;\n--muted: 60 4.8% 95.9%;\n--muted-foreground: 25 5.3% 44.7%;\n--popover: 0 0% 100%;\n--popover-foreground: 20 14.3% 4.1%;\n--card: 0 0% 100%;\n--card-foreground: 20 14.3% 4.1%;\n--border: 20 5.9% 90%;\n--input: 20 5.9% 90%;\n--primary: 260 100% 66%;\n--primary-foreground: 249 100% 99%;\n--secondary: 60 4.8% 95.9%;\n--secondary-foreground: 24 9.8% 10%;\n--accent: 60 4.8% 95.9%;\n--accent-foreground: 24 9.8% 10%;\n--destructive: 0 84.2% 60.2%;\n--destructive-foreground: 60 9.1% 97.8%;\n--ring: 20 14.3% 4.1%;\n--radius: 0.75rem;\n  }\n  .dark {\n      --background: 240 10% 3.9%;\n--foreground: 0 0% 98%;\n--muted: 240 3.7% 15.9%;\n--muted-foreground: 240 5% 64.9%;\n--popover: 240 10% 3.9%;\n--popover-foreground: 0 0% 98%;\n--card: 240 10% 3.9%;\n--card-foreground: 0 0% 98%;\n--border: 240 3.7% 15.9%;\n--input: 240 3.7% 15.9%;\n--primary: 260 100% 66%;\n--primary-foreground: 249 100% 99%;\n--secondary: 240 3.7% 15.9%;\n--secondary-foreground: 0 0% 98%;\n--accent: 240 3.7% 15.9%;\n--accent-foreground: 0 0% 98%;\n--destructive: 0 62.8% 30.6%;\n--destructive-foreground: 0 0% 98%;\n--ring: 240 4.9% 83.9%;\n--radius: 0.75rem;\n  }"
+  ],
+  "browserTargets": [
+    "es2020",
+    "edge88",
+    "firefox78",
+    "chrome87",
+    "safari14"
+  ]
+}
