@@ -6,10 +6,49 @@ on:
       - codex/railway-staging-preparation-2026-10-26
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_database_tests:
+        description: "Explicitly authorize disposable database initialization and integration suites"
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
   backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.1
+          cache: npm
+      - run: npm ci --include=dev --no-audit --no-fund
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run test:security
+      - run: npm run build
+        env:
+          VITE_API_BASE_URL: https://dapr-staging.invalid
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS50ZXN0JA
+          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_fixture
+          VITE_CLERK_ACCOUNT_PORTAL_URL: https://fixture.accounts.dev
+      - name: Validate Linux image build (no push or deployment)
+        run: >-
+          docker build --build-arg VITE_API_BASE_URL=https://dapr-staging.invalid
+          --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuZXhhbXBsZS50ZXN0JA
+          --build-arg VITE_STRIPE_PUBLISHABLE_KEY=pk_test_fixture
+          --build-arg VITE_CLERK_ACCOUNT_PORTAL_URL=https://fixture.accounts.dev
+          --tag dapr-staging-review:ci .
+      - name: Record verification scope
+        run: |
+          echo "Database integration is opt-in and is not certified by the automatic checks. A skipped database job is not deployment approval." >> "$GITHUB_STEP_SUMMARY"
+  database-integration:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_database_tests == true }}
+    needs: [backend, dependency-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -33,9 +72,6 @@ jobs:
           node-version: 24.14.1
           cache: npm
       - run: npm ci --include=dev --no-audit --no-fund
-      - run: npm run check
-      - run: npm run test:unit
-      - run: npm run test:security
       - run: npm run build
         env:
           VITE_API_BASE_URL: https://dapr-staging.invalid
