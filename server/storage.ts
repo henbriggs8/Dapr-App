@@ -117,6 +117,7 @@ export interface IStorage {
   findBookingAssignment(providerId: number): Promise<Booking | undefined>;
   getBookingsByTimeframe(providerId: number, timeframe: 'day' | 'week' | 'month'): Promise<Booking[]>;
   getUnassignedBookings(): Promise<Booking[]>;
+  getAdminDispatchBookings(): Promise<Booking[]>;
   
   // Provider earnings and metrics
   getProviderEarnings(providerId: number, period?: string): Promise<{ 
@@ -219,6 +220,7 @@ export interface IStorage {
   ): Promise<{ eta: string; distance: number }>;
   enableTrackingForBooking(bookingId: number): Promise<Booking>;
   // Time adjustment methods
+  markOnTheWay(bookingId: number): Promise<Booking>;
   markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking>;
   updateTimeAdjustments(bookingId: number, adjustments: any[], providerNotes?: string): Promise<Booking>;
   updateBookingStage(bookingId: number, stage: string): Promise<Booking>;
@@ -308,22 +310,8 @@ export class MemStorage implements IStorage {
       updatedAt: new Date().toISOString()
     };
 
-    // Create a single car wash company instead of multiple providers
-    this.createUser({
-      username: "carwashcompany",
-      password: "password",
-      isProvider: true,
-      name: "Dapr",
-      description: "Premium car wash and detailing services for the discerning vehicle owner",
-      latitude: 40.7128,
-      longitude: -74.0060,
-      profileImage: "https://images.unsplash.com/photo-1556745753-b2904692b3cd",
-      currentStatus: "online"
-    });
+    // Privileged identities are never seeded, including in memory storage.
 
-    // Create admin user - password will be hashed during creation
-    this.initializeAdminUser().catch(console.error);
-    
     // Create the four customer-facing service tiers (mirrors /services marketing copy)
     for (const tier of TIER_SEEDS) {
       this.createService(tier);
@@ -399,16 +387,6 @@ export class MemStorage implements IStorage {
       paymentDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       paymentUrl: null,
       stripeSessionId: null,
-    });
-  }
-
-  private async initializeAdminUser() {
-    const hashedPassword = await hashPassword("admin123");
-    this.createUser({
-      username: "dapperadmin",
-      password: hashedPassword,
-      isAdmin: true,
-      name: "System Administrator"
     });
   }
 
@@ -1386,6 +1364,14 @@ export class MemStorage implements IStorage {
         booking.status === 'confirmed' &&
         booking.isPaid === true &&
         (!booking.providerId)
+
+    );
+  }
+
+  async getAdminDispatchBookings(): Promise<Booking[]> {
+    const activeStatuses = new Set(["confirmed", "assigned", "on_the_way", "arrived", "in_progress"]);
+    return Array.from(this.bookings.values()).filter(
+      booking => booking.isPaid === true && activeStatuses.has(booking.status),
     );
   }
   
@@ -1615,6 +1601,22 @@ export class MemStorage implements IStorage {
   }
   async getTrackingInfo(bookingId: number): Promise<any> {
     return null;
+  }
+
+  async markOnTheWay(bookingId: number): Promise<Booking> {
+    const booking = await this.getBookingById(bookingId);
+    if (!booking) throw new Error("Booking not found");
+    if (booking.status === "on_the_way") return booking;
+    if (!booking.providerId || !["assigned", "confirmed"].includes(booking.status)) {
+      throw new Error("Booking is not ready to be marked on the way");
+    }
+    const updated: Booking = {
+      ...booking,
+      status: "on_the_way",
+      currentStage: "on_the_way",
+    };
+    this.bookings.set(bookingId, updated);
+    return updated;
   }
 
   async markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking> {
@@ -2286,6 +2288,16 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
+  async getAdminDispatchBookings(): Promise<Booking[]> {
+    return await db.select().from(bookings).where(
+      and(
+        eq(bookings.isPaid, true),
+        inArray(bookings.status, ["confirmed", "assigned", "on_the_way", "arrived", "in_progress"]),
+      ),
+    );
+  }
+
+
   async getProviderEarnings(providerId: number, period: string = 'month'): Promise<{
     totalEarnings: number;
     completedServices: number;
@@ -2457,6 +2469,10 @@ export class DatabaseStorage implements IStorage {
     const booking = await this.getBookingById(bookingId);
     if (!booking || !booking.startTime) {
       throw new Error('Booking not found or service not started');
+    if (booking!.status === 'completed' && booking!.endTime) {
+      return booking as Booking;
+    }
+
     }
 
     // Complete exactly once: a retry keeps the original endTime and duration.
@@ -2474,8 +2490,17 @@ export class DatabaseStorage implements IStorage {
         endTime: endTime.toISOString(),
         serviceDuration
       })
-      .where(eq(bookings.id, bookingId))
+      .where(and(
+        eq(bookings.id, bookingId),
+        eq(bookings.status, 'in_progress'),
+        isNotNull(bookings.providerId),
+      ))
       .returning();
+    if (!updatedBooking) {
+      const current = await this.getBookingById(bookingId);
+      if (current?.status === 'completed' && current.endTime) return current;
+      throw new Error('Booking is not ready for completion');
+    }
     return updatedBooking;
   }
 
@@ -2782,12 +2807,28 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+
+  async markOnTheWay(bookingId: number): Promise<Booking> {
+    const [booking] = await db.update(bookings)
+      .set({ status: 'on_the_way', currentStage: 'on_the_way' })
+      .where(and(
+        eq(bookings.id, bookingId),
+        isNotNull(bookings.providerId),
+        inArray(bookings.status, ['assigned', 'confirmed']),
+      ))
+      .returning();
+    if (booking) return booking;
+    const current = await this.getBookingById(bookingId);
+    if (current?.status === 'on_the_way' && current.providerId) return current;
+    throw new Error("Booking is not ready to be marked on the way");
+  }
   async markArrived(bookingId: number, baseDurationMinutes: number): Promise<Booking> {
     const arrivalTime = new Date().toISOString();
     const [booking] = await db
       .update(bookings)
       .set({
         arrivalTime: sql`COALESCE(${bookings.arrivalTime}, ${arrivalTime})`,
+
         estimatedCompletionTime: null,
         extraTimeMinutes: 0,
         timeAdjustments: [],
@@ -2906,19 +2947,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async initialize(): Promise<void> {
-    // Seed default admin user if not present
-    const existing = await this.getUserByUsername("dapperadmin");
-    if (!existing) {
-      const hashed = await hashPassword("admin123");
-      await db.insert(users).values({
-        username: "dapperadmin",
-        password: hashed,
-        isAdmin: true,
-        isProvider: false,
-        name: "Dapr Admin",
-      });
-      console.log("[storage] Default admin user created (dapperadmin)");
-    }
+    // Identity creation and role approval are explicit authenticated workflows.
+    // Startup must never create an administrator or a known login credential.
 
     // Sync the four customer-facing service tiers. We match by category so
     // legacy rows (Basic / The OG / Black Label) get their name, price, and

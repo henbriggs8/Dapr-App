@@ -1,7 +1,8 @@
+import { connectAuthenticatedSocket } from "@/lib/authenticated-websocket";
 import { useEffect, useRef, useState, useCallback, ReactNode, createContext, useContext } from "react";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
-import { queryClient, resolveWsUrl } from "@/lib/queryClient";
+import { queryClient, resolveWsUrl, getClerkToken } from "@/lib/queryClient";
 
 type WebSocketStatus = "connecting" | "connected" | "disconnected";
 
@@ -17,7 +18,7 @@ export const WebSocketContext = createContext<WebSocketContextType | null>(null)
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<ReturnType<typeof connectAuthenticatedSocket> | null>(null);
   const [status, setStatus] = useState<WebSocketStatus>("disconnected");
   const { toast } = useToast();
   const completionSubscribersRef = useRef<Set<CompletionSubscriber>>(new Set());
@@ -28,48 +29,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const connect = useCallback(() => {
-    if (!user) {
-      setStatus("disconnected");
-      return;
-    }
-    
-    try {
-      setStatus("connecting");
-      const wsUrl = resolveWsUrl("/ws");
-      
-      socketRef.current = new WebSocket(wsUrl);
-      
-      socketRef.current.onopen = () => {
-        setStatus("connected");
-        console.log("WebSocket connection established");
-        
-        // Register with the server using the user's ID
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({
-            type: "auth",
-            userId: user.id
-          }));
-        }
-      };
-      
-      socketRef.current.onclose = () => {
-        setStatus("disconnected");
-        console.log("WebSocket connection closed");
-        
-        // Try to reconnect after delay
-        setTimeout(() => {
-          if (user) {
-            connect();
-          }
-        }, 5000);
-      };
-      
-      socketRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setStatus("disconnected");
-      };
-      
-      socketRef.current.onmessage = (event) => {
+    if (!user) return;
+    socketRef.current = connectAuthenticatedSocket({
+      url: resolveWsUrl("/ws"),
+      getToken: getClerkToken,
+      onStatus: setStatus,
+      onMessage: (event) => {
         try {
           const data = JSON.parse(event.data);
           
@@ -85,6 +50,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
               queryClient.invalidateQueries({ queryKey: [`/api/bookings/${data.bookingId}`] });
             }
             queryClient.invalidateQueries({ queryKey: ["/api/provider/active-bookings"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
+          } else if (data.type === "available_jobs_changed") {
             queryClient.invalidateQueries({ queryKey: ["/api/provider/available-jobs"] });
           } else if (data.type === "new_job_available") {
             // A new booking was created — refresh provider available jobs and alert them
@@ -156,19 +123,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Error processing WebSocket message:", error);
         }
-      };
-    } catch (error) {
-      console.error("Error connecting to WebSocket:", error);
-      setStatus("disconnected");
-    }
+      },
+    });
   }, [user, toast]);
   
   const sendMessage = useCallback((message: object) => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn("Cannot send message, WebSocket is not connected");
-    }
+    socketRef.current?.send(message);
   }, []);
   
   // Connect and disconnect on mount/unmount or when user changes

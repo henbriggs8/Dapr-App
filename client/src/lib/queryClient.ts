@@ -25,6 +25,10 @@ export function setClerkTokenGetter(fn: () => Promise<string | null>) {
   _getToken = fn;
 }
 
+export async function getClerkToken(): Promise<string | null> {
+  return _getToken ? _getToken() : null;
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (!IS_NATIVE || !_getToken) return {};
   try {

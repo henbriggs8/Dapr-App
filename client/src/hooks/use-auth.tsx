@@ -5,7 +5,7 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { getQueryFn, apiRequest, queryClient, getClerkToken, resolveUrl } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
@@ -50,8 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
+    mutationFn: async (_credentials: InsertUser) => {
+      const token = await getClerkToken();
+      if (!token) throw new Error("Complete Clerk sign-up first.");
+      const res = await fetch(resolveUrl("/api/register"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Unable to synchronize account.");
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
