@@ -8,8 +8,8 @@
   {
     "id": "M2",
     "gate": "merge/readiness",
-    "issue": "45 reported inherited dependency findings: 4 critical, 24 high, 14 moderate, 3 low",
-    "required": "Remediate or document reachability and explicit owner/security disposition. New CI audit gate intentionally fails on high/critical findings; do not bypass it or run force-fix upgrades blindly."
+    "issue": "Remote PR #19 baseline has 45 dependency findings (4 critical, 24 high); local follow-up reduces production-dependency audit to 16 (0 critical, 7 high, 8 moderate, 1 low)",
+    "required": "Remaining high findings must be remediated or have explicit owner/security disposition before readiness. Keep the CI high/critical gate active. Local dependency fixes have not been pushed; do not credit them to the remote PR."
   },
   {
     "id": "M3",
@@ -27,13 +27,13 @@
     "id": "M5",
     "gate": "merge/operations",
     "issue": "Main-branch automation and deployment hooks need owner attestation",
-    "required": "Confirm merging GitHub source cannot trigger a production deployment. No repository protections or Railway/Replit integrations were changed by this task."
+    "required": "Railway now connects main in both production and staging environments. Disable automatic deployments manually in both; verify all production hooks before any merge or push. This task changes no live integrations."
   },
   {
     "id": "S1",
     "gate": "future staging deployment",
-    "issue": "Railway project, database, bucket, service identities, domain and budget not provisioned",
-    "required": "Owner approval and manual account configuration; verify all resources belong to a NEW staging project. Resource creation often starts deployments and is outside this task."
+    "issue": "Railway inspiring-passion now contains production and staging environments, both with failed main builds; no database, bucket, application secrets or domain configured",
+    "required": "Use the staging environment only after exact identity approval. Separate PostgreSQL dapr_staging, private bucket and test identities remain unprovisioned. New service configuration must use dashboard settings or separately reviewed Railway IaC; railway.toml alone is insufficient. Resource creation and applying configuration can deploy and are outside this task."
   },
   {
     "id": "S2",

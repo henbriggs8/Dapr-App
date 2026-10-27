@@ -48,5 +48,6 @@
   },
   "railway_resources": "Not created or deployed",
   "database_initialization": "Explicit empty staging only; no production migration history inferred",
-  "safety": "Replit production, production databases, live iOS projects/apps and all existing services untouched; no merges or force pushes"
+  "safety": "Replit production, production databases, live iOS projects/apps and all existing services untouched; no merges or force pushes",
+  "snapshot_note": "Original preparation snapshot; current diagnosis and local-only follow-up are in railway-build-diagnosis.html and railway-staging-settings.json. Original verification applies to remote ae0f005 only."
 }

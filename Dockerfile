@@ -14,7 +14,7 @@ RUN npm run check && npm run build
 FROM node:24.14.1-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-# Runtime still imports Vite/theme utilities. Keep locked dev dependencies until that import split is qualified.
+# Keep tooling for explicit staging commands and image verification. Production HTTP startup does not initialize Vite.
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/public ./public

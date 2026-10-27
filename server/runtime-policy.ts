@@ -31,7 +31,7 @@ export function assertStagingConfiguration(env: NodeJS.ProcessEnv = process.env)
     if (env.RAILWAY_PROJECT_ID) throw new Error("Railway deployment requires APP_ENV=staging in this preparation branch");
     return;
   }
-  const requireValue = (key: string) => { if (!env[key]?.trim()) throw new Error(`Staging requires ${key}`); return env[key]!; };
+  const requireValue = (key: string) => { if (!env[key]?.trim() || /replace|placeholder/i.test(env[key]!)) throw new Error(`Staging requires a configured ${key}`); return env[key]!; };
   if (requireValue("STAGING_ISOLATION_CONFIRMED") !== "true") throw new Error("Staging isolation must be explicitly confirmed");
   const database = new URL(requireValue("DATABASE_URL"));
   if (database.hostname !== requireValue("STAGING_DATABASE_HOST")) throw new Error("Staging database host mismatch");
@@ -70,7 +70,13 @@ export function assertStagingConfiguration(env: NodeJS.ProcessEnv = process.env)
   }
   if (env.PUSH_NOTIFICATION_ENVIRONMENT !== "development") throw new Error("Staging push namespace must be development");
   if (env.REPLIT_DEPLOYMENT || env.REPL_ID) throw new Error("Replit identity must not be copied into staging");
-  if (env.RAILWAY_PROJECT_ID && requireValue("STAGING_RAILWAY_PROJECT_ID") !== env.RAILWAY_PROJECT_ID) throw new Error("Railway staging project identity mismatch");
+  if (env.RAILWAY_PROJECT_ID) {
+    if (requireValue("STAGING_RAILWAY_PROJECT_ID") !== env.RAILWAY_PROJECT_ID) throw new Error("Railway staging project identity mismatch");
+    if (env.RAILWAY_ENVIRONMENT_NAME !== "staging" || !env.RAILWAY_ENVIRONMENT_ID
+      || requireValue("STAGING_RAILWAY_ENVIRONMENT_ID") !== env.RAILWAY_ENVIRONMENT_ID) {
+      throw new Error("Railway staging environment identity mismatch");
+    }
+  }
 }
 
 export function publicConfigFingerprint(env: NodeJS.ProcessEnv = process.env): string {

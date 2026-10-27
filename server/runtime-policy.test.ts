@@ -35,3 +35,12 @@ test("database transport enforces certificate verification and prevents SSL URL 
   assert.throws(() => postgresPoolConfig({ DATABASE_URL: "postgres://fixture:fixture@db.invalid/test", DATABASE_SSL: "disable" }));
   assert.throws(() => postgresPoolConfig({ DATABASE_URL: "postgres://fixture:fixture@localhost/test?sslmode=no-verify", DATABASE_SSL: "verify-full" }));
 });
+
+test("Railway startup binds the intended staging environment and rejects unfilled placeholders", () => {
+  const railway = { ...staging(), RAILWAY_PROJECT_ID: "project-fixture", STAGING_RAILWAY_PROJECT_ID: "project-fixture",
+    RAILWAY_ENVIRONMENT_NAME: "staging", RAILWAY_ENVIRONMENT_ID: "environment-fixture", STAGING_RAILWAY_ENVIRONMENT_ID: "environment-fixture" };
+  assert.doesNotThrow(() => assertStagingConfiguration(railway));
+  assert.throws(() => assertStagingConfiguration({ ...railway, RAILWAY_ENVIRONMENT_NAME: "production" }));
+  assert.throws(() => assertStagingConfiguration({ ...railway, STAGING_RAILWAY_ENVIRONMENT_ID: "wrong" }));
+  assert.throws(() => assertStagingConfiguration({ ...railway, S3_ACCESS_KEY_ID: "REPLACE_WITH_KEY" }));
+});

@@ -1,3 +1,6 @@
+# LEGACY COMPATIBILITY ONLY: new services cannot opt into Config as Code.
+# Legacy support ends 2026-12-01 per current Railway documentation.
+# Apply/verify docs/railway-staging-settings.json manually only after approval.
 # Preparation only: this file does not authorize resource creation or deployment.
 [build]
 builder = "DOCKERFILE"

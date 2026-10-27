@@ -1,5 +1,9 @@
 name: Backend staging readiness
 on:
+  push:
+    branches:
+      - main
+      - codex/railway-staging-preparation-2026-10-26
   pull_request:
   workflow_dispatch:
 permissions:
