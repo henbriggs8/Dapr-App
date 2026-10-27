@@ -22,6 +22,7 @@ COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/server ./server
 COPY --from=build --chown=node:node /app/shared ./shared
 COPY --from=build --chown=node:node /app/staging ./staging
+COPY --from=build --chown=node:node /app/migrations ./migrations
 COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/tsconfig.json ./tsconfig.json
 USER node
