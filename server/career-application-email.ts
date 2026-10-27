@@ -28,7 +28,7 @@ export interface CareerApplicationEmailPayload {
  * Failures are logged only; the stored application is never affected.
  */
 export async function sendCareerApplicationEmail(payload: CareerApplicationEmailPayload): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
+  if (process.env.OUTBOUND_DELIVERY_MODE === "disabled" || !process.env.RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY not set — skipping career application notification.");
     return;
   }

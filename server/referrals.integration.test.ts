@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 import assert from "node:assert/strict";
 import {
   cleanupReferralTestRecords,
@@ -40,14 +42,17 @@ async function main() {
     return user;
   }
 
+  const { services: serviceTable } = await import("@shared/schema");
+  const [fixtureService] = await db.insert(serviceTable).values({ name: "referral fixture", description: "synthetic", price: 39, duration: 60, category: "test" }).returning();
   async function createTestBooking(userId: number, suffix: string) {
     const booking = await storage.createBooking({
       userId,
-      providerId: null,
-      serviceId: 1,
+      providerId: -424242,
+      serviceId: fixtureService.id,
       timeSlotId: 1,
       vehicleId: null,
-      status: "pending",
+      status: "in_progress",
+      startTime: new Date().toISOString(),
       priceTier: "basic",
       timestamp: new Date().toISOString(),
       serviceLocation: `INTEGRATION TEST ${runId} ${suffix}`,

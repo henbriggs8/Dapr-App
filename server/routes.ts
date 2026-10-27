@@ -1,3 +1,5 @@
+import { loadBookingServiceSubtotals } from "./booking-compensation";
+import { providerPayoutCents } from "./provider-compensation";
 import express from "express";
 import type { Express } from "express";
 import { Request, Response, NextFunction } from "express";
@@ -244,7 +246,7 @@ export function registerRoutes(app: Express): Server {
   });
   const notifyBookingCustomer = createBookingNotifier(pushService);
   void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Initial outbox pass failed:", error));
-  setInterval(() => {
+  const dispatchTimer = setInterval(() => {
     void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Outbox retry pass failed:", error));
   }, 60_000).unref();
   const sessionMiddleware = setupAuth(app, storage);
@@ -265,6 +267,9 @@ export function registerRoutes(app: Express): Server {
     getUserByUsername: username => storage.getUserByUsername(username),
     verifyToken: token => clerkClient.verifyToken(token),
   });
+
+  httpServer.once("dapr:shutdown", () => { clearInterval(dispatchTimer); realtime.close(); });
+  httpServer.once("close", () => clearInterval(dispatchTimer));
 
   const sendBookingEvent = (booking: { userId: number; providerId?: number | null }, payload: unknown) => {
     const participantIds = new Set([booking.userId, booking.providerId].filter((id): id is number => typeof id === "number"));
@@ -1053,6 +1058,7 @@ export function registerRoutes(app: Express): Server {
           .map(vehicle => [vehicle.id, vehicle])
       );
 
+      const providerSubtotals = await loadBookingServiceSubtotals(providerBookings);
       res.json(providerBookings.map(booking => {
         const customer = customerMap.get(booking.userId);
         const vehicle = typeof booking.vehicleId === "number"
@@ -1067,6 +1073,7 @@ export function registerRoutes(app: Express): Server {
           time: booking.time,
           totalPrice: booking.totalPrice,
           providerEarnings: booking.providerEarnings,
+          payoutCents: providerPayoutCents(booking, providerSubtotals.get(booking.id)),
           serviceDuration: booking.serviceDuration,
           customerFirstName: customer?.name?.split(" ")[0] || null,
           vehicleLabel: vehicle
@@ -1753,6 +1760,7 @@ export function registerRoutes(app: Express): Server {
         ),
       ]);
 
+      const serviceSubtotals = await loadBookingServiceSubtotals(unseenBookings);
       const jobs = [];
       for (const booking of unseenBookings) {
         const bookingHasLocation = booking.serviceLatitude != null && booking.serviceLongitude != null;
@@ -1762,7 +1770,7 @@ export function registerRoutes(app: Express): Server {
           ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
           : null;
 
-        const details = { serviceName: serviceMap[booking.serviceId]?.name ?? null, vehicleSummary, distanceMiles: null as number | null };
+        const details = { serviceName: serviceMap[booking.serviceId]?.name ?? null, vehicleSummary, distanceMiles: null as number | null, serviceSubtotalCents: serviceSubtotals.get(booking.id) };
 
         if (providerHasLocation && bookingHasLocation) {
           const distance = calculateDistance(

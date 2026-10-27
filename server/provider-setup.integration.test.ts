@@ -1,13 +1,15 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { Pool } from "pg";
 import express from "express";
 import type { Server } from "node:http";
 import ws from "ws";
 
-neonConfig.webSocketConstructor = ws;
+
 
 if (process.env.RUN_PROVIDER_SETUP_INTEGRATION !== "1") {
   throw new Error("Set RUN_PROVIDER_SETUP_INTEGRATION=1 to run this destructive-to-test-data-only integration test.");

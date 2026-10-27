@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 import assert from "node:assert/strict";
 import { eq, sql } from "drizzle-orm";
 import { bookings, notificationEvents, users } from "@shared/schema";

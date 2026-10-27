@@ -1,3 +1,7 @@
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
+import { earningsForCompletedBooking } from "./booking-compensation";
+import { providerPayoutCents, resolveServiceSubtotalCents } from "./provider-compensation";
 import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, providerApplications, notificationEvents, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress, ProviderApplication, InsertProviderApplication } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, gt, lt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
@@ -635,8 +639,8 @@ export class MemStorage implements IStorage {
       
       // Get service details to calculate provider earnings
       const service = await this.getServiceById(booking.serviceId);
-      const amount = service ? service.price * 100 : 0; // Convert to cents
-      const providerEarnings = Math.round(amount * 0.7); // Provider gets 70%
+      const providerEarnings = providerPayoutCents(booking, resolveServiceSubtotalCents(booking, null, service));
+      if (providerEarnings == null) throw new Error("Cannot finalize provider earnings: service subtotal is unavailable");
       
       const updatedBooking = {
         ...booking,
@@ -645,7 +649,6 @@ export class MemStorage implements IStorage {
         notes: booking.notes,
         endTime,
         serviceDuration,
-        amount,
         providerEarnings
       };
       
@@ -897,6 +900,7 @@ export class MemStorage implements IStorage {
       throw new Error('Booking not found');
     }
     
+    if (booking.status === 'completed' && booking.endTime) return booking;
     if (!booking.startTime) {
       throw new Error('Cannot complete service that has not been started');
     }
@@ -911,8 +915,8 @@ export class MemStorage implements IStorage {
     
     // Get service details to calculate provider earnings
     const service = await this.getServiceById(booking.serviceId);
-    const amount = service ? service.price * 100 : 0; // Convert to cents
-    const providerEarnings = Math.round(amount * 0.7); // Provider gets 70%
+    const providerEarnings = providerPayoutCents(booking, resolveServiceSubtotalCents(booking, null, service));
+    if (providerEarnings == null) throw new Error("Cannot finalize provider earnings: service subtotal is unavailable");
     
     const updatedBooking = {
       ...booking,
@@ -920,7 +924,6 @@ export class MemStorage implements IStorage {
       currentStage: 'completed',
       endTime,
       serviceDuration,
-      amount,
       providerEarnings
     };
     
@@ -1683,9 +1686,12 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    });
+    if (process.env.SESSION_STORE === "postgres") {
+      const PgStore = connectPgSimple(session);
+      this.sessionStore = new PgStore({ pool, tableName: "session", createTableIfMissing: false });
+    } else {
+      this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -1891,8 +1897,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     return db.transaction(async tx => {
-      const [before] = await tx.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+      const [before] = await tx.select().from(bookings).where(eq(bookings.id, id)).limit(1).for("update");
       if (!before) throw new Error("Booking not found");
+      if (status === "completed") {
+        if (before.status === "completed") return before;
+        updates.endTime = before.endTime || new Date().toISOString();
+        updates.serviceDuration = before.startTime ? (before.endTime && before.serviceDuration != null ? before.serviceDuration : Math.floor((new Date(updates.endTime).getTime() - new Date(before.startTime).getTime()) / 60_000)) : before.serviceDuration;
+        updates.providerEarnings = await earningsForCompletedBooking(before, tx);
+      }
       const [booking] = await tx.update(bookings).set(updates).where(eq(bookings.id, id)).returning();
       if (status === "cancelled" && before.status !== "cancelled" && before.providerId) {
         await tx.insert(notificationEvents).values({
@@ -2466,42 +2478,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeServiceTimer(bookingId: number): Promise<Booking> {
-    const booking = await this.getBookingById(bookingId);
-    if (!booking || !booking.startTime) {
-      throw new Error('Booking not found or service not started');
-    if (booking!.status === 'completed' && booking!.endTime) {
-      return booking as Booking;
-    }
-
-    }
-
-    // Complete exactly once: a retry keeps the original endTime and duration.
-    const startTime = new Date(booking.startTime);
-    const endTime = booking.endTime ? new Date(booking.endTime) : new Date();
-    const serviceDuration = booking.endTime && booking.serviceDuration != null
-      ? booking.serviceDuration
-      : Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // in minutes
-
-    const [updatedBooking] = await db
-      .update(bookings)
-      .set({
-        status: 'completed',
-        currentStage: 'completed',
-        endTime: endTime.toISOString(),
-        serviceDuration
-      })
-      .where(and(
-        eq(bookings.id, bookingId),
-        eq(bookings.status, 'in_progress'),
-        isNotNull(bookings.providerId),
-      ))
-      .returning();
-    if (!updatedBooking) {
-      const current = await this.getBookingById(bookingId);
-      if (current?.status === 'completed' && current.endTime) return current;
-      throw new Error('Booking is not ready for completion');
-    }
-    return updatedBooking;
+    return db.transaction(async tx => {
+      const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1).for("update");
+      if (!booking) throw new Error("Booking is not ready for completion");
+      if (booking.status === "completed" && booking.endTime) return booking;
+      if (booking.status !== "in_progress" || !booking.startTime || !booking.providerId) throw new Error("Booking is not ready for completion");
+      const endTime = booking.endTime || new Date().toISOString();
+      const serviceDuration = booking.endTime && booking.serviceDuration != null ? booking.serviceDuration
+        : Math.floor((new Date(endTime).getTime() - new Date(booking.startTime).getTime()) / 60_000);
+      const providerEarnings = await earningsForCompletedBooking(booking, tx);
+      const [updated] = await tx.update(bookings).set({ status: "completed", currentStage: "completed", endTime, serviceDuration, providerEarnings })
+        .where(eq(bookings.id, bookingId)).returning();
+      return updated;
+    });
   }
 
   async addBookingRating(bookingId: number, rating: number, comment?: string): Promise<Booking> {

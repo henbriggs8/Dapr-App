@@ -1,4 +1,5 @@
 import type { Booking, User } from "@shared/schema";
+import { providerPayoutCents } from "./provider-compensation";
 
 type BookingActor = Pick<User, "id" | "isProvider" | "isAdmin">;
 type BookingAccess = Pick<Booking, "userId" | "providerId" | "status">;
@@ -27,7 +28,7 @@ export function serializePublicProvider(provider: PublicProvider) {
 
 export function serializeAvailableJob(
   booking: AvailableJob,
-  details: { serviceName: string | null; vehicleSummary: string | null; distanceMiles: number | null },
+  details: { serviceName: string | null; vehicleSummary: string | null; distanceMiles: number | null; serviceSubtotalCents?: number | null },
 ) {
   return {
     id: booking.id,
@@ -38,9 +39,41 @@ export function serializeAvailableJob(
     time: booking.time,
     fulfillmentMode: booking.fulfillmentMode,
     estimatedDurationMinutes: booking.serviceDuration,
-    payoutCents: booking.providerEarnings,
+    payoutCents: providerPayoutCents(booking, details.serviceSubtotalCents),
     vehicleSummary: details.vehicleSummary,
     distanceMiles: details.distanceMiles,
+  };
+}
+
+type AssignedProviderJob = Pick<
+  Booking,
+  "id" | "serviceId" | "serviceLocation" | "date" | "time" | "totalPrice" | "providerEarnings"
+  | "amount" | "serviceDuration" | "notes" | "status" | "currentStage" | "acceptedAt" | "arrivalTime" | "startTime" | "endTime"
+>;
+
+export function serializeAssignedProviderJob(
+  booking: AssignedProviderJob,
+  details: { customerFirstName: string | null; vehicleLabel: string | null; serviceSubtotalCents?: number | null },
+) {
+  return {
+    id: booking.id,
+    serviceId: booking.serviceId,
+    serviceLocation: booking.serviceLocation,
+    date: booking.date,
+    time: booking.time,
+    totalPrice: booking.totalPrice,
+    providerEarnings: booking.providerEarnings,
+    payoutCents: providerPayoutCents(booking, details.serviceSubtotalCents),
+    serviceDuration: booking.serviceDuration,
+    customerFirstName: details.customerFirstName,
+    vehicleLabel: details.vehicleLabel,
+    notes: booking.notes,
+    status: booking.status,
+    currentStage: booking.currentStage,
+    acceptedAt: booking.acceptedAt,
+    arrivalTime: booking.arrivalTime,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
   };
 }
 

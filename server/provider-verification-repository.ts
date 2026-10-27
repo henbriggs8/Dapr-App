@@ -26,7 +26,7 @@ export type PendingMediaInput = {
 function storageEnvironment(): string {
   const configured = process.env.VERIFICATION_MEDIA_ENVIRONMENT?.trim();
   if (configured && /^[a-z0-9_-]{1,32}$/i.test(configured)) return configured.toLowerCase();
-  return process.env.REPLIT_DEPLOYMENT ? "production" : "development";
+  return process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "development");
 }
 
 export class ProviderVerificationRepository {

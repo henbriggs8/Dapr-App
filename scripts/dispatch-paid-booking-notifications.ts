@@ -1,3 +1,4 @@
+import "../server/runtime-bootstrap";
 import { pool } from "../server/db";
 import { runPaidBookingNotificationDispatch } from "../server/paid-booking-notifications";
 

@@ -5,3 +5,12 @@ server/public
 vite.config.ts.*
 *.tar.gz
 admin_cookies.txt
+
+.env
+.env.*
+!.env.example
+!.env.staging.example
+!.env.test.example
+*.dump
+*.backup
+.test-postgres/

@@ -17,6 +17,8 @@ type Connection = { socket: WebSocket; userId: number; validate(): Promise<Socke
 
 function permittedOrigin(request: IncomingMessage): boolean {
   const origin = request.headers.origin;
+  if (process.env.APP_ENV === "staging" && origin) return origin === process.env.SITE_URL;
+  if (process.env.SITE_URL && origin === process.env.SITE_URL) return true;
   if (!origin) return true; // Headerless native clients must use a Clerk token.
   if (["https://autodapper.com", "https://www.autodapper.com", "https://dapper-pros.replit.app",
     "capacitor://localhost", "ionic://localhost"].includes(origin)) return true;

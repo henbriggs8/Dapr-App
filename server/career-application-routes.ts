@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import multer from "multer";
 import { db } from "./db";
 import { careerApplications, careerApplicationFieldsSchema } from "@shared/schema";
-import { ReplitVerificationMediaObjectStore } from "./verification-media-object-store";
+import { createVerificationMediaObjectStore } from "./verification-media-object-store";
 import { sendCareerApplicationEmail } from "./career-application-email";
 
 /** Open roles are the single server-side source of truth for valid positions. */
@@ -76,11 +76,11 @@ function parseBoolean(value: unknown): boolean | undefined {
 }
 
 export function registerCareerApplicationRoutes(app: Express): void {
-  const objectStore = new ReplitVerificationMediaObjectStore();
+  const objectStore = createVerificationMediaObjectStore();
   const configuredEnvironment = process.env.VERIFICATION_MEDIA_ENVIRONMENT?.trim();
   const environmentPrefix = configuredEnvironment && /^[a-z0-9_-]{1,32}$/i.test(configuredEnvironment)
     ? configuredEnvironment.toLowerCase()
-    : (process.env.REPLIT_DEPLOYMENT ? "production" : "development");
+    : (process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "development"));
 
   app.post(
     "/api/careers/applications",
