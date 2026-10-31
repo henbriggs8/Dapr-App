@@ -225,17 +225,25 @@ try {
   await setupClient.query(migration);
 
   const columns = await setupClient.query(
-    `SELECT column_name FROM information_schema.columns
+    `SELECT column_name, is_nullable FROM information_schema.columns
       WHERE table_schema = $1 AND table_name = 'provider_application_setup'
       ORDER BY ordinal_position`,
     [schemaName],
   );
   assert.deepEqual(columns.rows.map(row => row.column_name), expectedColumns);
+  assert.deepEqual(
+    columns.rows.filter(row => row.is_nullable === "NO").map(row => row.column_name).sort(),
+    ["id", "application_id", "user_id", "created_at", "updated_at"].sort(),
+    "Required provider setup columns must remain NOT NULL on every supported PostgreSQL version.",
+  );
 
+  // PostgreSQL 18 also catalogs NOT NULL constraints (contype='n').
+  // Their column semantics are checked above independently of generated names.
   const constraints = await setupClient.query(
     `SELECT conname FROM pg_constraint
       WHERE connamespace = $1::regnamespace
         AND conrelid = $2::regclass
+        AND contype <> 'n'
       ORDER BY conname`,
     [schemaName, `${schemaName}.provider_application_setup`],
   );
