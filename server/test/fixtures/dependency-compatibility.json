@@ -1,0 +1,2546 @@
+{
+  "baseline": "9f822292852ecf6e10de6d53051ebcb72ee25abd",
+  "synthetic": true,
+  "compiled": {
+    "select": {
+      "sql": "select \"id\", \"status\" from \"bookings\" where (\"bookings\".\"user_id\" = $1 and \"bookings\".\"is_paid\" = $2)",
+      "params": [
+        7,
+        true
+      ]
+    },
+    "bookingUpdate": {
+      "sql": "update \"bookings\" set \"status\" = $1, \"provider_earnings\" = $2 where \"bookings\".\"id\" = $3 returning \"id\"",
+      "params": [
+        "completed",
+        9685,
+        12
+      ]
+    },
+    "providerApproval": {
+      "sql": "update \"users\" set \"is_provider\" = $1 where \"users\".\"id\" = $2",
+      "params": [
+        true,
+        9
+      ]
+    },
+    "advisoryLock": {
+      "sql": "select pg_advisory_xact_lock(hashtext($1))",
+      "params": [
+        "provider-approval:9"
+      ],
+      "typings": [
+        "none"
+      ]
+    }
+  },
+  "tables": {
+    "bookingPhotos": {
+      "name": "booking_photos",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "booking_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "photo_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "data_url",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "caption",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "uploaded_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "bookingQuotes": {
+      "name": "booking_quotes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "idempotency_key",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "request_fingerprint",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "time_slot_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_location",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_location_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_latitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_longitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "time",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "price_tier",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "add_on_ids",
+          "type": "json",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "add_ons",
+          "type": "json",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "subtotal_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_discount_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "referral_credit_applied_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "total_amount_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "expires_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "consumed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "booking_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "fulfillment_mode",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        }
+      ]
+    },
+    "bookings": {
+      "name": "bookings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "time_slot_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "booking_ref",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "current_stage",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "rating",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "rating_comment",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "price_tier",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_location",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_location_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_latitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_longitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "time",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "amount",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_earnings",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_duration",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "assigned_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "accepted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "rejected_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "assignment_expiry",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "previous_providers",
+          "type": "json",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "add_ons",
+          "type": "json",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "add_on_total",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "total_price",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_discount_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "referral_credit_applied_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "quote_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "booking_idempotency_key",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "payment_intent_idempotency_key",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "payment_expires_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_credit_refunded_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "fulfillment_mode",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "slot_reserved_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "slot_reservation_released_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "is_paid",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "payment_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "payment_date",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "payment_url",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "stripe_session_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "payment_method",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "tip_amount",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "pending_tip_session_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "pending_tip_cents",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_latitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_longitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "estimated_arrival",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "last_location_update",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "distance_to_customer",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "tracking_enabled",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "arrival_time",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "extra_time_minutes",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "estimated_completion_time",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "time_adjustments",
+          "type": "json",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "provider_notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "careerApplications": {
+      "name": "career_applications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "first_name",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "last_name",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "linkedin_url",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "portfolio_url",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "resume_object_key",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "resume_file_name",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "why_dapr",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "relevant_experience",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "role_specific_answer",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "available_start",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "authorized_to_work_us",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "requires_sponsorship",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_source",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "clerkStripeMapping": {
+      "name": "clerk_stripe_mapping",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "clerk_user_id",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "stripe_customer_id",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "contactMessages": {
+      "name": "contact_messages",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "request_callback",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "submitted_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "resolved",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "resolved_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "notificationEvents": {
+      "name": "notification_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "event_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "booking_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "recipient",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "channel",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "provider",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "notification_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "attempt_count",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "idempotency_key",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "provider_message_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "metadata",
+          "type": "json",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "first_attempted_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "last_attempted_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "claim_token",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "failed_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "pricingConfig": {
+      "name": "pricing_config",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "basic",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "interior",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "standard",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "premium",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "providerApplicationMedia": {
+      "name": "provider_application_media",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "application_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "media_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "object_key",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "mime_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "file_size_bytes",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "expected_checksum_sha256",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "checksum_sha256",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "upload_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "processing_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "failure_reason",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "is_current",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "supersedes_media_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "review_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "rejection_reason",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "upload_expires_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "uploaded_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "ready_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "reviewed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "reviewed_by",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "superseded_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "object_deleted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "providerApplicationSetup": {
+      "name": "provider_application_setup",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "application_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_guide_version",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_guide_acknowledged_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_area_region",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_area_zip_codes",
+          "type": "text[]",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "max_travel_radius",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "service_area_confirmed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "training_completed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "training_completed_by",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "training_notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "activated_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "providerApplications": {
+      "name": "provider_applications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "full_name",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "phone_number",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "normalized_phone_number",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "normalized_email",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "zip_code",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "experience_level",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "years_detailing",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "vehicle_type",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "vehicle_description",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "available_weekdays",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "available_weekends",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "max_travel_radius",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "privacy_policy_version",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "privacy_accepted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "applicant_terms_version",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "applicant_terms_accepted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "contact_consent_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "has_reliable_vehicle",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "agreed_to_standards",
+          "type": "boolean",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "standards_version",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "standards_accepted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "application_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "submitted_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "reviewed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "reviewed_by",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "internal_review_notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "pushDevices": {
+      "name": "push_devices",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "fcm_token",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "app_type",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "environment",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "notifications_enabled",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        }
+      ]
+    },
+    "referrals": {
+      "name": "referrals",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "referrer_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referred_user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_code_used",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "reward_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "discount_status",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "related_booking_id",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "discount_amount_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "reward_amount_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "referrer_credited",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "created_at",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "completed_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "rewarded_at",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "savedAddresses": {
+      "name": "saved_addresses",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "is_default",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        }
+      ]
+    },
+    "services": {
+      "name": "services",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "price",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "duration",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "timeSlots": {
+      "name": "time_slots",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "is_available",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "max_bookings",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "current_bookings",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "is_published",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        }
+      ]
+    },
+    "users": {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "username",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "password",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "is_provider",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "is_admin",
+          "type": "boolean",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "rating",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "rating_count",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "latitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "longitude",
+          "type": "double precision",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "birthday",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "profile_image",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "current_status",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "last_location_update",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "last_online_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "last_heartbeat_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_code",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "free_wash_credits",
+          "type": "integer",
+          "notNull": false,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "referred_by_code",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "referral_credit_balance_cents",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": false
+        },
+        {
+          "name": "stripe_customer_id",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    },
+    "vehicles": {
+      "name": "vehicles",
+      "columns": [
+        {
+          "name": "id",
+          "type": "serial",
+          "notNull": true,
+          "hasDefault": true,
+          "primary": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "make",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "notNull": true,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "license_plate",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "notNull": false,
+          "hasDefault": false,
+          "primary": false
+        }
+      ]
+    }
+  },
+  "cases": [
+    {"schema":"insertUserSchema","label":"valid","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"name":"Ada","email":"ada@example.test"}}},
+    {"schema":"insertUserSchema","label":"unknown-key","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":false,"unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"name":"Ada","email":"ada@example.test"}}},
+    {"schema":"insertUserSchema","label":"empty","input":{},"expected":{"success":false,"paths":["password","username"]}},
+    {"schema":"insertUserSchema","label":"missing-username","input":{"password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["username"]}},
+    {"schema":"insertUserSchema","label":"null-username","input":{"username":null,"password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["username"]}},
+    {"schema":"insertUserSchema","label":"wrong-type-username","input":{"username":{"invalid":"fixture"},"password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["username"]}},
+    {"schema":"insertUserSchema","label":"missing-password","input":{"username":"clerk_fixture","name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["password"]}},
+    {"schema":"insertUserSchema","label":"null-password","input":{"username":"clerk_fixture","password":null,"name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["password"]}},
+    {"schema":"insertUserSchema","label":"wrong-type-password","input":{"username":"clerk_fixture","password":{"invalid":"fixture"},"name":"Ada","email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["password"]}},
+    {"schema":"insertUserSchema","label":"missing-name","input":{"username":"clerk_fixture","password":"synthetic-fixture","email":"ada@example.test","isAdmin":false},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"email":"ada@example.test"}}},
+    {"schema":"insertUserSchema","label":"null-name","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":null,"email":"ada@example.test","isAdmin":false},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"name":null,"email":"ada@example.test"}}},
+    {"schema":"insertUserSchema","label":"wrong-type-name","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":{"invalid":"fixture"},"email":"ada@example.test","isAdmin":false},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertUserSchema","label":"missing-email","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","isAdmin":false},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"name":"Ada"}}},
+    {"schema":"insertUserSchema","label":"null-email","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":null,"isAdmin":false},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","isAdmin":false,"name":"Ada","email":null}}},
+    {"schema":"insertUserSchema","label":"wrong-type-email","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":{"invalid":"fixture"},"isAdmin":false},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"insertUserSchema","label":"missing-isAdmin","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test"},"expected":{"success":true,"data":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test"}}},
+    {"schema":"insertUserSchema","label":"null-isAdmin","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":null},"expected":{"success":false,"paths":["isAdmin"]}},
+    {"schema":"insertUserSchema","label":"wrong-type-isAdmin","input":{"username":"clerk_fixture","password":"synthetic-fixture","name":"Ada","email":"ada@example.test","isAdmin":{"invalid":"fixture"}},"expected":{"success":false,"paths":["isAdmin"]}},
+    {"schema":"insertPricingConfigSchema","label":"valid","input":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":true,"data":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"}}},
+    {"schema":"insertPricingConfigSchema","label":"unknown-key","input":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"}}},
+    {"schema":"insertPricingConfigSchema","label":"empty","input":{},"expected":{"success":false,"paths":["basic","interior","premium","standard","updatedAt"]}},
+    {"schema":"insertPricingConfigSchema","label":"missing-basic","input":{"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["basic"]}},
+    {"schema":"insertPricingConfigSchema","label":"null-basic","input":{"basic":null,"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["basic"]}},
+    {"schema":"insertPricingConfigSchema","label":"wrong-type-basic","input":{"basic":{"invalid":"fixture"},"interior":99,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["basic"]}},
+    {"schema":"insertPricingConfigSchema","label":"missing-interior","input":{"basic":49,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["interior"]}},
+    {"schema":"insertPricingConfigSchema","label":"null-interior","input":{"basic":49,"interior":null,"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["interior"]}},
+    {"schema":"insertPricingConfigSchema","label":"wrong-type-interior","input":{"basic":49,"interior":{"invalid":"fixture"},"standard":149,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["interior"]}},
+    {"schema":"insertPricingConfigSchema","label":"missing-standard","input":{"basic":49,"interior":99,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["standard"]}},
+    {"schema":"insertPricingConfigSchema","label":"null-standard","input":{"basic":49,"interior":99,"standard":null,"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["standard"]}},
+    {"schema":"insertPricingConfigSchema","label":"wrong-type-standard","input":{"basic":49,"interior":99,"standard":{"invalid":"fixture"},"premium":249,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["standard"]}},
+    {"schema":"insertPricingConfigSchema","label":"missing-premium","input":{"basic":49,"interior":99,"standard":149,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["premium"]}},
+    {"schema":"insertPricingConfigSchema","label":"null-premium","input":{"basic":49,"interior":99,"standard":149,"premium":null,"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["premium"]}},
+    {"schema":"insertPricingConfigSchema","label":"wrong-type-premium","input":{"basic":49,"interior":99,"standard":149,"premium":{"invalid":"fixture"},"updatedAt":"2026-10-26"},"expected":{"success":false,"paths":["premium"]}},
+    {"schema":"insertPricingConfigSchema","label":"missing-updatedAt","input":{"basic":49,"interior":99,"standard":149,"premium":249},"expected":{"success":false,"paths":["updatedAt"]}},
+    {"schema":"insertPricingConfigSchema","label":"null-updatedAt","input":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":null},"expected":{"success":false,"paths":["updatedAt"]}},
+    {"schema":"insertPricingConfigSchema","label":"wrong-type-updatedAt","input":{"basic":49,"interior":99,"standard":149,"premium":249,"updatedAt":{"invalid":"fixture"}},"expected":{"success":false,"paths":["updatedAt"]}},
+    {"schema":"insertServiceSchema","label":"valid","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":"basic"},"expected":{"success":true,"data":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":"basic"}}},
+    {"schema":"insertServiceSchema","label":"unknown-key","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":"basic","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":"basic"}}},
+    {"schema":"insertServiceSchema","label":"empty","input":{},"expected":{"success":false,"paths":["category","description","duration","name","price"]}},
+    {"schema":"insertServiceSchema","label":"missing-name","input":{"description":"Synthetic fixture","price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertServiceSchema","label":"null-name","input":{"name":null,"description":"Synthetic fixture","price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertServiceSchema","label":"wrong-type-name","input":{"name":{"invalid":"fixture"},"description":"Synthetic fixture","price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertServiceSchema","label":"missing-description","input":{"name":"Fixture Wash","price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["description"]}},
+    {"schema":"insertServiceSchema","label":"null-description","input":{"name":"Fixture Wash","description":null,"price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["description"]}},
+    {"schema":"insertServiceSchema","label":"wrong-type-description","input":{"name":"Fixture Wash","description":{"invalid":"fixture"},"price":149,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["description"]}},
+    {"schema":"insertServiceSchema","label":"missing-price","input":{"name":"Fixture Wash","description":"Synthetic fixture","duration":60,"category":"basic"},"expected":{"success":false,"paths":["price"]}},
+    {"schema":"insertServiceSchema","label":"null-price","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":null,"duration":60,"category":"basic"},"expected":{"success":false,"paths":["price"]}},
+    {"schema":"insertServiceSchema","label":"wrong-type-price","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":{"invalid":"fixture"},"duration":60,"category":"basic"},"expected":{"success":false,"paths":["price"]}},
+    {"schema":"insertServiceSchema","label":"missing-duration","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"category":"basic"},"expected":{"success":false,"paths":["duration"]}},
+    {"schema":"insertServiceSchema","label":"null-duration","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":null,"category":"basic"},"expected":{"success":false,"paths":["duration"]}},
+    {"schema":"insertServiceSchema","label":"wrong-type-duration","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":{"invalid":"fixture"},"category":"basic"},"expected":{"success":false,"paths":["duration"]}},
+    {"schema":"insertServiceSchema","label":"missing-category","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60},"expected":{"success":false,"paths":["category"]}},
+    {"schema":"insertServiceSchema","label":"null-category","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":null},"expected":{"success":false,"paths":["category"]}},
+    {"schema":"insertServiceSchema","label":"wrong-type-category","input":{"name":"Fixture Wash","description":"Synthetic fixture","price":149,"duration":60,"category":{"invalid":"fixture"}},"expected":{"success":false,"paths":["category"]}},
+    {"schema":"insertTimeSlotSchema","label":"valid","input":{"date":"2026-10-26","startTime":"10:00","endTime":"11:00"},"expected":{"success":true,"data":{"date":"2026-10-26","startTime":"10:00","endTime":"11:00"}}},
+    {"schema":"insertTimeSlotSchema","label":"unknown-key","input":{"date":"2026-10-26","startTime":"10:00","endTime":"11:00","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"date":"2026-10-26","startTime":"10:00","endTime":"11:00"}}},
+    {"schema":"insertTimeSlotSchema","label":"empty","input":{},"expected":{"success":false,"paths":["date","endTime","startTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"missing-date","input":{"startTime":"10:00","endTime":"11:00"},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"insertTimeSlotSchema","label":"null-date","input":{"date":null,"startTime":"10:00","endTime":"11:00"},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"insertTimeSlotSchema","label":"wrong-type-date","input":{"date":{"invalid":"fixture"},"startTime":"10:00","endTime":"11:00"},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"insertTimeSlotSchema","label":"missing-startTime","input":{"date":"2026-10-26","endTime":"11:00"},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"null-startTime","input":{"date":"2026-10-26","startTime":null,"endTime":"11:00"},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"wrong-type-startTime","input":{"date":"2026-10-26","startTime":{"invalid":"fixture"},"endTime":"11:00"},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"missing-endTime","input":{"date":"2026-10-26","startTime":"10:00"},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"null-endTime","input":{"date":"2026-10-26","startTime":"10:00","endTime":null},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"insertTimeSlotSchema","label":"wrong-type-endTime","input":{"date":"2026-10-26","startTime":"10:00","endTime":{"invalid":"fixture"}},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"insertBookingSchema","label":"valid","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":true,"data":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"}}},
+    {"schema":"insertBookingSchema","label":"unknown-key","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"}}},
+    {"schema":"insertBookingSchema","label":"empty","input":{},"expected":{"success":false,"paths":["priceTier","serviceId","serviceLocation","serviceLocationType","timestamp","userId"]}},
+    {"schema":"insertBookingSchema","label":"missing-userId","input":{"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertBookingSchema","label":"null-userId","input":{"userId":null,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-userId","input":{"userId":{"invalid":"fixture"},"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertBookingSchema","label":"missing-serviceId","input":{"userId":7,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"insertBookingSchema","label":"null-serviceId","input":{"userId":7,"serviceId":null,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-serviceId","input":{"userId":7,"serviceId":{"invalid":"fixture"},"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"insertBookingSchema","label":"missing-priceTier","input":{"userId":7,"serviceId":3,"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"insertBookingSchema","label":"null-priceTier","input":{"userId":7,"serviceId":3,"priceTier":null,"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-priceTier","input":{"userId":7,"serviceId":3,"priceTier":{"invalid":"fixture"},"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"insertBookingSchema","label":"missing-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"insertBookingSchema","label":"null-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":null,"serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":{"invalid":"fixture"},"serviceLocation":"123 Fixture Way","serviceLocationType":"home"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"insertBookingSchema","label":"missing-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"insertBookingSchema","label":"null-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":null,"serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":{"invalid":"fixture"},"serviceLocationType":"home"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"insertBookingSchema","label":"missing-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way"},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"insertBookingSchema","label":"null-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":null},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"insertBookingSchema","label":"wrong-type-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":{"invalid":"fixture"}},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"bookingFormSchema","label":"valid","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":true,"data":{"userId":7,"serviceId":3,"timeSlotId":4,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","zipCode":"85001"}}},
+    {"schema":"bookingFormSchema","label":"unknown-key","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"userId":7,"serviceId":3,"timeSlotId":4,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","zipCode":"85001"}}},
+    {"schema":"bookingFormSchema","label":"empty","input":{},"expected":{"success":false,"paths":["priceTier","serviceId","serviceLocation","serviceLocationType","timeSlotId","timestamp","userId"]}},
+    {"schema":"bookingFormSchema","label":"missing-userId","input":{"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"bookingFormSchema","label":"null-userId","input":{"userId":null,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-userId","input":{"userId":{"invalid":"fixture"},"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"bookingFormSchema","label":"missing-serviceId","input":{"userId":7,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"bookingFormSchema","label":"null-serviceId","input":{"userId":7,"serviceId":null,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-serviceId","input":{"userId":7,"serviceId":{"invalid":"fixture"},"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"bookingFormSchema","label":"missing-priceTier","input":{"userId":7,"serviceId":3,"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"bookingFormSchema","label":"null-priceTier","input":{"userId":7,"serviceId":3,"priceTier":null,"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-priceTier","input":{"userId":7,"serviceId":3,"priceTier":{"invalid":"fixture"},"timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["priceTier"]}},
+    {"schema":"bookingFormSchema","label":"missing-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"bookingFormSchema","label":"null-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":null,"serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-timestamp","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":{"invalid":"fixture"},"serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["timestamp"]}},
+    {"schema":"bookingFormSchema","label":"missing-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"bookingFormSchema","label":"null-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":null,"serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-serviceLocation","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":{"invalid":"fixture"},"serviceLocationType":"home","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocation"]}},
+    {"schema":"bookingFormSchema","label":"missing-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"bookingFormSchema","label":"null-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":null,"timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-serviceLocationType","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":{"invalid":"fixture"},"timeSlotId":4,"zipCode":"85001"},"expected":{"success":false,"paths":["serviceLocationType"]}},
+    {"schema":"bookingFormSchema","label":"missing-timeSlotId","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","zipCode":"85001"},"expected":{"success":false,"paths":["timeSlotId"]}},
+    {"schema":"bookingFormSchema","label":"null-timeSlotId","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":null,"zipCode":"85001"},"expected":{"success":false,"paths":["timeSlotId"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-timeSlotId","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":{"invalid":"fixture"},"zipCode":"85001"},"expected":{"success":false,"paths":["timeSlotId"]}},
+    {"schema":"bookingFormSchema","label":"missing-zipCode","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4},"expected":{"success":true,"data":{"userId":7,"serviceId":3,"timeSlotId":4,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home"}}},
+    {"schema":"bookingFormSchema","label":"null-zipCode","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":null},"expected":{"success":false,"paths":["zipCode"]}},
+    {"schema":"bookingFormSchema","label":"wrong-type-zipCode","input":{"userId":7,"serviceId":3,"priceTier":"basic","timestamp":"2026-10-26T10:00:00.000Z","serviceLocation":"123 Fixture Way","serviceLocationType":"home","timeSlotId":4,"zipCode":{"invalid":"fixture"}},"expected":{"success":false,"paths":["zipCode"]}},
+    {"schema":"insertVehicleSchema","label":"valid","input":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null},"expected":{"success":true,"data":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null}}},
+    {"schema":"insertVehicleSchema","label":"unknown-key","input":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null,"unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null}}},
+    {"schema":"insertVehicleSchema","label":"empty","input":{},"expected":{"success":false,"paths":["make","model","userId","year"]}},
+    {"schema":"insertVehicleSchema","label":"missing-userId","input":{"year":2024,"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertVehicleSchema","label":"null-userId","input":{"userId":null,"year":2024,"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertVehicleSchema","label":"wrong-type-userId","input":{"userId":{"invalid":"fixture"},"year":2024,"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertVehicleSchema","label":"missing-year","input":{"userId":7,"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["year"]}},
+    {"schema":"insertVehicleSchema","label":"null-year","input":{"userId":7,"year":null,"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["year"]}},
+    {"schema":"insertVehicleSchema","label":"wrong-type-year","input":{"userId":7,"year":{"invalid":"fixture"},"make":"Toyota","model":"Camry","color":null},"expected":{"success":false,"paths":["year"]}},
+    {"schema":"insertVehicleSchema","label":"missing-make","input":{"userId":7,"year":2024,"model":"Camry","color":null},"expected":{"success":false,"paths":["make"]}},
+    {"schema":"insertVehicleSchema","label":"null-make","input":{"userId":7,"year":2024,"make":null,"model":"Camry","color":null},"expected":{"success":false,"paths":["make"]}},
+    {"schema":"insertVehicleSchema","label":"wrong-type-make","input":{"userId":7,"year":2024,"make":{"invalid":"fixture"},"model":"Camry","color":null},"expected":{"success":false,"paths":["make"]}},
+    {"schema":"insertVehicleSchema","label":"missing-model","input":{"userId":7,"year":2024,"make":"Toyota","color":null},"expected":{"success":false,"paths":["model"]}},
+    {"schema":"insertVehicleSchema","label":"null-model","input":{"userId":7,"year":2024,"make":"Toyota","model":null,"color":null},"expected":{"success":false,"paths":["model"]}},
+    {"schema":"insertVehicleSchema","label":"wrong-type-model","input":{"userId":7,"year":2024,"make":"Toyota","model":{"invalid":"fixture"},"color":null},"expected":{"success":false,"paths":["model"]}},
+    {"schema":"insertVehicleSchema","label":"missing-color","input":{"userId":7,"year":2024,"make":"Toyota","model":"Camry"},"expected":{"success":true,"data":{"userId":7,"year":2024,"make":"Toyota","model":"Camry"}}},
+    {"schema":"insertVehicleSchema","label":"null-color","input":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null},"expected":{"success":true,"data":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":null}}},
+    {"schema":"insertVehicleSchema","label":"wrong-type-color","input":{"userId":7,"year":2024,"make":"Toyota","model":"Camry","color":{"invalid":"fixture"}},"expected":{"success":false,"paths":["color"]}},
+    {"schema":"insertSavedAddressSchema","label":"valid","input":{"userId":7,"address":"123 Fixture Way"},"expected":{"success":true,"data":{"userId":7,"address":"123 Fixture Way"}}},
+    {"schema":"insertSavedAddressSchema","label":"unknown-key","input":{"userId":7,"address":"123 Fixture Way","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"userId":7,"address":"123 Fixture Way"}}},
+    {"schema":"insertSavedAddressSchema","label":"empty","input":{},"expected":{"success":false,"paths":["address","userId"]}},
+    {"schema":"insertSavedAddressSchema","label":"missing-userId","input":{"address":"123 Fixture Way"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertSavedAddressSchema","label":"null-userId","input":{"userId":null,"address":"123 Fixture Way"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertSavedAddressSchema","label":"wrong-type-userId","input":{"userId":{"invalid":"fixture"},"address":"123 Fixture Way"},"expected":{"success":false,"paths":["userId"]}},
+    {"schema":"insertSavedAddressSchema","label":"missing-address","input":{"userId":7},"expected":{"success":false,"paths":["address"]}},
+    {"schema":"insertSavedAddressSchema","label":"null-address","input":{"userId":7,"address":null},"expected":{"success":false,"paths":["address"]}},
+    {"schema":"insertSavedAddressSchema","label":"wrong-type-address","input":{"userId":7,"address":{"invalid":"fixture"}},"expected":{"success":false,"paths":["address"]}},
+    {"schema":"insertReferralSchema","label":"valid","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":true,"data":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"}}},
+    {"schema":"insertReferralSchema","label":"unknown-key","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"}}},
+    {"schema":"insertReferralSchema","label":"empty","input":{},"expected":{"success":false,"paths":["createdAt","referralCodeUsed","referredUserId","referrerId"]}},
+    {"schema":"insertReferralSchema","label":"missing-referrerId","input":{"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referrerId"]}},
+    {"schema":"insertReferralSchema","label":"null-referrerId","input":{"referrerId":null,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referrerId"]}},
+    {"schema":"insertReferralSchema","label":"wrong-type-referrerId","input":{"referrerId":{"invalid":"fixture"},"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referrerId"]}},
+    {"schema":"insertReferralSchema","label":"missing-referredUserId","input":{"referrerId":7,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referredUserId"]}},
+    {"schema":"insertReferralSchema","label":"null-referredUserId","input":{"referrerId":7,"referredUserId":null,"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referredUserId"]}},
+    {"schema":"insertReferralSchema","label":"wrong-type-referredUserId","input":{"referrerId":7,"referredUserId":{"invalid":"fixture"},"referralCodeUsed":"FIXTURE","createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referredUserId"]}},
+    {"schema":"insertReferralSchema","label":"missing-referralCodeUsed","input":{"referrerId":7,"referredUserId":8,"createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referralCodeUsed"]}},
+    {"schema":"insertReferralSchema","label":"null-referralCodeUsed","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":null,"createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referralCodeUsed"]}},
+    {"schema":"insertReferralSchema","label":"wrong-type-referralCodeUsed","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":{"invalid":"fixture"},"createdAt":"2026-10-26"},"expected":{"success":false,"paths":["referralCodeUsed"]}},
+    {"schema":"insertReferralSchema","label":"missing-createdAt","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE"},"expected":{"success":false,"paths":["createdAt"]}},
+    {"schema":"insertReferralSchema","label":"null-createdAt","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":null},"expected":{"success":false,"paths":["createdAt"]}},
+    {"schema":"insertReferralSchema","label":"wrong-type-createdAt","input":{"referrerId":7,"referredUserId":8,"referralCodeUsed":"FIXTURE","createdAt":{"invalid":"fixture"}},"expected":{"success":false,"paths":["createdAt"]}},
+    {"schema":"insertContactMessageSchema","label":"valid","input":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":true,"data":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"}}},
+    {"schema":"insertContactMessageSchema","label":"unknown-key","input":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"}}},
+    {"schema":"insertContactMessageSchema","label":"empty","input":{},"expected":{"success":false,"paths":["email","message","name","submittedAt"]}},
+    {"schema":"insertContactMessageSchema","label":"missing-name","input":{"email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertContactMessageSchema","label":"null-name","input":{"name":null,"email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertContactMessageSchema","label":"wrong-type-name","input":{"name":{"invalid":"fixture"},"email":"ada@example.test","message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["name"]}},
+    {"schema":"insertContactMessageSchema","label":"missing-email","input":{"name":"Ada","message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"insertContactMessageSchema","label":"null-email","input":{"name":"Ada","email":null,"message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"insertContactMessageSchema","label":"wrong-type-email","input":{"name":"Ada","email":{"invalid":"fixture"},"message":"Synthetic support request","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"insertContactMessageSchema","label":"missing-message","input":{"name":"Ada","email":"ada@example.test","submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["message"]}},
+    {"schema":"insertContactMessageSchema","label":"null-message","input":{"name":"Ada","email":"ada@example.test","message":null,"submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["message"]}},
+    {"schema":"insertContactMessageSchema","label":"wrong-type-message","input":{"name":"Ada","email":"ada@example.test","message":{"invalid":"fixture"},"submittedAt":"2026-10-26"},"expected":{"success":false,"paths":["message"]}},
+    {"schema":"insertContactMessageSchema","label":"missing-submittedAt","input":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request"},"expected":{"success":false,"paths":["submittedAt"]}},
+    {"schema":"insertContactMessageSchema","label":"null-submittedAt","input":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":null},"expected":{"success":false,"paths":["submittedAt"]}},
+    {"schema":"insertContactMessageSchema","label":"wrong-type-submittedAt","input":{"name":"Ada","email":"ada@example.test","message":"Synthetic support request","submittedAt":{"invalid":"fixture"}},"expected":{"success":false,"paths":["submittedAt"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"valid","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"unknown-key","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":"","unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"empty","input":{},"expected":{"success":false,"paths":["authorizedToWorkUs","availableStart","city","email","firstName","lastName","phone","relevantExperience","requiresSponsorship","role","roleSpecificAnswer","state","whyDapr"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-role","input":{"firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["role"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-role","input":{"role":null,"firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["role"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-role","input":{"role":{"invalid":"fixture"},"firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["role"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-firstName","input":{"role":"detailer","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["firstName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-firstName","input":{"role":"detailer","firstName":null,"lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["firstName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-firstName","input":{"role":"detailer","firstName":{"invalid":"fixture"},"lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["firstName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-lastName","input":{"role":"detailer","firstName":" Ada ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["lastName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-lastName","input":{"role":"detailer","firstName":" Ada ","lastName":null,"email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["lastName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-lastName","input":{"role":"detailer","firstName":" Ada ","lastName":{"invalid":"fixture"},"email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["lastName"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-email","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-email","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":null,"phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-email","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":{"invalid":"fixture"},"phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["email"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-phone","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["phone"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-phone","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":null,"city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["phone"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-phone","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":{"invalid":"fixture"},"city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["phone"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-city","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["city"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-city","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":null,"state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["city"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-city","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":{"invalid":"fixture"},"state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["city"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-state","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["state"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-state","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["state"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-state","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":{"invalid":"fixture"},"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["state"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-whyDapr","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["whyDapr"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-whyDapr","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":null,"relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["whyDapr"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-whyDapr","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":{"invalid":"fixture"},"relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["whyDapr"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-relevantExperience","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["relevantExperience"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-relevantExperience","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":null,"roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["relevantExperience"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-relevantExperience","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":{"invalid":"fixture"},"roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["relevantExperience"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-roleSpecificAnswer","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["roleSpecificAnswer"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-roleSpecificAnswer","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":null,"availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["roleSpecificAnswer"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-roleSpecificAnswer","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":{"invalid":"fixture"},"availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["roleSpecificAnswer"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-availableStart","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["availableStart"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-availableStart","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":null,"authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["availableStart"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-availableStart","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":{"invalid":"fixture"},"authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["availableStart"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-authorizedToWorkUs","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["authorizedToWorkUs"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-authorizedToWorkUs","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":null,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["authorizedToWorkUs"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-authorizedToWorkUs","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":{"invalid":"fixture"},"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["authorizedToWorkUs"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-requiresSponsorship","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["requiresSponsorship"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-requiresSponsorship","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":null,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["requiresSponsorship"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-requiresSponsorship","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":{"invalid":"fixture"},"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["requiresSponsorship"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-linkedinUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"portfolioUrl":null,"referralSource":""},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-linkedinUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":null,"portfolioUrl":null,"referralSource":""},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-linkedinUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":{"invalid":"fixture"},"portfolioUrl":null,"referralSource":""},"expected":{"success":false,"paths":["linkedinUrl"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-portfolioUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","referralSource":""},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-portfolioUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":""},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-portfolioUrl","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":{"invalid":"fixture"},"referralSource":""},"expected":{"success":false,"paths":["portfolioUrl"]}},
+    {"schema":"careerApplicationFieldsSchema","label":"missing-referralSource","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"null-referralSource","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":null},"expected":{"success":true,"data":{"role":"detailer","firstName":"Ada","lastName":"Fixture","email":"ada@example.test","phone":"555-0101","city":"Phoenix","state":"AZ","linkedinUrl":null,"portfolioUrl":null,"whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"referralSource":null}}},
+    {"schema":"careerApplicationFieldsSchema","label":"wrong-type-referralSource","input":{"role":"detailer","firstName":" Ada ","lastName":" Fixture ","email":" ada@example.test ","phone":"555-0101","city":" Phoenix ","state":"AZ","whyDapr":"Synthetic application reason","relevantExperience":"Synthetic application experience","roleSpecificAnswer":"Synthetic application answer","availableStart":"Next month","authorizedToWorkUs":true,"requiresSponsorship":false,"linkedinUrl":"","portfolioUrl":null,"referralSource":{"invalid":"fixture"}},"expected":{"success":false,"paths":["referralSource"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"valid","input":{"addressId":1,"serviceId":3,"vehicleId":4},"expected":{"success":true,"data":{"addressId":1,"serviceId":3,"vehicleId":4,"addOnIds":[]}}},
+    {"schema":"asapAvailabilityRequestSchema","label":"unknown-key","input":{"addressId":1,"serviceId":3,"vehicleId":4,"unknownFixtureKey":"strip-me"},"expected":{"success":true,"data":{"addressId":1,"serviceId":3,"vehicleId":4,"addOnIds":[]}}},
+    {"schema":"asapAvailabilityRequestSchema","label":"empty","input":{},"expected":{"success":false,"paths":["addressId","serviceId","vehicleId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"missing-addressId","input":{"serviceId":3,"vehicleId":4},"expected":{"success":false,"paths":["addressId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"null-addressId","input":{"addressId":null,"serviceId":3,"vehicleId":4},"expected":{"success":false,"paths":["addressId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"wrong-type-addressId","input":{"addressId":{"invalid":"fixture"},"serviceId":3,"vehicleId":4},"expected":{"success":false,"paths":["addressId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"missing-serviceId","input":{"addressId":1,"vehicleId":4},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"null-serviceId","input":{"addressId":1,"serviceId":null,"vehicleId":4},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"wrong-type-serviceId","input":{"addressId":1,"serviceId":{"invalid":"fixture"},"vehicleId":4},"expected":{"success":false,"paths":["serviceId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"missing-vehicleId","input":{"addressId":1,"serviceId":3},"expected":{"success":false,"paths":["vehicleId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"null-vehicleId","input":{"addressId":1,"serviceId":3,"vehicleId":null},"expected":{"success":false,"paths":["vehicleId"]}},
+    {"schema":"asapAvailabilityRequestSchema","label":"wrong-type-vehicleId","input":{"addressId":1,"serviceId":3,"vehicleId":{"invalid":"fixture"}},"expected":{"success":false,"paths":["vehicleId"]}},
+    {"schema":"publishCapacityRequestSchema","label":"valid","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":true,"data":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3}}},
+    {"schema":"publishCapacityRequestSchema","label":"unknown-key","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3,"unknownFixtureKey":"strip-me"},"expected":{"success":false,"paths":[""]}},
+    {"schema":"publishCapacityRequestSchema","label":"empty","input":{},"expected":{"success":false,"paths":["date","endTime","maxBookings","slotDurationMinutes","startTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"missing-date","input":{"startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"publishCapacityRequestSchema","label":"null-date","input":{"date":null,"startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"publishCapacityRequestSchema","label":"wrong-type-date","input":{"date":{"invalid":"fixture"},"startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["date"]}},
+    {"schema":"publishCapacityRequestSchema","label":"missing-startTime","input":{"date":"2026-10-26","endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"null-startTime","input":{"date":"2026-10-26","startTime":null,"endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"wrong-type-startTime","input":{"date":"2026-10-26","startTime":{"invalid":"fixture"},"endTime":"12:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["startTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"missing-endTime","input":{"date":"2026-10-26","startTime":"10:00","slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"null-endTime","input":{"date":"2026-10-26","startTime":"10:00","endTime":null,"slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"wrong-type-endTime","input":{"date":"2026-10-26","startTime":"10:00","endTime":{"invalid":"fixture"},"slotDurationMinutes":60,"maxBookings":3},"expected":{"success":false,"paths":["endTime"]}},
+    {"schema":"publishCapacityRequestSchema","label":"missing-slotDurationMinutes","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","maxBookings":3},"expected":{"success":false,"paths":["slotDurationMinutes"]}},
+    {"schema":"publishCapacityRequestSchema","label":"null-slotDurationMinutes","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":null,"maxBookings":3},"expected":{"success":false,"paths":["slotDurationMinutes"]}},
+    {"schema":"publishCapacityRequestSchema","label":"wrong-type-slotDurationMinutes","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":{"invalid":"fixture"},"maxBookings":3},"expected":{"success":false,"paths":["slotDurationMinutes"]}},
+    {"schema":"publishCapacityRequestSchema","label":"missing-maxBookings","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60},"expected":{"success":false,"paths":["maxBookings"]}},
+    {"schema":"publishCapacityRequestSchema","label":"null-maxBookings","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":null},"expected":{"success":false,"paths":["maxBookings"]}},
+    {"schema":"publishCapacityRequestSchema","label":"wrong-type-maxBookings","input":{"date":"2026-10-26","startTime":"10:00","endTime":"12:00","slotDurationMinutes":60,"maxBookings":{"invalid":"fixture"}},"expected":{"success":false,"paths":["maxBookings"]}}
+  ]
+}

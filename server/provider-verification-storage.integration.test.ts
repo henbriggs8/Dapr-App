@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -6,11 +8,23 @@ import { Readable } from "node:stream";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
 import express, { type NextFunction, type Request, type Response } from "express";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { Client } from "@replit/object-storage";
+import { Pool } from "pg";
+import { S3VerificationMediaObjectStore } from "./verification-media-object-store";
+import { ListObjectsV2Command } from "@aws-sdk/client-s3";
+// Test-only wrapper keeps the historical lifecycle assertions while exercising the new adapter.
+class Client {
+  store = new S3VerificationMediaObjectStore({ ...process.env, NODE_ENV: "test" });
+  async exists(key: string) { return { ok: true, value: await this.store.exists(key) }; }
+  async delete(key: string, _options?: unknown) { await this.store.delete(key); }
+  async uploadFromBytes(key: string, bytes: Buffer, _options?: unknown) { await this.store.upload(key, Readable.from(bytes)); }
+  async list({ prefix }: { prefix: string }) {
+    const result = await this.store.client.send(new ListObjectsV2Command({ Bucket: this.store.bucket, Prefix: prefix }));
+    return { ok: true, value: (result.Contents || []).map(o => ({ name: o.Key! })) };
+  }
+}
 import ws from "ws";
 
-neonConfig.webSocketConstructor = ws;
+
 
 if (process.env.RUN_PROVIDER_VERIFICATION_STORAGE_INTEGRATION !== "1") {
   throw new Error("Set RUN_PROVIDER_VERIFICATION_STORAGE_INTEGRATION=1 to run this destructive-to-test-data-only integration audit.");
@@ -50,7 +64,7 @@ async function runCleanupCommand(databaseUrl: string): Promise<string> {
       ...process.env,
       DATABASE_URL: databaseUrl,
       VERIFICATION_MEDIA_ENVIRONMENT: auditId,
-      NODE_ENV: "development",
+      NODE_ENV: "test",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -89,7 +103,7 @@ try {
   process.env.DATABASE_URL = withSearchPath(baseDatabaseUrl, schemaName);
   process.env.VERIFICATION_MEDIA_TOKEN_SECRET = randomBytes(48).toString("hex");
   process.env.VERIFICATION_MEDIA_ENVIRONMENT = auditId;
-  process.env.NODE_ENV = "development";
+  process.env.NODE_ENV = "test";
 
   const [
     { registerProviderVerificationRoutes },
@@ -478,7 +492,7 @@ try {
       videoChecksum: sha256(video),
     },
     replacement: { oldMediaId: trunk.id, newMediaId: replacement.id },
-    realStorageRejections: ["content_signature", "checksum"],
+    adapterStorageRejections: ["content_signature", "checksum"],
     concurrentReplacementSingleCurrent: true,
     secureViewsVerified: ["image/jpeg", "video/quicktime"],
     capabilityLeakDetected: false,

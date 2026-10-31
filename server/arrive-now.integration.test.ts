@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { prepareTestDatabase, redactDatabaseUrl, requireSafeTestDatabaseUrl } from "./test/test-database";

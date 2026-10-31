@@ -2,10 +2,13 @@ import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+const security = process.argv.includes('--security');
+if (process.argv.slice(2).some(arg => arg !== '--security')) throw new Error('Unknown test runner option');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const guard = fileURLToPath(new URL('./unit-network-guard.cjs', import.meta.url));
 const tests = readdirSync(new URL('../server/', import.meta.url))
   .filter(name => name.endsWith('.test.ts') && !name.endsWith('.integration.test.ts'))
+  .filter(name => !security || /security|runtime-policy|health/.test(name))
   .sort()
   .map(name => `server/${name}`);
 
@@ -14,7 +17,7 @@ const tests = readdirSync(new URL('../server/', import.meta.url))
 const env = {
   PATH: process.env.PATH,
   ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}),
-  NODE_ENV: 'test',
+  NODE_ENV: security ? 'production' : 'test',
   DATABASE_URL: 'postgresql://unit:unit@127.0.0.1:1/unused',
   STRIPE_SECRET_KEY: 'sk_test_unit_test_only',
   SESSION_SECRET: 'unit-test-session-only',

@@ -20,7 +20,7 @@ import {
 } from "./provider-verification-capability";
 import { ProviderVerificationRepository } from "./provider-verification-repository";
 import {
-  ReplitVerificationMediaObjectStore,
+  createVerificationMediaObjectStore,
   type VerificationMediaObjectStore,
 } from "./verification-media-object-store";
 
@@ -30,7 +30,7 @@ const repository = new ProviderVerificationRepository();
 let objectStore: VerificationMediaObjectStore | undefined;
 
 function getObjectStore(): VerificationMediaObjectStore {
-  objectStore ??= new ReplitVerificationMediaObjectStore();
+  objectStore ??= createVerificationMediaObjectStore();
   return objectStore;
 }
 

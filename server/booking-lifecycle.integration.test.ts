@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 /**
  * Development-only integration test for booking lifecycle persistence:
  * arrived → in_progress → completed must keep status, currentStage, and the
@@ -22,15 +24,17 @@ const { storage } = await import("./storage");
 const { bookings } = await import("@shared/schema");
 const { eq } = await import("drizzle-orm");
 
+const [service] = await db.insert((await import("@shared/schema")).services).values({ name: "lifecycle fixture", description: "synthetic", price: 149, duration: 60, category: "test" }).returning();
 const [row] = await db
   .insert(bookings)
   .values({
     userId: -1,
-    serviceId: -1,
+    serviceId: service.id,
     priceTier: "basic",
     timestamp: new Date().toISOString(),
     serviceLocation: "lifecycle-test",
     serviceLocationType: "home",
+    providerId: -424242,
     status: "on_the_way",
     currentStage: "on_the_way",
     fulfillmentMode: "asap",
@@ -91,12 +95,13 @@ try {
     .insert(bookings)
     .values({
       userId: -1,
-      serviceId: -1,
+      serviceId: service.id,
       priceTier: "basic",
       timestamp: new Date().toISOString(),
       serviceLocation: "lifecycle-test-stage",
       serviceLocationType: "home",
-      status: "on_the_way",
+      providerId: -424242,
+    status: "on_the_way",
       fulfillmentMode: "asap",
     })
     .returning();
@@ -114,7 +119,7 @@ try {
     .insert(bookings)
     .values({
       userId: -1,
-      serviceId: -1,
+      serviceId: service.id,
       priceTier: "basic",
       timestamp: new Date().toISOString(),
       serviceLocation: "lifecycle-test-paid-claim",

@@ -1375,7 +1375,7 @@ function AuthFlow() {
         devLog('[Auth] Native Apple Sign-In: requesting credential…');
         const appleResult = await SignInWithApple.authorize({
           clientId: 'com.autodapper.app',
-          redirectURI: 'https://dapper-pros.replit.app',
+          redirectURI: import.meta.env.VITE_API_BASE_URL || window.location.origin,
           scopes: 'email name',
           state: '',
           nonce: '',
@@ -1386,7 +1386,7 @@ function AuthFlow() {
 
         // redirect_url is required by Clerk even for native token exchange
         // (validated server-side but never followed — session is returned directly).
-        const nativeRedirect = 'https://dapper-pros.replit.app/sso-callback';
+        const nativeRedirect = new URL('/sso-callback', import.meta.env.VITE_API_BASE_URL || window.location.origin).href;
         let sessionId: string | null = null;
         let clerkStatus: string = '';
         let needsSignUp = false;
@@ -1508,7 +1508,8 @@ function AuthFlow() {
 
         // Generate a unique state key so the server can match the callback to this poll.
         const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
-        const callbackUrl = `https://dapper-pros.replit.app/native-sso-callback?state=${state}`;
+        const callbackUrl = new URL('/native-sso-callback', import.meta.env.VITE_API_BASE_URL || window.location.origin);
+        callbackUrl.searchParams.set('state', state);
 
         // Use the Clerk Account Portal to start the Google OAuth flow.
         // We cannot use signIn.create() to get a direct Google URL here because
@@ -1517,7 +1518,9 @@ function AuthFlow() {
         // server rejects the state mismatch with authorization_invalid.
         // The Account Portal starts the flow from Clerk's own server context,
         // avoiding that cookie isolation entirely.
-        const portalUrl = `https://accounts.autodapper.com/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`;
+        const portal = new URL('/sign-in', import.meta.env.VITE_CLERK_ACCOUNT_PORTAL_URL || 'https://accounts.autodapper.com');
+        portal.searchParams.set('redirect_url', callbackUrl.href);
+        const portalUrl = portal.href;
 
         // Stop polling if the user manually closes the browser without signing in.
         let cancelled = false;

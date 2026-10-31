@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { Pool } from "pg";
 import ws from "ws";
 
-neonConfig.webSocketConstructor = ws;
+
 
 const TEST_MARKERS = /(^|[._-])(test|testing|stage|staging|preview|development|dev)([._-]|$)/i;
 const PRODUCTION_MARKERS = /(^|[._-])(prod|production|primary|main|live)([._-]|$)/i;

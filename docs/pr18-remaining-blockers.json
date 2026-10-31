@@ -1,0 +1,50 @@
+[
+  {
+    "id": "M1",
+    "gate": "merge",
+    "issue": "PR #18 remains a draft without independent approval or configured checks",
+    "required": "Review all four P0 security fixes and source provenance; require passing functional checks on the final combined tree. Do not treat mergeable as approved."
+  },
+  {
+    "id": "M2",
+    "gate": "merge/readiness",
+    "issue": "Local follow-up resolves all seven production high dependency findings plus the development Vite high: zero high/critical in both audit scopes. Production dependencies retain 8 moderate and 3 low; full audit retains 14 moderate and 3 low.",
+    "required": "Exact CI dependency audit gate passes locally without suppression. Review scoped override and coordinated Drizzle/Zod/form/build-tool upgrades. Re-run real PostgreSQL and Linux/container checks on the final tree only after authorization. Changes are unpushed; prior remote PR checks do not certify this tree."
+  },
+  {
+    "id": "M3",
+    "gate": "merge",
+    "issue": "PR #18 intentionally preserves 70% formulas and omits finalized-earnings reconciliation",
+    "required": "Review this PR\u2019s approved 65/35 implementation and history-preserving tests. Incorporate the reviewed financial correction before declaring the combined source releasable; never deploy #18 alone as the approved compensation model."
+  },
+  {
+    "id": "M4",
+    "gate": "merge/portability",
+    "issue": "PR #18 lockfile uses 100 Replit internal package-mirror download URLs",
+    "required": "This branch replaces them with public registry equivalents preserving prior version/integrity metadata. Require a clean Linux install/build; local clean install passes."
+  },
+  {
+    "id": "M5",
+    "gate": "merge/operations",
+    "issue": "Main-branch automation and deployment hooks need owner attestation",
+    "required": "Railway now connects main in both production and staging environments. Disable automatic deployments manually in both; verify all production hooks before any merge or push. This task changes no live integrations."
+  },
+  {
+    "id": "S1",
+    "gate": "future staging deployment",
+    "issue": "Railway inspiring-passion now contains production and staging environments, both with failed main builds; no database, bucket, application secrets or domain configured",
+    "required": "Use the staging environment only after exact identity approval. Separate PostgreSQL dapr_staging, private bucket and test identities remain unprovisioned. New service configuration must use dashboard settings or separately reviewed Railway IaC; railway.toml alone is insufficient. Resource creation and applying configuration can deploy and are outside this task."
+  },
+  {
+    "id": "S2",
+    "gate": "future staging promotion",
+    "issue": "Real external services, full multipart media, process replacement and distributed iOS builds unverified",
+    "required": "Separate test Clerk/Stripe identities and dedicated test devices; later authorized end-to-end tests, private-bucket smoke checks, real device matrix and at least 24-hour staging soak."
+  },
+  {
+    "id": "S3",
+    "gate": "future production migration",
+    "issue": "Historical role/session cleanup, data export/restore, media copy, custom API domain and rollback unexecuted",
+    "required": "Separate scoped approval. Existing installed apps still call Replit; keep production intact until a separately reviewed client/domain/cutover plan succeeds."
+  }
+]

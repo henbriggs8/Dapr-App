@@ -93,6 +93,7 @@ export async function sendPaidBookingEmail(params: PaidBookingEmailParams): Prom
 let resend: Resend | null = null;
 
 function getResendClient(): Resend | null {
+  if (process.env.OUTBOUND_DELIVERY_MODE === "disabled") return null;
   if (!process.env.RESEND_API_KEY) {
     return null;
   }

@@ -1,11 +1,17 @@
+import "./runtime-bootstrap";
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import https from "https";
 import http from "http";
 import zlib from "zlib";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { serveStatic, log } from "./static";
 import { storage } from "./storage";
+import { pool } from "./db";
+import { publicConfigFingerprint } from "./runtime-policy";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { registerHealthRoutes } from "./health";
 import { serializeSafeLogJson } from "./log-redaction";
 
 // ── Startup configuration warnings ────────────────────────────────────────────
@@ -19,6 +25,8 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const app = express();
+if (process.env.APP_ENV === "staging") app.set("trust proxy", 1);
+let draining = false;
 // Stripe webhook must receive raw body for signature verification — mount BEFORE express.json()
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
 app.use(express.json());
@@ -106,12 +114,18 @@ if (clerkFrontendApi) {
     });
 
   const PROXY_CORS_ORIGINS = new Set([
+    ...(process.env.SITE_URL ? [new URL(process.env.SITE_URL).origin] : []),
     'capacitor://localhost',
     'ionic://localhost',
     'https://dapper-pros.replit.app',
     'https://autodapper.com',
     'https://www.autodapper.com',
   ]);
+
+  if (process.env.APP_ENV === 'staging') {
+    PROXY_CORS_ORIGINS.clear();
+    PROXY_CORS_ORIGINS.add(new URL(process.env.SITE_URL!).origin);
+  }
 
   // Apply CORS for the proxy directly — the global CORS middleware is registered
   // AFTER this handler so it never runs for /clerk-proxy responses. WKWebView
@@ -267,7 +281,8 @@ if (clerkFrontendApi) {
 }
 
 // Add CORS middleware — restrict to known origins
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGINS = process.env.APP_ENV === "staging" ? [new URL(process.env.SITE_URL!).origin] : [
+  ...(process.env.SITE_URL ? [new URL(process.env.SITE_URL).origin] : []),
   'https://autodapper.com',
   'https://www.autodapper.com',
   'https://dapper-pros.replit.app',
@@ -305,7 +320,7 @@ app.get('/native-oauth-start', (req, res) => {
   // If this request arrived on any other host (e.g. dapper-pros.replit.app), redirect
   // to autodapper.com so that Clerk JS runs with the correct Origin header.
   const host = req.hostname;
-  if (host !== 'autodapper.com' && host !== 'www.autodapper.com') {
+  if (process.env.APP_ENV !== 'staging' && host !== 'autodapper.com' && host !== 'www.autodapper.com') {
     const qs = Object.keys(req.query).length
       ? '?' + new URLSearchParams(req.query as Record<string, string>).toString()
       : '';
@@ -317,7 +332,7 @@ app.get('/native-oauth-start', (req, res) => {
   const providerName = strategy === 'oauth_apple' ? 'Apple' : 'Google';
   const pk = clerkPk;
   // Callback must also be on autodapper.com so the URL is in Clerk's allowlist.
-  const callbackUrl = 'https://autodapper.com/native-sso-callback';
+  const callbackUrl = new URL('/native-sso-callback', process.env.SITE_URL || 'https://autodapper.com').href;
 
   if (!pk) {
     res.status(500).send('<p>Clerk not configured on server</p>');
@@ -489,13 +504,26 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Add health check endpoint first
-  app.get('/health', (_req, res) => {
-    res.status(200).json({
-      status: 'ok',
-      ...(process.env.DAPR_BUILD_SHA ? { build: process.env.DAPR_BUILD_SHA } : {}),
-    });
-  });
+  if (process.env.APP_ENV === "staging") {
+    const manifest = JSON.parse(await readFile(new URL("./staging-build-manifest.json", import.meta.url), "utf8"));
+    if (manifest.publicConfigSha256 !== publicConfigFingerprint()) throw new Error("Staging public runtime settings differ from the compiled frontend; rebuild with matching public settings");
+  }
+  const expectedSchema = createHash("sha256").update((await Promise.all(
+    ["0000_staging_baseline.sql", "0001_runtime_invariants.sql"].map(name =>
+      readFile(new URL(`../staging/migrations/${name}`, import.meta.url), "utf8")))).join("\n")).digest("hex");
+  registerHealthRoutes(app, async () => {
+    if (process.env.APP_ENV === "staging") {
+      const result = await pool.query<{ schema_sha256: string; catalog_ready: boolean }>("SELECT schema_sha256, (SELECT count(DISTINCT category)>=4 FROM services) AS catalog_ready FROM staging_schema_manifest WHERE id=1");
+      return result.rows[0]?.schema_sha256 === expectedSchema && result.rows[0]?.catalog_ready === true;
+    }
+    const query = { text: `SELECT to_regclass('public.users') IS NOT NULL
+      AND to_regclass('public.bookings') IS NOT NULL
+      AND to_regclass('public.booking_quotes') IS NOT NULL
+      AND to_regclass('public.provider_application_media') IS NOT NULL
+      AND to_regclass('public.notification_events') IS NOT NULL AS ready`, query_timeout: 2000 };
+    const result = await pool.query<{ ready: boolean }>(query);
+    return result.rows[0]?.ready === true;
+  }, () => draining);
 
   // Add a root endpoint that Replit can detect
   app.get('/ping', (_req, res) => {
@@ -503,9 +531,18 @@ app.use((req, res, next) => {
   });
 
   const server = registerRoutes(app);
+  const shutdown = () => {
+    if (draining) return;
+    draining = true;
+    server.emit("dapr:shutdown");
+    const deadline = setTimeout(() => process.exit(1), 10_000).unref();
+    server.close(() => { void pool.end().finally(() => { clearTimeout(deadline); process.exit(0); }); });
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
 
   // Seed required data (admin user etc.) on startup
-  await storage.initialize();
+  if (process.env.SEED_CATALOG_ON_START === "true") await storage.initialize();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -516,13 +553,14 @@ app.use((req, res, next) => {
 
   // Setup Vite middleware only after registering routes
   if (app.get("env") === "development") {
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
   const PORT = Number(process.env.PORT) || 5000;
-  const HOST = process.env.REPL_SLUG ? '0.0.0.0' : '0.0.0.0';
+  const HOST = "0.0.0.0";
 
   // Create a promise that resolves when the server is ready
   await new Promise<void>((resolve) => {
@@ -541,7 +579,7 @@ app.use((req, res, next) => {
       }
 
       // Test the health endpoint to ensure the server is truly ready
-      fetch(`http://${HOST}:${PORT}/health`)
+      fetch(`http://127.0.0.1:${PORT}/health`)
         .then(response => response.json())
         .then(() => {
           console.log('Health check passed - server is fully operational');
@@ -563,30 +601,9 @@ app.use((req, res, next) => {
       }
     });
 
-    // Register native OAuth callback URL with Clerk's allowed redirect URL list.
-    // This enables the Clerk Account Portal (accounts.autodapper.com) to redirect
-    // back to our server after Google Sign-In — without needing a dashboard change.
-    const clerkSk = process.env.CLERK_SECRET_KEY;
-    if (clerkSk) {
-      const nativeCallback = 'https://dapper-pros.replit.app/native-sso-callback';
-      fetch('https://api.clerk.com/v1/redirect_urls', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${clerkSk}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: nativeCallback }),
-      })
-        .then(r => r.json())
-        .then((data: any) => {
-          if (data?.errors?.length) {
-            console.log('[Clerk] redirect URL already registered or skipped:', data.errors[0]?.long_message ?? data.errors[0]?.message);
-          } else {
-            console.log('[Clerk] ✓ Registered native-sso-callback as allowed redirect URL');
-          }
-        })
-        .catch((e: any) => console.log('[Clerk] Could not register redirect URL:', e.message));
-    }
+    // Clerk redirect URLs are configured manually in the isolated Clerk dashboard.
+    // Application startup must never mutate an external identity provider.
+
   });
 })().catch(error => {
   console.error('Failed to start server:', error);

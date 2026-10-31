@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-26",
+  "scope": "Preparation and local synthetic tests only; no Railway resources deployed or existing production infrastructure changed",
+  "base_pr": "https://github.com/henbriggs8/Dapr-App/pull/18",
+  "base_commit": "044e407da743d204cc427e9ae3ee9b106865c13f",
+  "branch": "codex/railway-staging-preparation-2026-10-26",
+  "pr_strategy": "Stacked draft PR targeting PR #18 branch; neither PR is merged. Review both together, preserve audited provenance, and retest the final merge tree before adopting it.",
+  "compensation_policy": {
+    "approved_by": "User confirmation on 2026-10-26",
+    "provider_basis_points": 6500,
+    "platform_basis_points": 3500,
+    "basis": "Full saved quote subtotal before platform-funded promo/referral credits; supported legacy estimate uses catalog plus saved add-ons",
+    "rounding": "Integer cents, half-up; Dapr receives remainder",
+    "history": "Preserve existing finalized earnings including zero; never reprice completed history or rewrite customer charges",
+    "discounts": "Dapr funds discounts and referral credits; platform net can be negative"
+  },
+  "verification": {
+    "clean_locked_install": "PASS; 817 packages from public npm registry",
+    "typecheck": "PASS",
+    "unit_tests": 145,
+    "production_security_tests": 29,
+    "postgresql_integration_suites": 9,
+    "database": "Fresh disposable local PostgreSQL 17; synthetic data only",
+    "storage": "Real S3 SDK against local protocol double; not a cloud certification",
+    "startup": "Production-mode listener tested locally with isolated PostgreSQL, disabled external egress, empty-DB refusal, build/config fingerprint, readiness, auth/CORS, raw webhook rejection and graceful shutdown",
+    "production_build": "PASS on macOS Node 24.14.1 with synthetic public settings",
+    "linux_docker_build": "Configured in CI; local Docker unavailable",
+    "external_service_tests": "Not run; no live accounts/keys used"
+  },
+  "dependency_audit": {
+    "status": "FAIL - unresolved readiness gate",
+    "counts": {
+      "info": 0,
+      "low": 3,
+      "moderate": 14,
+      "high": 24,
+      "critical": 4,
+      "total": 45
+    },
+    "critical_packages": [
+      "@capacitor/ios",
+      "@clerk/shared",
+      "proxy-addr",
+      "tar"
+    ],
+    "inheritance": "All audited vulnerable nodes retain the same versions as PR #18; no such node was introduced by the new adapters",
+    "interpretation": "Scanner findings require remediation or documented reachability assessment; not proof of production exploitation"
+  },
+  "railway_resources": "Not created or deployed",
+  "database_initialization": "Explicit empty staging only; no production migration history inferred",
+  "safety": "Replit production, production databases, live iOS projects/apps and all existing services untouched; no merges or force pushes",
+  "snapshot_note": "Original preparation snapshot; current diagnosis and local-only follow-up are in railway-build-diagnosis.html and railway-staging-settings.json. Original verification applies to remote ae0f005 only.",
+  "latest_dependency_followup": "dependency-remediation.json: local-only remediation; zero high/critical in both audit scopes. Other verification values in this file remain the original ae0f005 snapshot."
+}

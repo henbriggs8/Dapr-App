@@ -46,6 +46,7 @@ export class PushService {
   }
 
   async sendToTokens(tokens: string[], input: Omit<PushDeliveryInput, "userId" | "appType">): Promise<PushDeliverySummary> {
+    if (process.env.OUTBOUND_DELIVERY_MODE === "disabled") return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
     if (!tokens.length) return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
     const sender = this.senderFactory();
     let delivered = 0;
@@ -71,6 +72,7 @@ export class PushService {
   }
 
   async sendToUser(input: PushDeliveryInput): Promise<PushDeliverySummary> {
+    if (process.env.OUTBOUND_DELIVERY_MODE === "disabled") return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
     const devices = await this.devices.enabledForUser(input.userId, input.appType, input.environment);
     if (!devices.length) return { attempted: 0, delivered: 0, invalidDisabled: 0, failed: 0 };
 

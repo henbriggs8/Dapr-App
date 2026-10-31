@@ -1,0 +1,172 @@
+{
+  "date": "2026-10-27 America/Phoenix",
+  "decision": "NO-GO for first Railway staging application deployment now; GO for reviewed source publication and configuration planning only",
+  "candidateBranch": "codex/railway-staging-preparation-2026-10-26",
+  "remediationCommit": "043e39482e93a2cee0eaac89485104c679d2e247",
+  "pr18": "https://github.com/henbriggs8/Dapr-App/pull/18",
+  "pr19": "https://github.com/henbriggs8/Dapr-App/pull/19",
+  "publication": "Pending normal fast-forward push of remediation plus CI-isolation/report follow-up; no force push",
+  "railwayObserved": {
+    "projectId": "3f646fec-82ed-49c9-94e5-e0b938dd2346",
+    "projectName": "inspiring-passion",
+    "serviceId": "2e9f706a-147d-4eaa-a074-f6aa855a50f0",
+    "stagingEnvironmentId": "53cc8851-23dc-4bf4-9b9b-00d51775b8ed",
+    "productionEnvironmentId": "34a6048e-6636-478e-acbc-618fe5554c91",
+    "sourceBranchBoth": "main",
+    "sourceCommitBoth": "8f95ee9d7d269b32f3e53db8b85d63a10efe2cb5",
+    "builderBoth": "RAILPACK",
+    "rootOverride": null,
+    "startOverride": null,
+    "healthcheckOverride": null,
+    "replicas": 1,
+    "restartRetriesObservedInUI": 10,
+    "PRPreviewEnvironments": "Disabled: dashboard shows Enable PR Environments",
+    "autodeployControl": "Both service Settings pages show Auto deploy unavailable / Could not load branches; disabled state not certified",
+    "resources": "No DB service, buckets, volumes, app variables, public/custom domains, TCP proxies or staged changes in this project; only Railway built-ins",
+    "otherProject": "Separate spectacular-tranquility contains an existing PostgreSQL 18 service, ownership/data purpose unverified. Do not reuse, query or alter it.",
+    "account": "Dashboard shows trial with 20 days/$4.86 remaining at observation; owner must approve capacity/budget before provisioning"
+  },
+  "failure": {
+    "deployment": "de4b5791-979b-468c-85f1-3019ae155d66",
+    "status": "FAILED",
+    "timestamp": "2026-10-27T04:50:21Z",
+    "error": "npm ENOTFOUND package-firewall.replit.local fetching websocket-extensions-0.1.4.tgz",
+    "cause": "Main-branch lockfile uses private Replit mirror; candidate root lockfile has zero such URLs",
+    "runtimeLogEntries": 0,
+    "originalProductionNamedAttempt": "Confirmed BUILD_IMAGE failure; returned terminal cause not independently available"
+  },
+  "ciSafety": "Push/PR jobs run install/typecheck/unit/security/build/Linux Docker build/audit without database services. PostgreSQL/container integration job is gated at job level behind workflow_dispatch input run_database_tests=true, default false. Not dispatched. Skipped integration job does not certify readiness.",
+  "gateStates": [
+    {
+      "id": "S1",
+      "phase": "before first API deploy",
+      "status": "PASS",
+      "criterion": "043e394 is committed on correct staging branch and descends from PR18 head; no main overwrite"
+    },
+    {
+      "id": "S2",
+      "phase": "before first API deploy",
+      "status": "PENDING_PUBLICATION",
+      "criterion": "PR19 head equals exact normal-pushed candidate SHA; source reviewed, drafts unmerged"
+    },
+    {
+      "id": "S3",
+      "phase": "before first API deploy",
+      "status": "PASS_PRIOR_LOCAL",
+      "criterion": "155 backend /39 overlapping security tests, 252 compatibility cases, typecheck and synthetic build pass"
+    },
+    {
+      "id": "S4",
+      "phase": "before first API deploy",
+      "status": "PENDING_CI",
+      "criterion": "Exact final commit has passing automatic backend, Linux image build and dependency-audit checks; zero high/critical"
+    },
+    {
+      "id": "S5",
+      "phase": "before first API deploy",
+      "status": "NOT_RUN_APPROVAL_REQUIRED",
+      "criterion": "Exact final source passes real isolated PostgreSQL at the selected staging major and Linux container integration/concurrency suites. Existing baseline is17;18requires18validation. A skipped job fails this gate."
+    },
+    {
+      "id": "R1",
+      "phase": "before first API deploy",
+      "status": "FAIL",
+      "criterion": "Staging targets approved candidate branch/full SHA, root /, Dockerfile builder/path Dockerfile; not main"
+    },
+    {
+      "id": "R2",
+      "phase": "before first API deploy",
+      "status": "FAIL",
+      "criterion": "Start sh scripts/start-railway.sh; no predeploy/DDL; readiness /health/ready timeout60; one replica; sleep off; retries3; explicit dashboard config (not legacy railway.toml)"
+    },
+    {
+      "id": "R3",
+      "phase": "before first API deploy",
+      "status": "UNVERIFIED",
+      "criterion": "Branch-loading/integration issue resolved, automatic deployment verified disabled, PR previews off, owner approves exact manual deploy"
+    },
+    {
+      "id": "D1",
+      "phase": "before first API deploy",
+      "status": "FAIL_UNPROVISIONED",
+      "criterion": "New stage-only PostgreSQL server/db dapr_staging on same environment private network; ownership/host/version verified; no production connection"
+    },
+    {
+      "id": "D2",
+      "phase": "before first API deploy",
+      "status": "FAIL_UNINITIALIZED",
+      "criterion": "Separately authorized empty-staging schema/catalog initialization; schema manifest and4 service categories present; never boot-time DDL"
+    },
+    {
+      "id": "O1",
+      "phase": "before first API deploy",
+      "status": "FAIL_UNPROVISIONED",
+      "criterion": "Separate private S3 bucket and scoped credentials; actual BUCKET/ENDPOINT/REGION and addressing verified; only synthetic staging keys"
+    },
+    {
+      "id": "I1",
+      "phase": "before first API deploy",
+      "status": "UNVERIFIED",
+      "criterion": "Dedicated Clerk development instance and Stripe Sandbox account ownership confirmed, matching test keys; stage-only redirects/webhook signing secret"
+    },
+    {
+      "id": "I2",
+      "phase": "before first API deploy",
+      "status": "FAIL_UNCONFIGURED",
+      "criterion": "Fresh session/media signing secrets, all isolation flags and IDs, no prod/Firebase/Resend/Replit credentials; public build/runtime fingerprint matches"
+    },
+    {
+      "id": "N1",
+      "phase": "before first API deploy",
+      "status": "FAIL_UNCONFIGURED",
+      "criterion": "Separately approved stage-only HTTPS hostname; SITE_URL=VITE_API_BASE_URL; stage webhook and Clerk callbacks; no customer DNS/live app changes"
+    },
+    {
+      "id": "A1",
+      "phase": "before first API deploy",
+      "status": "APPROVAL_REQUIRED",
+      "criterion": "Owner approves resource budget, image provenance/base digest review, remaining moderate/low findings and exact first deployment scope"
+    },
+    {
+      "id": "P1",
+      "phase": "after first API deploy",
+      "status": "NOT_RUN",
+      "criterion": "Real container /health/live and /health/ready200, no bootDDL, correct source identity, graceful restart and sessions persist"
+    },
+    {
+      "id": "P2",
+      "phase": "after first API deploy",
+      "status": "NOT_RUN",
+      "criterion": "Real Clerk auth, sandbox payment/webhook replay, booking/dispatch/provider approval lifecycle, private media and financial invariants pass"
+    },
+    {
+      "id": "P3",
+      "phase": "before staging qualification",
+      "status": "NOT_RUN",
+      "criterion": "Native Swift test variants/devices, controlled dev push/email path after guard approval, backup restore drill, load/outbox/restart and24hsoak pass; production still untouched"
+    }
+  ],
+  "isolationConclusion": "No production resources or app credentials are connected in the inspected target project today. Future end-to-end isolation cannot be certified because resources, provider identities and secrets are not yet configured. Test-key prefixes/host checks are not ownership proof.",
+  "authorizedThisTask": [
+    "Normal GitHub staging-branch push",
+    "Read-only Railway/GitHub inspection",
+    "Local CI safety preparation and reports"
+  ],
+  "notPerformed": [
+    "Merge",
+    "Database initialization/query/resource creation",
+    "Deployment",
+    "DNS changes",
+    "Replit production/native app changes"
+  ],
+  "approvalNeeded": [
+    "Disposable CI/local database integration execution",
+    "Railway GitHub/source/settings changes that may deploy",
+    "New isolated PostgreSQL and S3 bucket provisioning/budget",
+    "Clerk/Stripe test setup and credentials/callbacks/webhook",
+    "Stage hostname allocation (no customer DNS)",
+    "Empty dapr_staging DB/schema/catalog and synthetic admin preparation",
+    "First API deployment at exact approvedSHA",
+    "Real-service/media/native-device/soak and restore tests; enabling a controlled dev push/email path needs guard review"
+  ]
+}

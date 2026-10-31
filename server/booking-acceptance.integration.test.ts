@@ -1,3 +1,5 @@
+import { requireLocalIntegrationDatabase } from "./test/isolated-integration";
+requireLocalIntegrationDatabase();
 /**
  * Development-only integration test for provider acceptance persistence:
  * accepting a job must set status='assigned', currentStage='assigned', and

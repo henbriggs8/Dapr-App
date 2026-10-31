@@ -1,9 +1,10 @@
+import "../server/runtime-bootstrap";
 import { ProviderVerificationRepository } from "../server/provider-verification-repository";
-import { ReplitVerificationMediaObjectStore } from "../server/verification-media-object-store";
+import { createVerificationMediaObjectStore } from "../server/verification-media-object-store";
 import { pool } from "../server/db";
 
 const repository = new ProviderVerificationRepository();
-const objectStore = new ReplitVerificationMediaObjectStore();
+const objectStore = createVerificationMediaObjectStore();
 const now = new Date();
 const retentionCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

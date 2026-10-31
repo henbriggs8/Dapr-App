@@ -1,0 +1,260 @@
+{
+  "date": "2026-10-26 America/Phoenix",
+  "branch": "codex/railway-staging-preparation-2026-10-26",
+  "baselineCommit": "9f822292852ecf6e10de6d53051ebcb72ee25abd",
+  "published": false,
+  "scope": "Local dependency remediation only; no push, merge, deployment, database initialization/query or production change.",
+  "productionAuditBefore": {
+    "critical": 0,
+    "high": 7,
+    "moderate": 8,
+    "low": 1,
+    "total": 16
+  },
+  "productionAuditAfter": {
+    "info": 0,
+    "low": 3,
+    "moderate": 8,
+    "high": 0,
+    "critical": 0,
+    "total": 11
+  },
+  "allDependencyAuditBefore": {
+    "critical": 0,
+    "high": 8,
+    "moderate": 15,
+    "low": 1,
+    "total": 24
+  },
+  "allDependencyAuditAfter": {
+    "info": 0,
+    "low": 3,
+    "moderate": 14,
+    "high": 0,
+    "critical": 0,
+    "total": 17
+  },
+  "resolvedHighPackageNodes": [
+    "@clerk/backend",
+    "@clerk/clerk-sdk-node",
+    "@clerk/shared",
+    "js-cookie",
+    "drizzle-orm",
+    "zod",
+    "zod-validation-error"
+  ],
+  "additionalHighResolved": "vite",
+  "versions": {
+    "js-cookie": "3.0.7",
+    "@clerk/clerk-sdk-node": "4.13.23",
+    "@clerk/backend": "0.38.15",
+    "drizzle-orm": "0.45.4",
+    "drizzle-zod": "0.8.3",
+    "zod": "4.6.7",
+    "@hookform/resolvers": "5.2.2",
+    "react-hook-form": "7.91.0",
+    "vite": "7.3.7",
+    "@vitejs/plugin-react": "5.2.0",
+    "@types/node": "20.19.43"
+  },
+  "clerkOverride": {
+    "scope": "@clerk/shared > js-cookie",
+    "version": "3.0.7",
+    "reason": "Patch pinned same-major transitive dependency, retain existing authentication integration; regression tested, not an advisory suppression."
+  },
+  "removedUnusedDependency": "zod-validation-error; repository search found no app imports",
+  "verification": {
+    "cleanInstall": {
+      "passed": true,
+      "packages": 820
+    },
+    "backendUnitMocked": {
+      "passed": 155,
+      "failed": 0
+    },
+    "productionModeSecurity": {
+      "passed": 39,
+      "failed": 0,
+      "overlapsBackend": true
+    },
+    "validationCompatibilityCases": 252,
+    "schemasCompared": 13,
+    "tablesCompared": 18,
+    "sqlQueriesCompared": 4,
+    "fakePgTransactions": "commit/rollback/release, advisory locks, row-lock compilation and returning rows PASS; no real database",
+    "clerk": "Ephemeral offline RSA JWT verification plus negative signature/expiry/authorized-party cases PASS",
+    "cookie": "Resolved Clerk cookie module injection and normal API regression PASS",
+    "zod": "Real Zod4 and constrained-collection fail-fast regression PASS",
+    "developmentBuild": "No-listener React/overlay/theme transform PASS; original browser targets and theme CSS retained",
+    "typecheck": "PASS",
+    "productionBuild": "PASS with synthetic settings",
+    "exactCIAuditGate": "PASS with --package-lock-only --omit=dev --audit-level=high; no CI run triggered",
+    "schemaComparisonScope": "Column names, SQL types, nullability, default presence and primary flags; schema declarations unchanged. No DDL or live indexes/constraints tested."
+  },
+  "compensation": "Financial source unchanged; existing tests preserve 65/35, Dapr-funded discounts/referrals and finalized earnings.",
+  "remainingFindings": [
+    {
+      "name": "@clerk/backend",
+      "severity": "low",
+      "fixAvailable": {
+        "name": "@clerk/clerk-sdk-node",
+        "version": "5.1.6",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@clerk/clerk-sdk-node",
+      "severity": "low",
+      "fixAvailable": {
+        "name": "@clerk/clerk-sdk-node",
+        "version": "5.1.6",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@esbuild-kit/core-utils",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "drizzle-kit",
+        "version": "0.31.11",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@esbuild-kit/esm-loader",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "drizzle-kit",
+        "version": "0.31.11",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@google-cloud/firestore",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@google-cloud/storage",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tailwindcss/typography",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "@tailwindcss/typography",
+        "version": "0.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "cookie",
+      "severity": "low",
+      "fixAvailable": {
+        "name": "@clerk/clerk-sdk-node",
+        "version": "5.1.6",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "drizzle-kit",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "drizzle-kit",
+        "version": "0.31.11",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "esbuild",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "esbuild",
+        "version": "0.28.2",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "firebase-admin",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "gaxios",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "google-gax",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "postcss-selector-parser",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "@tailwindcss/typography",
+        "version": "0.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "retry-request",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "teeny-request",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "uuid",
+      "severity": "moderate",
+      "fixAvailable": {
+        "name": "firebase-admin",
+        "version": "14.5.0",
+        "isSemVerMajor": true
+      }
+    }
+  ],
+  "notRun": [
+    "Real PostgreSQL integration or concurrency",
+    "Linux Docker/container checks",
+    "Real Clerk/Stripe/Firebase/S3 tests",
+    "Browser journeys/distributed Swift device tests",
+    "CI workflows"
+  ],
+  "limitations": [
+    "Zero high/critical is a point-in-time audit result, not zero vulnerabilities.",
+    "Legacy Clerk SDK retained with visible low findings; migration to a supported SDK remains maintenance work.",
+    "Detailed Zod issue formats follow version4; captured parity verifies acceptance, parsed values, error field paths and existing custom booking messages, not all library-generated wording.",
+    "Real database/platform verification remains required before deployment."
+  ],
+  "nextActions": "Review locally. Publication, CI database creation, staging initialization or any deployment require separate authorization."
+}
