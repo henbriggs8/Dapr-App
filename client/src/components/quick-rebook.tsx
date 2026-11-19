@@ -1,3 +1,4 @@
+import { isBookableService } from "@shared/service-catalog";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +67,7 @@ export default function QuickRebook({
     const mostRecent = completedBookings[0];
     const recentService = services.find(s => s.id === mostRecent.serviceId);
     
-    if (recentService) {
+    if (recentService && isBookableService(recentService)) {
       // Calculate suggested date based on service type and frequency
       const daysSinceLastService = Math.floor(
         (Date.now() - new Date(mostRecent.timestamp).getTime()) / (1000 * 60 * 60 * 24)
@@ -159,7 +160,7 @@ export default function QuickRebook({
     // Analyze service upgrade opportunities
     const serviceFrequency = completedBookings.reduce((acc: {[key: string]: number}, booking) => {
       const service = services.find(s => s.id === booking.serviceId);
-      if (service) {
+      if (service && isBookableService(service)) {
         acc[service.category] = (acc[service.category] || 0) + 1;
       }
       return acc;
@@ -193,13 +194,14 @@ export default function QuickRebook({
       }
     }
 
-    return suggestions.slice(0, 2); // Return top 2 suggestions
+    return suggestions.filter(suggestion => isBookableService(suggestion.service)).slice(0, 2); // Return top 2 suggestions
   };
 
   const suggestions = generateRebookSuggestions();
 
   const createRebookingMutation = useMutation({
     mutationFn: async (suggestion: RebookSuggestion) => {
+      if (!isBookableService(suggestion.service)) throw new Error("This service is not available for new bookings.");
       if (!suggestion.timeSlot) throw new Error("No time slot available");
       
       const bookingData = {

@@ -1,3 +1,4 @@
+import { CANONICAL_SERVICE_CATALOG } from "@shared/service-catalog";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { earningsForCompletedBooking } from "./booking-compensation";
@@ -56,38 +57,9 @@ function generateReferralCode(): string {
   return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
 }
 
-// Canonical four marketing tiers shown on /services. Categories map 1:1
-// so the booking screen, predictive logic, and seed all stay in sync.
-export const TIER_SEEDS: InsertService[] = [
-  {
-    name: "Essential Wash",
-    description: "Hand wash, spray wax, vacuum, quick interior wipe-down",
-    price: 39,
-    duration: 30,
-    category: "basic",
-  },
-  {
-    name: "Interior Detail",
-    description: "Full vacuum, surface cleaning, seat cleaning, light stain treatment",
-    price: 89,
-    duration: 60,
-    category: "interior",
-  },
-  {
-    name: "Refresh Detail",
-    description: "Basic interior cleaning with an upgraded exterior clean.\n\nInterior includes vacuuming, wipe-down, seats, cupholders, and dashboard cleaning.\n\nExterior includes a hand wash, spray wax, and cleaning of the wheels and tires.",
-    price: 149,
-    duration: 90,
-    category: "standard",
-  },
-  {
-    name: "Dapr Black Label Detail",
-    description: "Showroom-finish results from a senior detailer with our most thorough interior and exterior work",
-    price: 299,
-    duration: 180,
-    category: "premium",
-  },
-];
+// Three visible catalog definitions; only basic and standard are bookable.
+// Keep selection, API policy, and empty-staging initialization in sync.
+export const TIER_SEEDS: InsertService[] = CANONICAL_SERVICE_CATALOG.map(tier => ({ ...tier }));
 
 export interface IStorage {
   initialize(): Promise<void>;
@@ -2939,13 +2911,8 @@ export class DatabaseStorage implements IStorage {
     // Identity creation and role approval are explicit authenticated workflows.
     // Startup must never create an administrator or a known login credential.
 
-    // Sync the four customer-facing service tiers. We match by category so
-    // legacy rows (Basic / The OG / Black Label) get their name, price, and
-    // duration rewritten in place — preserving the existing `services.id`
-    // values that historical bookings reference. The new "interior" tier is
-    // inserted on first run. Any duplicate rows in the same category are
-    // collapsed: their bookings are repointed at the primary row before the
-    // duplicate is removed, so we end up with exactly one row per tier.
+    // Sync only the three current definitions. Retired Interior and duplicate
+    // service rows remain unchanged so historical booking references stay intact.
     for (const tier of TIER_SEEDS) {
       const matches = await db
         .select()
@@ -2958,7 +2925,7 @@ export class DatabaseStorage implements IStorage {
         continue;
       }
 
-      const [primary, ...duplicates] = matches;
+      const [primary] = matches;
       if (
         primary.name !== tier.name ||
         primary.description !== tier.description ||
@@ -2967,17 +2934,6 @@ export class DatabaseStorage implements IStorage {
       ) {
         await db.update(services).set(tier).where(eq(services.id, primary.id));
         console.log(`[storage] Updated service tier ${primary.id} → ${tier.name}`);
-      }
-
-      for (const dup of duplicates) {
-        await db
-          .update(bookings)
-          .set({ serviceId: primary.id })
-          .where(eq(bookings.serviceId, dup.id));
-        await db.delete(services).where(eq(services.id, dup.id));
-        console.log(
-          `[storage] Removed duplicate service tier ${dup.id} (${dup.name}); bookings repointed to ${primary.id}`,
-        );
       }
     }
   }

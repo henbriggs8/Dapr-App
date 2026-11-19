@@ -1,0 +1,59 @@
+{
+  "status": "PREPARED_FOR_REVIEW_NOT_AUTHORIZED",
+  "branch": "codex/two-service-catalog-2026-11-18",
+  "baseCommit": "2cad2ec30493bc4035daf455dba5460bc3d8ca21",
+  "database": "dapr_staging",
+  "schemaChanges": false,
+  "schemaFiles": [
+    "0000_staging_baseline.sql",
+    "0001_runtime_invariants.sql"
+  ],
+  "schemaSha256": "fe58e1a3edfa952c65fe1523383a9df99008a33ffe779cf272bd7fb7b8f35425",
+  "expectedTables": 20,
+  "expectedNewServiceRows": 3,
+  "expectedBookableServices": 2,
+  "expectedUsers": 0,
+  "expectedBookings": 0,
+  "expectedPushDevices": 0,
+  "catalog": [
+    {
+      "databaseRecord": {
+        "name": "Essential Wash",
+        "description": "Hand wash, spray wax, vacuum, quick interior wipe-down",
+        "price": 39,
+        "duration": 30,
+        "category": "basic"
+      },
+      "bookingAvailability": "available",
+      "isBookable": true,
+      "displayPrice": 39
+    },
+    {
+      "databaseRecord": {
+        "name": "Refresh Detail",
+        "description": "Basic interior cleaning with an upgraded exterior clean.\n\nInterior includes vacuuming, wipe-down, seats, cupholders, and dashboard cleaning.\n\nExterior includes a hand wash, spray wax, and cleaning of the wheels and tires.",
+        "price": 149,
+        "duration": 90,
+        "category": "standard"
+      },
+      "bookingAvailability": "available",
+      "isBookable": true,
+      "displayPrice": 149
+    },
+    {
+      "databaseRecord": {
+        "name": "Dapr Black Label Detail",
+        "description": "Our most elevated detailing experience is coming soon. Not available to book.",
+        "price": 299,
+        "duration": 180,
+        "category": "premium"
+      },
+      "bookingAvailability": "coming_soon",
+      "isBookable": false,
+      "displayPrice": null
+    }
+  ],
+  "retired": "Do not seed Interior in a new database. Keep existing Interior/duplicate records and all historical booking references; never delete or repoint them.",
+  "priceCompatibility": "services.price and duration are NOT NULL. Preserve numeric Black Label legacy/internal values for old clients and history; displayPrice=null and all customer selection surfaces suppress its price. No new database columns.",
+  "safety": "Do not initialize persistent staging or apply the pending API patch until the new candidate is reviewed, published under authorization, reverified and separately approved."
+}

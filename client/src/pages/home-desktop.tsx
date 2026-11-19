@@ -392,13 +392,6 @@ export default function HomeDesktop() {
                 popular: false,
               },
               {
-                name: "Interior Detail",
-                price: "$89",
-                time: "60 min",
-                desc: "A focused interior reset — vacuum, surfaces, seats, and windows.",
-                popular: false,
-              },
-              {
                 name: "Refresh Detail",
                 price: "$149",
                 time: "90 min",
@@ -406,9 +399,9 @@ export default function HomeDesktop() {
                 popular: true,
               },
               {
-                name: "Dapr Black Label",
-                price: "$299",
-                time: "3 hrs",
+                name: "Dapr Black Label Detail",
+                price: "Coming Soon",
+                time: "Not available to book",
                 desc: "Showroom-finish results from a senior detailer. Our flagship service.",
                 popular: false,
               },
@@ -430,13 +423,14 @@ export default function HomeDesktop() {
                 </div>
                 <button
                   onClick={goBook}
+                  disabled={s.name === "Dapr Black Label Detail"}
                   className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
                     s.popular
                       ? "bg-[#8c52ff] text-white hover:bg-[#7a42e5]"
                       : "border border-gray-200 text-black hover:bg-gray-50"
                   }`}
                 >
-                  Book {s.name}
+                  {s.name === "Dapr Black Label Detail" ? "Coming Soon" : `Book ${s.name}`}
                 </button>
               </div>
             ))}

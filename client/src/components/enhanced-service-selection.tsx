@@ -1,3 +1,4 @@
+import { bookableServices } from "@shared/service-catalog";
 import { Clock, ChevronRight, Check } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { Service } from "@shared/schema";
@@ -14,7 +15,7 @@ export function EnhancedServiceSelection({
   selectedServiceId,
   onServiceSelect,
 }: EnhancedServiceSelectionProps) {
-  const packages = services.filter((s) => s.category !== "premium");
+  const packages = bookableServices(services);
   const signature = services.find((s) => s.category === "premium");
 
   return (
@@ -59,7 +60,8 @@ export function EnhancedServiceSelection({
         <div className="mt-8">
           <p className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-3">Signature</p>
           <button
-            onClick={() => onServiceSelect(signature)}
+            disabled
+            aria-label="Dapr Black Label Detail, Coming Soon"
             className="w-full bg-gray-950 rounded-xl p-5 text-left"
           >
             <div className="flex items-start justify-between">
@@ -69,7 +71,7 @@ export function EnhancedServiceSelection({
                 <p className="text-sm text-gray-400 mt-3">{signature.description}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <p className="text-base font-medium text-white">${signature.price}</p>
+                <p className="text-base font-medium text-white">Coming Soon</p>
                 {selectedServiceId === signature.id ? (
                   <div className="w-5 h-5 rounded-full bg-[#8c52ff] flex items-center justify-center flex-shrink-0">
                     <Icon icon={Check} size="xs" className="text-white" />

@@ -1,5 +1,6 @@
+import { requireBookableService } from "./service-catalog";
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { bookingQuotes, bookings, notificationEvents, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
@@ -141,6 +142,9 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
   const input = nativeQuoteRequestSchema.parse(raw);
   const promo = resolvePromoCode(input.promoCode);
   const requestFingerprint = fingerprint(input);
+  const catalog = await db.select().from(services).orderBy(asc(services.id));
+  const service = catalog.find(s => s.id === input.serviceId);
+  requireBookableService(service, catalog);
   const [existing] = await db.select().from(bookingQuotes).where(and(
     eq(bookingQuotes.userId, userId),
     eq(bookingQuotes.idempotencyKey, idempotencyKey),
@@ -152,8 +156,6 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     return withPromoMetadata(existing, promo);
   }
 
-  const [service] = await db.select().from(services).where(eq(services.id, input.serviceId)).limit(1);
-  if (!service) throw new NativeContractError(400, "INVALID_SERVICE", "Service not found.");
   const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, input.vehicleId)).limit(1);
   if (!vehicle || vehicle.userId !== userId) throw new NativeContractError(403, "VEHICLE_ACCESS_DENIED", "Vehicle does not belong to this account.");
   let timeSlotId: number | null = null;
@@ -240,6 +242,10 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
     }
     if (new Date(quote.expiresAt).getTime() <= Date.now()) throw new NativeContractError(410, "QUOTE_EXPIRED", "Quote has expired.");
 
+    const catalog = await tx.select().from(services).orderBy(asc(services.id));
+    const service = catalog.find(s => s.id === quote.serviceId);
+    requireBookableService(service, catalog);
+
     const now = new Date();
     let slotReservedAt: string | null = null;
     if (quote.fulfillmentMode === "scheduled") {
@@ -278,7 +284,7 @@ export async function createBookingFromQuote(userId: number, quoteId: string, id
       bookingRef: bookingReference(), status: "awaiting_payment", priceTier: quote.priceTier,
       timestamp: now.toISOString(), serviceLocation: quote.serviceLocation, serviceLocationType: quote.serviceLocationType,
       serviceLatitude: quote.serviceLatitude, serviceLongitude: quote.serviceLongitude, date: quote.date, time: quote.time,
-      addOns: quote.addOns, addOnTotal: Math.round((quote.subtotalCents / 100) - ((await tx.select({ price: services.price }).from(services).where(eq(services.id, quote.serviceId)).limit(1))[0]?.price ?? 0)),
+      addOns: quote.addOns, addOnTotal: Math.round((quote.subtotalCents / 100) - service.price),
       totalPrice: Math.round(quote.totalAmountCents / 100), amount: quote.totalAmountCents,
       referralDiscountCents: quote.referralDiscountCents, referralCreditAppliedCents: quote.referralCreditAppliedCents,
       quoteId: quote.id, bookingIdempotencyKey: idempotencyKey,

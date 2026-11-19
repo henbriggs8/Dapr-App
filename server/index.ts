@@ -513,7 +513,7 @@ app.use((req, res, next) => {
       readFile(new URL(`../staging/migrations/${name}`, import.meta.url), "utf8")))).join("\n")).digest("hex");
   registerHealthRoutes(app, async () => {
     if (process.env.APP_ENV === "staging") {
-      const result = await pool.query<{ schema_sha256: string; catalog_ready: boolean }>("SELECT schema_sha256, (SELECT count(DISTINCT category)>=4 FROM services) AS catalog_ready FROM staging_schema_manifest WHERE id=1");
+      const result = await pool.query<{ schema_sha256: string; catalog_ready: boolean }>("SELECT schema_sha256, (SELECT count(DISTINCT category)=3 FROM services WHERE category IN ('basic','standard','premium')) AS catalog_ready FROM staging_schema_manifest WHERE id=1");
       return result.rows[0]?.schema_sha256 === expectedSchema && result.rows[0]?.catalog_ready === true;
     }
     const query = { text: `SELECT to_regclass('public.users') IS NOT NULL
