@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci --include=dev --no-audit --no-fund
       - run: npm run check
+      - name: Verify offline staging initialization artifacts (no database connection)
+        run: npm run db:staging:plan:check
       - run: npm run test:unit
       - run: npm run test:security
       - run: npm run build

@@ -1,5 +1,5 @@
 {
-  "status": "PREPARED_FOR_REVIEW_NOT_AUTHORIZED",
+  "status": "READY_FOR_GITHUB_REVIEW_DATABASE_EXECUTION_NOT_AUTHORIZED",
   "branch": "codex/two-service-catalog-2026-11-18",
   "baseCommit": "2cad2ec30493bc4035daf455dba5460bc3d8ca21",
   "database": "dapr_staging",
@@ -55,5 +55,34 @@
   ],
   "retired": "Do not seed Interior in a new database. Keep existing Interior/duplicate records and all historical booking references; never delete or repoint them.",
   "priceCompatibility": "services.price and duration are NOT NULL. Preserve numeric Black Label legacy/internal values for old clients and history; displayPrice=null and all customer selection surfaces suppress its price. No new database columns.",
-  "safety": "Do not initialize persistent staging or apply the pending API patch until the new candidate is reviewed, published under authorization, reverified and separately approved."
+  "safety": "Do not execute the SQL, initialize a database, apply any of the 42 pending API changes or start a service in this preparation task. Preserve Replit production, Railway production and Dapr Legacy DB. Keep the API isolation hold and all notification/email safeguards unchanged.",
+  "catalogFunctionalCommit": "21b605eb73ad6be1dc9f5ec9144015aa5304fe43",
+  "nativeVisualApproval": {
+    "repository": "henbriggs8/Dapr-Customer-iOS",
+    "branch": "codex/native-catalog-production-design-2026-11-18",
+    "commit": "79a34e158c18d1988540eb2051d98311fe143e6b",
+    "scope": "Visual direction approved; existing release capabilities and September light mode preserved. No app release or database write authorized."
+  },
+  "executionBundle": {
+    "sql": "staging/revised-catalog-initialization.sql",
+    "manifest": "staging/revised-catalog-initialization.json",
+    "sqlSha256": "b0a139fdb98f5e8a7cc5d9dea5d395bf3f2dee87426b54de1dd77124a57b7a49",
+    "schemaSha256": "fe58e1a3edfa952c65fe1523383a9df99008a33ffe779cf272bd7fb7b8f35425",
+    "sourceSelection": "Freeze and approve the full backend PR head SHA containing this bundle; do not initialize from the older PR #19 head alone.",
+    "transaction": "One BEGIN/COMMIT, guarded database identity and emptiness, unchanged schema, three catalog records and postconditions. No SDK or API startup.",
+    "rehearsal": "The component schema/catalog passed prior disposable PostgreSQL 18.6 integration. This newly composed transaction has not been executed; a disposable rehearsal needs explicit authorization."
+  },
+  "target": {
+    "projectId": "3f646fec-82ed-49c9-94e5-e0b938dd2346",
+    "environmentId": "53cc8851-23dc-4bf4-9b9b-00d51775b8ed",
+    "serviceId": "3737d3b6-3401-4adf-acc7-941b4b9ffa36",
+    "database": "dapr_staging",
+    "privateHost": "postgres.railway.internal"
+  },
+  "requiredApprovals": [
+    "Review the exact backend GitHub head and passing database-free CI. Native visual approval is already recorded.",
+    "Authorize a local disposable PostgreSQL 18.6 rehearsal of this exact bundle; no persistent staging/production changes.",
+    "After rehearsal and a fresh identity/emptiness check, explicitly authorize this SQL bundle against only the existing Dapr. staging Postgres dapr_staging database.",
+    "Authorize API source selection, pending configuration application and API deployment separately; none is implied by catalog initialization."
+  ]
 }
