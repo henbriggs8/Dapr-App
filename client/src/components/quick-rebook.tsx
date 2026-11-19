@@ -215,10 +215,10 @@ export default function QuickRebook({
         serviceLocationType: suggestion.booking.serviceLocationType,
         serviceLatitude: suggestion.booking.serviceLatitude,
         serviceLongitude: suggestion.booking.serviceLongitude,
-        totalPrice: suggestion.service.price * 100, // Convert to cents
+        totalPrice: suggestion.service.price, // Legacy booking total is USD; Stripe converts to cents
       };
 
-      const res = await apiRequest("POST", "/api/bookings", bookingData);
+      const res = await apiRequest("POST", "/api/bookings/legacy", bookingData);
       return await res.json();
     },
     onSuccess: (newBooking: Booking) => {

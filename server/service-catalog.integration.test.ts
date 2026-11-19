@@ -61,9 +61,21 @@ try {
     assert.equal((await db.select().from(bookingQuotes).where(eq(bookingQuotes.id, stale.id)))[0].consumedAt, null);
   }
   const app = express(); app.use(express.json());
-  app.use((req, _res, next) => { req.user = customer; next(); });
+  let requestUser = customer;
+  app.use((req, _res, next) => { req.user = requestUser; next(); });
   server = registerRoutes(app); server.listen(0, "127.0.0.1"); await once(server, "listening");
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
+  const [legacyCustomer] = await db.insert(users).values({ username: "legacy_catalog_customer", password: "synthetic", isProvider: false, isAdmin: false }).returning();
+  requestUser = legacyCustomer;
+  for (const service of catalog.filter(s => ["basic", "standard"].includes(s.category))) {
+    const response = await fetch(origin + "/api/bookings/legacy", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ serviceId: service.id, priceTier: service.category, serviceLocation: "Synthetic", serviceLocationType: "home",
+        timeSlotId: slot.id, date: slot.date, time: slot.startTime, timestamp: new Date().toISOString(), totalPrice: service.price }) });
+    assert.equal(response.status, 201, `legacy web booking must accept ${service.name}: ${await response.clone().text()}`);
+    const booking = await response.json();
+    assert.equal(booking.totalPrice, service.price, "legacy USD totals must never be multiplied by 100 before booking");
+    assert.equal(booking.serviceId, service.id); assert.equal(booking.isPaid, false, "no payment was sent");
+  }
   for (const service of [catalog.find(s => s.category === "premium")!, interior, duplicate]) {
     const response = await fetch(origin + "/api/bookings/legacy", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ serviceId: service.id, isBookable: true }) });
     assert.equal(response.status, 409); assert.equal((await response.json()).code, "SERVICE_NOT_BOOKABLE");
@@ -72,7 +84,7 @@ try {
   assert.equal(apiServices.find((s: any) => s.id === interior.id).customerVisible, false);
   assert.equal(apiServices.find((s: any) => s.category === "premium").displayPrice, null);
   assert.deepEqual(await storage.getBookingById(historical.id), historical);
-  console.log("PASS: real PostgreSQL permits only two canonical tiers; rejects blocked quotes, ASAP, stale quote consumption and legacy HTTP booking; preserves capacity, history, provider lookup and finalized earnings");
+  console.log("PASS: real PostgreSQL and native/legacy HTTP permit only two canonical tiers; rejects blocked quotes, ASAP, stale quote consumption and legacy HTTP booking; preserves capacity, history, provider lookup and finalized earnings");
 } finally {
   if (server) { server.emit("dapr:shutdown"); server.closeAllConnections(); await new Promise<void>(resolve => server!.close(() => resolve())); }
   await pool.end();

@@ -366,7 +366,7 @@ export default function BookingDialog({
   const bookingMutation = useMutation({
     mutationFn: async (formData: any) => {
       console.log("Making booking API request with data:", formData);
-      const res = await apiRequest("POST", "/api/bookings", formData);
+      const res = await apiRequest("POST", "/api/bookings/legacy", formData);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Network error" }));
         throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);

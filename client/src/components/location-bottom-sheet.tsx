@@ -1162,6 +1162,7 @@ function ConfirmStep({
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
+      if (!slotsRes.ok) throw new Error("Could not load current availability. Please try again.");
       const slots: TimeSlot[] = await slotsRes.json();
       const available = slots.find(
         (s) => s.date === today && s.isAvailable && s.currentBookings < s.maxBookings
@@ -1171,7 +1172,7 @@ function ConfirmStep({
       if (!isBookableService(service)) throw new Error("This service is not available for new bookings.");
 
       // 2. Create booking
-      const bookingRes = await fetch(resolveUrl("/api/bookings"), {
+      const bookingRes = await fetch(resolveUrl("/api/bookings/legacy"), {
         method: "POST",
         headers,
         credentials: "include",
@@ -1181,6 +1182,8 @@ function ConfirmStep({
           serviceLocationType: "address",
           priceTier: service.category,
           timeSlotId: available.id,
+          date: available.date,
+          time: available.startTime,
           ...(vehicleId ? { vehicleId } : {}),
           timestamp: new Date().toISOString(),
         }),
