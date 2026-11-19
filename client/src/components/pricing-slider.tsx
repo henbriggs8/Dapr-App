@@ -1,3 +1,5 @@
+import { ComingSoonService } from "./coming-soon-service";
+import { bookableServices } from "@shared/service-catalog";
 import React, { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +26,11 @@ export default function PricingSlider({
   const [selectedValue, setSelectedValue] = useState<number>(1);
   const [animatePrice, setAnimatePrice] = useState<boolean>(false);
   
-  const { data: services, isLoading } = useQuery<Service[]>({
+  const { data: catalog, isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
+
+  const services = bookableServices(catalog ?? []);
 
   const getServiceByIndex = (index: number): Service | undefined => {
     if (!services || services.length === 0) return undefined;
@@ -172,7 +176,7 @@ export default function PricingSlider({
             <Slider
               value={[selectedValue]}
               min={1}
-              max={services?.length || 3}
+              max={Math.max(1, services.length)}
               step={1}
               onValueChange={(value) => setSelectedValue(value[0])}
               className="py-4"
@@ -291,6 +295,7 @@ export default function PricingSlider({
           </div>
         </div>
       </CardContent>
+      <div className="p-4"><ComingSoonService /></div>
     </Card>
   );
 }

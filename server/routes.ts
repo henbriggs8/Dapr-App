@@ -1,3 +1,5 @@
+import { requireBookableService } from "./service-catalog";
+import { bookableServices, catalogService } from "@shared/service-catalog";
 import { loadBookingServiceSubtotals } from "./booking-compensation";
 import { providerPayoutCents } from "./provider-compensation";
 import express from "express";
@@ -812,6 +814,9 @@ export function registerRoutes(app: Express): Server {
       // created within the last hour, return it immediately instead of
       // creating a second booking (which would produce a second payment session).
       const incomingServiceId = Number(req.body.serviceId);
+      const catalog = await storage.getServices();
+      const service = catalog.find(service => service.id === incomingServiceId);
+      requireBookableService(service, catalog);
       if (!isNaN(incomingServiceId)) {
         const existingBooking = await storage.findRecentUnpaidBooking(
           req.user.id,
@@ -853,7 +858,6 @@ export function registerRoutes(app: Express): Server {
       // Authoritative total = base service price + add-on subtotal. Anything
       // beyond that (e.g. vehicle-size markup) is layered in by the client and
       // sent as `totalPrice`; we never trust it to be lower than base+add-ons.
-      const service = await storage.getServiceById(bookingData.serviceId);
       const legacyTimeSlotId = bookingData.timeSlotId;
       if (legacyTimeSlotId == null) {
         return res.status(400).json({ code: "TIME_SLOT_REQUIRED", error: "This scheduled booking requires a time slot." });
@@ -982,6 +986,7 @@ export function registerRoutes(app: Express): Server {
       
       res.status(201).json(newBooking);
     } catch (error) {
+      if (error instanceof NativeContractError) return res.status(error.status).json({ code: error.code, error: error.message });
       console.error("Error creating booking:", error instanceof Error ? error.message : String(error));
       res.status(400).json({ error: error instanceof Error ? error.message : "An error occurred" });
     }
@@ -1265,7 +1270,8 @@ export function registerRoutes(app: Express): Server {
   // Services endpoints
   app.get("/api/services", async (req, res) => {
     const services = await storage.getServices();
-    res.json(services);
+    // Keep retired records readable for history/admin/provider clients.
+    res.json(services.map(service => catalogService(service, services)));
   });
 
   // Add-ons catalogue (single source of truth shared with the frontend)
@@ -1284,7 +1290,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(404).send("Service not found");
     }
     
-    res.json(service);
+    res.json(catalogService(service, await storage.getServices()));
   });
   
   // Rebooking analysis endpoint
@@ -1296,7 +1302,7 @@ export function registerRoutes(app: Express): Server {
       const services = await storage.getServices();
       const timeSlots = await storage.getAvailableTimeSlots();
       
-      const suggestions = await storage.generateRebookingSuggestions(req.user.id, userBookings, services, timeSlots);
+      const suggestions = await storage.generateRebookingSuggestions(req.user.id, userBookings, bookableServices(services), timeSlots);
       res.json(suggestions);
     } catch (error) {
       console.error("Error generating rebooking suggestions:", error);

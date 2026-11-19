@@ -1,4 +1,5 @@
-import { and, eq } from "drizzle-orm";
+import { requireBookableService } from "./service-catalog";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { ADD_ONS_BY_ID } from "@shared/add-ons";
 import { savedAddresses, services, users, vehicles } from "@shared/schema";
@@ -49,8 +50,9 @@ export async function getAsapAvailability(userId: number, raw: unknown) {
     eq(savedAddresses.userId, userId),
   )).limit(1);
   if (!address) throw new NativeContractError(404, "ADDRESS_NOT_FOUND", "Saved address not found.");
-  const [service] = await db.select({ id: services.id }).from(services).where(eq(services.id, input.serviceId)).limit(1);
-  if (!service) throw new NativeContractError(400, "INVALID_SERVICE", "Service not found.");
+  const catalog = await db.select().from(services).orderBy(asc(services.id));
+  const service = catalog.find(s => s.id === input.serviceId);
+  requireBookableService(service, catalog);
   const [vehicle] = await db.select({ id: vehicles.id }).from(vehicles).where(and(
     eq(vehicles.id, input.vehicleId),
     eq(vehicles.userId, userId),

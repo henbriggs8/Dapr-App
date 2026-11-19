@@ -29,7 +29,7 @@ const dapprLogo = "/dapr-logo.svg";
 type Tier = {
   slug: string;
   name: string;
-  price: number;
+  price: number | null;
   duration: string;
   icon: LucideIcon;
   tagline: string;
@@ -67,42 +67,16 @@ const TIERS: Tier[] = [
     ],
   },
   {
-    slug: "interior-detail",
-    name: "Interior Detail",
-    price: 89,
-    duration: "60 min",
-    icon: Sparkles,
-    tagline:
-      "A focused interior reset. We attack built-up dust, crumbs, spills, and everyday mess so your cabin feels brand new again.",
-    included: [
-      "Full interior vacuum",
-      "Dash, console, door panels, and cup holder cleaning",
-      "Seat cleaning",
-      "Chemical treatment on interior surfaces",
-      "Light stain treatment",
-      "Crevice and touchpoint cleaning",
-      "Interior windows cleaned",
-    ],
-    bestFor: [
-      "Vehicles with built-up dust, crumbs, spills, or everyday mess",
-      "Families, commuters, and work vehicles needing an interior reset",
-    ],
-    goodToKnow: [
-      "Light stain treatment is included; severe stains, pet hair, or bio messes may need an add-on",
-      "Exterior wash is not the focus of this package",
-    ],
-  },
-  {
     slug: "refresh-detail",
     name: "Refresh Detail",
     price: 149,
     duration: "90 min",
     icon: Wand2,
     tagline:
-      "A complete inside-and-out refresh. Combines our Essential Wash and Interior Detail with upgraded wheel work and tire shine.",
+      "A complete inside-and-out refresh. Combines a complete interior clean with upgraded exterior care, wheel work, and tire shine.",
     included: [
       "Everything in Essential Wash",
-      "Everything in Interior Detail",
+      "Thorough interior vacuum and surface cleaning",
       "More thorough wheel cleaning",
       "Tire shine",
       "Full inside-and-out refresh",
@@ -120,7 +94,7 @@ const TIERS: Tier[] = [
   {
     slug: "black-label",
     name: "Dapr Black Label Detail",
-    price: 299,
+    price: null,
     duration: "3 hrs",
     icon: Crown,
     tagline:
@@ -178,21 +152,21 @@ const DIFFERENTIATORS: Differentiator[] = [
   },
 ];
 
-type CompareRow = { feature: string; values: [boolean, boolean, boolean, boolean] };
+type CompareRow = { feature: string; values: [boolean, boolean, boolean] };
 const COMPARE: CompareRow[] = [
-  { feature: "Hand wash & spray wax", values: [true, false, true, true] },
-  { feature: "Wheel face rinse + tire wipe", values: [true, false, true, true] },
-  { feature: "Deep wheel clean + tire shine", values: [false, false, true, true] },
-  { feature: "Interior vacuum", values: [true, true, true, true] },
-  { feature: "Streak-free windows", values: [true, true, true, true] },
-  { feature: "Full surface cleaning (dash, console, doors)", values: [false, true, true, true] },
-  { feature: "Seat cleaning & surface chemical treatment", values: [false, true, true, true] },
-  { feature: "Light stain treatment", values: [false, true, true, true] },
-  { feature: "Carpet shampoo", values: [false, false, false, true] },
-  { feature: "Steam extraction", values: [false, false, false, true] },
-  { feature: "Paint decontamination & clay bar", values: [false, false, false, true] },
-  { feature: "Engine bay degrease & dress", values: [false, false, false, true] },
-  { feature: "Premium interior protectant", values: [false, false, false, true] },
+  { feature: "Hand wash & spray wax", values: [true, true, true] },
+  { feature: "Wheel face rinse + tire wipe", values: [true, true, true] },
+  { feature: "Deep wheel clean + tire shine", values: [false, true, true] },
+  { feature: "Interior vacuum", values: [true, true, true] },
+  { feature: "Streak-free windows", values: [true, true, true] },
+  { feature: "Full surface cleaning (dash, console, doors)", values: [false, true, true] },
+  { feature: "Seat cleaning & surface chemical treatment", values: [false, true, true] },
+  { feature: "Light stain treatment", values: [false, true, true] },
+  { feature: "Carpet shampoo", values: [false, false, true] },
+  { feature: "Steam extraction", values: [false, false, true] },
+  { feature: "Paint decontamination & clay bar", values: [false, false, true] },
+  { feature: "Engine bay degrease & dress", values: [false, false, true] },
+  { feature: "Premium interior protectant", values: [false, false, true] },
 ];
 
 export default function ServicesOverview() {
@@ -214,6 +188,7 @@ function DesktopServices() {
   }, []);
 
   const goBookWith = (_slug?: string) => {
+    if (_slug === "black-label" || _slug === "interior-detail") return;
     setLocation(user ? "/services" : "/auth?context=booking&redirect=%2Fservices");
   };
 
@@ -325,7 +300,7 @@ function DesktopServices() {
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="text-center mb-12">
             <p className="text-xs font-bold text-[#8c52ff] uppercase tracking-widest mb-3">Compare Services</p>
-            <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-black">All four tiers, side by side.</h2>
+            <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-black">Compare our services.</h2>
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
@@ -339,7 +314,7 @@ function DesktopServices() {
                         <div className="flex flex-col items-center gap-1">
                           <Icon icon={t.icon} size="sm" className="text-[#8c52ff]" />
                           <span className="text-[13px] leading-tight">{t.name}</span>
-                          <span className="text-[11px] text-gray-400 font-normal">${t.price}</span>
+                          <span className="text-[11px] text-gray-400 font-normal">{t.price === null ? "Coming Soon" : `$${t.price}`}</span>
                         </div>
                       </th>
                     ))}
@@ -455,8 +430,8 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
           </div>
           <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.05] text-black mb-4">{tier.name}</h2>
           <div className="flex items-baseline gap-3 mb-6">
-            <p className="text-3xl font-bold text-black">${tier.price}</p>
-            <p className="text-sm text-gray-400 font-medium">starting price</p>
+            <p className="text-3xl font-bold text-black">{tier.price === null ? "Coming Soon" : `$${tier.price}`}</p>
+            {tier.price !== null && <p className="text-sm text-gray-400 font-medium">starting price</p>}
             <span className="w-1 h-1 rounded-full bg-gray-300" />
             <p className="text-sm text-gray-500 font-medium flex items-center gap-1.5">
               <Icon icon={Clock} size="xs" /> {tier.duration}
@@ -465,10 +440,11 @@ function TierBlock({ tier, index, onBook }: { tier: Tier; index: number; onBook:
           <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">{tier.tagline}</p>
           <button
             onClick={onBook}
+            disabled={tier.price === null}
             className="bg-black text-white px-7 py-3.5 rounded-full text-sm font-bold hover:bg-gray-900 transition-all active:scale-[0.98] inline-flex items-center gap-2"
             data-testid={`button-book-${tier.slug}`}
           >
-            Book {tier.name} <Icon icon={ArrowRight} size="sm" />
+            {tier.price === null ? "Coming Soon" : `Book ${tier.name}`} <Icon icon={ArrowRight} size="sm" />
           </button>
         </div>
 
@@ -584,7 +560,7 @@ function MobileServices() {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="text-[15px] font-bold text-[#111]">${tier.price}</p>
+                        <p className="text-[15px] font-bold text-[#111]">{tier.price === null ? "Coming Soon" : `$${tier.price}`}</p>
                         <div className="flex items-center gap-1 justify-end">
                           <Icon icon={Clock} size="xs" className="text-[#aaa]" />
                           <p className="text-[11px] text-[#aaa]">{tier.duration}</p>
@@ -610,10 +586,11 @@ function MobileServices() {
                           <MobileSection title="Good to know" items={tier.goodToKnow} />
                           <button
                             onClick={() => goBookWith(tier.slug)}
+                            disabled={tier.price === null}
                             className="mt-5 inline-flex items-center gap-1.5 bg-[#111] text-white text-[13px] font-semibold rounded-full px-5 py-2.5 hover:bg-[#000] transition-colors"
                             data-testid={`mobile-book-${tier.slug}`}
                           >
-                            Book {tier.name}
+                            {tier.price === null ? "Coming Soon" : `Book ${tier.name}`}
                             <Icon icon={ChevronRight} size="xs" />
                           </button>
                         </div>
@@ -647,7 +624,7 @@ function MobileServices() {
                         data-testid={`mobile-compare-col-${t.slug}`}
                       >
                         <p className="text-[12px] font-semibold text-[#111] leading-tight whitespace-nowrap">{t.name}</p>
-                        <p className="text-[11px] font-bold text-[#8c52ff] mt-0.5">${t.price}</p>
+                        <p className="text-[11px] font-bold text-[#8c52ff] mt-0.5">{t.price === null ? "Coming Soon" : `$${t.price}`}</p>
                       </th>
                     ))}
                   </tr>

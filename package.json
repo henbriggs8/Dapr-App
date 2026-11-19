@@ -30,7 +30,9 @@
     "start:railway": "sh scripts/start-railway.sh",
     "db:staging:init": "node --import tsx scripts/initialize-staging-database.ts",
     "test:database": "node scripts/test-database.mjs",
-    "db:staging:seed": "node --import tsx scripts/seed-staging-catalog.ts"
+    "db:staging:seed": "node --import tsx scripts/seed-staging-catalog.ts",
+    "db:staging:prepare": "node --import tsx scripts/prepare-staging-initialization.mjs",
+    "db:staging:plan:check": "node --import tsx scripts/prepare-staging-initialization.mjs --check"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1157.0",

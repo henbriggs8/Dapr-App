@@ -95,7 +95,7 @@
       "id": "D2",
       "phase": "before first API deploy",
       "status": "FAIL_UNINITIALIZED",
-      "criterion": "Separately authorized empty-staging schema/catalog initialization; schema manifest and4 service categories present; never boot-time DDL"
+      "criterion": "Separately authorized empty-staging schema/catalog initialization; schema manifest, three canonical service records and two bookable categories present; never boot-time DDL"
     },
     {
       "id": "O1",
@@ -168,5 +168,13 @@
     "Empty dapr_staging DB/schema/catalog and synthetic admin preparation",
     "First API deployment at exact approvedSHA",
     "Real-service/media/native-device/soak and restore tests; enabling a controlled dev push/email path needs guard review"
-  ]
+  ],
+  "catalogHandoff": {
+    "runbook": "../staging/CATALOG-INITIALIZATION.md",
+    "plan": "../staging/catalog-plan.json",
+    "expectedServiceRecords": 3,
+    "expectedBookableServices": 2,
+    "databaseExecutionAuthorized": false,
+    "note": "Other resource/status entries preserve the original dated snapshot; consult the catalog handoff for current source and initialization approvals."
+  }
 }

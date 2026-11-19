@@ -152,9 +152,9 @@ export default function HomeScreen() {
   const lastServiceStreet = lastServiceLocation ? parseAddress(lastServiceLocation).street : null;
 
   const categories: { icon: LucideIcon; label: string; route?: string; openSheet?: boolean }[] = [
-    { icon: Gauge,         label: "Interior",    openSheet: true },
-    { icon: CarFront,      label: "Exterior",    openSheet: true },
-    { icon: Sparkles,      label: "Full Detail", openSheet: true },
+    { icon: Gauge,         label: "Essential Wash",    openSheet: true },
+    { icon: CarFront,      label: "Refresh Detail",    openSheet: true },
+    { icon: Sparkles,      label: "Services", openSheet: true },
     { icon: MoreHorizontal,label: "More",        route: "/services" },
   ];
 
@@ -165,28 +165,21 @@ export default function HomeScreen() {
       reward: "5 washes until $50 reward",
       title: "Essential Wash",
       price: "$39",
-      duration: "15–30 min",
-    },
-    {
-      id: 2,
-      image: "/interior-detail.jpg",
-      title: "Interior Detail",
-      price: "$89",
-      duration: "45–90 min",
+      duration: "30 min",
     },
     {
       id: 3,
       image: "/dapper-lambo.jpg",
       title: "Refresh Detail",
       price: "$149",
-      duration: "30–45 min",
+      duration: "90 min",
     },
     {
       id: 4,
       image: "/dapper-van-house.jpg",
-      title: "Reserve Ahead",
-      price: "From $39",
-      duration: "Schedule anytime",
+      title: "Dapr Black Label Detail",
+      price: "Coming Soon",
+      duration: "Not available to book",
     },
   ];
 
@@ -452,6 +445,7 @@ export default function HomeScreen() {
           <button
             key={card.id}
             onClick={() => setAddrSheetOpen(true)}
+            disabled={card.title === "Dapr Black Label Detail"}
             className="w-full flex items-center gap-3.5 text-left active:opacity-90 transition rounded-2xl border border-[#f0f0f0] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
           >
             {/* Thumbnail */}
@@ -483,7 +477,7 @@ export default function HomeScreen() {
                 className="mt-1 flex items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold text-white"
                 style={{ background: ACCENT }}
               >
-                Book
+                {card.title === "Dapr Black Label Detail" ? "Coming Soon" : "Book"}
               </div>
             </div>
           </button>

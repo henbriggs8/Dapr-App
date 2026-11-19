@@ -1,3 +1,4 @@
+import { isBookableService } from "@shared/service-catalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { User, bookingFormSchema, Service, TimeSlot } from "@shared/schema";
 import { Button } from "./ui/button";
@@ -365,7 +366,7 @@ export default function BookingDialog({
   const bookingMutation = useMutation({
     mutationFn: async (formData: any) => {
       console.log("Making booking API request with data:", formData);
-      const res = await apiRequest("POST", "/api/bookings", formData);
+      const res = await apiRequest("POST", "/api/bookings/legacy", formData);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Network error" }));
         throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
@@ -424,10 +425,10 @@ export default function BookingDialog({
       return;
     }
     
-    if (!service) {
+    if (!service || !isBookableService(service)) {
       toast({
         title: "Error",
-        description: "Service information is missing",
+        description: "This service is not available to book",
         variant: "destructive",
       });
       return;
@@ -534,6 +535,14 @@ export default function BookingDialog({
         </DialogContent>
       </Dialog>
     );
+  }
+
+  if (service && !isBookableService(service)) {
+    return <Dialog open={open} onOpenChange={onClose}><DialogContent>
+      <DialogHeader><DialogTitle>{service.category === "premium" ? "Coming Soon" : "Service unavailable"}</DialogTitle>
+        <DialogDescription>This service is not available for new bookings. Choose Essential Wash or Refresh Detail.</DialogDescription>
+      </DialogHeader>
+    </DialogContent></Dialog>;
   }
 
   return (

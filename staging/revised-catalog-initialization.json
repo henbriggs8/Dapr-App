@@ -1,0 +1,89 @@
+{
+  "status": "PREPARED_REQUIRES_SEPARATE_DATABASE_APPROVAL",
+  "executionRehearsal": "NOT_RUN_FOR_THIS_COMPOSED_TRANSACTION",
+  "target": {
+    "projectId": "3f646fec-82ed-49c9-94e5-e0b938dd2346",
+    "environmentId": "53cc8851-23dc-4bf4-9b9b-00d51775b8ed",
+    "serviceId": "3737d3b6-3401-4adf-acc7-941b4b9ffa36",
+    "database": "dapr_staging",
+    "privateHost": "postgres.railway.internal"
+  },
+  "operatorMustVerifyRailwayIdentity": true,
+  "schemaFiles": [
+    "staging/migrations/0000_staging_baseline.sql",
+    "staging/migrations/0001_runtime_invariants.sql"
+  ],
+  "schemaSha256": "fe58e1a3edfa952c65fe1523383a9df99008a33ffe779cf272bd7fb7b8f35425",
+  "catalogSourceSha256": "8d5e04b17abd832a7bba55fa1d5540f10ca3aabb7ddc31bdd03e6509e8dab470",
+  "sqlFile": "staging/revised-catalog-initialization.sql",
+  "sqlSha256": "b0a139fdb98f5e8a7cc5d9dea5d395bf3f2dee87426b54de1dd77124a57b7a49",
+  "expectedTables": [
+    "booking_photos",
+    "booking_quotes",
+    "bookings",
+    "career_applications",
+    "clerk_stripe_mapping",
+    "contact_messages",
+    "notification_events",
+    "pricing_config",
+    "provider_application_media",
+    "provider_application_setup",
+    "provider_applications",
+    "push_devices",
+    "referrals",
+    "saved_addresses",
+    "services",
+    "session",
+    "staging_schema_manifest",
+    "time_slots",
+    "users",
+    "vehicles"
+  ],
+  "expectedRows": {
+    "services": 3,
+    "staging_schema_manifest": 1,
+    "everyOtherTable": 0
+  },
+  "expectedBookableServices": 2,
+  "catalog": [
+    {
+      "name": "Essential Wash",
+      "description": "Hand wash, spray wax, vacuum, quick interior wipe-down",
+      "price": 39,
+      "duration": 30,
+      "category": "basic",
+      "id": 1,
+      "bookingAvailability": "available",
+      "isBookable": true,
+      "customerVisible": true,
+      "displayPrice": 39
+    },
+    {
+      "name": "Refresh Detail",
+      "description": "Basic interior cleaning with an upgraded exterior clean.\n\nInterior includes vacuuming, wipe-down, seats, cupholders, and dashboard cleaning.\n\nExterior includes a hand wash, spray wax, and cleaning of the wheels and tires.",
+      "price": 149,
+      "duration": 90,
+      "category": "standard",
+      "id": 2,
+      "bookingAvailability": "available",
+      "isBookable": true,
+      "customerVisible": true,
+      "displayPrice": 149
+    },
+    {
+      "name": "Dapr Black Label Detail",
+      "description": "Our most elevated detailing experience is coming soon. Not available to book.",
+      "price": 299,
+      "duration": 180,
+      "category": "premium",
+      "id": 3,
+      "bookingAvailability": "coming_soon",
+      "isBookable": false,
+      "customerVisible": true,
+      "displayPrice": null
+    }
+  ],
+  "flagsAreApplicationPolicyNotDatabaseColumns": true,
+  "noExistingDataUpdatesOrDeletes": true,
+  "rollback": "Any failed pre/postcondition aborts the single transaction; explicitly ROLLBACK on error. Do not delete existing tables or retry against a nonempty target."
+}

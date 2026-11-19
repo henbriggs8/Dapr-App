@@ -1,3 +1,4 @@
+import { bookableServices, isBookableService } from "@shared/service-catalog";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { User, Service, TimeSlot, Booking } from "@shared/schema";
@@ -90,7 +91,7 @@ const SERVICE_CONTENT: Record<string, ServiceContent> = {
     short: "Complete interior/exterior refresh with upgraded wheels and tire shine",
     included: [
       "Everything in Essential Wash",
-      "Everything in Interior Detail",
+      "Thorough interior vacuum and surface cleaning",
       "More thorough wheel cleaning",
       "Tire shine",
       "Full inside-and-out refresh",
@@ -166,15 +167,15 @@ function getArrivalWindows() {
 // row exists for each tier, so no category fallback is needed.
 const SLUG_TO_NAME: Record<string, string> = {
   "essential-wash": "essential wash",
-  "interior-detail": "interior detail",
+
   "refresh-detail": "refresh detail",
-  "black-label": "black label",
+
 };
 
 function resolvePreselectService(slug: string, services: Service[]): Service | undefined {
   const target = SLUG_TO_NAME[slug];
   if (!target) return undefined;
-  return services.find((s) => s.name.toLowerCase().includes(target));
+  return bookableServices(services).find((s) => s.name.toLowerCase().includes(target));
 }
 
 export default function BookingScreen() {
@@ -229,12 +230,14 @@ export default function BookingScreen() {
 
   const packages =
     services
-      ?.filter((s) => s.category !== "premium")
+      ?.filter(isBookableService)
       .slice()
       .sort((a, b) => a.price - b.price) ?? [];
   const signature = services?.find((s) => s.category === "premium");
 
   const handleSelectService = (service: Service) => {
+    if (!isBookableService(service)) return;
+    if (!isBookableService(service)) return;
     setSelectedServiceId(service.id);
     setTimeout(() => {
       whenSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -242,6 +245,8 @@ export default function BookingScreen() {
   };
 
   const handlePickService = (service: Service) => {
+    if (!isBookableService(service)) return;
+    if (!isBookableService(service)) return;
     setSelectedServiceId(service.id);
     setExpandedId(service.id);
     setTimeout(() => {
@@ -485,7 +490,8 @@ export default function BookingScreen() {
                 Signature
               </p>
               <button
-                onClick={() => handlePickService(signature)}
+                disabled
+                aria-label="Dapr Black Label Detail, Coming Soon"
                 className={`w-full text-left bg-[#111] rounded-2xl p-5 active:opacity-90 hover:opacity-95 transition ${
                   selectedServiceId === signature.id ? "ring-2 ring-[#8c52ff] ring-offset-2 ring-offset-white" : ""
                 }`}
@@ -504,7 +510,7 @@ export default function BookingScreen() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-[16px] font-bold text-white">${signature.price}</p>
+                    <p className="text-[16px] font-bold text-white">Coming Soon</p>
                     <Icon icon={ChevronRight} size="sm" className="text-[#8c52ff]" />
                   </div>
                 </div>
@@ -693,7 +699,7 @@ export default function BookingScreen() {
         </div>
       </div>
 
-      {bookingOpen && selectedServiceId && selectedTimeSlotId && (() => {
+      {bookingOpen && selectedServiceId && selectedTimeSlotId && services?.some(s => s.id === selectedServiceId && isBookableService(s)) && (() => {
         const selectedSlot = timeSlots?.find((s) => s.id === selectedTimeSlotId);
         const addressParam = new URLSearchParams(search).get("address") || undefined;
         return (

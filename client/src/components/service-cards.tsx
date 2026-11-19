@@ -1,3 +1,5 @@
+import { ComingSoonService } from "./coming-soon-service";
+import { bookableServices } from "@shared/service-catalog";
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +17,11 @@ export default function ServiceCards({
 }) {
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   
-  const { data: services, isLoading } = useQuery<Service[]>({
+  const { data: catalog, isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
+
+  const services = bookableServices(catalog ?? []);
 
   // Select first service by default when data is loaded only once, using a ref to avoid multiple re-runs
   const initialSelectionMade = React.useRef(false);
@@ -202,6 +206,7 @@ export default function ServiceCards({
           </motion.div>
         ))}
       </div>
+      <ComingSoonService />
     </div>
   );
 }

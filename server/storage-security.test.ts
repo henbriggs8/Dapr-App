@@ -20,7 +20,7 @@ test("database startup seeds services but never reads or inserts privileged acco
   } })) as any);
   const storage = new DatabaseStorage();
   await storage.initialize();
-  assert.equal(inserts.length, 4);
+  assert.equal(inserts.length, 3);
 });
 
 test("memory storage does not automatically create administrator or provider credentials", async t => {

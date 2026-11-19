@@ -1,3 +1,4 @@
+import { isBookableService } from "@shared/service-catalog";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { createPortal } from "react-dom";
@@ -892,7 +893,7 @@ function ServiceStep({
     : "Select vehicle";
 
   const packages = services
-    ?.filter((s) => s.category !== "premium")
+    ?.filter(isBookableService)
     .slice()
     .sort((a, b) => a.price - b.price) ?? [];
   const signature = services?.find((s) => s.category === "premium");
@@ -1005,7 +1006,8 @@ function ServiceStep({
             {/* Signature */}
             {signature && (
               <button
-                onClick={() => onSelect(signature)}
+                disabled
+                aria-label="Dapr Black Label Detail, Coming Soon"
                 className={`w-full flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left transition border ${
                   selectedId === signature.id
                     ? "bg-[#111] border-[#8c52ff]"
@@ -1023,7 +1025,7 @@ function ServiceStep({
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <p className="text-[15px] font-bold text-white">${signature.price}</p>
+                  <p className="text-[15px] font-bold text-white">Coming Soon</p>
                   {selectedId === signature.id && <Icon icon={Check} size="sm" style={{ color: ACCENT }} />}
                 </div>
               </button>
@@ -1040,7 +1042,7 @@ function ServiceStep({
         )}
         <button
           onClick={onContinue}
-          disabled={selectedId === null || selectedVehicleId === null}
+          disabled={selectedVehicleId === null || !services?.some(service => service.id === selectedId && isBookableService(service))}
           className={`w-full py-4 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 transition ${
             selectedId !== null && selectedVehicleId !== null
               ? "bg-[#111] text-white active:bg-[#222]"
@@ -1160,14 +1162,17 @@ function ConfirmStep({
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
+      if (!slotsRes.ok) throw new Error("Could not load current availability. Please try again.");
       const slots: TimeSlot[] = await slotsRes.json();
       const available = slots.find(
         (s) => s.date === today && s.isAvailable && s.currentBookings < s.maxBookings
       );
       if (!available) throw new Error("No time slots available right now. Try again in a moment.");
 
+      if (!isBookableService(service)) throw new Error("This service is not available for new bookings.");
+
       // 2. Create booking
-      const bookingRes = await fetch(resolveUrl("/api/bookings"), {
+      const bookingRes = await fetch(resolveUrl("/api/bookings/legacy"), {
         method: "POST",
         headers,
         credentials: "include",
@@ -1177,6 +1182,8 @@ function ConfirmStep({
           serviceLocationType: "address",
           priceTier: service.category,
           timeSlotId: available.id,
+          date: available.date,
+          time: available.startTime,
           ...(vehicleId ? { vehicleId } : {}),
           timestamp: new Date().toISOString(),
         }),
@@ -1839,8 +1846,8 @@ export function LocationBottomSheet({
                 <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
                   <ServiceStep
                     selectedId={selectedService?.id ?? null}
-                    onSelect={setSelectedService}
-                    onContinue={() => { if (selectedService) goTo(2); }}
+                    onSelect={service => { if (isBookableService(service)) setSelectedService(service); }}
+                    onContinue={() => { if (selectedService && isBookableService(selectedService)) goTo(2); }}
                     selectedVehicleId={selectedVehicleId}
                     onVehicleSelect={setSelectedVehicleId}
                   />
@@ -1848,7 +1855,7 @@ export function LocationBottomSheet({
 
                 {/* Step 2 */}
                 <div style={{ width: "33.333%", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
-                  {selectedAddress && selectedService ? (
+                  {selectedAddress && selectedService && isBookableService(selectedService) ? (
                     <ConfirmStep
                       address={selectedAddress}
                       service={selectedService}
