@@ -57,7 +57,7 @@ try {
   const exited=once(app,"exit");app.kill("SIGTERM");const [exitCode]=await exited;assert.equal(exitCode,0,logs);app=undefined;
   console.log("PASS: guarded production-mode startup, explicit empty-DB init, duplicate-init refusal, explicit catalog preparation, schema readiness, auth/CORS, raw Stripe signature rejection and graceful shutdown; no external egress");
 } finally {
-  if(app){const exited=once(app,"exit");app.kill("SIGTERM");await exited;}
+  if(app && app.exitCode == null && app.signalCode == null){const exited=once(app,"exit");app.kill("SIGTERM");await exited;}
   if(created) await admin.query('DROP DATABASE dapr_staging WITH (FORCE)');
   await admin.end();
 }

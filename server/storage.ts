@@ -5,6 +5,7 @@ import { earningsForCompletedBooking } from "./booking-compensation";
 import { providerPayoutCents, resolveServiceSubtotalCents } from "./provider-compensation";
 import { users, bookings, services, timeSlots, vehicles, savedAddresses, pricingConfig, clerkStripeMapping, bookingPhotos, referrals, contactMessages, providerApplications, notificationEvents, User, Booking, InsertBooking, InsertUser, PricingConfig, Service, TimeSlot, InsertService, InsertTimeSlot, Vehicle, InsertVehicle, ClerkStripeMapping, InsertClerkStripeMapping, BookingPhoto, Referral, ContactMessage, InsertContactMessage, SavedAddress, ProviderApplication, InsertProviderApplication } from "@shared/schema";
 import { db } from "./db";
+import { assertBookingPaymentOpen } from "./unpaid-booking-cancellation";
 import { eq, and, gte, lte, gt, lt, desc, asc, sql, isNull, isNotNull, or, inArray } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -2558,11 +2559,14 @@ export class DatabaseStorage implements IStorage {
       paymentMethod?: string;
     }
   ): Promise<Booking> {
-    const [booking] = await db
-      .update(bookings)
-      .set(paymentInfo)
-      .where(eq(bookings.id, bookingId))
-      .returning();
+    const booking = await db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
+      const [existing] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1).for("update");
+      if (!existing) throw new Error("Booking not found");
+      assertBookingPaymentOpen(existing);
+      const [updated] = await tx.update(bookings).set(paymentInfo).where(eq(bookings.id, bookingId)).returning();
+      return updated;
+    });
     if (paymentInfo.isPaid === true && booking.status === 'completed') {
       await this.awardReferralForCompletedBooking(booking.id);
     }

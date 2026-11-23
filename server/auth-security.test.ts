@@ -56,6 +56,11 @@ async function harness(t: TestContext) {
       return user;
     },
   });
+  // Representative routes that rely on req.user, as the provider lifecycle does.
+  app.get("/api/provider/bearer-regression", (req, res) => {
+    if (!req.user?.isProvider) return res.sendStatus(403);
+    res.json({ id: req.user.id });
+  });
   const server = createServer(app);
   const hub = attachAuthenticatedWebSocketServer(server, {
     sessionMiddleware: middleware,
@@ -93,6 +98,26 @@ async function harness(t: TestContext) {
   };
   return { users, calls, tokens, base, hub, post, sync, cookieFor, socket, authenticate };
 }
+
+test("native provider bearer authentication does not require Clerk-sync cookies", async t => {
+  const h = await harness(t);
+  const response = await fetch(h.base + "/api/provider/bearer-regression", { headers: { Authorization: "Bearer provider-token" } });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).id, 2);
+  for (const token of ["invalid-token", "customer-token"]) {
+    assert.equal((await fetch(h.base + "/api/provider/bearer-regression", { headers: { Authorization: `Bearer ${token}` } })).status, 403);
+  }
+});
+
+test("explicit bearer identity overrides stale cookies and invalid tokens cannot fall back to them", async t => {
+  const h = await harness(t);
+  const cookie = await h.cookieFor("provider-token");
+  const me = await fetch(h.base + "/api/user", { headers: { Cookie: cookie, Authorization: "Bearer customer-token" } });
+  assert.equal((await me.json()).id, 1);
+  assert.equal((await fetch(h.base + "/api/user", { headers: { Cookie: cookie, Authorization: "Bearer invalid-token" } })).status, 401);
+  assert.equal((await fetch(h.base + "/api/provider/bearer-regression", { headers: { Cookie: cookie, Authorization: "Bearer customer-token" } })).status, 403);
+  assert.equal((await fetch(h.base + "/api/user", { headers: { Cookie: cookie } })).status, 200);
+});
 
 test("retired signup never looks up or changes an existing identity, with or without a session", async t => {
   const h = await harness(t);
