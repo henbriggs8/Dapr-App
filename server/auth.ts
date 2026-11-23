@@ -7,6 +7,7 @@ import { promisify } from "util";
 import type { IStorage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { clerkClient } from "@clerk/clerk-sdk-node";
+import { createBearerUserResolver } from "./bearer-user";
 
 declare global {
   namespace Express {
@@ -77,6 +78,10 @@ export function setupAuth(
   app.use(sessionMiddleware);
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use(createBearerUserResolver({
+    verifyToken,
+    getUserByUsername: username => storage.getUserByUsername(username),
+  }));
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {

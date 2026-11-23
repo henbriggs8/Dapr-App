@@ -6,6 +6,7 @@ import { ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { bookingQuotes, bookings, notificationEvents, referrals, services, timeSlots, users, vehicles, type Booking } from "@shared/schema";
 import { db } from "./db";
 import { NativeContractError } from "./native-contract-error";
+import { assertBookingPaymentOpen } from "./unpaid-booking-cancellation";
 import { getEligibleOnlineProviderCount } from "./asap-availability";
 import { applyPromoCode, calculateQuoteDiscounts, resolvePromoCode, type PromoCodeDefinition } from "./promo-codes";
 
@@ -379,13 +380,20 @@ export async function nativePaymentStatus(userId: number, bookingId: number) {
 }
 
 export async function attachNativePaymentIntent(bookingId: number, idempotencyKey: string, paymentIntentId: string) {
-  const [booking] = await db.update(bookings).set({
-    stripeSessionId: paymentIntentId,
-    paymentId: paymentIntentId,
-    paymentIntentIdempotencyKey: idempotencyKey,
-    paymentStatus: "payment_pending",
-  }).where(eq(bookings.id, bookingId)).returning();
-  return booking;
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
+    const [existing] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1).for("update");
+    if (!existing) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+    assertBookingPaymentOpen(existing);
+    if (existing.isPaid) throw new NativeContractError(409, "BOOKING_ALREADY_PAID", "Booking is already paid.");
+    const [booking] = await tx.update(bookings).set({
+      stripeSessionId: paymentIntentId,
+      paymentId: paymentIntentId,
+      paymentIntentIdempotencyKey: idempotencyKey,
+      paymentStatus: "payment_pending",
+    }).where(eq(bookings.id, bookingId)).returning();
+    return booking;
+  });
 }
 
 export async function markNativeBookingPaid(bookingId: number, intentId: string, paymentMethod?: string | null) {
@@ -393,6 +401,7 @@ export async function markNativeBookingPaid(bookingId: number, intentId: string,
     await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
     if (!booking) return undefined;
+    assertBookingPaymentOpen(booking);
     if (booking.slotReservationReleasedAt) {
       throw new NativeContractError(409, "SLOT_RESERVATION_RELEASED", "Payment cannot be confirmed after slot capacity was released.");
     }
@@ -418,6 +427,7 @@ export async function confirmZeroAmountBooking(bookingId: number) {
     await tx.execute(sql`select pg_advisory_xact_lock(${bookingId})`);
     const [existing] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
     if (!existing) return undefined;
+    assertBookingPaymentOpen(existing);
     if (existing.slotReservationReleasedAt) throw new NativeContractError(409, "SLOT_RESERVATION_RELEASED", "Payment cannot be confirmed after slot capacity was released.");
     if (existing.isPaid) return existing;
     const [booking] = await tx.update(bookings).set({
@@ -441,6 +451,7 @@ export async function redeemFreeWashCreditBooking(bookingId: number, userId: num
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
     if (!booking) throw new NativeContractError(404, "BOOKING_NOT_FOUND", "Booking not found.");
     if (booking.userId !== userId) throw new NativeContractError(403, "BOOKING_ACCESS_DENIED", "Booking does not belong to this account.");
+    assertBookingPaymentOpen(booking);
     if (booking.isPaid) return { booking, newlyPaid: false };
     const [credit] = await tx.update(users).set({
       freeWashCredits: sql`${users.freeWashCredits} - 1`,

@@ -14,6 +14,7 @@ import { insertBookingSchema, insertPricingConfigSchema, insertServiceSchema, in
 import type { User, Vehicle } from "@shared/schema";
 import { ADD_ONS, ADD_ONS_BY_ID, resolveBookingAddOns } from "@shared/add-ons";
 import { clerkAuthMiddleware, ClerkRequest, resolveUserFromBearer } from "./clerk-middleware";
+import { cancelUnpaidNativeBooking } from "./unpaid-booking-cancellation";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import fs from "fs";
 import path from "path";
@@ -240,7 +241,8 @@ async function recoverStaleStripeCustomerId(user: Express.User): Promise<string>
   return customerId;
 }
 
-export function registerRoutes(app: Express): Server {
+export function registerRoutes(app: Express, auth: { verifyToken?: (token: string) => Promise<{ sub: string }> } = {}): Server {
+  const verifyToken = auth.verifyToken ?? (token => clerkClient.verifyToken(token));
   const pushDevices = new DatabasePushDeviceRepository();
   const pushService = new PushService(pushDevices);
   registerPushDeviceRoutes(app, pushDevices, pushService, {
@@ -251,9 +253,9 @@ export function registerRoutes(app: Express): Server {
   const dispatchTimer = setInterval(() => {
     void runPaidBookingNotificationDispatch().catch(error => console.error("[notification] Outbox retry pass failed:", error));
   }, 60_000).unref();
-  const sessionMiddleware = setupAuth(app, storage);
+  const sessionMiddleware = setupAuth(app, storage, verifyToken);
   registerClerkAccountRoutes(app, {
-    verifyToken: token => clerkClient.verifyToken(token),
+    verifyToken,
     getClerkUser: id => clerkClient.users.getUser(id),
     getUserByUsername: username => storage.getUserByUsername(username),
     createUser: input => storage.createUser(input),
@@ -1612,6 +1614,11 @@ export function registerRoutes(app: Express): Server {
       const booking = await storage.getBookingById(bookingId);
       if (!booking) return res.status(404).json({ error: "Booking not found" });
       if (booking.userId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (booking.status === "awaiting_payment" || (booking.status === "cancelled" && !booking.isPaid && booking.paymentStatus === "payment_cancelled")) {
+        const result = await cancelUnpaidNativeBooking(req.user.id, bookingId);
+        if (result.newlyCancelled) void notifyBookingCustomer("cancelled", result.booking);
+        return res.json(result.booking);
+      }
       if (!["pending", "confirmed"].includes(booking.status)) {
         return res.status(409).json({ error: "Booking cannot be cancelled in its current state" });
       }
@@ -1630,6 +1637,7 @@ export function registerRoutes(app: Express): Server {
       res.json(updated);
     } catch (error) {
       console.error("Error cancelling booking:", error);
+      if (error instanceof NativeContractError) return nativeContractError(res, error);
       res.status(500).json({ error: "Failed to cancel booking" });
     }
   });
