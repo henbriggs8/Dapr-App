@@ -23,10 +23,12 @@ export function liveProviderAvailability(onlineProviderCount: number) {
     };
   }
   return {
-    available: false as const,
+    // Customers may request ASAP service before a pro comes online.
+    // Supply informs the ETA; it does not close the booking flow.
+    available: true as const,
     mode: "asap" as const,
-    etaText: null,
-    reason: "NO_ONLINE_PROVIDERS" as const,
+    etaText: "Next available Dapr Pro — arrival time confirmed after matching",
+    reason: null,
     onlineProviderCount: 0,
   };
 }

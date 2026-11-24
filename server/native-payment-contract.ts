@@ -7,7 +7,6 @@ import { bookingQuotes, bookings, notificationEvents, referrals, services, timeS
 import { db } from "./db";
 import { NativeContractError } from "./native-contract-error";
 import { assertBookingPaymentOpen } from "./unpaid-booking-cancellation";
-import { getEligibleOnlineProviderCount } from "./asap-availability";
 import { applyPromoCode, calculateQuoteDiscounts, resolvePromoCode, type PromoCodeDefinition } from "./promo-codes";
 
 export { NativeContractError } from "./native-contract-error";
@@ -173,9 +172,7 @@ export async function createNativeQuote(userId: number, idempotencyKey: string, 
     quoteDate = input.date;
     quoteTime = input.time;
   } else {
-    if (await getEligibleOnlineProviderCount(db) < 1) {
-      throw new NativeContractError(409, "NO_ONLINE_PROVIDERS", "No online Dapr Pros are currently available.");
-    }
+    // ASAP requests wait for the next available pro, regardless of live supply.
     timeSlotId = null;
     quoteDate = dateInPhoenix(new Date());
     quoteTime = "ASAP";

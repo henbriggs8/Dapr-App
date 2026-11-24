@@ -101,18 +101,25 @@ async function main() {
     await confirmZeroAmountBooking(asapBooking.id);
 
     await db.update(users).set({ currentStatus: "offline" }).where(eq(users.id, onlineProvider.id));
-    await assert.rejects(
-      createNativeQuote(second.user.id, `${runId}:quote:no-provider`, {
-        serviceId: service.id,
-        vehicleId: second.vehicle.id,
-        serviceLocation: second.address.address,
-        serviceLocationType: "home",
-        addOnIds: [],
-        fulfillmentMode: "asap",
-      }),
-      (error: any) => error?.code === "NO_ONLINE_PROVIDERS",
-      "ASAP quote creation rechecks live provider supply",
-    );
+    const noProviderAvailability = await getAsapAvailability(second.user.id, {
+      addressId: second.address.id,
+      serviceId: service.id,
+      vehicleId: second.vehicle.id,
+      addOnIds: [],
+    });
+    assert.equal(noProviderAvailability.available, true, "ASAP remains available with no online providers");
+    assert.equal(noProviderAvailability.onlineProviderCount, 0);
+    const noProviderQuote = await createNativeQuote(second.user.id, `${runId}:quote:no-provider`, {
+      serviceId: service.id,
+      vehicleId: second.vehicle.id,
+      serviceLocation: second.address.address,
+      serviceLocationType: "home",
+      addOnIds: [],
+      fulfillmentMode: "asap",
+    });
+    createdQuoteIds.push(noProviderQuote.id);
+    assert.equal(noProviderQuote.fulfillmentMode, "asap");
+    assert.equal(noProviderQuote.timeSlotId, null, "ASAP quotes need neither online providers nor scheduled slots");
     await db.update(users).set({ currentStatus: "online" }).where(eq(users.id, onlineProvider.id));
 
     const [existingCapacitySlot] = await db.insert(timeSlots).values({

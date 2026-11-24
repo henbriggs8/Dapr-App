@@ -12,12 +12,12 @@ test("ASAP is available when at least one eligible provider is online", () => {
   });
 });
 
-test("ASAP reports NO_ONLINE_PROVIDERS when live supply is empty", () => {
+test("ASAP stays bookable without promising an ETA when live supply is empty", () => {
   assert.deepEqual(liveProviderAvailability(0), {
-    available: false,
+    available: true,
     mode: "asap",
-    etaText: null,
-    reason: "NO_ONLINE_PROVIDERS",
+    etaText: "Next available Dapr Pro — arrival time confirmed after matching",
+    reason: null,
     onlineProviderCount: 0,
   });
 });
